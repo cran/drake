@@ -4,25 +4,47 @@
 \alias{clean}
 \title{Function \code{clean}}
 \usage{
-clean(destroy = FALSE)
+clean(..., list = character(0), destroy = FALSE, path = getwd(),
+  search = TRUE)
 }
 \arguments{
+\item{...}{targets to remove from the cache, as names (unquoted)
+or character strings (quoted). Similar to \code{...} in
+\code{\link{remove}(...)}.}
+
+\item{list}{character vector naming targets to be removed from the
+cache. Similar to the \code{list} argument of \code{\link{remove}()}.}
+
 \item{destroy}{logical, whether to totally remove the drake cache. 
-If \code{destroy} is \code{FALSE}, only the outputs from \code{make}()
+If \code{destroy} is \code{FALSE}, only the targets 
+from \code{make}()
 are removed. If \code{TRUE}, the whole cache is removed, including
-session metadata.}
+session metadata, etc.}
+
+\item{path}{Root directory of the drake project,
+or if \code{search} is \code{TRUE}, either the
+project root or a subdirectory of the project.}
+
+\item{search}{logical. If \code{TRUE}, search parent directories
+to find the nearest drake cache. Otherwise, look in the
+current working directory only.}
 }
 \description{
-Cleans up all work done by \code{\link{make}}. 
-Your working directory (\code{\link{getwd}()}) must be the 
-root directory of your drake project.
-WARNING:
-This deletes ALL \code{\link{make}} output, which includes 
-file outputs as well as the entire drake cache. Only use \code{clean}
-if you're sure you won't lose any important work.
+Cleans up all work done by \code{\link{make}()}.
+}
+\details{
+You must be in your project's working directory 
+or a subdirectory of it.
+\code{clean(search = TRUE)} searches upwards in your folder structure
+for the drake cache and acts on the first one it sees. Use 
+\code{search == FALSE} to look within the current working 
+directory only.
+WARNING: This deletes ALL work done with \code{\link{make}()}, 
+which includes 
+file targets as well as the entire drake cache. Only use \code{clean()}
+if you're sure you won't lose anything important.
 }
 \seealso{
-\code{\link{prune}}, \code{\link{make}}, 
-\code{\link{help_drake}}
+\code{\link{prune}}, \code{\link{make}},
 }
 

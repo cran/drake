@@ -1,7 +1,0 @@
-devtools::load_all()
-library(eply)
-debug_setup()
-p = example_plan("debug")
-p = rbind(p, plan(sha = sha1(1)))
-makefile(p, run = F, verbose = F)
-system("rm -rf .drake input")

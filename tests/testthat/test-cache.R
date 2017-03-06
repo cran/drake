@@ -1,200 +1,157 @@
-# NOTE: if some of these tests fail, remove the 
-# '.drake/' caches from all parent and ancestor
-# directories. I need them to be clear to fully
-# test the behavior of the cache functions.
-
+# library(testthat); library(devtools); load_all()
 context("cache")
 
-test_that("uncache_imported works", {
-  debug_cleanup()
-  debug_setup()
-  p = example_plan("debug")
-  make(p, verbose = F)
-  x = get_cache()
-  expect_true("f" %in% cached())
-  expect_true("f" %in% x$list("depends"))
-  uncache_imported(x)
-  expect_false("f" %in% cached())
-  expect_false("f" %in% x$list("depends"))
-  debug_cleanup()
-})
+test_that("cache functions work", {
+  dclean()
+  expect_equal(character(0), 
+    cached(search = FALSE), imported(search = FALSE), 
+    built(search = FALSE))
+  expect_error(status(search = FALSE))
+  expect_error(readd(search = FALSE))
+  config = dbug()
+  testrun(config)
 
-test_that("can find cache while in project root", {
-  clean(destroy=TRUE)
-  expect_error(loadd())
-  p = example_plan()
-  make(p, verbose = F)
-  expect_equal(cached(), letters[1:6])
-  expect_equal(readd(a), 14)
-  y = "a"
-  expect_equal(readd(y, character_only = T), 14)
-  expect_false(any(letters[1:6] %in% ls()))
-  loadd(c, d)
-  expect_true(all(c("c", "d") %in% ls()))
-  expect_equal(c(c, d), c(8, 2))
-  rm(c)
-  rm(d)
-  expect_false(any(letters[1:6] %in% ls()))
-  loadd()
-  expect_true(all(letters[1:6] %in% ls()))
-  expect_equal(a, readd(a))
-  expect_equal(e, readd(e))
-  rm(list = letters[1:6])
-  expect_false(any(letters[1:6] %in% ls()))
-  wd = getwd()
-  expect_equal(wd, find_project())
-  expect_equal(file.path(wd, cache_path), find_cache())
-  expect_equal(built(), letters[1:6])
-  expect_equal(imported(), character(0))
-  expect_true(is.list(session()))
-  expect_true(is.data.frame(status()))
-  expect_error(a)
-  expect_error(b)
-  loadd("a")
-  expect_true(is.numeric(a))
-  loadd(list = c("a", "b"))
-  expect_true(is.numeric(b))
-  rm(list = intersect(ls(), letters[1:6]))
-  expect_false(any(letters[1:6] %in% ls()))
-  loadd("a", "b")
-  expect_true(all(letters[1:2] %in% ls()))
-  clean(destroy=TRUE)
-})
- 
-test_that("can find cache in subdir", {
-  debug_cleanup()
-  debug_setup()
-  p = example_plan("debug")
-  make(p, verbose = F)
-  bt = c("'d'", "'e'", letters[1:5], "final")
-  imp = c("'input'", "f", "g", "global", "h", "i", "j", "y")
-  ch = sort(c(bt, imp))
-  expect_equal(imported(), imp)
-  wd = getwd()
-  for(mydir in c("d1", "d2")){
-    dir.create(mydir)
-    setwd(mydir)
+  # targets
+  all = c("'input.rds'", "'intermediatefile.rds'", "a",
+        "b", "c", "combined", "f", "final", "g", "h", "i",
+        "j", "myinput", "nextone", "readRDS", "saveRDS",
+        "yourinput")
+  imports = c("'input.rds'",  "a",
+          "b", "c", "f", "g", "h", "i",
+          "j", "readRDS", "saveRDS")
+  builds = setdiff(all, imports)
+  
+  # find stuff in current directory
+  # session, status
+  expect_true(is.list(session(search = FALSE)))
+  expect_true(all(status(search = FALSE) == "finished"))
+  expect_equal(names(status(search = FALSE)), all)
+  expect_equal(names(status(search = FALSE, imported_files_only = TRUE)), 
+    c("'input.rds'", builds))
+  expect_equal(status(bla, f, list = c("h", "final"), search = FALSE), 
+    c(bla = "not built or imported", f = "finished", 
+      h = "finished", final = "finished"))
+  
+  # config
+  newconfig = read_config(search = FALSE)
+  expect_true(is.list(newconfig) & length(newconfig) > 1)
+  expect_equal(read_plan(search = FALSE), config$plan)
+  expect_equal(class(read_graph(plot = FALSE, 
+    search = FALSE)), "igraph")
+  pdf(NULL)
+  read_graph(plot = TRUE, search = FALSE)
+  dev.off()
+  unlink("Rplots.pdf")
+  
+  # imported , built, cached
+  expect_equal(imported(files_only = FALSE, search = FALSE), imports)
+  expect_equal(imported(files_only = TRUE, search = FALSE), "'input.rds'")
+  expect_equal(built(search = FALSE), sort(config$plan$target))
+  twopiece = sort(c(built(search = FALSE), 
+    imported(search = FALSE, files_only = FALSE)))
+  expect_equal(cached(search = FALSE), all, twopiece)
+  expect_equal(cached(search = FALSE, no_imported_objects = TRUE), 
+    c("'input.rds'", builds))
+  expect_true(all(cached(search = FALSE, list = all)))
+  expect_equal(length(cached(search = FALSE, i, 
+    list = imported(files_only = FALSE))), 
+    length(imported(files_only = FALSE)))
+  expect_equal(cached(i, bla, list = c("final", "run"), search = FALSE), 
+    c(i = TRUE, bla = FALSE, final = TRUE, run = FALSE))
+  
+  # find your project
+  expect_equal(find_project(), getwd())
+  expect_equal(find_cache(), file.path(getwd(), cachepath))
+  expect_true(is.numeric(readd(a, search = FALSE)))
+  expect_error(h(1))
+  
+  # load and read stuff
+  expect_true(is.numeric(readd(final, search = FALSE)))
+  expect_error(loadd(yourinput, myinput, 
+    search = FALSE, imported_only = TRUE))
+  loadd(h, i, j, c, search = FALSE)
+  expect_true(is.numeric(h(1)))
+  rm(h, i, j, c)
+  expect_error(h(1))
+  
+  # test loadd imported_only and loadd() everything
+  loadd(imported_only = TRUE)
+  expect_true(all(imported(search = FALSE) %in% ls()))
+  loadd(search = FALSE)
+  expect_true(all(config$cache$list() %in% ls()))
+  rm(list = intersect(all, ls()))
+  
+  # search from a different directory
+  if(!file.exists("searchfrom")){
+    dir.create("searchfrom")
+    dir.create(file.path("searchfrom", "here"))
   }
-  expect_equal(cached(), character(0))
-  expect_equal(built(), character(0))
-  expect_equal(imported(), character(0))
-  expect_equal(cached(search = T), ch)
-  expect_equal(built(search = T), bt)
-  expect_equal(imported(search = T), imp)
-  expect_error(readd("a"))
-  expect_true(is.numeric(readd("a", search = T)))
-  expect_error(a)
-  expect_error(loadd("a"))
-  expect_silent(loadd("a", search = T))
-  expect_true(is.numeric(a))
-  expect_equal(find_cache(), file.path(wd, cache_path))
-  expect_equal(find_project(), wd)
-  expect_error(o <- session())
-  expect_error(o <- status())
-  expect_true(is.list(session(search = T)))
-  expect_true(is.data.frame(status(search = T)))
-  expect_error(loadd())
-  expect_silent(loadd(search = T))
-  setwd(wd)
-  unlink("d1", recursive = T)
-  debug_cleanup()
-})
-
-test_that("can find cache in other dir", {
-  debug_cleanup()
-  p = example_plan("debug")
-  wd = getwd()
-  dir.create("d1")
-  setwd("d1")
-  debug_setup()
-  make(p, verbose = F)
-  setwd(wd)
-  deep = file.path("d1", "d2")
-  dir.create(deep)
-  bt = c("'d'", "'e'", letters[1:5], "final")
-  imp = c("'input'", "f", "g", "global", "h", "i", "j", "y")
-  ch = sort(c(bt, imp))
-  expect_equal(cached(search = T), character(0)) # see comment at top of file
-  expect_equal(built(search = T), character(0)) # see comment at top of file
-  expect_equal(imported(search = T), character(0))
-  expect_equal(cached(path = "d1", search = T), ch)
-  expect_equal(built(path = "d1", search = T), bt)
-  expect_equal(imported(path = "d1", search = T), imp)
-  expect_equal(cached(path = deep, search = T), ch)
-  expect_equal(built(path = deep, search = T), bt)
-  expect_equal(imported(path = deep, search = T), imp)
-  expect_equal(cached(path = deep, search = F), character(0))
-  expect_equal(built(path = deep, search = F), character(0))
-  expect_equal(imported(path = deep, search = F), character(0))
-  expect_error(readd("a", search = T)) # see comment at top of file
-  expect_true(is.numeric(readd("a", path = "d1", search = T)))
-  expect_true(is.numeric(readd("a", path = deep, search = T)))
-  expect_error(readd("a", path = deep, search = F))
-  expect_error(a)
-  expect_error(loadd("a", search = T)) # see comment at top of file
-  expect_silent(loadd("a", path = "d1", search = T))
-  expect_true(is.numeric(a))
-  rm(a)
-  expect_error(a)
-  expect_error(loadd("a", path = deep, search = F))
-  expect_silent(loadd("a", path = deep, search = T))
-  expect_true(is.numeric(a))
-  rm(a)
-  expect_error(a)
-  expect_silent(loadd("a", path = "d1", search = F))
-  expect_true(is.numeric(a))
-  rm(a)
-  rm(f)
-  rm(global)
-  expect_error(loadd(imported_only = T, path = deep, search = F))
-  expect_error(f(1))
-  loadd(imported_only = T, path = deep, search = T)
-  expect_true(is.numeric(f(1)))
-  expect_error(a)
-  expect_error(loadd("a", imported_only = T, path = deep, search = T))
-  expect_error(a)
-  loadd("a", path = deep, search = T)
-  expect_true(is.numeric(a))
-  rm(a)
-  expect_equal(find_cache(path = "d1"), file.path("d1", cache_path))
-  expect_equal(find_project(path = "d1"), "d1")
-  expect_equal(find_cache(path = deep), file.path("d1", cache_path))
-  expect_equal(find_project(path = deep), "d1")
-  expect_false(identical(find_cache(), file.path("d1", cache_path)))
-  expect_false(identical(find_project(), "d1"))
-  expect_true(is.list(session(path = "d1", search = T)))
-  expect_true(is.data.frame(status(path = "d1", search = T)))
-  setwd(wd)
-  expect_error(loadd(search = T)) # see comment at top of file
-  expect_error(loadd(search = F))
-  expect_silent(loadd(path = "d1", search = T))
-  expect_silent(loadd(path = "d1", search = F))
-  expect_silent(loadd(path = deep, search = T))
-  expect_error(loadd(path = deep, search = F))
-  unlink("d1", recursive = T)
-  debug_cleanup()
-})
-
-test_that("readd & loadd load cached functions/objects correctly", {
-  debug_cleanup()
-  debug_setup()
-  p = example_plan("debug")
-  h = function(x){2*x + 5 + global}
-  global = 1
-  make(p, verbose = F)
-  rm(list = ls())
-  expect_equal(readd(global), 1)
-  expect_true(is.function(readd(f)))
-  expect_error(readd(f)(1))
-  expect_equal(readd(a), c(1:5, 1:25))
-  expect_false(any(c("global", "a", "f") %in% ls()))
-  loadd()
-  expect_equal(global, 1)
-  expect_true(is.function(f))
-  expect_true(is.numeric(older <- f(1)))
-  global = 2
-  expect_true(is.numeric(newer <- f(1)))
-  expect_true(older != newer)
-  expect_equal(a, c(1:5, 1:25))
-  debug_cleanup()
+  setwd("..")
+  s = file.path("testthat", "searchfrom", "here")
+  
+  # status, session 
+  expect_true(is.list(session(search = T, path = s)))
+  expect_equal(names(status(search = T, path = s)), all)
+  expect_equal(names(status(imported_files_only = TRUE, 
+    search = T, path = s)), c("'input.rds'", builds))
+  expect_equal(status(search = T, path = s, bla, f, 
+    list = c("h", "final")), 
+    c(bla = "not built or imported", f = "finished", 
+    h = "finished", final = "finished"))
+  
+  # imported, built, cached
+  expect_equal(imported(files_only = FALSE, search = T, path = s),
+    imports)
+  expect_equal(imported(files_only = T, search = T, path = s), 
+    "'input.rds'")
+  expect_equal(built(search = T, path = s), sort(config$plan$target))
+  twopiece = sort(c(built(path = s, search = T), 
+    imported(files_only = FALSE, path = s, search = T)))
+  expect_equal(cached(path = s, search = T), all, twopiece)
+  expect_equal(cached(no_imported_objects = TRUE,
+    path = s, search = T), c("'input.rds'", builds))
+  expect_true(all(cached(list = all, path = s, search = T)))
+  
+  # find your project
+  expect_equal(find_project(path = s), "testthat")
+  expect_equal(find_cache(path = s), 
+    file.path("testthat", cachepath))
+  
+  # config
+  newconfig = read_config(search = TRUE, path = s)
+  expect_true(is.list(newconfig) & length(newconfig) > 1)
+  expect_equal(read_plan(search = TRUE, path = s), config$plan)
+  expect_equal(class(read_graph(plot = FALSE, 
+    search = TRUE, path = s)), "igraph")
+  pdf(NULL)
+  read_graph(plot = TRUE, search = TRUE, path = s)
+  dev.off()
+  unlink("Rplots.pdf")
+  
+  # load and read stuff
+  expect_true(is.numeric(readd(a, path = s, search = T)))
+  expect_error(h(1))
+  expect_error(j(1))
+  loadd(h, i, j, c, path = s, search = T)
+  expect_true(is.numeric(h(1)))
+  rm(h, i, j, c)
+  expect_error(h(1))
+  
+  # clean using search = TRUE or FALSE
+  expect_true(all(all %in% cached(path = s, search = T)))
+  clean(final, path = s, search = TRUE)
+  expect_true(all(setdiff(all, "final") %in% 
+    cached(path = s, search = T)))
+  clean(path = s, search = TRUE)
+  expect_equal(cached(path = s, search = T), character(0))
+  where = file.path("testthat", cachepath)
+  expect_true(file.exists(where))
+  clean(path = s, search = FALSE, destroy = TRUE)
+  expect_true(file.exists(where))
+  clean(path = s, search = TRUE, destroy = TRUE)
+  expect_false(file.exists(where))
+  
+  setwd("testthat")
+  unlink("searchfrom", recursive = TRUE)
+  dclean()
 })

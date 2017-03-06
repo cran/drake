@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="William Michael Landau" />
+
+<meta name="date" content="2017-03-06" />
+
+<title>Quickstart</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+</style>
+
+
+
+<link href="data:text/css,body%20%7B%0A%20%20background%2Dcolor%3A%20%23fff%3B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20max%2Dwidth%3A%20700px%3B%0A%20%20overflow%3A%20visible%3B%0A%20%20padding%2Dleft%3A%202em%3B%0A%20%20padding%2Dright%3A%202em%3B%0A%20%20font%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0A%20%20font%2Dsize%3A%2014px%3B%0A%20%20line%2Dheight%3A%201%2E35%3B%0A%7D%0A%0A%23header%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0A%0A%23TOC%20%7B%0A%20%20clear%3A%20both%3B%0A%20%20margin%3A%200%200%2010px%2010px%3B%0A%20%20padding%3A%204px%3B%0A%20%20width%3A%20400px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20border%2Dradius%3A%205px%3B%0A%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20font%2Dsize%3A%2013px%3B%0A%20%20line%2Dheight%3A%201%2E3%3B%0A%7D%0A%20%20%23TOC%20%2Etoctitle%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%20%20font%2Dsize%3A%2015px%3B%0A%20%20%20%20margin%2Dleft%3A%205px%3B%0A%20%20%7D%0A%0A%20%20%23TOC%20ul%20%7B%0A%20%20%20%20padding%2Dleft%3A%2040px%3B%0A%20%20%20%20margin%2Dleft%3A%20%2D1%2E5em%3B%0A%20%20%20%20margin%2Dtop%3A%205px%3B%0A%20%20%20%20margin%2Dbottom%3A%205px%3B%0A%20%20%7D%0A%20%20%23TOC%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dleft%3A%20%2D2em%3B%0A%20%20%7D%0A%20%20%23TOC%20li%20%7B%0A%20%20%20%20line%2Dheight%3A%2016px%3B%0A%20%20%7D%0A%0Atable%20%7B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dcolor%3A%20%23DDDDDD%3B%0A%20%20border%2Dstyle%3A%20outset%3B%0A%20%20border%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0A%20%20border%2Dwidth%3A%202px%3B%0A%20%20padding%3A%205px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%20%20line%2Dheight%3A%2018px%3B%0A%20%20padding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0A%20%20border%2Dleft%2Dstyle%3A%20none%3B%0A%20%20border%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Ap%20%7B%0A%20%20margin%3A%200%2E5em%200%3B%0A%7D%0A%0Ablockquote%20%7B%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20padding%3A%200%2E25em%200%2E75em%3B%0A%7D%0A%0Ahr%20%7B%0A%20%20border%2Dstyle%3A%20solid%3B%0A%20%20border%3A%20none%3B%0A%20%20border%2Dtop%3A%201px%20solid%20%23777%3B%0A%20%20margin%3A%2028px%200%3B%0A%7D%0A%0Adl%20%7B%0A%20%20margin%2Dleft%3A%200%3B%0A%7D%0A%20%20dl%20dd%20%7B%0A%20%20%20%20margin%2Dbottom%3A%2013px%3B%0A%20%20%20%20margin%2Dleft%3A%2013px%3B%0A%20%20%7D%0A%20%20dl%20dt%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%7D%0A%0Aul%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%7D%0A%20%20ul%20li%20%7B%0A%20%20%20%20list%2Dstyle%3A%20circle%20outside%3B%0A%20%20%7D%0A%20%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dbottom%3A%200%3B%0A%20%20%7D%0A%0Apre%2C%20code%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20color%3A%20%23333%3B%0A%20%20white%2Dspace%3A%20pre%2Dwrap%3B%20%20%20%20%2F%2A%20Wrap%20long%20lines%20%2A%2F%0A%7D%0Apre%20%7B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20margin%3A%205px%200px%2010px%200px%3B%0A%20%20padding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Acode%20%7B%0A%20%20font%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0A%20%20font%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0A%20%20padding%3A%202px%200px%3B%0A%7D%0A%0Adiv%2Efigure%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0A%20%20background%2Dcolor%3A%20%23FFFFFF%3B%0A%20%20padding%3A%202px%3B%0A%20%20border%3A%201px%20solid%20%23DDDDDD%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20margin%3A%200%205px%3B%0A%7D%0A%0Ah1%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%20%20font%2Dsize%3A%2035px%3B%0A%20%20line%2Dheight%3A%2040px%3B%0A%7D%0A%0Ah2%20%7B%0A%20%20border%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20padding%2Dbottom%3A%202px%3B%0A%20%20font%2Dsize%3A%20145%25%3B%0A%7D%0A%0Ah3%20%7B%0A%20%20border%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20font%2Dsize%3A%20120%25%3B%0A%7D%0A%0Ah4%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0A%20%20margin%2Dleft%3A%208px%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Ah5%2C%20h6%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23ccc%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Aa%20%7B%0A%20%20color%3A%20%230033dd%3B%0A%20%20text%2Ddecoration%3A%20none%3B%0A%7D%0A%20%20a%3Ahover%20%7B%0A%20%20%20%20color%3A%20%236666ff%3B%20%7D%0A%20%20a%3Avisited%20%7B%0A%20%20%20%20color%3A%20%23800080%3B%20%7D%0A%20%20a%3Avisited%3Ahover%20%7B%0A%20%20%20%20color%3A%20%23BB00BB%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%0A%2F%2A%20Class%20described%20in%20https%3A%2F%2Fbenjeffrey%2Ecom%2Fposts%2Fpandoc%2Dsyntax%2Dhighlighting%2Dcss%0A%20%20%20Colours%20from%20https%3A%2F%2Fgist%2Egithub%2Ecom%2Frobsimmons%2F1172277%20%2A%2F%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Keyword%20%2A%2F%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%2F%2A%20DataType%20%2A%2F%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%2F%2A%20DecVal%20%28decimal%20values%29%20%2A%2F%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20BaseN%20%2A%2F%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Float%20%2A%2F%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Char%20%2A%2F%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20String%20%2A%2F%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%2F%2A%20Comment%20%2A%2F%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%2F%2A%20OtherToken%20%2A%2F%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20AlertToken%20%2A%2F%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Function%20calls%20%2A%2F%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%2F%2A%20ErrorTok%20%2A%2F%0A%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Quickstart</h1>
+<h3 class="subtitle"><em>quickstart example for drake</em></h3>
+<h4 class="author"><em>William Michael Landau</em></h4>
+<h4 class="date"><em>2017-03-06</em></h4>
+
+
+
+<h1 align="center">
+  
+<img src="data:image/png;base64,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" width="200" alt style="border: none">
+</h1>
+
+
+
+<div id="quickstart-examples" class="section level1">
+<h1>Quickstart examples</h1>
+<p>Drake has small self-contained built-in examples. To see the names of the available examples, use</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">examples_drake</span>()</code></pre>
+<pre><code>## [1] &quot;basic&quot;</code></pre>
+<p>Then use <code>example_drake()</code> to write the files for the example to your working directory. This vignette walks through the <code>&quot;basic&quot;</code> example, for which you can get the code with</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">example_drake</span>(<span class="st">&quot;basic&quot;</span>)</code></pre>
+</div>
+<div id="setting-up-the-basic-example" class="section level1">
+<h1>Setting up the basic example</h1>
+<p>Load your libraries first. Drake will detect loaded packages and reload them on all your compute nodes, if applicable.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(knitr)
+<span class="kw">library</span>(rmarkdown)
+<span class="kw">library</span>(drake)</code></pre>
+<p>This example is a simulation study, and we’re using a function to simulate random datasets. Enter your simulation function and drake will import it automatically.</p>
+<pre class="sourceCode r"><code class="sourceCode r">simulate =<span class="st"> </span>function(n){
+  <span class="kw">data.frame</span>(
+    <span class="dt">x =</span> <span class="kw">rnorm</span>(n),
+    <span class="dt">y =</span> <span class="kw">rpois</span>(n, <span class="dv">1</span>)
+  )
+}</code></pre>
+<p>For each dataset we simulate, we’ll apply a bunch of methods of analysis.</p>
+<pre class="sourceCode r"><code class="sourceCode r">reg1 =<span class="st"> </span>function(d){
+  <span class="kw">lm</span>(y ~<span class="st"> </span>+<span class="st"> </span>x, <span class="dt">data =</span> d)
+}
+
+reg2 =<span class="st"> </span>function(d){
+  d$x2 =<span class="st"> </span>d$x^<span class="dv">2</span>
+  <span class="kw">lm</span>(y ~<span class="st"> </span>x2, <span class="dt">data =</span> d)
+}</code></pre>
+<p>After we’re done, we’ll want to knit a dynamic <a href="http://rmarkdown.rstudio.com/">R Markdown</a> report with a bunch of results.</p>
+<pre class="sourceCode r"><code class="sourceCode r">my_knit =<span class="st"> </span>function(file, ...){
+  <span class="kw">knit</span>(file) <span class="co"># drake knows you loaded the knitr package</span>
+}
+
+my_render =<span class="st"> </span>function(file, ...){
+  <span class="kw">render</span>(file) <span class="co"># drake knows you loaded the rmarkdown package</span>
+}</code></pre>
+<p>The example provides an example <code>report.Rmd</code>, which uses <code>readd()</code> and <code>loadd()</code> to load objects we’ll generate with drake.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Write the R Markdown source for a dynamic knitr report</span>
+lines =<span class="st"> </span><span class="kw">c</span>(
+  <span class="st">&quot;---&quot;</span>,
+  <span class="st">&quot;title: Example Report&quot;</span>,
+  <span class="st">&quot;author: You&quot;</span>,
+  <span class="st">&quot;output: html_document&quot;</span>,
+  <span class="st">&quot;---&quot;</span>,
+  <span class="st">&quot;&quot;</span>,
+  <span class="st">&quot;Look how I read outputs from the drake cache.&quot;</span>,
+  <span class="st">&quot;&quot;</span>,
+  <span class="st">&quot;```{r example_chunk}&quot;</span>,
+  <span class="st">&quot;library(drake)&quot;</span>,
+  <span class="st">&quot;readd(small)&quot;</span>,
+  <span class="st">&quot;readd(coef_regression2_small)&quot;</span>,
+  <span class="st">&quot;loadd(large)&quot;</span>,
+  <span class="st">&quot;head(large)&quot;</span>,
+  <span class="st">&quot;```&quot;</span>
+)
+
+<span class="kw">writeLines</span>(lines, <span class="st">&quot;report.Rmd&quot;</span>)</code></pre>
+</div>
+<div id="the-workflow-plan" class="section level1">
+<h1>The workflow plan</h1>
+<p>In drake, your workflow plan is organized into a data frame. Each row represents a target, which is either a variable or a file that will be produced with a single command. Here is the part of the plan that generates our datasets.</p>
+<pre class="sourceCode r"><code class="sourceCode r">datasets =<span class="st"> </span><span class="kw">plan</span>(
+  <span class="dt">small =</span> <span class="kw">simulate</span>(<span class="dv">5</span>),
+  <span class="dt">large =</span> <span class="kw">simulate</span>(<span class="dv">50</span>))
+datasets</code></pre>
+<pre><code>##   target      command
+## 1  small  simulate(5)
+## 2  large simulate(50)</code></pre>
+<p>Commands need not be function calls. They can be any kind R expression except for formulas with <code>~</code> and function definitions. If I want multiple replicates, I can just use <code>expand</code>, but let’s just stick to our two datasets here.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">expand</span>(datasets, <span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;rep1&quot;</span>, <span class="st">&quot;rep2&quot;</span>))</code></pre>
+<pre><code>##       target      command
+## 1 small_rep1  simulate(5)
+## 2 small_rep2  simulate(5)
+## 3 large_rep1 simulate(50)
+## 4 large_rep2 simulate(50)</code></pre>
+<p>To plan my analyses, we first declare the methods we will use.</p>
+<pre class="sourceCode r"><code class="sourceCode r">methods =<span class="st"> </span><span class="kw">plan</span>(
+  <span class="dt">regression1 =</span> <span class="kw">reg1</span>(..dataset..),
+  <span class="dt">regression2 =</span> <span class="kw">reg2</span>(..dataset..))
+methods</code></pre>
+<pre><code>##        target           command
+## 1 regression1 reg1(..dataset..)
+## 2 regression2 reg2(..dataset..)</code></pre>
+<p>The wildcard placeholder <code>..dataset..</code> says to substitute the names of our datasets one at a time in our actual analysis plan.</p>
+<pre class="sourceCode r"><code class="sourceCode r">analyses =<span class="st"> </span><span class="kw">analyses</span>(methods, <span class="dt">data =</span> datasets)
+analyses</code></pre>
+<pre><code>##              target     command
+## 1 regression1_small reg1(small)
+## 2 regression1_large reg1(large)
+## 3 regression2_small reg2(small)
+## 4 regression2_large reg2(large)</code></pre>
+<p>Now, we should summarize each analysis of each dataset a few different ways.</p>
+<pre class="sourceCode r"><code class="sourceCode r">summary_types =<span class="st"> </span><span class="kw">plan</span>(<span class="dt">summ =</span> <span class="kw">summary</span>(..analysis..),
+                     <span class="dt">coef =</span> <span class="kw">coef</span>(..analysis..))
+summary_types</code></pre>
+<pre><code>##   target               command
+## 1   summ summary(..analysis..)
+## 2   coef    coef(..analysis..)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">results =<span class="st"> </span><span class="kw">summaries</span>(summary_types, analyses, datasets, 
+  <span class="dt">gather =</span> <span class="ot">NULL</span>)
+results</code></pre>
+<pre><code>##                   target                    command
+## 1 summ_regression1_small summary(regression1_small)
+## 2 summ_regression1_large summary(regression1_large)
+## 3 summ_regression2_small summary(regression2_small)
+## 4 summ_regression2_large summary(regression2_large)
+## 5 coef_regression1_small    coef(regression1_small)
+## 6 coef_regression1_large    coef(regression1_large)
+## 7 coef_regression2_small    coef(regression2_small)
+## 8 coef_regression2_large    coef(regression2_large)</code></pre>
+<p>The <code>gather</code> argument of <code>summaries</code> is used to group summaries together by type, and I am skipping it here to make the workflow plan data frames more readable. The <code>..analysis..</code> wildcard acts similarly to the <code>..dataset..</code> wildcard. Functions <code>analyses()</code> and <code>summaries()</code> make use of <code>evaluate()</code> and <code>gather()</code> behind the scenes, which you can use them directly for added flexibility.</p>
+<p>For the dynamic report, we have to tell drake which targets will be loaded into the embedded R chunks. That way, when the targets change, the report will automatically rebuild.</p>
+<pre class="sourceCode r"><code class="sourceCode r">load_in_report =<span class="st"> </span><span class="kw">plan</span>(
+  <span class="dt">report_dependencies =</span> <span class="kw">c</span>(small, large, coef_regression2_small))
+load_in_report</code></pre>
+<pre><code>##                target                                 command
+## 1 report_dependencies c(small, large, coef_regression2_small)</code></pre>
+<p>In the commands to render the report, keep in mind the rule for working with files: use single quotes to declare external file targets and dependencies, and use double quotes to remove any special meaning from character strings.</p>
+<pre class="sourceCode r"><code class="sourceCode r">report =<span class="st"> </span><span class="kw">plan</span>(
+  <span class="dt">report.md =</span> <span class="kw">my_knit</span>(<span class="st">'report.Rmd'</span>, report_dependencies),
+  <span class="dt">report.html =</span> <span class="kw">my_render</span>(<span class="st">'report.md'</span>, report_dependencies),
+  <span class="dt">file_targets =</span> <span class="ot">TRUE</span>, <span class="dt">strings_in_dots =</span> <span class="st">&quot;filenames&quot;</span>)
+report</code></pre>
+<pre><code>##          target                                     command
+## 1   'report.md'  my_knit('report.Rmd', report_dependencies)
+## 2 'report.html' my_render('report.md', report_dependencies)</code></pre>
+<p>To finish planning your full workflow, use <code>rbind()</code> to piece all your commands together. Row order does not matter here. Drake knows which commands to run first.</p>
+<pre class="sourceCode r"><code class="sourceCode r">plan =<span class="st"> </span><span class="kw">rbind</span>(report, datasets, load_in_report, analyses, results)
+plan</code></pre>
+<pre><code>##                    target                                     command
+## 1             'report.md'  my_knit('report.Rmd', report_dependencies)
+## 2           'report.html' my_render('report.md', report_dependencies)
+## 3                   small                                 simulate(5)
+## 4                   large                                simulate(50)
+## 5     report_dependencies     c(small, large, coef_regression2_small)
+## 6       regression1_small                                 reg1(small)
+## 7       regression1_large                                 reg1(large)
+## 8       regression2_small                                 reg2(small)
+## 9       regression2_large                                 reg2(large)
+## 10 summ_regression1_small                  summary(regression1_small)
+## 11 summ_regression1_large                  summary(regression1_large)
+## 12 summ_regression2_small                  summary(regression2_small)
+## 13 summ_regression2_large                  summary(regression2_large)
+## 14 coef_regression1_small                     coef(regression1_small)
+## 15 coef_regression1_large                     coef(regression1_large)
+## 16 coef_regression2_small                     coef(regression2_small)
+## 17 coef_regression2_large                     coef(regression2_large)</code></pre>
+<p>Optionally, check your workflow plan for obvious errors and pitfalls.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">check</span>(plan)</code></pre>
+</div>
+<div id="run-the-workflow-in-a-single-process" class="section level1">
+<h1>Run the workflow in a single process</h1>
+<p>Use <code>make(plan)</code> to run your workflow.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(plan)</code></pre>
+<pre><code>## import 'report.Rmd'
+## import c
+## import summary
+## import coef
+## import render
+## import lm
+## import data.frame
+## import rnorm
+## import rpois
+## import knit
+## import my_render
+## import reg2
+## import reg1
+## import simulate
+## import my_knit
+## build small
+## build large
+## build regression1_small
+## build regression1_large
+## build regression2_small
+## build regression2_large
+## build summ_regression1_small
+## build summ_regression1_large
+## build summ_regression2_small
+## build summ_regression2_large
+## build coef_regression1_small
+## build coef_regression1_large
+## build coef_regression2_small
+## build coef_regression2_large
+## build report_dependencies
+## build 'report.md'</code></pre>
+<pre><code>## processing file: report.Rmd</code></pre>
+<pre><code>## output file: report.md</code></pre>
+<pre><code>## build 'report.html'
+## /lrlhps/apps/pandoc/pandoc +RTS -K512m -RTS report.utf8.md --to html --from markdown+autolink_bare_uris+ascii_identifiers+tex_math_single_backslash --output report.html --smart --email-obfuscation none --self-contained --standalone --section-divs --template /home/c240390/.R/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable 'theme:bootstrap' --include-in-header /node/scratch/RtmpMkZD68/rmarkdown-str21a315f1bbb4.html --mathjax --variable 'mathjax-url:https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'</code></pre>
+<pre><code>## 
+## Output created: report.html</code></pre>
+<p>Use <code>readd()</code> and <code>loadd()</code> to see the targets you generated. (They are stored in the hidden <code>.drake/</code> folder using <a href="https://CRAN.R-project.org/package=storr">storr</a>). Other functions interact and view the cache.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">readd</span>(coef_regression2_large)</code></pre>
+<pre><code>## (Intercept)          x2 
+##  0.89247217 -0.06069947</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">loadd</span>(small)
+<span class="kw">head</span>(small)</code></pre>
+<pre><code>##            x y
+## 1  0.3410611 2
+## 2 -0.1728483 1
+## 3 -0.6123971 1
+## 4 -0.3395540 2
+## 5 -0.9519455 1</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cached</span>(small, large)</code></pre>
+<pre><code>## small large 
+##  TRUE  TRUE</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cached</span>()</code></pre>
+<pre><code>##  [1] &quot;'report.Rmd'&quot;           &quot;'report.html'&quot;         
+##  [3] &quot;'report.md'&quot;            &quot;c&quot;                     
+##  [5] &quot;coef&quot;                   &quot;coef_regression1_large&quot;
+##  [7] &quot;coef_regression1_small&quot; &quot;coef_regression2_large&quot;
+##  [9] &quot;coef_regression2_small&quot; &quot;data.frame&quot;            
+## [11] &quot;knit&quot;                   &quot;large&quot;                 
+## [13] &quot;lm&quot;                     &quot;my_knit&quot;               
+## [15] &quot;my_render&quot;              &quot;reg1&quot;                  
+## [17] &quot;reg2&quot;                   &quot;regression1_large&quot;     
+## [19] &quot;regression1_small&quot;      &quot;regression2_large&quot;     
+## [21] &quot;regression2_small&quot;      &quot;render&quot;                
+## [23] &quot;report_dependencies&quot;    &quot;rnorm&quot;                 
+## [25] &quot;rpois&quot;                  &quot;simulate&quot;              
+## [27] &quot;small&quot;                  &quot;summ_regression1_large&quot;
+## [29] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
+## [31] &quot;summ_regression2_small&quot; &quot;summary&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">built</span>()</code></pre>
+<pre><code>##  [1] &quot;'report.html'&quot;          &quot;'report.md'&quot;           
+##  [3] &quot;coef_regression1_large&quot; &quot;coef_regression1_small&quot;
+##  [5] &quot;coef_regression2_large&quot; &quot;coef_regression2_small&quot;
+##  [7] &quot;large&quot;                  &quot;regression1_large&quot;     
+##  [9] &quot;regression1_small&quot;      &quot;regression2_large&quot;     
+## [11] &quot;regression2_small&quot;      &quot;report_dependencies&quot;   
+## [13] &quot;small&quot;                  &quot;summ_regression1_large&quot;
+## [15] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
+## [17] &quot;summ_regression2_small&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">imported</span>()</code></pre>
+<pre><code>##  [1] &quot;'report.Rmd'&quot; &quot;c&quot;            &quot;coef&quot;         &quot;data.frame&quot;  
+##  [5] &quot;knit&quot;         &quot;lm&quot;           &quot;my_knit&quot;      &quot;my_render&quot;   
+##  [9] &quot;reg1&quot;         &quot;reg2&quot;         &quot;render&quot;       &quot;rnorm&quot;       
+## [13] &quot;rpois&quot;        &quot;simulate&quot;     &quot;summary&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(<span class="kw">read_plan</span>())</code></pre>
+<pre><code>##                target                                     command
+## 1         'report.md'  my_knit('report.Rmd', report_dependencies)
+## 2       'report.html' my_render('report.md', report_dependencies)
+## 3               small                                 simulate(5)
+## 4               large                                simulate(50)
+## 5 report_dependencies     c(small, large, coef_regression2_small)
+## 6   regression1_small                                 reg1(small)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># plot_graph() # plots the tree structure of your workflow plan</span>
+<span class="kw">head</span>(<span class="kw">status</span>()) <span class="co"># last call to make()</span></code></pre>
+<pre><code>##           'report.Rmd'          'report.html'            'report.md' 
+##             &quot;finished&quot;             &quot;finished&quot;             &quot;finished&quot; 
+##                      c                   coef coef_regression1_large 
+##             &quot;finished&quot;             &quot;finished&quot;             &quot;finished&quot;</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">status</span>(large)</code></pre>
+<pre><code>##      large 
+## &quot;finished&quot;</code></pre>
+<p>The next time you run <code>make(plan)</code>, nothing will be built because drake knows everything is up to date.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(plan)</code></pre>
+<pre><code>## Warning in assert_unique_names(imports = names(imports), targets = plan$target): There are targets in your workflow plan that share names with imported objects from your environment/workspace. Behavior may be unpredictable. Duplicates found:
+##   small</code></pre>
+<pre><code>## import 'report.Rmd'
+## import c
+## import summary
+## import coef
+## import render
+## import lm
+## import data.frame
+## import rnorm
+## import rpois
+## import knit
+## import my_render
+## import reg2
+## import reg1
+## import simulate
+## import my_knit</code></pre>
+<p>But if you change one of your functions, commands, or other dependencies, drake will update the affected parts of the workflow. Let’s say we want to change the quadratic term to a cubic term in our <code>reg2()</code> function.</p>
+<pre class="sourceCode r"><code class="sourceCode r">reg2 =<span class="st"> </span>function(d){
+  d$x3 =<span class="st"> </span>d$x^<span class="dv">3</span>
+  <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
+}</code></pre>
+<p>Voila! Targets depending on <code>reg2()</code> are updated, and those depending only on <code>reg1()</code> are left alone.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(plan)</code></pre>
+<pre><code>## Warning in assert_unique_names(imports = names(imports), targets = plan$target): There are targets in your workflow plan that share names with imported objects from your environment/workspace. Behavior may be unpredictable. Duplicates found:
+##   small</code></pre>
+<pre><code>## import 'report.Rmd'
+## import c
+## import summary
+## import coef
+## import render
+## import lm
+## import data.frame
+## import rnorm
+## import rpois
+## import knit
+## import my_render
+## import reg2
+## import reg1
+## import simulate
+## import my_knit
+## build regression2_small
+## build regression2_large
+## build summ_regression2_small
+## build summ_regression2_large
+## build coef_regression2_small
+## build coef_regression2_large
+## build report_dependencies
+## build 'report.md'</code></pre>
+<pre><code>## processing file: report.Rmd</code></pre>
+<pre><code>## output file: report.md</code></pre>
+<pre><code>## build 'report.html'
+## /lrlhps/apps/pandoc/pandoc +RTS -K512m -RTS report.utf8.md --to html --from markdown+autolink_bare_uris+ascii_identifiers+tex_math_single_backslash --output report.html --smart --email-obfuscation none --self-contained --standalone --section-divs --template /home/c240390/.R/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable 'theme:bootstrap' --include-in-header /node/scratch/RtmpMkZD68/rmarkdown-str21a3dcaaf66.html --mathjax --variable 'mathjax-url:https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'</code></pre>
+<pre><code>## 
+## Output created: report.html</code></pre>
+</div>
+<div id="need-to-add-new-work-on-the-fly" class="section level1">
+<h1>Need to add new work on the fly?</h1>
+<p>Just append rows to the workflow plan. If the rest of your workflow is up to date, only the new work is run.</p>
+<pre class="sourceCode r"><code class="sourceCode r">new_simulation =<span class="st"> </span>function(n){
+  <span class="kw">data.frame</span>(<span class="dt">x =</span> <span class="kw">rnorm</span>(n), <span class="dt">y =</span> <span class="kw">rnorm</span>(n))
+}
+
+additions =<span class="st"> </span><span class="kw">plan</span>(
+  <span class="dt">new_data =</span> <span class="kw">new_simulation</span>(<span class="dv">36</span>) +<span class="st"> </span><span class="kw">sqrt</span>(<span class="dv">10</span>))  
+additions</code></pre>
+<pre><code>##     target                       command
+## 1 new_data new_simulation(36) + sqrt(10)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">plan =<span class="st"> </span><span class="kw">rbind</span>(plan, additions)
+plan</code></pre>
+<pre><code>##                    target                                     command
+## 1             'report.md'  my_knit('report.Rmd', report_dependencies)
+## 2           'report.html' my_render('report.md', report_dependencies)
+## 3                   small                                 simulate(5)
+## 4                   large                                simulate(50)
+## 5     report_dependencies     c(small, large, coef_regression2_small)
+## 6       regression1_small                                 reg1(small)
+## 7       regression1_large                                 reg1(large)
+## 8       regression2_small                                 reg2(small)
+## 9       regression2_large                                 reg2(large)
+## 10 summ_regression1_small                  summary(regression1_small)
+## 11 summ_regression1_large                  summary(regression1_large)
+## 12 summ_regression2_small                  summary(regression2_small)
+## 13 summ_regression2_large                  summary(regression2_large)
+## 14 coef_regression1_small                     coef(regression1_small)
+## 15 coef_regression1_large                     coef(regression1_large)
+## 16 coef_regression2_small                     coef(regression2_small)
+## 17 coef_regression2_large                     coef(regression2_large)
+## 18               new_data               new_simulation(36) + sqrt(10)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(plan)</code></pre>
+<pre><code>## Warning in assert_unique_names(imports = names(imports), targets = plan$target): There are targets in your workflow plan that share names with imported objects from your environment/workspace. Behavior may be unpredictable. Duplicates found:
+##   small</code></pre>
+<pre><code>## import 'report.Rmd'
+## import c
+## import summary
+## import coef
+## import sqrt
+## import render
+## import lm
+## import data.frame
+## import rnorm
+## import rpois
+## import knit
+## import my_render
+## import reg2
+## import reg1
+## import simulate
+## import my_knit
+## import new_simulation
+## build new_data</code></pre>
+<p>To clean up, use <code>clean()</code>. Any targets removed from the cache will have to be rebuilt on the next call to <code>make()</code>, so only clean if you are sure you will not lose anything important.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>(small, reg1) <span class="co"># uncaches individual targets and imported objects</span>
+<span class="kw">clean</span>() <span class="co"># cleans all targets out of the cache</span>
+<span class="kw">clean</span>(<span class="dt">destroy =</span> <span class="ot">TRUE</span>) <span class="co"># removes the cache entirely</span></code></pre>
+</div>
+<div id="high-performance-parallel-computing" class="section level1">
+<h1>High-performance parallel computing</h1>
+<p>Within a single R session and a single compute node, you can spread your work over multiple parallel processes. Note: this does not work on Windows because drake uses <a href="https://stat.ethz.ch/R-manual/R-devel/library/parallel/html/mclapply.html">parallel::mclapply()</a> in the backend</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(plan, <span class="dt">parallelism =</span> <span class="st">&quot;mclapply&quot;</span>, <span class="dt">jobs =</span> <span class="dv">2</span>) <span class="co"># &quot;mclapply&quot; is default.</span>
+<span class="kw">readd</span>(coef_regression2_large)</code></pre>
+<p>Alternatively, set <code>parallelism = &quot;Makefile&quot;</code> to spread targets over multiple parallel R sessions. This gets into true distributed computing. Windows users will need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>. The following are equivalent.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">4</span>, <span class="dt">verbose =</span> <span class="ot">FALSE</span>)
+<span class="kw">make</span>(plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">command =</span> <span class="st">&quot;make&quot;</span>, <span class="dt">args =</span> <span class="st">&quot;--jobs=4 --silent&quot;</span>) </code></pre>
+<p>To distribute those <a href="http://kbroman.org/minimal_make/">Makefile</a> jobs over multiple nodes on a cluster or supercomputer, you may need a <code>shell.sh</code> file like the following</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co">#!/bin/bash</span>
+shift
+echo <span class="st">&quot;module load R/3.3.2; $*&quot;</span> |<span class="st"> </span>qsub -sync y -cwd -j y</code></pre>
+<p>Note that you may need to replace <code>R/3.3.2</code> with your version of R. Next, put your main code, including your call to <code>make(plan, ...)</code>, inside an R script such as <code>script.R</code>. To run your workflow on the cluster, use the <a href="https://www.howtogeek.com/140679/beginner-geek-how-to-start-using-the-linux-terminal/">Linux terminal</a> to enter the following.</p>
+<pre class="sourceCode r"><code class="sourceCode r">nohup nice -<span class="dv">19</span> R CMD BATCH script.R &amp;</code></pre>
+<p>Even after you log out, a background process will remain on the login node to submit new jobs through <a href="http://kbroman.org/minimal_make/">Make</a> as new targets become ready.</p>
+</div>
+<div id="a-warning-about-the-makefile" class="section level1">
+<h1>A warning about the Makefile</h1>
+<p>The <a href="http://kbroman.org/minimal_make/">Makefile</a> generated by <code>make(plan, parallelism = &quot;Makefile&quot;)</code> is not standalone. Do not run it outside of <code>drake::make()</code>. Drake uses dummy timestamp files to tell the <a href="http://kbroman.org/minimal_make/">Makefile</a> what to do, and running <code>make</code> in the <a href="https://www.howtogeek.com/140679/beginner-geek-how-to-start-using-the-linux-terminal/">terminal</a> will most likely give incorrect results.</p>
+</div>
+<div id="flexible-generation-of-workflow-plans" class="section level1">
+<h1>Flexible generation of workflow plans</h1>
+<div id="more-flexibility-for-generating-workflow-plans" class="section level2">
+<h2>More flexibility for generating workflow plans</h2>
+<p>If your workflow does not fit the rigid datasets/analyses/summaries framework, check out functions <code>expand()</code>, <code>evaluate()</code>, and <code>gather()</code>.</p>
+<pre class="sourceCode r"><code class="sourceCode r">df =<span class="st"> </span><span class="kw">plan</span>(<span class="dt">data =</span> <span class="kw">simulate</span>(<span class="dt">center =</span> MU, <span class="dt">scale =</span> SIGMA))
+df</code></pre>
+<pre><code>##   target                              command
+## 1   data simulate(center = MU, scale = SIGMA)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">df =<span class="st"> </span><span class="kw">expand</span>(df, <span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;rep1&quot;</span>, <span class="st">&quot;rep2&quot;</span>))
+df</code></pre>
+<pre><code>##      target                              command
+## 1 data_rep1 simulate(center = MU, scale = SIGMA)
+## 2 data_rep2 simulate(center = MU, scale = SIGMA)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">wildcard =</span> <span class="st">&quot;MU&quot;</span>, <span class="dt">values =</span> <span class="dv">1</span>:<span class="dv">2</span>)</code></pre>
+<pre><code>##        target                             command
+## 1 data_rep1_1 simulate(center = 1, scale = SIGMA)
+## 2 data_rep1_2 simulate(center = 2, scale = SIGMA)
+## 3 data_rep2_1 simulate(center = 1, scale = SIGMA)
+## 4 data_rep2_2 simulate(center = 2, scale = SIGMA)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">wildcard =</span> <span class="st">&quot;MU&quot;</span>, <span class="dt">values =</span> <span class="dv">1</span>:<span class="dv">2</span>, <span class="dt">expand =</span> <span class="ot">FALSE</span>)</code></pre>
+<pre><code>##      target                             command
+## 1 data_rep1 simulate(center = 1, scale = SIGMA)
+## 2 data_rep2 simulate(center = 2, scale = SIGMA)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">rules =</span> <span class="kw">list</span>(<span class="dt">MU =</span> <span class="dv">1</span>:<span class="dv">2</span>, <span class="dt">SIGMA =</span> <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="dv">1</span>)), <span class="dt">expand =</span> <span class="ot">FALSE</span>)</code></pre>
+<pre><code>##      target                           command
+## 1 data_rep1 simulate(center = 1, scale = 0.1)
+## 2 data_rep2   simulate(center = 2, scale = 1)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">rules =</span> <span class="kw">list</span>(<span class="dt">MU =</span> <span class="dv">1</span>:<span class="dv">2</span>, <span class="dt">SIGMA =</span> <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="dv">1</span>, <span class="dv">10</span>)))</code></pre>
+<pre><code>##             target                           command
+## 1  data_rep1_1_0.1 simulate(center = 1, scale = 0.1)
+## 2    data_rep1_1_1   simulate(center = 1, scale = 1)
+## 3   data_rep1_1_10  simulate(center = 1, scale = 10)
+## 4  data_rep1_2_0.1 simulate(center = 2, scale = 0.1)
+## 5    data_rep1_2_1   simulate(center = 2, scale = 1)
+## 6   data_rep1_2_10  simulate(center = 2, scale = 10)
+## 7  data_rep2_1_0.1 simulate(center = 1, scale = 0.1)
+## 8    data_rep2_1_1   simulate(center = 1, scale = 1)
+## 9   data_rep2_1_10  simulate(center = 1, scale = 10)
+## 10 data_rep2_2_0.1 simulate(center = 2, scale = 0.1)
+## 11   data_rep2_2_1   simulate(center = 2, scale = 1)
+## 12  data_rep2_2_10  simulate(center = 2, scale = 10)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">gather</span>(df)</code></pre>
+<pre><code>##   target                                            command
+## 1 target list(data_rep1 = data_rep1, data_rep2 = data_rep2)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">gather</span>(df, <span class="dt">target =</span> <span class="st">&quot;my_summaries&quot;</span>, <span class="dt">gather =</span> <span class="st">&quot;rbind&quot;</span>)</code></pre>
+<pre><code>##         target                                             command
+## 1 my_summaries rbind(data_rep1 = data_rep1, data_rep2 = data_rep2)</code></pre>
+</div>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

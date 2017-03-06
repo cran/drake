@@ -4,25 +4,30 @@
 \alias{imported}
 \title{Function \code{imported}}
 \usage{
-imported(path = getwd(), search = FALSE)
+imported(files_only = FALSE, path = getwd(), search = TRUE)
 }
 \arguments{
+\item{files_only}{logical, whether to show imported files only 
+and ignore imported objects. Since all your functions and 
+all their global variables are imported, the full list of
+imported objects could get really cumbersome.}
+
 \item{path}{Root directory of the drake project,
 or if \code{search} is \code{TRUE}, either the
 project root or a subdirectory of the project.}
 
-\item{search}{If \code{TRUE}, search parent directories
+\item{search}{logical. If \code{TRUE}, search parent directories
 to find the nearest drake cache. Otherwise, look in the
 current working directory only.}
 }
 \value{
-list of imported objects in the cache
+character vector naming the imported objects in the cache
 }
 \description{
 List all the imported objects in the drake cache
 }
 \seealso{
 \code{\link{cached}}, \code{\link{loadd}},
-\code{link{built}}
+\code{\link{built}}
 }
 

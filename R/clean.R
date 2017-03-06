@@ -1,58 +1,74 @@
 #' @title Function \code{clean}
-#' @description Cleans up all work done by \code{\link{make}}. 
-#' Your working directory (\code{\link{getwd}()}) must be the 
-#' root directory of your drake project.
-#' WARNING:
-#' This deletes ALL \code{\link{make}} output, which includes 
-#' file outputs as well as the entire drake cache. Only use \code{clean}
-#' if you're sure you won't lose any important work.
+#' @description Cleans up all work done by \code{\link{make}()}. 
+#' @details You must be in your project's working directory 
+#' or a subdirectory of it.
+#' \code{clean(search = TRUE)} searches upwards in your folder structure
+#' for the drake cache and acts on the first one it sees. Use 
+#' \code{search == FALSE} to look within the current working 
+#' directory only.
+#' WARNING: This deletes ALL work done with \code{\link{make}()}, 
+#' which includes 
+#' file targets as well as the entire drake cache. Only use \code{clean()}
+#' if you're sure you won't lose anything important.
 #' @seealso \code{\link{prune}}, \code{\link{make}}, 
-#' \code{\link{help_drake}}
 #' @export
+#' @param ... targets to remove from the cache, as names (unquoted)
+#' or character strings (quoted). Similar to \code{...} in
+#' \code{\link{remove}(...)}.
+#' @param list character vector naming targets to be removed from the
+#' cache. Similar to the \code{list} argument of \code{\link{remove}()}.
 #' @param destroy logical, whether to totally remove the drake cache. 
-#' If \code{destroy} is \code{FALSE}, only the outputs from \code{make}()
+#' If \code{destroy} is \code{FALSE}, only the targets 
+#' from \code{make}()
 #' are removed. If \code{TRUE}, the whole cache is removed, including
-#' session metadata. 
-clean = function(destroy = FALSE){
-  if(!file.exists(cache_path)) return(invisible())
-  cache = storr_rds(cache_path, mangle_key = TRUE)
-  files = cached(search = FALSE) %>% Filter(f = is_file) 
-  remove_output_files(files, cache)
-  if(destroy){
-    unlink(cache_path, recursive = TRUE)
-  } else {
-    cache$clear()
-    cache$clear(namespace = "depends")
+#' session metadata, etc.
+#' @param path Root directory of the drake project,
+#' or if \code{search} is \code{TRUE}, either the
+#' project root or a subdirectory of the project.
+#' @param search logical. If \code{TRUE}, search parent directories
+#' to find the nearest drake cache. Otherwise, look in the
+#' current working directory only.
+clean = function(..., list = character(0), destroy = FALSE,
+  path = getwd(), search = TRUE){
+  dots = match.call(expand.dots = FALSE)$...
+  targets = targets_from_dots(dots, list)
+  if(!length(targets)) 
+    return(clean_everything(destroy = destroy, 
+      path = path, search = search))
+  uncache(targets, path = path, search = search)
+  invisible()
+}
+
+clean_everything = function(destroy, path, search){
+  empty(path, search)
+  if(destroy) destroy(path, search)
+  invisible()
+}
+
+destroy = function(path, search){
+  where = cachepath
+  if(search){
+    where = find_cache(path = path)
+    if(!length(where)) return()
   }
+  unlink(where, recursive = TRUE)
   invisible()
 }
 
-#' @title Function \code{prune}
-#' @description Removes any cached output objects and drake-generated 
-#' files not listed in \code{plan$output$}. 
-#' Your working directory (\code{\link{getwd}()}) must be the
-#' root directory of your drake project.
-#' WARNING: this removes files.
-#' Only do this if you're sure you won't lose any important work.
-#' @seealso \code{\link{clean}}, \code{\link{make}},
-#' \code{\link{help_drake}}
-#' @export
-#' @param plan data frame, drake workflow like the one generated
-#' by \code{\link{example_plan}}. 
-prune = function(plan){
-  plan = sanitize(plan)
-  if(!file.exists(cache_path)) return(invisible())
-  cache = storr_rds(cache_path, mangle_key = TRUE)
-  remove = setdiff(cached(search = FALSE), plan$output)
-  files = Filter(remove, f = is_file)
-  remove_output_files(files, cache)
-  lapply(remove, function(x){
-    cache$del(x)
-    cache$del(x, namespace = "depends")
-  })
+empty = function(path, search){
+  uncache(cached(path = path, search = search),
+    path = path, search = search)
   invisible()
 }
 
-remove_output_files = Vectorize(function(file, cache){
-  if(!is_imported(file)) unlink(unquote(file), recursive = TRUE)
-}, "file")
+uncache = Vectorize(function(target, path, search){
+  cache = get_cache(path = path, search = search)
+  if(is.null(cache)) return(invisible())
+  if(is_file(target) & !is_imported(target = target, 
+    cache = cache))
+    unquote(target) %>% unlink(recursive = TRUE)
+  for(space in c("objects", "depends", "filemtime"))
+    if(target %in% cache$list(namespace = space))
+      cache$del(target, namespace = space)
+  invisible()
+}, "target")

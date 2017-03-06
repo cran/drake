@@ -4,27 +4,50 @@
 \alias{cached}
 \title{Function \code{cached}}
 \usage{
-cached(path = getwd(), search = FALSE)
+cached(..., list = character(0), no_imported_objects = FALSE,
+  path = getwd(), search = TRUE)
 }
 \arguments{
+\item{...}{objects to load from the cache, as names (unquoted)
+or character strings (quoted). Similar to \code{...} in
+\code{\link{remove}(...)}.}
+
+\item{list}{character vector naming objects to be loaded from the
+cache. Similar to the \code{list} argument of \code{\link{remove}()}.}
+
+\item{no_imported_objects}{logical, applies only when 
+no targets are specified and a list of cached targets is returned.
+If \code{no_imported_objects} is \code{TRUE}, then \code{cached()} 
+shows built targets (with commands) plus imported files,
+ignoring imported objects. Otherwise, the full collection of 
+all cached objects will be listed. Since all your functions and 
+all their global variables are imported, the full list of
+imported objects could get really cumbersome.}
+
 \item{path}{Root directory of the drake project, 
 or if \code{search} is \code{TRUE}, either the 
 project root or a subdirectory of the project.}
 
-\item{search}{If \code{TRUE}, search parent directories
+\item{search}{logical. If \code{TRUE}, search parent directories
 to find the nearest drake cache. Otherwise, look in the
 current working directory only.}
 }
 \value{
-character vector of cached items
+Either a named logical indicating whether the given
+targets or cached or a character vector listing all cached
+items, depending on whether any targets are specified
 }
 \description{
-See the cached items stored by drake.
-Load an item with \code{\link{readd}}.
+Check whether targets are in the cache.
+If no targets are specified with \code{...} or \code{list}, 
+then \code{cached()} lists 
+all the items in the drake cache.
+Read/load a cached item with \code{\link{readd}()} or 
+\code{\link{loadd}()}.
 }
 \seealso{
 \code{\link{built}}, \code{\link{imported}},
-\code{\link{readd}}, \code{\link{help_drake}}, 
+\code{\link{readd}}, \code{\link{loadd}},
 \code{\link{plan}}, \code{\link{make}}
 }
 
