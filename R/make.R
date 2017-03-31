@@ -35,14 +35,18 @@
 #' \code{parallelism} is \code{"mclapply"}, drake will use 
 #' \code{parallel::\link{mclapply}()} to distribute targets across
 #' parallel processes wherever possible. (This is not possible on
-#' Windows.) If \code{"Makefile"}, drake will write
+#' Windows.) Setting \code{parallelism} to \code{"parLapply"}
+#' is similar, except that it uses \code{parallel::\link{parLapply}()}.
+#' It works on Windows, but it requires more overhead (except
+#' if \code{jobs == 1}, in which case no "cluster" is created).
+#' If \code{"Makefile"}, drake will write
 #' and execute a Makefile to distribute targets across separate
 #' R sessions. The vignettes (\code{vignette(package = "drake")})
 #' show how to turn those R
 #' sessions into separate jobs on a cluster. Read the vignettes
 #' to learn how to take advantage of multiple nodes on a 
 #' supercomputer. WARNING: the Makefile is NOT standalone.
-#' Do not run outside of \code{\link{make}()} or \code{\link{make}()}.
+#' Do not run outside of \code{\link{make}()}.
 #' For \code{parallelism == "Makefile"}, Windows users will need
 #' to download and install Rtools.
 #' 
@@ -110,12 +114,13 @@
 #' wherever possible.
 make = function(plan, targets = possible_targets(plan),
   envir = parent.frame(), verbose = TRUE, 
-  parallelism = drake::parallelism_choices(), jobs = 1, 
+  parallelism = default_parallelism(), jobs = 1, 
   packages = (.packages()), prework = character(0),
   prepend = character(0), command = "make", 
   args = drake::default_system2_args(jobs = jobs, verbose = verbose)){
   force(envir)
-  parallelism = match.arg(parallelism)
+  parallelism = match.arg(arg = parallelism, 
+    choices = parallelism_choices())
   config = config(plan = plan, targets = targets, envir = envir, 
     verbose = verbose, parallelism = parallelism,
     jobs = jobs, packages = packages, prework = prework, 
@@ -125,7 +130,7 @@ make = function(plan, targets = possible_targets(plan),
   store_config(config)
   config$cache$set(key = "sessionInfo", value = sessionInfo(), 
     namespace = "session")
-  get(paste0("run_", parallelism))(config)
+  get(paste0("run_", parallelism), envir = getNamespace("drake"))(config)
 }
 
 next_targets = function(graph_remaining_targets){

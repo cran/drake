@@ -2,7 +2,7 @@
 % Please edit documentation in R/graph.R
 \name{build_graph}
 \alias{build_graph}
-\title{Function \code{plot_graph}}
+\title{Function \code{build_graph}}
 \usage{
 build_graph(plan, targets = plan$target, envir = parent.frame())
 }
@@ -26,4 +26,3 @@ the targets in your workflow depend on each other.
 to \code{\link{plot.igraph}()} on your graph, or just use 
 \code{\link{plot_graph}()} from the start.
 }
-

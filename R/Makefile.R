@@ -26,7 +26,7 @@ default_system2_args = function(jobs, verbose){
 
 makefile_head = function(config){
   if(length(config$prepend)) cat(config$prepend, "\n", sep = "\n")
-  cat("all: ", time_stamp(config$targets), sep = " \\\n")
+  cat("all:", time_stamp(config$targets), sep = " \\\n")
 }
 
 makefile_rules = function(config){
@@ -38,7 +38,7 @@ makefile_rules = function(config){
     cat("\n", time_stamp(target), ":", breaker, sep = "")
     if(length(deps)) cat(deps, sep = breaker)
     if(is_file(target)) 
-      target = paste0("drake::as_file(\"", eply::unquote(target), "\")")
+      target = paste0("drake::as_file(\"", unquote(target), "\")")
     else target = quotes(unquote(target), single = FALSE)
     cat("\tRscript -e 'drake::mk(", target, ")'\n", sep = "")
   }
@@ -46,8 +46,7 @@ makefile_rules = function(config){
 
 initialize = function(config){ 
   config$cache$clear(namespace = "status")
-  for(code in config$prework) 
-    eval(parse(text = code), envir = config$envir)
+  do_prework(config = config, verbosePackages = TRUE)
   imports = setdiff(config$order, config$plan$target)
   for(import in imports){ # Strict order needed. Might parallelize later.
     hash_list = hash_list(targets = import, config = config)
@@ -65,9 +64,7 @@ initialize = function(config){
 #' @param target name of target to make
 mk = function(target){
   config = get_cache()$get("config", namespace = "makefile")
-  for(code in config$prework)
-    suppressPackageStartupMessages(
-      eval(parse(text = code), envir = config$envir))
+  do_prework(config = config, verbosePackages = FALSE)
   prune_envir(targets = target, config = config)
   hash_list = hash_list(targets = target, config = config)
   old_hash = self_hash(target = target, config = config)

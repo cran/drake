@@ -98,13 +98,19 @@ load_in_report
 ## ----reportplan----------------------------------------------------------
 report = plan(
   report.md = my_knit('report.Rmd', report_dependencies),
-  report.html = my_render('report.md', report_dependencies),
+## The html report requires pandoc. Commented out.
+## report.html = my_render('report.md', report_dependencies),
   file_targets = TRUE, strings_in_dots = "filenames")
 report
 
 ## ----wholeplan-----------------------------------------------------------
 plan = rbind(report, datasets, load_in_report, analyses, results)
 plan
+
+## ----tracked-------------------------------------------------------------
+"small" %in% tracked(plan)
+tracked(plan, targets = "small")
+tracked(plan)
 
 ## ----check---------------------------------------------------------------
 check(plan)
@@ -116,12 +122,13 @@ make(plan)
 readd(coef_regression2_large)
 loadd(small)
 head(small)
+rm(small)
 cached(small, large)
 cached()
 built()
 imported()
 head(read_plan())
-# plot_graph() # plots the tree structure of your workflow plan
+# read_graph() # reads/plots the tree structure of your workflow plan
 head(status()) # last call to make()
 status(large)
 
@@ -136,6 +143,13 @@ reg2 = function(d){
 
 ## ----partialupdate-------------------------------------------------------
 make(plan)
+
+## ----trivial-------------------------------------------------------------
+reg2 = function(d){
+  d$x3 = d$x^3
+    lm(y ~ x3, data = d) # I indented here.
+}
+make(plan) 
 
 ## ----newstuff------------------------------------------------------------
 new_simulation = function(n){

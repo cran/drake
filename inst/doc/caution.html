@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<title>Acknowledgements and history</title>
+<title>Commands are NOT perfectly flexible.</title>
 
 <script type="text/javascript">
 window.onload = function() {
@@ -205,63 +205,64 @@ hr {
   <img width="200" src="../inst/logo.png" alt="" style = "border: none">
 </h1>
 
-<p>Drake is a workflow manager for R. When it runs a project, it automatically builds missing and outdated results while skipping the up-to-date output. This automation and reproducibility is important for data analysis workflows, especially large projects under heavy development.</p>
+<p>Drake tries to reproducibly track everything correctly, but there are limitations. For the most up-to-date information on unhandled edge cases, please visit the <a href="https://github.com/wlandau-lilly/drake/issues">issue tracker</a>, where you can submit your own bug reports as well. Here, I will try to address some of the main issues to keep in mind for writing reproducible workflows safely.</p>
 
-<h1>Acknowledgements and history</h1>
+<h2>Commands are NOT perfectly flexible.</h2>
 
-<p>The original idea of a time-saving reproducible build system extends back decades to <a href="http://kbroman.org/minimal_make/">GNU Make</a>, which today helps <a href="http://blog.kaggle.com/2012/10/15/make-for-data-scientists/">data scientists</a> as well as the original user base of complied-language programmers. More recently, <a href="http://richfitz.github.io/">Rich FitzJohn</a> created <a href="https://github.com/richfitz/remake">remake</a>, a breakthrough reimagining of <a href="http://kbroman.org/minimal_make/">Make</a> for R and the most important inspiration for drake. Drake is a fresh reinterpretation of some of  <a href="https://github.com/richfitz/remake">remake</a>&#39;s pioneering fundamental concepts, scaled up for computationally-demanding workflows. Relative to <a href="https://github.com/richfitz/remake">remake</a>, some of drake&#39;s most prominent distinguishing features at the time of writing this document are</p>
+<p>In your workflow plan data frame (produced by <code>plan()</code> and accepted by <code>make()</code>), your commands can usually be flexible R expressions.</p>
 
-<ul>
-<li>a more convenient, R-focused, <a href="http://yaml.org/">YAML</a>-free user interface.</li>
-<li>generative templating to plan large workflows without much typing.</li>
-<li>smoother, safer user-side handling of external files and nested commands.</li>
-<li>distributed computing though <strong>seamless</strong> integration with <a href="http://kbroman.org/minimal_make/">Makefiles</a>.</li>
-<li>single-session multiprocess parallel computing via <code>parallel::parLapply()</code> and <code>parallel::mclapply()</code>. (The user can choose either.)</li>
-<li>robust detection of dependencies from users&#39; packages.</li>
-<li>a wholehearted embrace of <a href="http://igraph.org/r/">igraph</a> to drive the backend.</li>
-</ul>
-
-<p>Thanks also to <a href="http://krlmlr.github.io/">Kirill M&uuml;ller</a> and <a href="http://danielfalster.com/">Daniel Falster</a>. They contributed code patches and enhancement ideas to my <a href="https://github.com/wlandau/parallelRemake">parallelRemake</a> and <a href="https://github.com/wlandau/remakeGenerator">remakeGenerator</a> packages, which I have now subsumed into drake.</p>
-
-<h1>Windows</h1>
-
-<p>Drake presents <code>mclapply()</code> as one of two single-session parallel computing backends. Unfortunately, <code>mclapply()</code> cannot run multiple parallel jobs on Windows, so Windows users should use set <code>parallelism = &quot;parLapply&quot;</code> rather than <code>parallelism = &quot;mclapply&quot;</code> inside <code>make()</code> (already the Windows default). For true distributed parallel computing over multiple R sessions, Windows users need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>. This is because drake runs <a href="http://kbroman.org/minimal_make/">Makefiles</a> with <code>system2(&quot;make&quot;, ...)</code>.</p>
-
-<h1>Tutorials</h1>
-
-<p>The <a href="https://CRAN.R-project.org/package=drake">CRAN page</a> links to multiple tutorials and vignettes. With drake installed, you can load any of the vignettes 
-in an R session.</p>
-
-<pre><code class="r">vignette(package = &quot;drake&quot;) # List the vignettes.
-vignette(&quot;drake&quot;) # High-level intro.
-vignette(&quot;quickstart&quot;) # Walk through a simple example.
-vignette(&quot;caution&quot;) # Drake is not perfect. Read this to be safe.
+<pre><code class="r">plan(target1 = 1 + 1 - sqrt(sqrt(3)), 
+     target2 = my_function(web_scraped_data) %&gt;% my_tidy)
 </code></pre>
 
-<h1>Quickstart examples</h1>
-
-<p>Drake has small self-contained built-in examples. To see the names of the available examples, use</p>
-
-<pre><code class="r">examples_drake()
+<pre><code>##    target                                   command
+## 1 target1                     1 + 1 - sqrt(sqrt(3))
+## 2 target2 my_function(web_scraped_data) %&gt;% my_tidy
 </code></pre>
 
-<pre><code>## [1] &quot;basic&quot;
+<p>However, please try to avoid formulas and function definitions in your commands. You may be able to get away with <code>plan(f = function(x){x + 1})</code> or <code>plan(f = y ~ x)</code> in some use cases, but be careful, this could cause problems in general. Rather than using commands for this, is better to define functions and formulas in your workspace before calling <code>make()</code>. (Alternatively, use the <code>envir</code> argument to <code>make()</code> for more control.)</p>
+
+<h2>Minimize the side effects of your commands.</h2>
+
+<p>Consider the workflow plan data frame below.</p>
+
+<pre><code class="r">plan(list = c(a = &quot;x &lt;- 1; return(x)&quot;))
 </code></pre>
 
-<p>Then use <code>example_drake()</code> to write the files for the example to your working directory.</p>
-
-<pre><code class="r">example_drake(&quot;basic&quot;)
+<pre><code>##   target           command
+## 1      a x &lt;- 1; return(x)
 </code></pre>
 
-<p>Step through the code files to get started.</p>
+<p>Here, <code>x</code> is a mere side effect of the command, and it will not be reproducibly tracked. And if you add to the workflow to include a proper target called <code>x</code>, the results of your analysis may not be correct. Side effects of commands can be unpredictable, so please try to minimize them.</p>
 
-<h1>Words of caution</h1>
+<h2>Do not change your working directory.</h2>
 
-<p>Drake tries to reproducibly track everything and make other obviously good decisions, but there are limitations. For example, in some edge cases, it is possible to trick drake into ignoring dependencies. Please read the &ldquo;caution&rdquo; vignette to use drake safely (<code>vignette(&quot;caution&quot;)</code>, also linked from the <a href="https://CRAN.R-project.org/package=drake">CRAN page</a> under &ldquo;vignettes&rdquo;).</p>
+<p>During the execution workflow of a drake project, please do not change your working directory (with <code>setwd()</code>, for example). At the very least, if you do change your working directory during a command in your workflow plan, please return to the original working directory before the command is completed. Drake relies on a hidden cache (the <code>.drake/</code> folder) at the root of your project, so navigating to a different folder will confuse drake.</p>
 
-<h1>Help and troubleshooting</h1>
+<h2>Directories (folders) are not reproducibly tracked.</h2>
 
-<p>For troubleshooting, please refer to <a href="https://github.com/wlandau-lilly/drake/blob/master/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> on the <a href="https://github.com/wlandau-lilly/drake">GitHub page</a> for instructions.</p>
+<p>Yes, you can declare a file target or input file by enclosing it in single quotes in your workflow plan data frame. But entire directories (i.e. folders) cannot yet be tracked this way. This is a trickier problem to solve, and lots of individual edge cases need to be ironed out before I can deliver a clean, reliable implementation. Please see <a href="https://github.com/wlandau-lilly/drake/issues/12">issue 12</a> for updates and a discussion.</p>
+
+<h2>Dependencies are not tracked in some edge cases.</h2>
+
+<p>First of all, if you are ever unsure about what exactly is reproducibly tracked, use the <code>tracked()</code> function to list the names of all reproducibly tracked objects, functions, targets, files, etc. Alternatively, use <code>build_graph()</code> to obtain an <a href="http://igraph.org/">igraph</a> object of the dependency structure of your workflow, and use <code>plot_graph()</code> to make a plot of the graph. </p>
+
+<p>Drake uses <a href="https://cran.r-project.org/package=codetools">codetools::findGlobals()</a> in the backend to look for dependencies, which can be fooled. For example, suppose you have a custom function <code>f</code> in your workspace.</p>
+
+<pre><code class="r">f &lt;- function(){
+  assign(&quot;a&quot;, 1)
+  b = get(&quot;x&quot;, envir = globalenv())
+  digest::digest(readLines(&#39;my_file.txt&#39;))
+}
+</code></pre>
+
+<p>When drake looks for the dependencies of <code>f</code>, it will fail to recognize the objects <code>a</code> and <code>x</code>, the function <code>digest()</code>, and the file <code>&#39;my_file.txt&#39;</code>. Objects <code>a</code> and <code>x</code> are referenced with quoted strings, not symbols, which tricks drake. The function <code>digest()</code> is referenced with the scoping rule <code>::</code>, so <a href="https://cran.r-project.org/package=codetools">codetools::findGlobals()</a> does not detect it. Lastly, because <code>&#39;my_file.txt&#39;</code> is inside a function and not a command in your workflow plan data frame, drake will not reproducibly track it.</p>
+
+<p>When it comes to commands in your workflow plan data frame, there are similar issues. It is possible to use double-quoted strings and the scoping operator <code>::</code> to trick drake into overlooking objects, functions, and files that should be dependencies. Use the <code>check()</code> function to scan the workflow plan for double-quoted strings and print out messages telling you where they occur.</p>
+
+<h2>Proper Makefiles are not standalone.</h2>
+
+<p>The <a href="http://kbroman.org/minimal_make/">Makefile</a> generated by <code>make(plan, parallelism = &quot;Makefile&quot;)</code> is not standalone. Do not run it outside of <code>drake::make()</code>. Drake uses dummy timestamp files to tell the <a href="http://kbroman.org/minimal_make/">Makefile</a> what to do, and running <code>make</code> in the <a href="https://www.howtogeek.com/140679/beginner-geek-how-to-start-using-the-linux-terminal/">terminal</a> will most likely give incorrect results.</p>
 
 </body>
 

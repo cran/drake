@@ -97,13 +97,25 @@ load_in_report = plan(
 
 # External file targets and dependencies should be single-quoted.
 # Use double quotes to remove any special meaning from character strings.
+# Single quotes inside imported functions are ignored, so this mechanism
+# only works inside the workflow plan data frame.
+# WARNING: drake cannot track entire directories (folders).
 report = plan(
   report.md = my_knit('report.Rmd', report_dependencies),
-  report.html = my_render('report.md', report_dependencies),
+## The html report requires pandoc. Commented out.
+## report.html = my_render('report.md', report_dependencies), 
   file_targets = TRUE, strings_in_dots = "filenames")
 
 # Row order doesn't matter in the workflow plan.
 plan = rbind(report, datasets, load_in_report, analyses, results)
+
+# Use tracked() to verify the objects, functions, targets, et. 
+# that drake tries to reproducibly track. It is wise to verify this
+# for yourself because drake can be tricked in some edge cases. 
+# See vignette("caution").
+"small" %in% tracked(plan)
+tracked(plan, targets = "small")
+tracked(plan)
 
 # Check the plan for obvious errors and pitfalls.
 check(plan)
@@ -121,7 +133,7 @@ make(plan) # build everything from scratch
 # Now, open and read report.html in a browser.
 
 # see also: loadd(), cached(), imported(), and built()
-readd(coef_regression2_large) 
+readd(coef_regression2_large) # Read target from the cache.
 
 # Everything is up to date.
 make(plan)
@@ -131,7 +143,17 @@ reg2 = function(d){
   d$x3 = d$x^3
   lm(y ~ x3, data = d)
 }
+
 make(plan) # Drake only runs targets that depend on reg2().
+
+# For functions and plan$command, 
+# trivial changes like comments and whitespace are ignored.
+reg2 = function(d){
+  d$x3 = d$x^3
+    lm(y ~ x3, data = d) # I indented here.
+}
+
+make(plan) # Nothing substantial changed. Everything up to date.
 
 #########################################
 ### NEED TO ADD MORE WORK ON THE FLY? ###
@@ -160,8 +182,8 @@ clean() # report.html and report.md are removed, but report.Rmd stays.
 ### ONE R SESSION WITH 2 PARALLEL PROCESSES ###
 ###############################################
 
-# Does not work on Windows.
-make(plan, parallelism = "mclapply", jobs = 2) # "mclapply" is default.
+make(plan, jobs = 2) # parallelism == "parLapply" for Windows
+# make(plan, parallelism = "mclapply", jobs = 2) # Not for Windows
 readd(coef_regression2_large) # see also: loadd(), cached()
 
 # All up to date.
@@ -183,17 +205,20 @@ clean() # Start over next time.
 
 ######################################################
 ### DISTRIBUTED COMPUTING: FOUR NODES ON A CLUSTER ###
+### ONLY ATTEMPT ON A PROPER COMPUTING CLUSTER     ###
 ######################################################
+
+if(FALSE){ # Only attempt this part on a proper computing cluster.
 
 # The file shell.sh tells the Makefile to submit jobs on a cluster.
 # You could write this file by hand if you wanted.
-# You may have to change 'module load R/3.3.2' to another 
-# version of R that has your packages.
+# You may have to change 'module load R' to a command that
+# loads a specific version of R.
 
 writeLines(c(
   "#!/bin/bash",
   "shift",
-  "echo \"module load R/3.3.2; $*\" | qsub -sync y -cwd -j y"
+  "echo \"module load R; $*\" | qsub -sync y -cwd -j y"
 ), "shell.sh")
 
 system2("chmod", args = c("+x", "shell.sh")) # permission to execute
@@ -212,6 +237,8 @@ readd(coef_regression2_large) # see also: loadd(), cached()
 # Everything is up to date, so no jobs should be submitted.
 make(plan, parallelism = "Makefile", jobs = 4, 
   prepend = "SHELL=./shell.sh")
+
+} # if(FALSE)
 
 ###########################
 ### CLEAN UP ALL OUTPUT ###
