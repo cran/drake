@@ -202,7 +202,7 @@ hr {
 
 <body>
 <h1 align="center">
-  <img width="200" src="../inst/logo.png" alt="" style = "border: none">
+  <img width="200" src="logo.png" alt="" style = "border: none">
 </h1>
 
 <h1>Quickstart examples</h1>
@@ -380,7 +380,7 @@ load_in_report
 ## 1 report_dependencies c(small, large, coef_regression2_small)
 </code></pre>
 
-<p>In the commands to render the report, keep in mind the rule for working with files: use single quotes to declare external file targets and dependencies, and use double quotes to remove any special meaning from character strings. Single quotes inside any custom functions are ignored, so this mechanism only works for your workflow plan data frame. Also, please be aware that drake cannot track entire directories (folders).</p>
+<p>In the commands to render the report, keep in mind the rule for working with files: use single quotes to declare external file targets and dependencies, and use double quotes to remove any special meaning from character strings. Single quotes inside any custom functions are ignored, so this mechanism only works for your workflow plan data frame. To help automate the correct quoting, you may wish to use the functions <code>quotes()</code>, <code>unquote()</code>, and <code>strings()</code> from the <code>eply</code> package. Also, please be aware that drake cannot track entire directories (folders).</p>
 
 <pre><code class="r">report = plan(
   report.md = my_knit(&#39;report.Rmd&#39;, report_dependencies),
@@ -508,19 +508,19 @@ plan
 </code></pre>
 
 <pre><code>## (Intercept)          x2 
-##  1.20982042  0.05446556
+##   0.9214072  -0.0321417
 </code></pre>
 
 <pre><code class="r">loadd(small)
 head(small)
 </code></pre>
 
-<pre><code>##              x y
-## 1 -0.026859063 0
-## 2 -0.382923352 1
-## 3 -0.008254466 3
-## 4  1.507813110 1
-## 5 -0.084409867 1
+<pre><code>##            x y
+## 1 0.68623897 1
+## 2 0.47225869 2
+## 3 0.24119171 2
+## 4 1.56944167 0
+## 5 0.04091244 1
 </code></pre>
 
 <pre><code class="r">rm(small)

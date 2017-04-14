@@ -1,3 +1,4 @@
+#' @importFrom base64url base64_urlencode
 #' @importFrom codetools findGlobals
 #' @importFrom crayon make_style
 #' @importFrom digest digest
@@ -11,7 +12,7 @@
 #' @importFrom plyr ddply
 #' @importFrom R.utils isPackageLoaded
 #' @importFrom stats complete.cases rnorm setNames
-#' @importFrom storr storr_rds
+#' @importFrom storr encode64 storr_rds
 #' @importFrom stringi stri_extract_all_regex stri_rand_strings
 #' @importFrom stringr str_split str_trim
 #' @importFrom testthat expect_true

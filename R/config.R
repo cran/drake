@@ -2,7 +2,7 @@ config = function(plan, targets, envir, jobs,
   parallelism = drake::parallelism_choices(), verbose, packages,
   prework, prepend, command, args){
   parallelism = match.arg(parallelism)
-  plan = fix_deprecated_plan_names(plan)
+  plan = as.data.frame(plan) %>% fix_deprecated_plan_names
   targets = intersect(targets, plan$target)
   prework = add_packages_to_prework(packages = packages,
     prework = prework)
@@ -18,10 +18,12 @@ config = function(plan, targets, envir, jobs,
   list(plan = plan, targets = targets, envir = envir, cache = cache,
     parallelism = parallelism, jobs = jobs, verbose = verbose,
     prepend = prepend, prework = prework, command = command, args = args,
-    graph = graph, order = order)
+    graph = graph, order = order, inventory = cache$list(),
+    inventory_filemtime = cache$list(namespace = "filemtime"))
 }
 
 add_packages_to_prework = function(packages, prework){
+  packages = c("methods", packages) %>% unique
   if(!length(packages)) return(prework)
   package_list = deparse(packages) %>% paste(collapse = "\n")
   paste0("if(!R.utils::isPackageLoaded(\"", packages, "\")) library(",
@@ -30,15 +32,22 @@ add_packages_to_prework = function(packages, prework){
 }
 
 do_prework = function(config, verbosePackages){
-  wrapper = ifelse(verbosePackages, invisible, suppressPackageStartupMessages)
+  wrapper = ifelse(verbosePackages, invisible, 
+    suppressPackageStartupMessages)
   for(code in config$prework)
     wrapper(eval(parse(text = code), envir = config$envir))
 }
 
-possible_targets = function(plan){c(
-  as.character(plan$output),
-  as.character(plan$target)
-)}
+inventory = function(config){
+  config$inventory = config$cache$list()
+  config$inventory_filemtime = config$cache$list(namespace = "filemtime")
+  config
+}
+
+possible_targets = function(plan){
+  plan = as.data.frame(plan)
+  c(as.character(plan$output), as.character(plan$target))
+}
 
 store_config = function(config){
   save_these = setdiff(names(config), "envir") # envir could get massive.

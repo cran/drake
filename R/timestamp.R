@@ -12,7 +12,9 @@ time_stamps = function(config){
 }
 
 time_stamp = function(x){
-  file.path(time_stamp_dir, x)
+  if(!length(x)) return(character(0))
+  key = paste0("t", base64_urlencode(x)) # must begin with alphanumeric
+  file.path(time_stamp_dir, key)
 }
 
 write_time_stamp = function(target){
