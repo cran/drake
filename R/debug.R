@@ -1,6 +1,9 @@
 dbug = function(clean = TRUE){
   if(clean) dclean()
-  envir = new.env(parent = globalenv())
+
+  envir = new.env(parent = globalenv()) # for shipped unit tests
+#  envir = globalenv() # needs to work here too
+
   imports = c(
     "f <- function(x) {g(x) + a}",
     "g <- function(y) {h(y) + b}",
@@ -27,7 +30,7 @@ dbug = function(clean = TRUE){
   ))
   config = config(plan, targets = plan$target, envir = envir, 
     parallelism = "mclapply", jobs = 1, prepend = character(0),
-    verbose = TRUE, packages = character(0), prework = character(0), 
+    verbose = FALSE, packages = character(0), prework = character(0), 
     command = "make", args = character(0))
   config
 }

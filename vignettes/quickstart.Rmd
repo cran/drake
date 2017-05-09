@@ -10,9 +10,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-<h1 align="center">
-  <img width="200" src="logo.png" alt="" style = "border: none">
-</h1>
+![](logo-small.png)
 
 ```{r, echo = F}
 suppressMessages(suppressWarnings(library(drake)))
@@ -199,7 +197,13 @@ Use `make(plan)` to run your workflow.
 make(plan)
 ```
 
-Use `readd()` and `loadd()` to see the targets you generated. (They are stored in the hidden `.drake/` folder using [storr](https://CRAN.R-project.org/package=storr)). Other functions interact and view the cache.
+The non-file dependencies of your last target are already loaded in your workspace.
+
+```{r autoload}
+"report_dependencies" %in% ls() # Should be TRUE.
+```
+
+Use `readd()` and `loadd()` to load more targets. (They are stored in the hidden `.drake/` folder using [storr](https://CRAN.R-project.org/package=storr)). Other functions interact and view the cache.
 
 ```{r cache}
 readd(coef_regression2_large)
@@ -212,7 +216,8 @@ built()
 imported()
 head(read_plan())
 # read_graph() # reads/plots the tree structure of your workflow plan
-head(status()) # last call to make()
+head(status()) # What did you last build? Did it finish?
+# session(): sessionInfo() of the last call to make()
 status(large)
 ```
 
@@ -284,7 +289,7 @@ make(plan, parallelism = "mclapply", jobs = 2) # not for Windows
 readd(coef_regression2_large)
 ```
 
-Alternatively, set `parallelism = "Makefile"` to spread targets over multiple parallel R sessions. This gets into true distributed computing. Windows users will need to download and install [`Rtools`](https://cran.r-project.org/bin/windows/Rtools/). The following are equivalent.
+Alternatively, set `parallelism = "Makefile"` to spread targets over multiple parallel R sessions. This gets into true distributed computing. Windows users will need to download and install [`Rtools`](https://cran.r-project.org/bin/windows/Rtools/), and everyone else just needs to make sure that [Make](https://www.gnu.org/software/make/) or an equivalent program is installed. The following calls to `drake::make()` are equivalent.
 
 ```r
 make(plan, parallelism = "Makefile", jobs = 4, verbose = FALSE)

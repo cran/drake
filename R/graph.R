@@ -7,10 +7,12 @@
 #' \code{\link{make}()}.
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}.
-plot_graph = function(plan, targets = plan$target, envir = parent.frame()){
+#' @param verbose logical, whether to output messages to the console.
+plot_graph = function(plan, targets = drake::possible_targets(plan), 
+  envir = parent.frame(), verbose = TRUE){
   force(envir)
-  build_graph(plan = plan, targets = targets, envir = envir) %>%
-    plot.igraph
+  build_graph(plan = plan, targets = targets, envir = envir,
+    verbose = verbose) %>% plot.igraph
 }
 
 #' @title Function \code{build_graph}
@@ -27,11 +29,15 @@ plot_graph = function(plan, targets = plan$target, envir = parent.frame()){
 #' \code{\link{make}()}.
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}.
-build_graph = function(plan, targets = plan$target, 
-  envir = parent.frame()){
+#' @param verbose logical, whether to output messages to the console.
+build_graph = function(plan, targets = drake::possible_targets(plan), 
+  envir = parent.frame(), verbose = TRUE){
   force(envir)
+  plan = sanitize_plan(plan)
+  targets = sanitize_targets(plan, targets)
   imports = as.list(envir)
-  assert_unique_names(imports = names(imports), targets = plan$target)
+  assert_unique_names(imports = names(imports), targets = plan$target,
+    envir = envir, verbose = verbose)
   import_deps = lapply(imports, import_dependencies)
   command_deps = lapply(plan$command, command_dependencies)
   names(command_deps) = plan$target
@@ -61,23 +67,22 @@ build_graph = function(plan, targets = plan$target,
 #' \code{\link{make}()}.
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}.
-tracked = function(plan, targets = plan$target, envir = parent.frame()){
+tracked = function(plan, targets = drake::possible_targets(plan),
+  envir = parent.frame()){
   force(envir)
   graph = build_graph(plan = plan, targets = targets, envir = envir)
   V(graph)$name
 }
 
-assert_unique_names = function(imports, targets){
+assert_unique_names = function(imports, targets, envir, verbose){
   if(anyDuplicated(targets)){
     duplicated = which(table(targets) > 1) %>% names
-    stop("duplicate targets in workflow plan:\n", 
+    stop("Duplicate targets in workflow plan:\n", 
       multiline_message(duplicated))
-  } 
+  }
   common = intersect(imports, targets)
-  if(length(common))
-    warning(paste("There are targets in your workflow plan that share",
-      "names with imported objects from your environment/workspace.",
-      "Behavior may be unpredictable.",
-      "Duplicates found:\n"),
-      multiline_message(common))
+  if(verbose & length(common))
+    cat("Unloading targets from environment:\n",
+     multiline_message(common), "\n", sep = "")
+  remove(list = common, envir = envir)
 }

@@ -1,268 +1,137 @@
 <!DOCTYPE html>
-<html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<title>Acknowledgements and history</title>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
 
-<script type="text/javascript">
-window.onload = function() {
-  var imgs = document.getElementsByTagName('img'), i, img;
-  for (i = 0; i < imgs.length; i++) {
-    img = imgs[i];
-    // center an image if it is the only element of its parent
-    if (img.parentElement.childElementCount === 1)
-      img.parentElement.style.textAlign = 'center';
-  }
-};
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Styles for R syntax highlighter -->
+<meta name="author" content="William Michael Landau" />
+
+<meta name="date" content="2017-05-09" />
+
+<title>drake</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
 <style type="text/css">
-   pre .operator,
-   pre .paren {
-     color: rgb(104, 118, 135)
-   }
-
-   pre .literal {
-     color: #990073
-   }
-
-   pre .number {
-     color: #099;
-   }
-
-   pre .comment {
-     color: #998;
-     font-style: italic
-   }
-
-   pre .keyword {
-     color: #900;
-     font-weight: bold
-   }
-
-   pre .identifier {
-     color: rgb(0, 0, 0);
-   }
-
-   pre .string {
-     color: #d14;
-   }
-</style>
-
-<!-- R syntax highlighter -->
-<script type="text/javascript">
-var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/</gm,"&lt;")}function f(r,q,p){return RegExp(q,"m"+(r.cI?"i":"")+(p?"g":""))}function b(r){for(var p=0;p<r.childNodes.length;p++){var q=r.childNodes[p];if(q.nodeName=="CODE"){return q}if(!(q.nodeType==3&&q.nodeValue.match(/\s+/))){break}}}function h(t,s){var p="";for(var r=0;r<t.childNodes.length;r++){if(t.childNodes[r].nodeType==3){var q=t.childNodes[r].nodeValue;if(s){q=q.replace(/\n/g,"")}p+=q}else{if(t.childNodes[r].nodeName=="BR"){p+="\n"}else{p+=h(t.childNodes[r])}}}if(/MSIE [678]/.test(navigator.userAgent)){p=p.replace(/\r/g,"\n")}return p}function a(s){var r=s.className.split(/\s+/);r=r.concat(s.parentNode.className.split(/\s+/));for(var q=0;q<r.length;q++){var p=r[q].replace(/^language-/,"");if(e[p]){return p}}}function c(q){var p=[];(function(s,t){for(var r=0;r<s.childNodes.length;r++){if(s.childNodes[r].nodeType==3){t+=s.childNodes[r].nodeValue.length}else{if(s.childNodes[r].nodeName=="BR"){t+=1}else{if(s.childNodes[r].nodeType==1){p.push({event:"start",offset:t,node:s.childNodes[r]});t=arguments.callee(s.childNodes[r],t);p.push({event:"stop",offset:t,node:s.childNodes[r]})}}}}return t})(q,0);return p}function k(y,w,x){var q=0;var z="";var s=[];function u(){if(y.length&&w.length){if(y[0].offset!=w[0].offset){return(y[0].offset<w[0].offset)?y:w}else{return w[0].event=="start"?y:w}}else{return y.length?y:w}}function t(D){var A="<"+D.nodeName.toLowerCase();for(var B=0;B<D.attributes.length;B++){var C=D.attributes[B];A+=" "+C.nodeName.toLowerCase();if(C.value!==undefined&&C.value!==false&&C.value!==null){A+='="'+m(C.value)+'"'}}return A+">"}while(y.length||w.length){var v=u().splice(0,1)[0];z+=m(x.substr(q,v.offset-q));q=v.offset;if(v.event=="start"){z+=t(v.node);s.push(v.node)}else{if(v.event=="stop"){var p,r=s.length;do{r--;p=s[r];z+=("</"+p.nodeName.toLowerCase()+">")}while(p!=v.node);s.splice(r,1);while(r<s.length){z+=t(s[r]);r++}}}}return z+m(x.substr(q))}function j(){function q(x,y,v){if(x.compiled){return}var u;var s=[];if(x.k){x.lR=f(y,x.l||hljs.IR,true);for(var w in x.k){if(!x.k.hasOwnProperty(w)){continue}if(x.k[w] instanceof Object){u=x.k[w]}else{u=x.k;w="keyword"}for(var r in u){if(!u.hasOwnProperty(r)){continue}x.k[r]=[w,u[r]];s.push(r)}}}if(!v){if(x.bWK){x.b="\\b("+s.join("|")+")\\s"}x.bR=f(y,x.b?x.b:"\\B|\\b");if(!x.e&&!x.eW){x.e="\\B|\\b"}if(x.e){x.eR=f(y,x.e)}}if(x.i){x.iR=f(y,x.i)}if(x.r===undefined){x.r=1}if(!x.c){x.c=[]}x.compiled=true;for(var t=0;t<x.c.length;t++){if(x.c[t]=="self"){x.c[t]=x}q(x.c[t],y,false)}if(x.starts){q(x.starts,y,false)}}for(var p in e){if(!e.hasOwnProperty(p)){continue}q(e[p].dM,e[p],true)}}function d(B,C){if(!j.called){j();j.called=true}function q(r,M){for(var L=0;L<M.c.length;L++){if((M.c[L].bR.exec(r)||[null])[0]==r){return M.c[L]}}}function v(L,r){if(D[L].e&&D[L].eR.test(r)){return 1}if(D[L].eW){var M=v(L-1,r);return M?M+1:0}return 0}function w(r,L){return L.i&&L.iR.test(r)}function K(N,O){var M=[];for(var L=0;L<N.c.length;L++){M.push(N.c[L].b)}var r=D.length-1;do{if(D[r].e){M.push(D[r].e)}r--}while(D[r+1].eW);if(N.i){M.push(N.i)}return f(O,M.join("|"),true)}function p(M,L){var N=D[D.length-1];if(!N.t){N.t=K(N,E)}N.t.lastIndex=L;var r=N.t.exec(M);return r?[M.substr(L,r.index-L),r[0],false]:[M.substr(L),"",true]}function z(N,r){var L=E.cI?r[0].toLowerCase():r[0];var M=N.k[L];if(M&&M instanceof Array){return M}return false}function F(L,P){L=m(L);if(!P.k){return L}var r="";var O=0;P.lR.lastIndex=0;var M=P.lR.exec(L);while(M){r+=L.substr(O,M.index-O);var N=z(P,M);if(N){x+=N[1];r+='<span class="'+N[0]+'">'+M[0]+"</span>"}else{r+=M[0]}O=P.lR.lastIndex;M=P.lR.exec(L)}return r+L.substr(O,L.length-O)}function J(L,M){if(M.sL&&e[M.sL]){var r=d(M.sL,L);x+=r.keyword_count;return r.value}else{return F(L,M)}}function I(M,r){var L=M.cN?'<span class="'+M.cN+'">':"";if(M.rB){y+=L;M.buffer=""}else{if(M.eB){y+=m(r)+L;M.buffer=""}else{y+=L;M.buffer=r}}D.push(M);A+=M.r}function G(N,M,Q){var R=D[D.length-1];if(Q){y+=J(R.buffer+N,R);return false}var P=q(M,R);if(P){y+=J(R.buffer+N,R);I(P,M);return P.rB}var L=v(D.length-1,M);if(L){var O=R.cN?"</span>":"";if(R.rE){y+=J(R.buffer+N,R)+O}else{if(R.eE){y+=J(R.buffer+N,R)+O+m(M)}else{y+=J(R.buffer+N+M,R)+O}}while(L>1){O=D[D.length-2].cN?"</span>":"";y+=O;L--;D.length--}var r=D[D.length-1];D.length--;D[D.length-1].buffer="";if(r.starts){I(r.starts,"")}return R.rE}if(w(M,R)){throw"Illegal"}}var E=e[B];var D=[E.dM];var A=0;var x=0;var y="";try{var s,u=0;E.dM.buffer="";do{s=p(C,u);var t=G(s[0],s[1],s[2]);u+=s[0].length;if(!t){u+=s[1].length}}while(!s[2]);if(D.length>1){throw"Illegal"}return{r:A,keyword_count:x,value:y}}catch(H){if(H=="Illegal"){return{r:0,keyword_count:0,value:m(C)}}else{throw H}}}function g(t){var p={keyword_count:0,r:0,value:m(t)};var r=p;for(var q in e){if(!e.hasOwnProperty(q)){continue}var s=d(q,t);s.language=q;if(s.keyword_count+s.r>r.keyword_count+r.r){r=s}if(s.keyword_count+s.r>p.keyword_count+p.r){r=p;p=s}}if(r.language){p.second_best=r}return p}function i(r,q,p){if(q){r=r.replace(/^((<[^>]+>|\t)+)/gm,function(t,w,v,u){return w.replace(/\t/g,q)})}if(p){r=r.replace(/\n/g,"<br>")}return r}function n(t,w,r){var x=h(t,r);var v=a(t);var y,s;if(v){y=d(v,x)}else{return}var q=c(t);if(q.length){s=document.createElement("pre");s.innerHTML=y.value;y.value=k(q,c(s),x)}y.value=i(y.value,w,r);var u=t.className;if(!u.match("(\\s|^)(language-)?"+v+"(\\s|$)")){u=u?(u+" "+v):v}if(/MSIE [678]/.test(navigator.userAgent)&&t.tagName=="CODE"&&t.parentNode.tagName=="PRE"){s=t.parentNode;var p=document.createElement("div");p.innerHTML="<pre><code>"+y.value+"</code></pre>";t=p.firstChild.firstChild;p.firstChild.cN=s.cN;s.parentNode.replaceChild(p.firstChild,s)}else{t.innerHTML=y.value}t.className=u;t.result={language:v,kw:y.keyword_count,re:y.r};if(y.second_best){t.second_best={language:y.second_best.language,kw:y.second_best.keyword_count,re:y.second_best.r}}}function o(){if(o.called){return}o.called=true;var r=document.getElementsByTagName("pre");for(var p=0;p<r.length;p++){var q=b(r[p]);if(q){n(q,hljs.tabReplace)}}}function l(){if(window.addEventListener){window.addEventListener("DOMContentLoaded",o,false);window.addEventListener("load",o,false)}else{if(window.attachEvent){window.attachEvent("onload",o)}else{window.onload=o}}}var e={};this.LANGUAGES=e;this.highlight=d;this.highlightAuto=g;this.fixMarkup=i;this.highlightBlock=n;this.initHighlighting=o;this.initHighlightingOnLoad=l;this.IR="[a-zA-Z][a-zA-Z0-9_]*";this.UIR="[a-zA-Z_][a-zA-Z0-9_]*";this.NR="\\b\\d+(\\.\\d+)?";this.CNR="\\b(0[xX][a-fA-F0-9]+|(\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";this.BNR="\\b(0b[01]+)";this.RSR="!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|\\.|-|-=|/|/=|:|;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";this.ER="(?![\\s\\S])";this.BE={b:"\\\\.",r:0};this.ASM={cN:"string",b:"'",e:"'",i:"\\n",c:[this.BE],r:0};this.QSM={cN:"string",b:'"',e:'"',i:"\\n",c:[this.BE],r:0};this.CLCM={cN:"comment",b:"//",e:"$"};this.CBLCLM={cN:"comment",b:"/\\*",e:"\\*/"};this.HCM={cN:"comment",b:"#",e:"$"};this.NM={cN:"number",b:this.NR,r:0};this.CNM={cN:"number",b:this.CNR,r:0};this.BNM={cN:"number",b:this.BNR,r:0};this.inherit=function(r,s){var p={};for(var q in r){p[q]=r[q]}if(s){for(var q in s){p[q]=s[q]}}return p}}();hljs.LANGUAGES.cpp=function(){var a={keyword:{"false":1,"int":1,"float":1,"while":1,"private":1,"char":1,"catch":1,"export":1,virtual:1,operator:2,sizeof:2,dynamic_cast:2,typedef:2,const_cast:2,"const":1,struct:1,"for":1,static_cast:2,union:1,namespace:1,unsigned:1,"long":1,"throw":1,"volatile":2,"static":1,"protected":1,bool:1,template:1,mutable:1,"if":1,"public":1,friend:2,"do":1,"return":1,"goto":1,auto:1,"void":2,"enum":1,"else":1,"break":1,"new":1,extern:1,using:1,"true":1,"class":1,asm:1,"case":1,typeid:1,"short":1,reinterpret_cast:2,"default":1,"double":1,register:1,explicit:1,signed:1,typename:1,"try":1,"this":1,"switch":1,"continue":1,wchar_t:1,inline:1,"delete":1,alignof:1,char16_t:1,char32_t:1,constexpr:1,decltype:1,noexcept:1,nullptr:1,static_assert:1,thread_local:1,restrict:1,_Bool:1,complex:1},built_in:{std:1,string:1,cin:1,cout:1,cerr:1,clog:1,stringstream:1,istringstream:1,ostringstream:1,auto_ptr:1,deque:1,list:1,queue:1,stack:1,vector:1,map:1,set:1,bitset:1,multiset:1,multimap:1,unordered_set:1,unordered_map:1,unordered_multiset:1,unordered_multimap:1,array:1,shared_ptr:1}};return{dM:{k:a,i:"</",c:[hljs.CLCM,hljs.CBLCLM,hljs.QSM,{cN:"string",b:"'\\\\?.",e:"'",i:"."},{cN:"number",b:"\\b(\\d+(\\.\\d*)?|\\.\\d+)(u|U|l|L|ul|UL|f|F)"},hljs.CNM,{cN:"preprocessor",b:"#",e:"$"},{cN:"stl_container",b:"\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<",e:">",k:a,r:10,c:["self"]}]}}}();hljs.LANGUAGES.r={dM:{c:[hljs.HCM,{cN:"number",b:"\\b0[xX][0-9a-fA-F]+[Li]?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+(?:[eE][+\\-]?\\d*)?L\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+\\.(?!\\d)(?:i\\b)?",e:hljs.IMMEDIATE_RE,r:1},{cN:"number",b:"\\b\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"keyword",b:"(?:tryCatch|library|setGeneric|setGroupGeneric)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\.",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\d+(?![\\w.])",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\b(?:function)",e:hljs.IMMEDIATE_RE,r:2},{cN:"keyword",b:"(?:if|in|break|next|repeat|else|for|return|switch|while|try|stop|warning|require|attach|detach|source|setMethod|setClass)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"literal",b:"(?:NA|NA_integer_|NA_real_|NA_character_|NA_complex_)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"literal",b:"(?:NULL|TRUE|FALSE|T|F|Inf|NaN)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"identifier",b:"[a-zA-Z.][a-zA-Z0-9._]*\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"<\\-(?!\\s*\\d)",e:hljs.IMMEDIATE_RE,r:2},{cN:"operator",b:"\\->|<\\-",e:hljs.IMMEDIATE_RE,r:1},{cN:"operator",b:"%%|~",e:hljs.IMMEDIATE_RE},{cN:"operator",b:">=|<=|==|!=|\\|\\||&&|=|\\+|\\-|\\*|/|\\^|>|<|!|&|\\||\\$|:",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"%",e:"%",i:"\\n",r:1},{cN:"identifier",b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[hljs.BE],r:0},{cN:"string",b:"'",e:"'",c:[hljs.BE],r:0},{cN:"paren",b:"[[({\\])}]",e:hljs.IMMEDIATE_RE,r:0}]}};
-hljs.initHighlightingOnLoad();
-</script>
-
-
-
-<style type="text/css">
-body, td {
-   font-family: sans-serif;
-   background-color: white;
-   font-size: 13px;
-}
-
-body {
-  max-width: 800px;
-  margin: auto;
-  padding: 1em;
-  line-height: 20px;
-}
-
-tt, code, pre {
-   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
-}
-
-h1 {
-   font-size:2.2em;
-}
-
-h2 {
-   font-size:1.8em;
-}
-
-h3 {
-   font-size:1.4em;
-}
-
-h4 {
-   font-size:1.0em;
-}
-
-h5 {
-   font-size:0.9em;
-}
-
-h6 {
-   font-size:0.8em;
-}
-
-a:visited {
-   color: rgb(50%, 0%, 50%);
-}
-
-pre, img {
-  max-width: 100%;
-}
-pre {
-  overflow-x: auto;
-}
-pre code {
-   display: block; padding: 0.5em;
-}
-
-code {
-  font-size: 92%;
-  border: 1px solid #ccc;
-}
-
-code[class] {
-  background-color: #F8F8F8;
-}
-
-table, td, th {
-  border: none;
-}
-
-blockquote {
-   color:#666666;
-   margin:0;
-   padding-left: 1em;
-   border-left: 0.5em #EEE solid;
-}
-
-hr {
-   height: 0px;
-   border-bottom: none;
-   border-top-width: thin;
-   border-top-style: dotted;
-   border-top-color: #999999;
-}
-
-@media print {
-   * {
-      background: transparent !important;
-      color: black !important;
-      filter:none !important;
-      -ms-filter: none !important;
-   }
-
-   body {
-      font-size:12pt;
-      max-width:100%;
-   }
-
-   a, a:visited {
-      text-decoration: underline;
-   }
-
-   hr {
-      visibility: hidden;
-      page-break-before: always;
-   }
-
-   pre, blockquote {
-      padding-right: 1em;
-      page-break-inside: avoid;
-   }
-
-   tr, img {
-      page-break-inside: avoid;
-   }
-
-   img {
-      max-width: 100% !important;
-   }
-
-   @page :left {
-      margin: 15mm 20mm 15mm 10mm;
-   }
-
-   @page :right {
-      margin: 15mm 10mm 15mm 20mm;
-   }
-
-   p, h2, h3 {
-      orphans: 3; widows: 3;
-   }
-
-   h2, h3 {
-      page-break-after: avoid;
-   }
-}
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
 </style>
 
 
+
+<link href="data:text/css,body%20%7B%0A%20%20background%2Dcolor%3A%20%23fff%3B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20max%2Dwidth%3A%20700px%3B%0A%20%20overflow%3A%20visible%3B%0A%20%20padding%2Dleft%3A%202em%3B%0A%20%20padding%2Dright%3A%202em%3B%0A%20%20font%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0A%20%20font%2Dsize%3A%2014px%3B%0A%20%20line%2Dheight%3A%201%2E35%3B%0A%7D%0A%0A%23header%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0A%0A%23TOC%20%7B%0A%20%20clear%3A%20both%3B%0A%20%20margin%3A%200%200%2010px%2010px%3B%0A%20%20padding%3A%204px%3B%0A%20%20width%3A%20400px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20border%2Dradius%3A%205px%3B%0A%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20font%2Dsize%3A%2013px%3B%0A%20%20line%2Dheight%3A%201%2E3%3B%0A%7D%0A%20%20%23TOC%20%2Etoctitle%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%20%20font%2Dsize%3A%2015px%3B%0A%20%20%20%20margin%2Dleft%3A%205px%3B%0A%20%20%7D%0A%0A%20%20%23TOC%20ul%20%7B%0A%20%20%20%20padding%2Dleft%3A%2040px%3B%0A%20%20%20%20margin%2Dleft%3A%20%2D1%2E5em%3B%0A%20%20%20%20margin%2Dtop%3A%205px%3B%0A%20%20%20%20margin%2Dbottom%3A%205px%3B%0A%20%20%7D%0A%20%20%23TOC%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dleft%3A%20%2D2em%3B%0A%20%20%7D%0A%20%20%23TOC%20li%20%7B%0A%20%20%20%20line%2Dheight%3A%2016px%3B%0A%20%20%7D%0A%0Atable%20%7B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dcolor%3A%20%23DDDDDD%3B%0A%20%20border%2Dstyle%3A%20outset%3B%0A%20%20border%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0A%20%20border%2Dwidth%3A%202px%3B%0A%20%20padding%3A%205px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%20%20line%2Dheight%3A%2018px%3B%0A%20%20padding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0A%20%20border%2Dleft%2Dstyle%3A%20none%3B%0A%20%20border%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Ap%20%7B%0A%20%20margin%3A%200%2E5em%200%3B%0A%7D%0A%0Ablockquote%20%7B%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20padding%3A%200%2E25em%200%2E75em%3B%0A%7D%0A%0Ahr%20%7B%0A%20%20border%2Dstyle%3A%20solid%3B%0A%20%20border%3A%20none%3B%0A%20%20border%2Dtop%3A%201px%20solid%20%23777%3B%0A%20%20margin%3A%2028px%200%3B%0A%7D%0A%0Adl%20%7B%0A%20%20margin%2Dleft%3A%200%3B%0A%7D%0A%20%20dl%20dd%20%7B%0A%20%20%20%20margin%2Dbottom%3A%2013px%3B%0A%20%20%20%20margin%2Dleft%3A%2013px%3B%0A%20%20%7D%0A%20%20dl%20dt%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%7D%0A%0Aul%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%7D%0A%20%20ul%20li%20%7B%0A%20%20%20%20list%2Dstyle%3A%20circle%20outside%3B%0A%20%20%7D%0A%20%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dbottom%3A%200%3B%0A%20%20%7D%0A%0Apre%2C%20code%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20color%3A%20%23333%3B%0A%20%20white%2Dspace%3A%20pre%2Dwrap%3B%20%20%20%20%2F%2A%20Wrap%20long%20lines%20%2A%2F%0A%7D%0Apre%20%7B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20margin%3A%205px%200px%2010px%200px%3B%0A%20%20padding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Acode%20%7B%0A%20%20font%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0A%20%20font%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0A%20%20padding%3A%202px%200px%3B%0A%7D%0A%0Adiv%2Efigure%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0A%20%20background%2Dcolor%3A%20%23FFFFFF%3B%0A%20%20padding%3A%202px%3B%0A%20%20border%3A%201px%20solid%20%23DDDDDD%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20margin%3A%200%205px%3B%0A%7D%0A%0Ah1%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%20%20font%2Dsize%3A%2035px%3B%0A%20%20line%2Dheight%3A%2040px%3B%0A%7D%0A%0Ah2%20%7B%0A%20%20border%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20padding%2Dbottom%3A%202px%3B%0A%20%20font%2Dsize%3A%20145%25%3B%0A%7D%0A%0Ah3%20%7B%0A%20%20border%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20font%2Dsize%3A%20120%25%3B%0A%7D%0A%0Ah4%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0A%20%20margin%2Dleft%3A%208px%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Ah5%2C%20h6%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23ccc%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Aa%20%7B%0A%20%20color%3A%20%230033dd%3B%0A%20%20text%2Ddecoration%3A%20none%3B%0A%7D%0A%20%20a%3Ahover%20%7B%0A%20%20%20%20color%3A%20%236666ff%3B%20%7D%0A%20%20a%3Avisited%20%7B%0A%20%20%20%20color%3A%20%23800080%3B%20%7D%0A%20%20a%3Avisited%3Ahover%20%7B%0A%20%20%20%20color%3A%20%23BB00BB%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%0A%2F%2A%20Class%20described%20in%20https%3A%2F%2Fbenjeffrey%2Ecom%2Fposts%2Fpandoc%2Dsyntax%2Dhighlighting%2Dcss%0A%20%20%20Colours%20from%20https%3A%2F%2Fgist%2Egithub%2Ecom%2Frobsimmons%2F1172277%20%2A%2F%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Keyword%20%2A%2F%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%2F%2A%20DataType%20%2A%2F%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%2F%2A%20DecVal%20%28decimal%20values%29%20%2A%2F%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20BaseN%20%2A%2F%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Float%20%2A%2F%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Char%20%2A%2F%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20String%20%2A%2F%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%2F%2A%20Comment%20%2A%2F%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%2F%2A%20OtherToken%20%2A%2F%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20AlertToken%20%2A%2F%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Function%20calls%20%2A%2F%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%2F%2A%20ErrorTok%20%2A%2F%0A%0A" rel="stylesheet" type="text/css" />
 
 </head>
 
 <body>
-<h1 align="center">
-  <img width="200" src="logo.png" alt="" style = "border: none">
-</h1>
 
-<p>Drake is a workflow manager for R. When it runs a project, it automatically builds missing and outdated results while skipping the up-to-date output. This automation and reproducibility is important for data analysis workflows, especially large projects under heavy development.</p>
 
+
+
+<h1 class="title toc-ignore">drake</h1>
+<h3 class="subtitle"><em>data frames in R for Make</em></h3>
+<h4 class="author"><em>William Michael Landau</em></h4>
+<h4 class="date"><em>2017-05-09</em></h4>
+
+
+
+<div class="figure">
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARIAAADMCAYAAAC/dCzIAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAAGYktHRAD/AP8A/6C9p5MAAAAHdElNRQfhAwkBOxV7yTY5AAAzHUlEQVR4Xu2dB3xUVdqH30x6hRAg9CooFlwISLcX7Lvrup+7ujZcV+niqqu7ItgABQtNRfHbb1fUdV1XqqKgAipNmvQuQhJCep9My/f+z9w7TJKZyczkTrtzHn7zCzlJJpmbe5/833POPSemniGJSzYcrqTb3zpEOECGmBgyW23Uu10SffxQX+qamWD/JIlEQgblraQRH/1QTJfO2EM2tggkAuJjDXTkjJG6TfmBTpXWiTaJRCJF4hJI5H/eOETZbRIo1mCXiEpCnIEyMuLpj/88rrRIJBIpkkY4JMKlS4ySRBqTyDLZ+lO18p5EIpEiccIbiQB8xGyRXUsSiYoUicK/vZQIwIerTVYySZlIJAIpEgZJ5LdeSgTgc6y2eiqpsSgtEkl0E/Ui8SWJOINO2FMlcuRGIgFRLZJ//1DiUxJxBkPC+RVm5T2JJLqJWpEgifz2jYN+SQTE8pHLLTUp70lChdlqpkOFh2jZ/mW06uAqpVUSbKJyZqtdIv4lEZVKo5WmXNOBnr2lq9IiCRRF1UV0tOQoHS4+TIeL7I9DxYfoaPFRstgsFMP/Yg2xZKu3kdFipHd/8y7defGdyldLgkHUiUQLiYDqOiv9dlAWvXN3L6VF4i8QwPHS4w5JCGHwA0mjoLpAiMIQY6A4Q5x4QBrqW3wMqL9LPFdeRR4tvHUhjRk0RrRJAk9UieTf21giC1suEWA022hIr1T6fGI/pUXiidLaUjpWcswhioNFB+lI0RHxf5PVXiI2FgUeEAjw5feFUzq3IpcW3sIyGSxlEgyiRiT/3lbCEvG/T6QxJotN3Li3c2p/pUVyovSEKDlUQeD/h4oOUX5Fvvg4jrsqCPXhKlVogZRJcIkKkYhy5k1OIq21kQjAPBI8U8GcHHtDFFBhrKBjpfZUcaT4iJAEHpAG+iZwKjmnCVUUsTGx4uu1FIU3OGQiy5yAo3uRfMzlzO0alTPO2FgkRks9lb8+SGnRF+jcXLRlkShBDhYeFBekSmNR4G0gUoUWSJkEB12LRJVIe5aIuhSAVuCwFVVbqGbeYHFHsJ6YtX4WPbX6KWqb0pbiYhVhhChVaIGUSeDR7TySQEoE4IKyWuupVGfT5KeumUrT10yn7q27U1piGiXFJdkTB7/eSJQIwM/dOaMzjVs6jhZvXay0SrRElyIREnkjcBJRwTT5kyX6mZT2zNpnaM6GOdQhvUPESsMdeD2dMjrRuGXj6N0f3lVaJVqhO5F8vK3ELpHWgZUIMLBI8sr1IRJIZPb62ZSdlq07iaioMhm7dKyUicboSiSOJBIEiYBY/hZ55ZF/v80za/QvERUpk8CgG5H8R0jkMEskPigSAShtcksjWyTT1kyj2RuiQyIqUibaowuRIIn8JsgSAVjONT+CS5tpa6fRyxtejiqJqDhkskzKRAsiXiT2PpHgSwSIRFIWmWuSCImsj06JqAiZpHeih5Y+RMsPLFdaJf4Q0SL5z3a1YzX4EgFIJJHYRzL9q+lRLxEVvP6O6R3F0LDEfyJWJB9v53IG80RCJBGARHK6LLJEMn3tdHpp3UtSIk5gsl1BVYG4BUDiHxEpEpFEFoamnHEG3xnT5CMFIZH1UiKugEwykjKU9yS+EnEigURCnURU8O2xLgnuBA53UM5g6ruUSFOqzdV0Re8rlPck/hBRIgkniQBckJGwmryQyLpZ1CFNfzNWWwruWk6MTaQVd69QWiT+EDEisUvkYNhIRMU+lyR8h4Cf/epZKRE3QCIoaU48fkIemxYSESI5K5HgzFj1Bfw8uWHa4QqJzFw3U0rEBZBIXEyclIhGhL1IPgljiQCsJh+OQ8BSIu5Rk8hPj/8kj41GhLVIPtlRQreFsUQAbtwLt9Lmua+ekxJxg5RIYAhbkSCJ3LYgvCUCcONeOE2Tf+7r52jGuhlSIi5Qy5mfHvuJz6mIqOojhrA8mkIiYZ5EVOzT5MNDJEgiM76REnGFmkSOP36cU6SUiNaE3RH9bwSUM85gmnx+GIhESEQmEZc4lzMyiQSGsDqqkMivI6CccQaJJNSdrbKccY+USHAImyMbiRIB+EnrzKGbJv/818/LcsYNDonIPpGAExZHN1IlAvDj1phCM00eEnnxmxelRFzQQCKyTyTghPwIR7JEADbziI8zBH1LCikR9zg6Vh+THavBIqRH+dMIlwios9TT0J6pynvBQUrEPc4SweZdkuAQMpFAIr+KcIlgt73yajMtvqe30hJ4pETcU2epc5QzUiLBJSQi0YVEuKY5U26mzx/pRz3bJiqtgeWFb16QEnEDJIJjIsuZ0BD0I750p04kUmamVZPPo+suaK20BhZI5IWvX5AScYEqEZlEQkdQRfIpS+SX8/Uhkc9YItdfKCUSaqREwoOgiWTpjlL6lS4kYhJJZHSQJIJSRkrENVIi4UNQRLJ0Zyn9csEBnUikX9CSCCSCzlUpkaZIiYQXARcJ+kR+OU8PEkGfiJRIOCAlEn4EVCQiiczjciYz8iWyMoh9IlIi7hES4X+4d0ZKJHwImEjsEuEkogOJoE/kBimRkNNAIjFSIuFEQESybBdLBB2rekgik4KXRHDznZSIa2QSCW80FwkkcutcjM6E12rvvnBWIufSDRcFSSLrZojlAKREmmK2mqVEwhxNReKQSGakS8QkksgNF2UqrYFFSOQrKRFX2Ortd1Wf/MtJKZEwRjOR2CWCPhE9SKRf8JIIlzNSIu5BEqk119Kr372qtEjCEU1EshwS0UXHqppEZDkTLuC4pCem01Orn6KXN7ystErCjRaLBBK5BUlEB5PNVgSxnMF2ETKJeAeOT8f0jjT1y6lSJmFKi0Sy/EdFIjpJIjcGUSLYwEpKxHukTMIbv0WyAhJ5XR8SWTExiElkvZSIL9Tz76jGXCPeqjJ55stnaPaG2cpnSMIBv0QCidysC4mYRTlzY/8gJpG1+pMIRlawMllFXSWV1paKR5mxjKpN1WSxWYQE/AFfV1RTRPf0v4tK+fnwfXDcOqR3oKe/fFrKJIyI4V+WT7/llSyRm/SSRCb143ImOB2rs9bNoulfTdeVRHBhV7I8LPVWuqrH5TSq2wjqldmTbDYWi7WOtuZto+WHVlJ+1WnKSMygxNgEr187Tkt83ZxrZtLYkRNp/aG1dN2Sm/n4ZfN5Z7B/vDKfnrv2OfrzyD8rXyUJFT6JRE8SWc7lzE1BSiJ6lAiGZM2cNp4c8RhNGfYIUWIckZU/4Hw2YdoHv9xDuXto/GeP0MbcTdQupV2zx6CxRGy1tWRITqb1B1km798kjmMDmVzDMhklZRJKvBaJrpIISyRY5cys9SyRtfqSSHldBQ3I7k/v/fJ/KbttNyJjnUgnrsArjolNJEow0D+2vEsPrZxA2WnthQhcoUpk9tUzaNyoSUIiKpDJBpbJtVImYYdXIln1Yxnd+Pp+mUR8RJcSMZZTTqccWn3/aiKTlWxW77crhQi+PvAF3fyvX1P7lPZNjokqkZevfpHGj5rcQCIqIplwmXPTh7+mtslZ4jlUmTx/zfP06KhHlc+UBJPYaYzyf5es3F3GSURKxFf0KBGMnuR0HEifQyJIIVza+EK9xUK9Op5HifWxtPrYGkqOS3IcG28kAvAcPTr0pbYJrenzI19wRZUoniMtIY2W7V9GyfHJNLzbcOWzJcHCYyJZtbuUbnxN9on4ykvrX6Jpa6fpSiJWm42qTJVUMOVnio2N91kiziBVDJw3UIzIxPNzeSsRYEhMph9PbaPL/u8aap3UqkGJ5Egm13IyGSmTSTBxO/y7ipOIlIjvIInoTSIAw7nzr3+NYpNSmpWIISaWDIY48dYl/OXPXzGNKk1VDom8dNULXklk98ltNPTdy6hVYkYDiQAcb8wz+dsXf6M5385RWiXBwGUisUtEljO+osckAqw2Kx9PG/38+M9UbzRSfYOhmbMYYhOIEmKpqryYai214kLPyuyEdQAa9KVAMNUskU6v9aQ6bn/pqhdp4qWPNC8RTiJD371UjPx4uhNYJpPg0ySRrNrDEnlVSsRXhETW6E8ioNZipLv6/078361E+EI/VLifrnnnasp+tRv1mHcedX6tFw1akEMnSo+RIT5Z+Uz8fqyUmtGGKmoqaOaVz3slkT2ntnslESCTSfBpIJLPIJFXWCJtpER8wSGRdP1JBNRZ62h0r+u4JHEjkbgk2nVyK1301iDaV7SfslOzWajZ1Cm9E5ctBXThmwMptxQ74MUrX8GYid64eR5NvuxRryRyybujvJKIirNMXvn2FaVVEigcpc3nLJHrdSKRZSyRm6VENONM9Rk68PCP1LlVV7LZ2ACNQOfpObN7k8lqFp2njcFoz7AuQ+iTuz4lm/GsNJBSbGbPEtmbu4MGLx5J7X2QiDNqmfPCdS/QlBFTlFaJ1ohEsnqvXSLZepDIBCkRrcHFmMSpA4VNYwyxibT16PciecQZ4pTWhiTHJdNnR75Q3jtLoCUC1GTy19V/lckkgBgqjVYaPdueRCL1YmggkYuDI5FFWxbR1DVTdS8REBNjoApTBf5nb3DGYKCDxYcc8zncEQcReHmYIJF9uTtbLBEVh0y++KtcaS1AGF5YlUepaRiqi8yLAX8tgy2RkpoSGr98vOgD0LtEAC7kE+Un+WxxfUGLDlj+PbgDN/V1Se+svOcZIZG8XTRo8QhNJKKiygQrrb3ynUwmWmP48VQ1JcRFqkSIymqt9PVjFwRNIuCDHz+g9IT0qJAISOLyZenB5RwrXLxeq5mu6nkF1VhqhdRdgTkok4aOt9/U5wFIZD8k8s5wTSWi4kgmKHOkTDTFkJSAG5+U9yIMXMeJfHL/Y2Oh0hIcKuoqOMG5ncunO9A/8v6eD12WJpic1qldD3pwwP1UUH2Gy0ybY4gY/8c6In0ye9NDg1kk5jrR7gq7RH6knLebSsSdoPzBWSayzNGO2D//5elpn+wooZQEbe0fLOJjDbTpeBXtzaul23OylNbAgsWIF2xaIN5GQyqBNLHuyPmZfei8jv2p3tpwZivuf7nholvJYjLSl8fWigWNqsSiRla648LbadldnGY4uWD+iCuERPIhkWHUPrWhRLAxVqW5iuLFTFlt5I3fGe7NWbpvKaUmpNKwbsOUj0j8RQz/tn90G5mt9ZQUH7l/ZYuqzHTbgDb04YN9lJbActuS2+ib499Q66TgLIwUapAuMJXdOLWWyMJScDFN3pCUTOaaKjpZcZIzSQz1zuLfBf5AeVhmABI5kL+bJTK0yTyRKlMV9eY08+29a6nn3PPIyiJCp65WIOlgaPjF616kR0Y8orRK/EGIBAe09eQfKJZNnShl4jWXLrqU9hfuF6t/RQNGTgddMjrT5rGbOSq4kQlSg3qPDV/47gQCIJGDLJEBLJHG5Qwk0r1VN9oybqu4N8dmqqFuc8/lj9RLmYQhTvfa1FOrSdv4l4l+BykTb4k2meAC79mqB236E8sEp4nJfdrwhF0ie1giQzxLxGgSJRHmq9hYZN3n9RUXv5RJeOFkjBgqfz2HrLZ6rkt9PzHChbZp8fSfHSV0x9uHlZbAsv7B9dSvXT/RARsNoG/hZGUupTyXSos3v8VnULyY2SoeWAnNCyCRQx4k0i2jqyKRs/0qNmsdGVgeJyYcIvRxoO9EK9QOWAwNv/bda0qrxBea3v3L77ZCmWPgMifSk8lATiZ/DE4yGfXWKDpQdCBqkglSCFZLQ4fzRe0vFB2sT4x4lEb3uVFc9O6ARA7n76WL377EhUSqWSJdaOu4HzjpuCmdICurmfovGkzldeVuZ9P6g0wm/tPUFGznstcHcTJBj3mEJ5PtJfS7RcFJJhv+tIHOa3te1CQT9IVkJmdyjo2hb3/+jq4/5zoafcHNzUvk9D6WyGCXEuma0Zm2jncvEQESSnIidUrv4FdJ5QmZTPzHZeTAyVH2GsqcyJfJx6LMOaK0BBYhk3b6lAnWJDG5WJ8VMkAK+8/+/3JM4RPKTUIwJEAinEQ4SWC9VlcS+WHcNreduMCA05W/ru8rfWndiQ1k5mSCR+NQ3RJUmTy5+kl67XspE29pWto4gQ+1nsRlTmxklzmFXObczmXOB8EqcxaNooOFB0Xs1wMQSFp8GvVo04O2526ntMQ05SNnwR2+mUmtad/E/U2GhyGRIwX7qP9bLJFG80QgkS7pnWjbhO0eJQJwt/CL3zxH6QlpYv7HweLDtProl3S87Di1Tsq038+jEWqZM2P0DJo8fLLSKnGHR5EAPcnkN0HuMzlYFPkygUTQsVnwVIH4az1owSA6WXbSg0wyad+kfURmC0vBLCRy9Mx+uujNQU0kgn6VTvzXf/uEHc1KREUskKTOAcTpyP//ZMe/6JEvHxepKRCjOTOuY5mMkDLxRLMiAUImOuiAtSeTLE4m5ygtgWXkWyPpUNGhiJWJKpH8J/MbCGDwgsH0c9nPnmUykWXCX3I0/wBLZCBLpGE5A4mghNgxniXiqU/EC9D3Ul9ndAwNJ2DJR42QMvEOr0QCpEz8I1Jl4k4iKoMWcjIpdZ9MsErav3+zhAYsGkptU7KaSiStA+2YsLNZiYg+l7h4e/rAmaokncaI0Rw+L7vP7i46grWaTg9UmcwcPZMmDZ+ktEqc8VokQMhED2VOJcskR8rEHc1JRMVTmYNO0ApTpeg3cb6ovZUIOvxjkpOouCSPFu1YTCfLc8VQ71MjH6MOWd0brLQGMI/llW9ephnfvRSQO7OlTDzjk0iAkIkekomQSfA6YEe8NYIOFx0Oe5l4KxEVTzJpDCSCxbF3NiMRsY1FQgL96b9/pHd2/J3aJLem2Jg4svE/3DzYeDtPSOTlr2bS1HXPCklpLREVKRP3+CwSgC/BpLU4KROfGPEmy6Q4fGXiq0RUvJEJnrtdSlva3kyfiJBIUgINWTiEDpccodaJrRqIAavh5Vbk0uKb36Q/DLqPv4Bo9tcz6elvAisRFSkT1/glEiBkwmVOnC7KHCkTXOhGi5FOP3naJ4moeJIJzpXi2hIq/1uZWNzIZnG9VquzRH4q+0lMx3cFRmeqzdVU+NdCenXdbHrqq6lBkYiKlElT/BYJkDLxj3CTiUgiZk4iT/mWRBrTXJ8JxCBGcyxNO0xViQxliRxjiWCuiCcgvQEdfkHfndwo+mEAlhnAazFz2lGVghEc9K3E8vNrKRopk4a0SCRAysQ/hr85nI4UHwm5TNRyJu/JPHHBtRRPMqkx14qtNg9MOtBAJg6JvDGUjpUc52PiWSIq+NnjDfFktNZRhbGCOmd0oqt7XiHu/VFlsv7Et7SzYJdY5R7fG2LRSiiqTGZdP4smDpuotEYnLRYJ0JdMgjeaE2qZqEkk7yltJKKSsyCHTpWfclmaNJYJ4X4ZlsgwlshRHyQCLCyL0tpSuqrXVTTn6pnUq+O5/Hz8Aee7OpSAtfvnbTR21WTaUbBT3OejtUyiPZloIhJQb6unjMk/ULxMJj4RKpkESiIqOfNZJhXNyGQyy4RPFX8kghSFMuztmxbSteffiBdEzvsLN0bMM0kw0NJdH9Mdn9wtdgLUaq6JlImGIgHoUcc8Ez0kk9+yTN7XqUwgEaPZKPpEAiERFZFMylgmbsqcXq17UGZya9qSt63ZPhFnIBHc+Xty0hGKTUwhm8n9RluNwVDxxsPr6Ip/jhbT8zUvc0ZzmTM8+socTUUC9CSTYJY5w94cRkeLjwZcJo4kgj6R2MBJRMWTTMSdu/zPlyntKGdwyh6bsJ/isOUnS8VXIJNVu5fS7f+5k7JT22sqk7zKPHpp9EtRJxPNr3RstFX22iA+SSJ7pbV26fH0723F9PsgLUGw8aGNdE7WOWLCVaBQk4goZ4IgEbBt3Dbq0qqLWPmsMdgn2BeJ4ELFPsTL7/gPxSWk+iURgIlsWPX+ks6Dqc5DOeQrEBI2TXv888dp7sa5Smt0EJDIYDDEUDnLxKIDmXwEmbwTHJl8/9D31LtN74DIxFHOPBnYcsYV28Zvo84ZnV3KxBdwD88DA+6ji7sP9rhvsAqm2bulzkL/vf1D/pkqhaBaCp4DD1UmT3z2BM39PnpkErDaAzIRycSiA5n8AJkEZ6W1jQ9v1FwmQiIWRSJBSiKN2T5+e4tkgou0kr/2ucufEUsOuEPcsJeYLLbGiElMsq8ly+83lgqGnlu3zqZzMs+hEmOpKJn8BT8bhqCxGZgqE9zZLJJJlMgkoJ0YIpnM1YtMSrjMCZ5MerXppYlMHEnkL6GTiEpLZILXcXn3S8XF73Z6vSiTYuipz5+gdi+2o9ipcdRtVnea8fXzFJPAUsF8lUaUskTmj36VUuKShWx9BeLA2rGjug6nDfesodzKPNERHG1ljuadra6w2XBvzlaxK54czfEe+wStY353wDYoZ0IsEWcGzh8o7pdxNwXeFVi+cuqlf6UJwye7HKWBJKycMnovuJAFXEHpCRkUazCI6fRICue1PZc2P7iZ6vl4qFuK4mvyKnOpU7ueIuV0e/0c/nyL2KLUW7Cv8XCWyPJ7lov3tx77nkb+/UoxIoR0hMtLdMBe/5KuJ60F5aq295kM1kUH7EfbOJkEqc9k08Ob/E4m4SoR4E8yMVnNNKzLEPxVUloakZhAf/tmujhW2P0QEgGYa4L1UPYV7qe/b3tHJBMVbHXRKb2z/S5ivuh/nnRE9B95m0zsEhkmJFJfaxTPM7jncPr23q9YHvkNk8lnj9O8jfOUr9QfQYsHeukzaZsWp/SZhK9MwlkiKv7IBPNHULo0RvR/WIkWbV9MGW7SG+7HeWUTlxiNqpuz++aYhExOTDrKMolvViZnJbJCSMSxcbrRLpPvXMjksc8eo3nf61MmQa0zsIYJtrqIZJngpAiJTDK9k4mQCF8EwZon0hIgky4ZroeGGwN94MY7V8SwACqri8S8FHcjNSgz0B8C4bj+DFUmMSyTI2JxJHcdsJDIsC5DhUTIeFYiKpDJIJbJpvvXUY2pxtEBK2TyOctEh8kk6B0WDplEcJkTEpmMbT6ZqEkk7y95Yo5GJIChYW9kEsslx8HigzCC0nKWev6rn57ellLiU0QCcAXuDO6Y1lEkEk+dgkImiXE07/pX+WeqVlrPIiTSeQituHclSwQzbN08m9lKA7oNoU4ZncT3Bg2Sic5kEnSRACGTCJ+0FrJk4kYmDolwEokUiah4I5OkuERacfgzIYLGqIngTzkPULmbPYVKakvpkSETCBuSewLDxV8f+IJu+fDX4n4gZyCRoV1YIvetUiTi+ty1jx7VU885PelMdWGDeTt6lUlQRm3cYbHZqM3kbRzBI3c6PQ5fUZWF/mdQFi15IDjT6bFvzs68ndQqyb56WK0yOQsS0XIF9WDj6UY//OUvrimiiqfKOV5gY/GGF7G4AY8v2AsXXkwn+Tla87FBKYTypKS2hIZ3GUZfjPmS6l2UIiqQyDcHvqRr37+JOvPF7nxTn5AIJ5GVXkmEqNfrfajOWud2BAjnDe7NwWjOhGEsuAgnpFdvnMFAJa/mRPQMWDWZ/IuTyZ1BSiYbHtwgTsAemT0oOy2b7hl4DxX9rSiiJQI8zYDFrRdIWu9ue5tLj6Z714gLmx97xu2mF66YJtYpwZyOtiltaeENc4VEqK7Os0QOupNIOQ3pfIlmEgE4b8SkNZ2M5oQ0kahAJG0eiewb/UKRTPSKu3kmuIALqs9Q4ZSTlMqJw9WyAUIA8Swa5xIIy544zR9pjF0ia+jaJZCIff6Hil0ig2nVfVxWeSORuX35j6LR67koekkmYSESgP6SLL3IZDDLZIyUSUtwV+ZgCBgbiG8Zh83GLSwT99PlvQESWadIRJ1EpgKJXNJpEH12/+deSCRGSSLeS0RFDzIJmysWCyKVvBrZN/o5ypytxXTX4uCUOXrFXQcstuQ8UX6KBs/nc4WlAhGoacBXhEQOQSI3tlgivef2IaMfEgHOZc78TfOV1sgibBKJip6SyR1c5rwny5wW4SmZYIRm0iXj6O7+d1LfzhfaP8ABxd0q9c5AIus5iVzT0iTCEjjn9b5Uw98z2Q+JOKMmk5evf5nGDxuvtEYGYScSYOZEkjVFH6M5d3CZ854sc1qEO5ngAsfSArVmo0gqRRWF9MYt8+ihIeM9LjNgl8halojrJDKYJfK5LxLhnyEZm5trQKTKJCxFAuwy2c4yQZyNbJn8jmXyTymTFuFpQWkcZ6STBaNf5RT4B8cOfK4QEjnEEnmvqUTKWSKDOuWwRFZ7JZE+c/tStUk7iahEokzCViRATzKJxGSSV2aijceqqMJopYykWMrpnko9spoOvQYLT/NMMD2+TXIm7Xx4Jx90LATdtBMWEtlw6Cu6+r0bXEokp9NAWn3/F170iRiozzxIpFpziag4ZHIDy2Ro+MskrEUCTCyTtjKZBJXP9pTRw0uO04miOornY45Z6TY+S8xWG6WxUKZc3ZGm39JF+ezg4imZYGJeakIqHZ54iA+6rcHwcHMSGdhxIH0xxguJ8NfZk0jgJKKiymT2DbNp3NBxSmt4EvYiAXaZyD6TYHDz/IO0YlcpZaXHEw41RhRU8BoglEpOKBhdWz7hXBp9gX2Xu2DiKZk4ZDKBZYJtx1kmzUtkgH3CmieJGOJhEuo791wxkhRoiaioMgn3ZBIRIgF6ksnvLuFkcn/4yWTwi3toT24NtUpufntLKxulsNREC+7pRWMvy1Zag4enxZGETOJZJpNYJvEx9C1L5KqWSIS/Bss8duckUlVXSUkuJIK7jrH2CY5aKv9M8U7317QUVSbhnEwiRiRATzL5PcvkH2Ekk8Ev7qZ9eUbKYIl4C15LAZc/u57/BfXvkqK0Bo/mypyslCyaN/oVuuH9X1J2WvsmEhnAEvmyGYkAQ0wsHSg6IG6WTIhLJAN0AdGKKwdLBBjEpuZHSrCdSBo9+dVUsSpbS4eDnQl3mUSUSICuksngtvTPMb2V1tBxCSeRvXm1PklEBf0myQmxdHLmAKUluHiSCTpgcYG3SrTf3KhSbqxgiVzMElnTrERUIBOUNm7B80NUOCUtVurN6aXWYowamUTclZjA8ih8RR83+n2wtYjufje0M2AhkT15NX5JBGAd3lPFdbT9hPslAAJJc/vmNJFIHUukQ/MSabLqvBgJMrl/WPi5OAXZ6uxDz0cnHqIUlgjmuGgFXgdmwP551Z9pwaYFSmt4EJF/0pFECl/Rx3T697cUh0wmqkRaJbesnk9NiqWPd5Qq7wUfIRM365k4SwQrx+V04HLmAc8SMRjixGJE/oZ1iAUcmcAyiY8OmURmbcAkxsVQ4Rx9JJNQyGSIRhIBcYYY0UkbSppbHAlSQKmz+t4vuOaxz4p1hRid4RKl/1uDKTbB/34fIRN22JEJB1kmyaLPRiucZbJw00KlNbRErEhAYrx+ypxgymTIjD20WyOJAK5u6Kci/7bP1BKxnkkr1+uZ4Dgncqlx7mvnslVsysSyhgiJxMZR3/n97Ou7erg68LlILiiBnP+pQFx2mcTQkYmQSUpAZPLoqkdpwebQJ5OIFgkQZY5IJriRSw8yOaq0BgYhETHEq93wJJbOPF3Rstv5tWL7uO1u+0wSYuOp0lRJfeayTBhnmagS6TePJVJbSlgO0d3VYYiJpeMlR+lMVYHY3iKGyxfxwIhOcrJ4xKakiLf8TcXjyJ+PiJ8LqUgrHMlkJSeTzaFNJhE3auMOo9lG7R/Vx2jOnZdk0f8FYGh4KEvkR40lAvBzF5Sbqf7toUpL6Gl20hrmmUw8YG/AJcDpoh8nESypiIWmz886l754YE2T+3YgEYwEpb3QhtKTM/hcSxBfDuz75HTkC9y+MZZ9wekO1K1VV7HsI0ZxNvz8reYr2eF7YTRnzg1zaOzQsUprcNGNSICeZPL7S9rSP+7Xbmg4UBJROV1mItuioUjyYUPzM2BTWCZcTnJoOH/u+SKJoASp45LkvKy+tOaBtS5Fgl3/OrzanTqkZjdZda1x3wvex25/ABPWArUcpkMmN7JMhgRfJhFf2jiTFG+gMyhzbHroMymiezQqcwItEQELJL+86dKHoUR0wLopczDFHXfuDn17CI1cNIIlUiYkImA3OPd3uEL0iPDvCpPcnB9YMd75AXHge+ERyDV1HX0mKx8NSZmjK5EAIZPZ+uiAXQKZ/G/LZDJ05t7AS4RBP8mp0vASCcDQsLsFpXFx51Wepp/LT4qRFQfNpip7CnG3BmyocJbJG5vfUFqDg+5EAvSUTJZs9l8mQ2dyEjlVHXCJAGzJeroi/EQCPG0PGh8bJyauNcaTJPC7EW+bN04DUH6g1MEWGSh33A1BtwRVJlNWTgmqTHQpEgCZFOglmfghk2FCIoFPIiqxfE2dLAlPkQBftwd1t12noN4uEG8TCZ4LN/0V1RSJ5QdSuYTC1+L/2EALO/pp2VUZCpnoViQgWZVJlCUTSGRXECUCwmkI2B2e9s1xBmmhR6tuyntNUQJJs0AO2OEvJS6ZHhr4AO3601Y68+QZ2jd5P5149ASd+csZ+vbetTRmwD10uqpAiEUrgi0TXYsEJCewTF7OIatOksm9zchk2My9QZcIYI9Qbml4iwSoZY6nixYlR9eMrsp7TfEmiSCFoO/l6VF/of1TDtCz171APdv0pvo6o9hkvN5kFI+LO+bQi9fPovLHC+jmvjeKTb20KnmcZfLm5jeV1sCge5EAyOS0TvpM3kMy+btrmQwXEglOn0hjkEhyw2zUxh2QCTb3dicTLCS99NAKzHB0OQNW9Yi7PhKscI8tRksey6Mplz1O9bV2eWD5R1VCeIt/Nit/bm0txfP3fPs3i+nj296nwuoix5BxS1Fl8sjKR+jNLYGTSVSIBIgyh5OJLvpMNjVNJsO5nNkZIokAJJLTESIS4EkmGLYtri2mc+adh/rEtUwYV8lEzFzl39Ox8fsoI6WdPX24+LzG2DjBQCg39f+VKHewo6DmMlkROJlEjUiASCY66YBFMrn/78dE24hZe1kiwS9nnEEiyS8P/9LGGU8ywUZX2GbCLpOG9+bgdyDeNkokKElKjGV0nCUSn5Dq1f46TZ6DZfKLbpfQxvvWUXldueZlTqBkElUiASnoM9GJTD7aVkxdntiu2V28LQGJpDDMO1td4UkmmGdSY65lmfRrIhPQOGkU15bQ3GtnU3xyOkvE/dIBYvJaYjIZkpLFvTri/py4s/NYsKbJL3oMpody/ihm0WpFIGUSdSIBekkmaYkGMlnqWY7+LUqkJepfaS2HMYOFZ5kgmZyVCcW5LnNMVhNd1P4Cun/Yg6JD1R2QCFZoe37tNOo1uxe1m9mOcuYNpC8OrxRiUUG/yowbXqLs1GwyexqK9hFVJpNXTNZUJlEpEoBkogeZoKQIG/hHibTyRsUrmcxnmdjqKTFW2dvHyZkog8ZcfC+RtWlSaQCnmu9PbaSn104XgsB9QGdqCummD35NW459x8nEvjSjeA5+rr+OfMKruS++gPMGdzdDJm9teUtpbRlRKxJgl8nAiJZJOBGu0+S9pVmZmGrpPJaJpd7Kr/XsSvv2Gav1dOdFdxCZXb9+tS8EJc/1F9xC6+9bS4UsEIB7cNqntqOJq6eIVe8dmOvozoH3iLSjddJTZTJpxSRNZBLVIgEoC/JfljLRAkyTzw/TafLe0pxMkA4Gvj2UspLaOJKHfbmAbEpMy2ChNB1pQcqIYVmINU8YjOSM6nslfXnnSsqvOi06VFHy4K5jZ0RHK1etl3e/VMhEa7SUSdSLBKQmskwivMwJBzBNPjeCE4mKJ5lgjgmWIIhhaaopA2nB1VIFABLZlfsDtZ6VRWZLraN0ETLpcyWtUWQCUfTO7CU+1pi2yVl2qQQArWQiRaKQymVOfoTPMwk1KG3yIrSPpDGeZGLfCMupBAEuKg/xOXxM/rB0DCVwGuk9/wKufKobyGQkywTJpKC8gJ4e9SSRqem5Z+N/gUQLmUiROJGaCJnIMsdf+JqhPB0kEhVPMnEGZUkJ1njlU8ZZMFgprbSygA4UHxSJxcqpovf885vIZNQ5V9LOsVvo4s6DxEzXxmBjLjxXIHGWyaKti5RW75EiaYQoc6RM/EJMky/Tj0iANzKBSMRNd1UlXPI0vKTQkYplFkESl0UoUZrIpK6WLu4wQOyL44wqpe2nd2q6Bag7VJlMXD6RFm3xTSZSJC6QMvEPJJKCSn2UNs4ImfAF5k4muACxdusnB5Y2mGeCjtfU9Ey6ssflYp1XgD4WlzKxNT1u6KDddeIHcQcxZBUMGsjEh2QiReIGKRPf0VMfSWO2T/CcTFC6TF//griiGvSf1Jnp099+JJZxxH7AuBcHUnBV5jQhwUCLti+m1IRUcYEHCyETfq0Tl3kvEykSD0AmeVImXoNEUqhTkQAkk44ZHV13wHL5UlRbTB9s+yfFJJ0VA27Gi49PpqPj9tKEwQ9TRmKG2NDcaKkVw8a93MgE0/ELik/Skj0farp/sLc4y+TtrW8rre7R1SrygaK6zkodH9se0avTB4twXE1eawbOH0h5FXkiKTiDkgUrnh0dv486tOra4H4bA/pJErjsUU6fOV/Poqe/eZYyk1sLCeFr7Df6GUWiiUlOousWX0O7C/eFRCQq0ANe67xb5tEfB/9RaW2KvCq8QCYTH2CBhNtq8lojkkl602SCkiUzqTVd/8Gt+JPumIAGxCbkdbXi7l48Hr3iCXru8qliCwy1zDEpyQQS+fvmd+j7U5tCKhGgJpMJyyZ4TCZSJF6SpvSZmKVMPKLHkRtX7Jiww6VM0JmKCWYXLbiID0ac2/4PVSbPXjGNZVLikAn4cNt79NCqCdQupZ14P9SoMhm/bDy9s/UdpbUhsrTxkSojlzmPb6d4Wea4pLjaQh//6Ry65eI2Sou+GTB/AOVX5Dcpc6rNNWIDrTV3raS2mZ2p3mh0TKl3BksIiDJn3bOUldxGiAh3B6cnpIkLOJyAKnIrcmnBrQvogUEPKK125JXgI2lJZ5OJSSaTJmCa/KkIWLtVK3aMd51MsFJ8UU0xdZ/bl/61fYkoV8QaJFzuiD4Q5R+ZrCKZzL1uDifdOi6fLWEpEYCfCevdjls6jt75oWEykYnET9AB2+Gx7ZTAV06CTCYOKjmxTb66Az1/q/vFk/XIgHmcTCqbJhN0wKIfBLJ5cOAYuuOC26lj6+585fEH+XGs4AD9Y/cSWnn4czpTfUYs8xjuqMlk4a0LacygMaJNiqQFqGWOlMlZINjbc7Jo8T2ub0DTM7+Y9ws6XXm6iUxwiWGoF2uW4JGZ1IZilRmwJbUllByXIu4sjgSJqDSWiRRJC5EyaQg2cr+kZyqtntRPaYku3MnEGaQU+2WHvYO5wAnDMsYb8BpOlJ0Q+wVJkWiAlMlZ0G/UtU0C7Xy6v9ISfXgjE71gsphoQKcBsrNVC9QOWKyfGu0dsBj+zS/Xbo3RSGTnhJ3UIb2D2+n0eiIuNo4OFB6QItEKdZ5JtMsE0+TPRPgqaVoQLTKx2WyUnZ4tRaIljmQSxUPDot5HsSwL5qiQCTZGHztkrBSJ1giZvGSfZ4Ip9VEJuyRP59PkvQUywV9sPcoEw9rX9bmOfnfx76RIAgFkUjgnR8ypiMa+7GiZJu8tuybs0l0ygUQu7XEpfXLXJ+J9KZIAceP8g5SUYIjYob2WgNXk88qiZ3arN4hkkqaPZKJK5NM/fKq0SJEEhMtm76PvjlQSNi6PRjBNXpY2Tdk1cVfEy8SVRIAUicZczhLZcryKWqdEzixFrRGljY4WgdaSSJUJbjiEREb1GNVEIkCKREMgkc1RLhGAIeD8CNxQPFgImURQBywkUlZbJpLI0j8sVVobIkWiEVIiZ0EiOVXSdFsFyVnQARsJycRZIq6SiIoUiQZIiTQEiaRAJpJmCfcyx1uJACmSFiIl0hQxTb4iuqfJe0u4ykSViLs+kcZIkbQAKRHXIJHIafLeA5m0T2sfNjJxloi7PpHGSJH4yeVzpETcIebOiDsE5Dx5b/lx4o9hIROHRLp7LxEgReIHQiLHpEQ8wmdWnpzd6hOhlglmYTskcrf3EgFSJD4iJeId9mnyssPVVyCTdmntgi4TIRGjfxIBUiQ+cIWUiNfIafL+s3vibmqfGrxkokpkZI+RfkkESJF4CSSySUrEa8Q0eVna+M2PkziZpAY+mTgk0n0kLfvDMqXVd6RIvEBKxHdEaSPvt2kRuyftDqhMGkjkbv8lAqRImkFKxD8wBHxaiqTFBEomWkoESJF4QErEf5BITsob9zRBlUmNqUZpaRmQSLmxXDOJACkSN1wpJdIikEjOyGnymgGZZKVmtVgmqkRGdB+hmUSAFIkLkEQ2Som0CDFNPspXk9eaPZP2tEgmgZIIkCJphCxntAGJpKBSljZa469MVIkM7z5cc4kAKRInfrnwIH1/VEpEC8Q0eSv+J6fJa42QSYr3MnFOIsvvXq60aosUicIHW4po6Y5SypQS0Q4+u+SktMCwZ7J3MnEkkW6BSSIqUiQKY5f8RG0z4vkvqdIgaTHoJ5GT0gIHZNImtY1bmTiXM8vvCUwSUZEiYb45WM4H3EpxKOwlmoFp8rnlMpEEkr2T9gqZNJ5nAolgngiSSKDKGWekSJg1+ysoOUEeCq3BNPl8mUgCDmSCNWDPVJ2hWnOtSCj5lfl0de+rA55EVOTVw+SXm8RJL9EWlDanpEiCAtaAnXfLPLEY0bV9rqVP7/qUPvr9R8pHA08MR6Co71Yfu+QY/XNzsdgIXKId1XVW+u2gLHrn7l5Ki0SvyETCnN8pJXr36Q0gSCQ/y9XkowIpEub6C1uT0WQTHVQS7UDfdWGlnN0aDUiRML3bJVHXrESyiHVGJVphnyYvR22iASkShem3dKHSaotMJRqCRHJGTpOPCqRIFO4b3o76ZCdRrVmKRCswTb5eTJOX6B0pEif2TutPGAWuqrPKZKIVfIYVVcryRu9IkTiBmr7s9UE0sGsqFZSZhFAwmgOpqA+J94jjxcevbXq80iLRK3IeiRv25tbQ3K9O0+p95XSiqE4oN4b/oe6HcNS3sdxu4AivvkW7irgDNoqx2OpFwjszJ8feINEtUiReYrLYKL/CTKc5qZwqM4vZsLmlJjEqgdmb+dx2qqyOKmqsMI6QSLRLp9JopTEj2tHrd/RQWiR6RYokAAjpsGBOs3hOlpj4LctHkU4uSwd3xOKtnqWD06qAX7PxrSGUGMcvQqJrpEhCjMnK0uE0A9nYpcPJRpUOv81D8oF0qlk6fD16lo69DQ+VUEhHSIRf08K7etLDl2crrRI9I0USQZit9SLNnGbJnCytaygd56RTbRE2aS7pxPJbZ89oIR0hEf55IJCFd/ZUWiV6R4pEp5g56eSWmqmg0izudylwlFlqn44inSqWTmxz0uEHt3mSDk6jOks9lXGCmnZbN3rmpi7KRyTRgBSJRAxxn+KEU1BpoZ+L8dZJOkp5hbQjpMNSiXGSDXRi5VPIUmejUf1a0T/u60092iban1gSNUiRSHwCp0sely5FVXbJGM311LFVPA3vna58hiT6IPp/Pi8Sp4IMyPQAAAAASUVORK5CYII=" />
+</div>
+<p>The issue of reproducibility is at the forefront of the R and Statistics community buzz, but there are glaring holes in the conversation and the landscape. Most current talks and tools focus on scientific replicability, code annotation, and version control, and they miss the most crucial part of reproducible data analysis: the promise that the alleged results really do match the code. Drake helps keep this promise by tracking the relationships among the components of the analysis, a rare and effective approach that also saves time. And with multiple parallel computing options that switch on auto-magically, drake is also a convenient and powerful high-performance computing solution.</p>
+<div id="acknowledgements-and-history" class="section level1">
 <h1>Acknowledgements and history</h1>
-
-<p>The original idea of a time-saving reproducible build system extends back decades to <a href="http://kbroman.org/minimal_make/">GNU Make</a>, which today helps <a href="http://blog.kaggle.com/2012/10/15/make-for-data-scientists/">data scientists</a> as well as the original user base of complied-language programmers. More recently, <a href="http://richfitz.github.io/">Rich FitzJohn</a> created <a href="https://github.com/richfitz/remake">remake</a>, a breakthrough reimagining of <a href="http://kbroman.org/minimal_make/">Make</a> for R and the most important inspiration for drake. Drake is a fresh reinterpretation of some of  <a href="https://github.com/richfitz/remake">remake</a>&#39;s pioneering fundamental concepts, scaled up for computationally-demanding workflows. Relative to <a href="https://github.com/richfitz/remake">remake</a>, some of drake&#39;s most prominent distinguishing features at the time of writing this document are</p>
-
+<p>The original idea of a time-saving reproducible build system extends back decades to <a href="http://kbroman.org/minimal_make/">GNU Make</a>, which today helps <a href="http://blog.kaggle.com/2012/10/15/make-for-data-scientists/">data scientists</a> as well as the original user base of complied-language programmers. More recently, <a href="http://richfitz.github.io/">Rich FitzJohn</a> created <a href="https://github.com/richfitz/remake">remake</a>, a breakthrough reimagining of <a href="http://kbroman.org/minimal_make/">Make</a> for R and the most important inspiration for drake. Drake is a fresh reinterpretation of some of <a href="https://github.com/richfitz/remake">remake</a>’s pioneering fundamental concepts, scaled up for computationally-demanding workflows.</p>
+<p>Thanks also to <a href="http://krlmlr.github.io/">Kirill Müller</a> and <a href="http://danielfalster.com/">Daniel Falster</a>. They contributed code patches and enhancement ideas to my <a href="https://github.com/wlandau/parallelRemake">parallelRemake</a> and <a href="https://github.com/wlandau/remakeGenerator">remakeGenerator</a> packages, which I have now subsumed into drake.</p>
+</div>
+<div id="advantages-of-drake" class="section level1">
+<h1>Advantages of drake</h1>
+<p>Some advantages of drake, especially relative to <a href="https://github.com/richfitz/remake">remake</a> at the time of writing, are</p>
+<ol style="list-style-type: decimal">
+<li>reproducibility. Drake can
 <ul>
-<li>a more convenient, R-focused, <a href="http://yaml.org/">YAML</a>-free user interface.</li>
-<li>generative templating to plan large workflows without much typing.</li>
-<li>smoother, safer user-side handling of external files and nested commands.</li>
-<li>distributed computing though <strong>seamless</strong> integration with <a href="http://kbroman.org/minimal_make/">Makefiles</a>.</li>
-<li>single-session multiprocess parallel computing via <code>parallel::parLapply()</code> and <code>parallel::mclapply()</code>. (The user can choose either.)</li>
-<li>robust detection of dependencies from users&#39; packages.</li>
-<li>a wholehearted embrace of <a href="http://igraph.org/r/">igraph</a> to drive the backend.</li>
-</ul>
-
-<p>Thanks also to <a href="http://krlmlr.github.io/">Kirill M&uuml;ller</a> and <a href="http://danielfalster.com/">Daniel Falster</a>. They contributed code patches and enhancement ideas to my <a href="https://github.com/wlandau/parallelRemake">parallelRemake</a> and <a href="https://github.com/wlandau/remakeGenerator">remakeGenerator</a> packages, which I have now subsumed into drake.</p>
-
+<li>import and track arbitrary variables from your workspace.</li>
+<li>track functions from packages.</li>
+</ul></li>
+<li>safety.
+<ul>
+<li>If you manually break an output file target, drake can fix it with another call to <code>make()</code>.</li>
+</ul></li>
+<li>parallel computing. Auto-magically run multiple targets simultaneously.
+<ul>
+<li>Switch on the <code>mclapply()</code> or <code>parLapply()</code> backend for light parallelism within a single R session.</li>
+<li>Switch on a <code>Makefile</code> to parallelize over multiple R sessions, which you can distribute across several nodes of a computing cluster or a supercomputer.</li>
+</ul></li>
+<li>convenience.
+<ul>
+<li>No YAML files!</li>
+<li>With functions like <code>plan()</code>, <code>datasets()</code>, <code>analyses()</code>, <code>evaluate()</code>, <code>expand()</code>, and <code>gather()</code>, you can minimize typing when you set up a project.</li>
+</ul></li>
+</ol>
+</div>
+<div id="windows" class="section level1">
 <h1>Windows</h1>
-
 <p>Drake presents <code>mclapply()</code> as one of two single-session parallel computing backends. Unfortunately, <code>mclapply()</code> cannot run multiple parallel jobs on Windows, so Windows users should use set <code>parallelism = &quot;parLapply&quot;</code> rather than <code>parallelism = &quot;mclapply&quot;</code> inside <code>make()</code> (already the Windows default). For true distributed parallel computing over multiple R sessions, Windows users need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>. This is because drake runs <a href="http://kbroman.org/minimal_make/">Makefiles</a> with <code>system2(&quot;make&quot;, ...)</code>.</p>
-
+</div>
+<div id="tutorials" class="section level1">
 <h1>Tutorials</h1>
-
-<p>The <a href="https://CRAN.R-project.org/package=drake">CRAN page</a> links to multiple tutorials and vignettes. With drake installed, you can load any of the vignettes 
-in an R session.</p>
-
-<pre><code class="r">vignette(package = &quot;drake&quot;) # List the vignettes.
-vignette(&quot;drake&quot;) # High-level intro.
-vignette(&quot;quickstart&quot;) # Walk through a simple example.
-vignette(&quot;caution&quot;) # Drake is not perfect. Read this to be safe.
-</code></pre>
-
+<p>The <a href="https://CRAN.R-project.org/package=drake">CRAN page</a> links to multiple tutorials and vignettes. With drake installed, you can load any of the vignettes in an R session.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">vignette</span>(<span class="dt">package =</span> <span class="st">&quot;drake&quot;</span>) <span class="co"># List the vignettes.</span>
+<span class="kw">vignette</span>(<span class="st">&quot;drake&quot;</span>) <span class="co"># High-level intro.</span>
+<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>) <span class="co"># Walk through a simple example.</span>
+<span class="kw">vignette</span>(<span class="st">&quot;caution&quot;</span>) <span class="co"># Drake is not perfect. Read this to be safe.</span></code></pre>
+</div>
+<div id="quickstart-examples" class="section level1">
 <h1>Quickstart examples</h1>
-
 <p>Drake has small self-contained built-in examples. To see the names of the available examples, use</p>
-
-<pre><code class="r">examples_drake()
-</code></pre>
-
-<pre><code>## [1] &quot;basic&quot;
-</code></pre>
-
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">examples_drake</span>()</code></pre>
+<pre><code>## [1] &quot;basic&quot;</code></pre>
 <p>Then use <code>example_drake()</code> to write the files for the example to your working directory.</p>
-
-<pre><code class="r">example_drake(&quot;basic&quot;)
-</code></pre>
-
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">example_drake</span>(<span class="st">&quot;basic&quot;</span>)</code></pre>
 <p>Step through the code files to get started.</p>
-
+</div>
+<div id="words-of-caution" class="section level1">
 <h1>Words of caution</h1>
-
-<p>Drake tries to reproducibly track everything and make other obviously good decisions, but there are limitations. For example, in some edge cases, it is possible to trick drake into ignoring dependencies. Please read the &ldquo;caution&rdquo; vignette to use drake safely (<code>vignette(&quot;caution&quot;)</code>, also linked from the <a href="https://CRAN.R-project.org/package=drake">CRAN page</a> under &ldquo;vignettes&rdquo;).</p>
-
+<p>Drake tries to reproducibly track everything and make other obviously good decisions, but there are limitations. For example, in some edge cases, it is possible to trick drake into ignoring dependencies. Please read the “caution” vignette to use drake safely (<code>vignette(&quot;caution&quot;)</code>, also linked from the <a href="https://CRAN.R-project.org/package=drake">CRAN page</a> under “vignettes”).</p>
+</div>
+<div id="help-and-troubleshooting" class="section level1">
 <h1>Help and troubleshooting</h1>
-
 <p>For troubleshooting, please refer to <a href="https://github.com/wlandau-lilly/drake/blob/master/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> on the <a href="https://github.com/wlandau-lilly/drake">GitHub page</a> for instructions.</p>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
 
 </body>
-
 </html>

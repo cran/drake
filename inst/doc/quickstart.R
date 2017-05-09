@@ -118,6 +118,9 @@ check(plan)
 ## ----firstmake-----------------------------------------------------------
 make(plan)
 
+## ----autoload------------------------------------------------------------
+"report_dependencies" %in% ls() # Should be TRUE.
+
 ## ----cache---------------------------------------------------------------
 readd(coef_regression2_large)
 loadd(small)
@@ -129,7 +132,8 @@ built()
 imported()
 head(read_plan())
 # read_graph() # reads/plots the tree structure of your workflow plan
-head(status()) # last call to make()
+head(status()) # What did you last build? Did it finish?
+# session(): sessionInfo() of the last call to make()
 status(large)
 
 ## ----uptodate------------------------------------------------------------

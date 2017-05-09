@@ -13,7 +13,7 @@
 ###################################
 
 library(knitr)
-library(rmarkdown)
+# library(rmarkdown) # platform-dependent: render() requires pandoc
 library(drake)
 
 clean() # remove any previous drake output
@@ -131,9 +131,14 @@ clean() # Cleans out the hidden cache in the .drake/ folder if it exists.
 # These functions are exactly the same.
 make(plan) # build everything from scratch
 # Now, open and read report.html in a browser.
+status() # What did you build? Did it finish?
+# session() # get the sessionInfo() of the last call to make()
 
 # see also: loadd(), cached(), imported(), and built()
 readd(coef_regression2_large) # Read target from the cache.
+# The non-file dependencies of your last target are already loaded
+# in your workspace.
+"report_dependencies" %in% ls() # Should be TRUE.
 
 # Everything is up to date.
 make(plan)
@@ -196,6 +201,9 @@ clean() # Start over next time.
 
 # Write a Makefile and execute it to spawn up to two
 # R sessions at a time.
+# Windows users need Rtools (https://cran.r-project.org/bin/windows/Rtools)
+# Everyone else just needs Make (https://www.gnu.org/software/make) 
+# or an equivalent program.
 make(plan, parallelism = "Makefile", jobs = 2) # build everything
 readd(coef_regression2_large) # see also: loadd(), cached()
 
@@ -208,7 +216,8 @@ clean() # Start over next time.
 ### ONLY ATTEMPT ON A PROPER COMPUTING CLUSTER     ###
 ######################################################
 
-if(FALSE){ # Only attempt this part on a proper computing cluster.
+if(FALSE){ # Use FALSE on regular local machines.
+# if(TRUE){ # Only attempt this part on a proper computing cluster.
 
 # The file shell.sh tells the Makefile to submit jobs on a cluster.
 # You could write this file by hand if you wanted.

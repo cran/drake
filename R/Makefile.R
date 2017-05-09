@@ -1,12 +1,16 @@
-run_Makefile = function(config, run = TRUE){
+run_Makefile = function(config, run = TRUE, debug = FALSE){
+  if(identical(globalenv(), config$envir))
+    save(list = ls(config$envir), envir = config$envir,
+      file = globalenvpath)
   config$cache$set("config", config, namespace = "makefile")
   makefile = file.path(cachepath, "Makefile")
   sink("Makefile")
   makefile_head(config)
   makefile_rules(config)
-  sink() 
+  sink()
   initialize(config)
   if(run) system2(command = config$command, args = config$args)
+  if(!debug) unlink(globalenvpath)
   invisible()
 }
 
@@ -44,7 +48,7 @@ makefile_rules = function(config){
   }
 }
 
-initialize = function(config){ 
+initialize = function(config){
   config$cache$clear(namespace = "status")
   do_prework(config = config, verbosePackages = TRUE)
   imports = setdiff(config$order, config$plan$target)
@@ -65,6 +69,8 @@ initialize = function(config){
 #' @param target name of target to make
 mk = function(target){
   config = get_cache()$get("config", namespace = "makefile")
+  if(identical(globalenv(), config$envir))
+    load(file = globalenvpath, envir = config$envir)
   config = inventory(config)
   do_prework(config = config, verbosePackages = FALSE)
   prune_envir(targets = target, config = config)

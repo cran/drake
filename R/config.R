@@ -1,19 +1,15 @@
 config = function(plan, targets, envir, jobs,
   parallelism = drake::parallelism_choices(), verbose, packages,
   prework, prepend, command, args){
+  plan = sanitize_plan(plan)
+  targets = sanitize_targets(plan, targets)
   parallelism = match.arg(parallelism)
-  plan = as.data.frame(plan) %>% fix_deprecated_plan_names
-  targets = intersect(targets, plan$target)
   prework = add_packages_to_prework(packages = packages,
     prework = prework)
   cache = storr_rds(cachepath, mangle_key = TRUE)
   cache$clear(namespace = "status")
-  envir = envir %>% as.list %>% list2env(parent = globalenv())
-  lapply(ls(envir), function(target)
-    if(is.function(envir[[target]]))
-      environment(envir[[target]]) = envir)
   graph = build_graph(plan = plan, targets = targets,
-    envir = envir)
+    envir = envir, verbose = verbose)
   order = topological.sort(graph)$name
   list(plan = plan, targets = targets, envir = envir, cache = cache,
     parallelism = parallelism, jobs = jobs, verbose = verbose,
@@ -26,7 +22,7 @@ add_packages_to_prework = function(packages, prework){
   packages = c("methods", packages) %>% unique
   if(!length(packages)) return(prework)
   package_list = deparse(packages) %>% paste(collapse = "\n")
-  paste0("if(!R.utils::isPackageLoaded(\"", packages, "\")) library(",
+  paste0("if(!R.utils::isPackageLoaded(\"", packages, "\")) require(",
     packages, ")", sep = "") %>%
     c(prework)
 }
@@ -44,8 +40,16 @@ inventory = function(config){
   config
 }
 
+#' @title Function \code{possible_targets}
+#' @description internal function, returns the list of 
+#' possible targets that you can select with the \code{targets}
+#' argument to \code{\link{make}()}.
+#' @seealso \code{\link{make}}
+#' @export
+#' @return character vector of possible targets
+#' @param plan workflow plan data frame
 possible_targets = function(plan){
-  plan = as.data.frame(plan)
+  plan = sanitize_plan(plan)
   c(as.character(plan$output), as.character(plan$target))
 }
 

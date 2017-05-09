@@ -19,10 +19,10 @@ test_that("scratch build with contained envir.", {
   nobuild(config)
   
   # take this opportunity to test clean() and prune()
-  all = c("'input.rds'", "'intermediatefile.rds'", "a",
+  all = sort(c("'input.rds'", "'intermediatefile.rds'", "a",
     "b", "c", "combined", "f", "final", "g", "h", "i",
     "j", "myinput", "nextone", "readRDS", "saveRDS",
-    "yourinput")
+    "yourinput"))
   expect_equal(config$cache$list(), all)
   expect_true(file.exists("intermediatefile.rds"))
   expect_true(file.exists("input.rds"))
@@ -48,9 +48,19 @@ test_that("scratch build with contained envir.", {
   clean("'input.rds'", search = FALSE)
   expect_true(file.exists("input.rds"))
   expect_false("'input.rds'" %in% config$cache$list())  
-  
+
+  # clean removes imported functions and cleans up "functions" namespace
+  expect_true(cached(f))
+  for(n in c("objects", "depends", "functions"))
+    expect_true("f" %in% config$cache$list(namespace = n))
+  clean(f)
+  for(n in c("objects", "depends", "functions"))
+    expect_false("f" %in% config$cache$list(namespace = n))
+
   clean(destroy = FALSE, search = FALSE)
   expect_equal(config$cache$list(), character(0))
+  expect_equal(config$cache$list("depends"), character(0))
+  expect_equal(config$cache$list("functions"), character(0))
   expect_false(file.exists("intermediatefile.rds"))
   expect_true(file.exists("input.rds"))
   expect_true(file.exists(cachepath))
@@ -63,18 +73,10 @@ test_that("scratch build with contained envir.", {
   dclean()
 })
 
-test_that("calling environment is unaffected in scratch build.", {
+test_that("clean in full build.", {
   dclean()
   config = dbug()
-  for(x in ls(config$envir)) assign(x, config$envir[[x]], environment())
-  if("obj" %in% ls()) rm(obj)
-  obj = ls()
-  expect_equal(config$cache$list(), character(0))
-  make(config$plan, verbose = FALSE)
-  expect_equal(sort(c(obj, "obj")), ls())
-  expect_true(length(config$cache$list()) > 0)
-  
-  # Take this opportunity to test clean() some more.
+  make(config$plan, envir = config$envir, verbose = FALSE)
   expect_true("final" %in% config$cache$list())
   clean(final, search = TRUE)
   expect_false("final" %in% config$cache$list())
@@ -83,7 +85,6 @@ test_that("calling environment is unaffected in scratch build.", {
   expect_true(file.exists(cachepath))
   clean(search = TRUE, destroy = TRUE)
   expect_false(file.exists(cachepath))
-  
   dclean()
   expect_false(file.exists("input.rds"))
 })

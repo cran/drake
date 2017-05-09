@@ -1,10 +1,40 @@
 # library(testthat); library(devtools); load_all()
 context("edge-cases")
 
+test_that("vectorized nested functions work", {
+  dclean()
+  e = new.env(parent = globalenv())
+  eval(parse(text='f <- Vectorize(function(x) g(x), "x")'), envir = e)
+  eval(parse(text='g <- function(x) x + 1'), envir = e)
+  config = dbug()
+  config$envir = e
+  config$plan = plan(a = f(1:10))
+  config$targets = "a"
+  testrun(config)
+  expect_equal(readd(a), 2:11)
+  k = readd(f)
+  expect_equal(k(2:5), 3:6)
+  dclean()
+})
+
+test_that("stringsAsFactors can be TRUE", {
+  dclean()
+  f = function(x){return(x)}
+  myplan = data.frame(target = "a", command = 'f("helloworld")',
+    stringsAsFactors = TRUE)
+  expect_true(is.factor(myplan$target))
+  expect_true(is.factor(myplan$command))
+  make(myplan, verbose = FALSE)
+  expect_equal(readd(a), "helloworld")
+  dclean()
+})
+
 test_that("circular non-DAG workflows quit in error", {
+  dclean()
   p = plan(a = b, b = c, c = a)
   expect_error(check(p))
   expect_error(make(p))
+  dclean()
 })
 
 # Target/import conflicts are unpredictable. A warning should be enough.
@@ -13,7 +43,7 @@ test_that("target conflicts with current import or another target", {
   config = dbug()
   config$plan = rbind(config$plan, data.frame(target = "f", 
     command = "1+1"))
-  expect_warning(tmp <- capture.output(
+  expect_silent(tmp <- capture.output(
     check(plan = config$plan, envir = config$envir)))
   config$plan$target = "repeated"
   expect_error(check(plan = config$plan))
@@ -27,10 +57,10 @@ test_that("target conflicts with previous import", {
   config$plan = rbind(config$plan, 
     data.frame(target = "f", command = "1+1"))
   config$targets = config$plan$target
-  expect_warning(testrun(config))
+  testrun(config)
   expect_equal(justbuilt(config), 
-    c("'intermediatefile.rds'", "combined", "f",
-      "final", "yourinput"))
+    sort(c("'intermediatefile.rds'", "combined", "f",
+      "final", "yourinput")))
   dclean()
 })
 

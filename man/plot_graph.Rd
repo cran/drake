@@ -4,7 +4,8 @@
 \alias{plot_graph}
 \title{Function \code{plot_graph}}
 \usage{
-plot_graph(plan, targets = plan$target, envir = parent.frame())
+plot_graph(plan, targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE)
 }
 \arguments{
 \item{plan}{workflow plan data frame, same as for function 
@@ -15,6 +16,8 @@ plot_graph(plan, targets = plan$target, envir = parent.frame())
 
 \item{envir}{environment to import from, same as for function
 \code{\link{make}()}.}
+
+\item{verbose}{logical, whether to output messages to the console.}
 }
 \description{
 Plot the dependency structure of your workflow
