@@ -1,22 +1,20 @@
-## ---- echo = F-----------------------------------------------------------
+## ----suppression, echo = F-----------------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
 clean(destroy = TRUE)
 
-## ----example-------------------------------------------------------------
-examples_drake()
-
-## ----basic, eval = FALSE-------------------------------------------------
-#  example_drake("basic")
+## ----noeval2, eval = FALSE-----------------------------------------------
+#  example_drake("basic") # Write the code files.
+#  examples_drake() # List the other examples.
+#  vignette("quickstart") # Same as https://cran.r-project.org/package=drake/vignettes/quickstart.html
 
 ## ----libs----------------------------------------------------------------
 library(knitr)
-library(rmarkdown)
 library(drake)
 
 ## ----sim-----------------------------------------------------------------
 simulate = function(n){
   data.frame(
-    x = rnorm(n),
+    x = stats::rnorm(n), # Drake tracks calls like `pkg::fn()` (namespaced functions).
     y = rpois(n, 1)
   )
 }
@@ -33,15 +31,10 @@ reg2 = function(d){
 
 ## ----knit----------------------------------------------------------------
 my_knit = function(file, ...){
-  knit(file) # drake knows you loaded the knitr package
-}
-
-my_render = function(file, ...){
-  render(file) # drake knows you loaded the rmarkdown package
+  knit(file)
 }
 
 ## ----file----------------------------------------------------------------
-# Write the R Markdown source for a dynamic knitr report
 lines = c(
   "---",
   "title: Example Report",
@@ -54,22 +47,44 @@ lines = c(
   "```{r example_chunk}",
   "library(drake)",
   "readd(small)",
-  "readd(coef_regression2_small)",
-  "loadd(large)",
+  "readd(coef_regression2_small)", # Return an object from the drake cache.
+  "loadd(large)", # Load an object from the drake cache into your workspace.
   "head(large)",
-  "```"
-)
-
+  "```")
 writeLines(lines, "report.Rmd")
 
+## ----previewmyplan-------------------------------------------------------
+load_basic_example()
+my_plan
+
+## ----plotgraph2----------------------------------------------------------
+# Skip the file argument to just plot.
+# Hover, click, drag, zoom, pan.
+plot_graph(my_plan, width = "100%", height = "500px", 
+  file = "quickstart_graph1.html") 
+# See also dataframes_graph(), render_graph().
+# Speed up regraphing with config().
+
+## ----checkdeps-----------------------------------------------------------
+deps(reg2)
+deps(my_plan$command[1]) # report.Rmd is single-quoted because it is a file dependency.
+deps(my_plan$command[16])
+
+## ----tracked-------------------------------------------------------------
+tracked(my_plan, targets = "small")
+tracked(my_plan)
+
+## ----check---------------------------------------------------------------
+check(my_plan)
+
 ## ----datasets------------------------------------------------------------
-datasets = plan(
+my_datasets = plan(
   small = simulate(5),
   large = simulate(50))
-datasets
+my_datasets
 
 ## ----expand--------------------------------------------------------------
-expand(datasets, values = c("rep1", "rep2"))
+expand(my_datasets, values = c("rep1", "rep2"))
 
 ## ----methods-------------------------------------------------------------
 methods = plan(
@@ -78,16 +93,17 @@ methods = plan(
 methods
 
 ## ----analyses------------------------------------------------------------
-analyses = analyses(methods, data = datasets)
-analyses
+my_analyses = analyses(methods, data = my_datasets)
+my_analyses
 
 ## ----summaries-----------------------------------------------------------
-summary_types = plan(summ = summary(..analysis..),
-                     coef = coef(..analysis..))
+summary_types = plan(
+  summ = suppressWarnings(summary(..analysis..)), # Occasionally there is a perfect regression fit.
+  coef = coef(..analysis..))
 summary_types
 
-results = summaries(summary_types, analyses, datasets, 
-  gather = NULL)
+results = summaries(summary_types, analyses = my_analyses, 
+  datasets = my_datasets, gather = NULL)
 results
 
 ## ----reportdeps----------------------------------------------------------
@@ -98,85 +114,12 @@ load_in_report
 ## ----reportplan----------------------------------------------------------
 report = plan(
   report.md = my_knit('report.Rmd', report_dependencies),
-## The html report requires pandoc. Commented out.
-## report.html = my_render('report.md', report_dependencies),
   file_targets = TRUE, strings_in_dots = "filenames")
 report
 
 ## ----wholeplan-----------------------------------------------------------
-plan = rbind(report, datasets, load_in_report, analyses, results)
-plan
-
-## ----tracked-------------------------------------------------------------
-"small" %in% tracked(plan)
-tracked(plan, targets = "small")
-tracked(plan)
-
-## ----check---------------------------------------------------------------
-check(plan)
-
-## ----firstmake-----------------------------------------------------------
-make(plan)
-
-## ----autoload------------------------------------------------------------
-"report_dependencies" %in% ls() # Should be TRUE.
-
-## ----cache---------------------------------------------------------------
-readd(coef_regression2_large)
-loadd(small)
-head(small)
-rm(small)
-cached(small, large)
-cached()
-built()
-imported()
-head(read_plan())
-# read_graph() # reads/plots the tree structure of your workflow plan
-head(status()) # What did you last build? Did it finish?
-# session(): sessionInfo() of the last call to make()
-status(large)
-
-## ----uptodate------------------------------------------------------------
-make(plan)
-
-## ----changereg2----------------------------------------------------------
-reg2 = function(d){
-  d$x3 = d$x^3
-  lm(y ~ x3, data = d)
-}
-
-## ----partialupdate-------------------------------------------------------
-make(plan)
-
-## ----trivial-------------------------------------------------------------
-reg2 = function(d){
-  d$x3 = d$x^3
-    lm(y ~ x3, data = d) # I indented here.
-}
-make(plan) 
-
-## ----newstuff------------------------------------------------------------
-new_simulation = function(n){
-  data.frame(x = rnorm(n), y = rnorm(n))
-}
-
-additions = plan(
-  new_data = new_simulation(36) + sqrt(10))  
-additions
-
-plan = rbind(plan, additions)
-plan
-
-make(plan)
-
-## ----cleanup-------------------------------------------------------------
-clean(small, reg1) # uncaches individual targets and imported objects
-clean() # cleans all targets out of the cache
-clean(destroy = TRUE) # removes the cache entirely
-
-## ----endofline, echo = F-------------------------------------------------
-clean(destroy = TRUE) # Totally remove the hidden .drake/ cache.
-unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*")) # Clean up other files.
+my_plan = rbind(report, my_datasets, load_in_report, my_analyses, results)
+my_plan
 
 ## ------------------------------------------------------------------------
 df = plan(data = simulate(center = MU, scale = SIGMA))
@@ -189,4 +132,103 @@ evaluate(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1)), expand = FALSE)
 evaluate(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1, 10)))
 gather(df)
 gather(df, target = "my_summaries", gather = "rbind")
+
+## ----firstmake-----------------------------------------------------------
+outdated(my_plan) # These are the targets that need to be (re)built.
+missed(my_plan) # Make sure nothing is missing from your workspace.
+make(my_plan)
+
+## ----autoload------------------------------------------------------------
+"report_dependencies" %in% ls() # Should be TRUE.
+
+## ----plotgraphfirstmake--------------------------------------------------
+outdated(my_plan) # Everything is up to date.
+plot_graph(my_plan, width = "100%", height = "500px",
+  file = "quickstart_graph2.html") # The red nodes from before turned green.
+# dataframes_graph(my_plan) # Get visNetwork nodes and edges so you can make your own plot.
+
+## ----cache---------------------------------------------------------------
+readd(coef_regression2_large)
+loadd(small)
+head(small)
+rm(small)
+cached(small, large)
+cached()
+built()
+imported()
+head(read_plan())
+# read_graph() # Plots the graph of the workflow you just ran.
+head(progress()) # See also in_progress()
+# session(): sessionInfo() of the last call to make()
+progress(large)
+
+## ----uptodateinvig-------------------------------------------------------
+make(my_plan)
+
+## ----changereg2invignette------------------------------------------------
+reg2 = function(d){
+  d$x3 = d$x^3
+  lm(y ~ x3, data = d)
+}
+
+## ----plotwithreg2--------------------------------------------------------
+outdated(my_plan)
+plot_graph(my_plan, width = "100%", height = "500px",
+  file = "quickstart_graph3.html")
+
+## ----remakewithreg2------------------------------------------------------
+make(my_plan)
+
+## ----trivial-------------------------------------------------------------
+reg2 = function(d){
+  d$x3 = d$x^3
+    lm(y ~ x3, data = d) # I indented here.
+}
+outdated(my_plan) # Everything is up to date.
+
+## ----newstuff------------------------------------------------------------
+new_simulation = function(n){
+  data.frame(x = rnorm(n), y = rnorm(n))
+}
+
+additions = plan(
+  new_data = new_simulation(36) + sqrt(10))  
+additions
+
+my_plan = rbind(my_plan, additions)
+my_plan
+
+make(my_plan)
+
+## ----cleanup-------------------------------------------------------------
+clean(small, reg1) # uncaches individual targets and imported objects
+clean() # cleans all targets out of the cache
+clean(destroy = TRUE) # removes the cache entirely
+
+## ----plotgraph-----------------------------------------------------------
+clean()
+load_basic_example()
+make(my_plan, jobs = 2, verbose = FALSE) # Parallelize over 2 jobs.
+reg2 = function(d){ # Change a dependency.
+  d$x3 = d$x^3
+  lm(y ~ x3, data = d)
+}
+plot_graph(my_plan, width = "100%", height = "500px",
+  file = "quickstart_graph4.html") # Click, drag, and zoom to explore.
+
+## ----binbash, eval = FALSE-----------------------------------------------
+#  #!/bin/bash
+#  shift
+#  echo "module load R; $*" | qsub -sync y -cwd -j y
+
+## ----cluster, eval = FALSE-----------------------------------------------
+#  make(my_plan, parallelism = "Makefile", jobs = 4,
+#    prepend = "SHELL=srun")
+
+## ----nohup, eval = FALSE-------------------------------------------------
+#  nohup nice -19 R CMD BATCH script.R &
+
+## ----endofline, echo = F-------------------------------------------------
+clean(destroy = TRUE) # Totally remove the hidden .drake/ cache.
+unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db")) # Clean up other files.
 
