@@ -57,14 +57,6 @@ writeLines(lines, "report.Rmd")
 load_basic_example()
 my_plan
 
-## ----plotgraph2----------------------------------------------------------
-# Skip the file argument to just plot.
-# Hover, click, drag, zoom, pan.
-plot_graph(my_plan, width = "100%", height = "500px", 
-  file = "quickstart_graph1.html") 
-# See also dataframes_graph(), render_graph().
-# Speed up regraphing with config().
-
 ## ----checkdeps-----------------------------------------------------------
 deps(reg2)
 deps(my_plan$command[1]) # report.Rmd is single-quoted because it is a file dependency.
@@ -134,18 +126,18 @@ gather(df)
 gather(df, target = "my_summaries", gather = "rbind")
 
 ## ----firstmake-----------------------------------------------------------
-outdated(my_plan) # These are the targets that need to be (re)built.
-missed(my_plan) # Make sure nothing is missing from your workspace.
+outdated(my_plan, verbose = FALSE) # These are the targets that need to be (re)built.
+missed(my_plan, verbose = FALSE) # Make sure nothing is missing from your workspace.
+
+## ----firstmakeforreal----------------------------------------------------
 make(my_plan)
 
 ## ----autoload------------------------------------------------------------
 "report_dependencies" %in% ls() # Should be TRUE.
 
 ## ----plotgraphfirstmake--------------------------------------------------
-outdated(my_plan) # Everything is up to date.
-plot_graph(my_plan, width = "100%", height = "500px",
-  file = "quickstart_graph2.html") # The red nodes from before turned green.
-# dataframes_graph(my_plan) # Get visNetwork nodes and edges so you can make your own plot.
+outdated(my_plan, verbose = FALSE) # Everything is up to date.
+build_times(digits = 4) # How long did it take to make each target?
 
 ## ----cache---------------------------------------------------------------
 readd(coef_regression2_large)
@@ -172,9 +164,7 @@ reg2 = function(d){
 }
 
 ## ----plotwithreg2--------------------------------------------------------
-outdated(my_plan)
-plot_graph(my_plan, width = "100%", height = "500px",
-  file = "quickstart_graph3.html")
+outdated(my_plan, verbose = FALSE)
 
 ## ----remakewithreg2------------------------------------------------------
 make(my_plan)
@@ -184,7 +174,7 @@ reg2 = function(d){
   d$x3 = d$x^3
     lm(y ~ x3, data = d) # I indented here.
 }
-outdated(my_plan) # Everything is up to date.
+outdated(my_plan, verbose = FALSE) # Everything is up to date.
 
 ## ----newstuff------------------------------------------------------------
 new_simulation = function(n){
@@ -213,8 +203,6 @@ reg2 = function(d){ # Change a dependency.
   d$x3 = d$x^3
   lm(y ~ x3, data = d)
 }
-plot_graph(my_plan, width = "100%", height = "500px",
-  file = "quickstart_graph4.html") # Click, drag, and zoom to explore.
 
 ## ----binbash, eval = FALSE-----------------------------------------------
 #  #!/bin/bash

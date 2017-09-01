@@ -12,7 +12,7 @@
 
 <meta name="author" content="William Michael Landau" />
 
-<meta name="date" content="2017-08-04" />
+<meta name="date" content="2017-09-01" />
 
 <title>drake</title>
 
@@ -71,7 +71,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1 class="title toc-ignore">drake</h1>
 <h3 class="subtitle"><em>data frames in R for Make</em></h3>
 <h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-08-04</em></h4>
+<h4 class="date"><em>2017-09-01</em></h4>
 
 
 
@@ -145,7 +145,8 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-
 <span class="kw">summaries</span>()
 <span class="kw">evaluate</span>()
 <span class="kw">expand</span>()
-<span class="kw">gather</span>()</code></pre></div>
+<span class="kw">gather</span>()
+<span class="kw">wildcard</span>() <span class="co"># from the wildcard package</span></code></pre></div>
 <p>explore the dependency network,</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">outdated</span>()
 <span class="kw">missed</span>()
@@ -160,6 +161,7 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-
 <span class="kw">cached</span>()
 <span class="kw">imported</span>()
 <span class="kw">built</span>()
+<span class="kw">build_times</span>()
 <span class="kw">readd</span>()
 <span class="kw">loadd</span>()
 <span class="kw">find_project</span>()
@@ -216,29 +218,10 @@ reg2 =<span class="st"> </span>function(d){ <span class="co"># Change one of you
 reg2 =<span class="st"> </span>function(d){ <span class="co"># Change a dependency.</span>
   d$x3 =<span class="st"> </span>d$x^<span class="dv">3</span>
   <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
-}
-
-<span class="co"># Skip the file argument to just plot.</span>
-<span class="co"># Hover, click, drag, zoom, pan.</span>
-<span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>, 
-  <span class="dt">file =</span> <span class="st">&quot;drake_graph.html&quot;</span>) </code></pre></div>
-<pre><code>## Unloading targets from environment:
-##   report_dependencies
-## import 'report.Rmd'
-## import c
-## import summary
-## import suppressWarnings
-## import coef
-## import knit
-## import data.frame
-## import rpois
-## import stats::rnorm
-## import lm
-## import my_knit
-## import simulate
-## import reg1
-## import reg2</code></pre>
-<iframe src="drake_graph.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+}</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
+<span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/a816f791/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
 <p>When you call <code>make(my_plan, jobs = 4)</code>, the work proceeds in chronological order from left to right. The items are built or imported column by column in sequence, and up-to-date targets are skipped. Within each column, the targets/objects are all independent of each other conditional on the previous steps, so they are distributed over the 4 available parallel jobs/workers. Assuming the targets are rate-limiting (as opposed to imported objects), the next <code>make(..., jobs = 4)</code> should be faster than <code>make(..., jobs = 1)</code>, but it would be superfluous to use more than 4 jobs.</p>
 <p>See function <code>max_useful_jobs()</code> to suggest the number of jobs, taking into account which targets are already up to date. Try out the following in a fresh R session.</p>
@@ -270,12 +253,12 @@ reg2 =<span class="st"> </span>function(d){
 <ol style="list-style-type: decimal">
 <li><strong>mclapply</strong>: low-overhead, light-weight. <code>make(..., parallelism = &quot;mclapply&quot;, jobs = 2)</code> invokes <code>parallel::mclapply()</code> under the hood and distributes the work over at most two independent processes (set with <code>jobs</code>). Mclapply is an ideal choice for low-overhead single-node parallelism, but it does not work on Windows.</li>
 <li><strong>parLapply</strong>: medium-overhead, light-weight. <code>make(..., parallelism = &quot;parLapply&quot;, jobs = 2)</code> invokes <code>parallel::mclapply()</code> under the hood. This option is similar to mclapply except that it works on Windows and costs a little extra time up front.</li>
-<li><strong>Makefile</strong>: high-overhead, heavy-duty. <code>make(..., parallelism = &quot;Makefile&quot;, jobs = 2)</code> creates a proper <a href="https://www.gnu.org/software/make/">Makefile</a> to distribute the work over multiple independent R sessions. With custom settings, you can distribute the R sessions over different jobs/nodes on a cluster. See the <a href="https://cran.r-project.org/package=drake/vignettes/quickstart.html">quickstart vignette</a> for more details.</li>
+<li><strong>Makefile</strong>: high-overhead, heavy-duty. <code>make(..., parallelism = &quot;Makefile&quot;, jobs = 2)</code> creates a proper <a href="https://www.gnu.org/software/make/">Makefile</a> to distribute the work over multiple independent R sessions. With custom settings, you can distribute the R sessions over different jobs/nodes on a cluster. The build order may be different here because all the imports are imported before any of the targets are built with the <a href="https://www.gnu.org/software/make/">Makefile</a>. That means <code>plot_graph()</code>, <code>dataframes_graph()</code>, and <code>max_useful_jobs()</code> behave differently for . For more details, see the <a href="https://cran.r-project.org/package=drake/vignettes/quickstart.html">quickstart vignette</a>.</li>
 </ol>
 </div>
 <div id="acknowledgements-and-related-work" class="section level1">
 <h1>Acknowledgements and related work</h1>
-<p>The original idea of a time-saving reproducible build system extends back decades to <a href="http://kbroman.org/minimal_make/">GNU Make</a>, which today helps <a href="http://blog.kaggle.com/2012/10/15/make-for-data-scientists/">data scientists</a> as well as the original user base of complied-language programmers. More recently, <a href="http://richfitz.github.io/">Rich FitzJohn</a> created <a href="https://github.com/richfitz/remake">remake</a>, a breakthrough reimagining of <a href="http://kbroman.org/minimal_make/">Make</a> for R and the most important inspiration for drake. Drake is a fresh reinterpretation of some of <a href="https://github.com/richfitz/remake">remake</a>’s pioneering fundamental concepts, scaled up for computationally-demanding workflows.</p>
+<p>The original idea of a time-saving reproducible build system extends back decades to <a href="http://kbroman.org/minimal_make/">GNU Make</a>, which today helps <a href="http://blog.kaggle.com/2012/10/15/make-for-data-scientists/">data scientists</a> as well as the original user base of complied-language programmers. More recently, <a href="http://richfitz.github.io/">Rich FitzJohn</a> created <a href="https://github.com/richfitz/remake">remake</a>, a breakthrough reimagining of <a href="http://kbroman.org/minimal_make/">Make</a> for R and the most important inspiration for drake. Drake is a fresh reinterpretation of some of <a href="https://github.com/richfitz/remake">remake</a>’s pioneering fundamental concepts, scaled up for computationally-demanding workflows. There are <a href="https://github.com/pditommaso/awesome-pipeline">many other pipeline toolkits</a>, but few are R-focused.</p>
 <p>Thanks also to <a href="http://krlmlr.github.io/">Kirill Müller</a> and <a href="http://danielfalster.com/">Daniel Falster</a>. They contributed code patches and enhancement ideas to my <a href="https://github.com/wlandau/parallelRemake">parallelRemake</a> and <a href="https://github.com/wlandau/remakeGenerator">remakeGenerator</a> packages, which I have now subsumed into drake.</p>
 <p>Special thanks to <a href="http://www.jarad.me/">Jarad Niemi</a>, my advisor from <a href="http://stat.iastate.edu/">graduate school</a>, for first introducing me to the idea of <a href="https://www.gnu.org/software/make/">Makefiles</a> for research. It took several months to convince me, and I am glad he succeeded.</p>
 <p>In the sphere of reproducibility, drake and <a href="https://github.com/richfitz/remake">remake</a> are examples of non-literate programming tools (as opposed to literate programming tools such as <a href="https://CRAN.R-project.org/package=knitr">knitr</a>). Counterparts include <a href="https://CRAN.R-project.org/package=R.cache">R.cache</a>, <a href="https://CRAN.R-project.org/package=archivist">archivist</a>, <a href="https://github.com/gmbecker/recordr">trackr</a>, and <a href="https://CRAN.R-project.org/package=memoise">memoise</a>. See the <a href="https://CRAN.R-project.org/view=ReproducibleResearch">reporducible research CRAN task view</a> for a more comprehensive list. Drake differentiates itself from these tools with its ability to track the relationships among cached objects and its extensive high-performance computing functionality.</p>

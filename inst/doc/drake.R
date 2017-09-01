@@ -11,11 +11,6 @@ reg2 = function(d){ # Change a dependency.
   lm(y ~ x3, data = d)
 }
 
-# Skip the file argument to just plot.
-# Hover, click, drag, zoom, pan.
-plot_graph(my_plan, width = "100%", height = "500px", 
-  file = "drake_graph.html") 
-
 ## ----rmfile, echo = FALSE------------------------------------------------
 clean(destroy = TRUE)
 unlink(c("report.Rmd", "Thumbs.db"))

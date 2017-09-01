@@ -2,6 +2,22 @@
 suppressMessages(suppressWarnings(library(drake)))
 clean(destroy = TRUE)
 
+## ----unparsable_plan-----------------------------------------------------
+template <- plan(x = process(..setting..))
+processed <- evaluate(template, wildcard = "..setting..", 
+  values = c("\"option1\"", "\"option2\""))
+gathered <- gather(processed, target = "bad_target")
+my_plan <- rbind(processed, gathered)
+my_plan
+
+## ----parsable_plan-------------------------------------------------------
+template <- plan(x = process("..setting.."), strings_in_dots = "literals")
+processed <- evaluate(template, wildcard = "..setting..",
+  values = c("option1", "option2"))
+gathered <- gather(processed, target = "bad_target")
+my_plan <- rbind(processed, gathered)
+my_plan
+
 ## ----envir---------------------------------------------------------------
 library(drake)
 envir = new.env(parent = globalenv())
@@ -35,12 +51,6 @@ deps(my_plan$command[1])
 ## ----previewmyplan-------------------------------------------------------
 load_basic_example()
 my_plan
-
-## ----plotgraph-----------------------------------------------------------
-# Skip the file argument to just plot.
-# Click, drag, and zoom to explore.
-plot_graph(my_plan, width = "100%", height = "500px",
-  file = "caution_graph.html") 
 
 ## ----checkdeps-----------------------------------------------------------
 deps(reg2)
