@@ -12,7 +12,7 @@
 
 <meta name="author" content="William Michael Landau" />
 
-<meta name="date" content="2017-09-01" />
+<meta name="date" content="2017-09-29" />
 
 <title>Quickstart</title>
 
@@ -71,7 +71,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1 class="title toc-ignore">Quickstart</h1>
 <h3 class="subtitle"><em>quickstart example for drake</em></h3>
 <h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-09-01</em></h4>
+<h4 class="date"><em>2017-09-29</em></h4>
 
 
 
@@ -82,14 +82,14 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="quick-examples" class="section level1">
 <h1>Quick examples</h1>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
-<span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd. `example_drake(&quot;basic&quot;)`, `vignette(&quot;quickstart&quot;)`.</span>
-<span class="kw">plot_graph</span>(my_plan) <span class="co"># Hover, click, drag, zoom, pan. Try file = &quot;graph.html&quot; and targets_only = TRUE.</span>
+<span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd.</span>
+<span class="kw">plot_graph</span>(my_plan) <span class="co"># Hover, click, drag, zoom, pan.</span>
 <span class="kw">make</span>(my_plan) <span class="co"># Run the workflow.</span>
 <span class="kw">make</span>(my_plan) <span class="co"># Check that everything is already up to date.</span></code></pre></div>
 <p>Dive deeper into the built-in examples.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">example_drake</span>(<span class="st">&quot;basic&quot;</span>) <span class="co"># Write the code files.</span>
 <span class="kw">examples_drake</span>() <span class="co"># List the other examples.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>) <span class="co"># Same as https://cran.r-project.org/package=drake/vignettes/quickstart.html</span></code></pre></div>
+<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>) <span class="co"># This vignette</span></code></pre></div>
 </div>
 <div id="useful-functions" class="section level1">
 <h1>Useful functions</h1>
@@ -120,23 +120,39 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <span class="kw">cached</span>()
 <span class="kw">imported</span>()
 <span class="kw">built</span>()
-<span class="kw">build_times</span>()
 <span class="kw">readd</span>()
 <span class="kw">loadd</span>()
 <span class="kw">find_project</span>()
 <span class="kw">find_cache</span>()</code></pre></div>
-<p>debug your work,</p>
+<p>make use of recorded build times,</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">build_times</span>()
+<span class="kw">predict_runtime</span>()
+<span class="kw">rate_limiting_times</span>()</code></pre></div>
+<p>speed up your project with parallel computing,</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>() <span class="co"># with jobs &gt; 2</span>
+<span class="kw">max_useful_jobs</span>()
+<span class="kw">parallelism_choices</span>()
+<span class="kw">shell_file</span>()</code></pre></div>
+<p>finely tune the caching and hashing,</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">available_hash_algos</span>()
+<span class="kw">cache_path</span>()
+<span class="kw">cache_types</span>()
+<span class="kw">configure_cache</span>()
+<span class="kw">default_long_hash_algo</span>()
+<span class="kw">default_short_hash_algo</span>()
+<span class="kw">long_hash</span>()
+<span class="kw">short_hash</span>()
+<span class="kw">new_cache</span>()
+<span class="kw">recover_cache</span>()
+<span class="kw">this_cache</span>()
+<span class="kw">type_of_cache</span>()</code></pre></div>
+<p>and debug your work.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">check</span>()
 <span class="kw">session</span>()
 <span class="kw">in_progress</span>()
 <span class="kw">progress</span>()
 <span class="kw">config</span>()
 <span class="kw">read_config</span>()</code></pre></div>
-<p>and speed up your project with parallel computing.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>() <span class="co"># with jobs &gt; 2</span>
-<span class="kw">max_useful_jobs</span>()
-<span class="kw">parallelism_choices</span>()
-<span class="kw">shell_file</span>()</code></pre></div>
 </div>
 <div id="setting-up-the-basic-example" class="section level1">
 <h1>Setting up the basic example</h1>
@@ -144,27 +160,27 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(knitr)
 <span class="kw">library</span>(drake)</code></pre></div>
 <p>First, we will generate a few datasets.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">simulate =<span class="st"> </span>function(n){
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">simulate &lt;-<span class="st"> </span>function(n){
   <span class="kw">data.frame</span>(
-    <span class="dt">x =</span> stats::<span class="kw">rnorm</span>(n), <span class="co"># Drake tracks calls like `pkg::fn()` (namespaced functions).</span>
+    <span class="dt">x =</span> stats::<span class="kw">rnorm</span>(n),
     <span class="dt">y =</span> <span class="kw">rpois</span>(n, <span class="dv">1</span>)
   )
 }</code></pre></div>
 <p>Then, we will analyze each dataset with multiple analysis methods.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg1 =<span class="st"> </span>function(d){
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg1 &lt;-<span class="st"> </span>function(d){
   <span class="kw">lm</span>(y ~<span class="st"> </span>+<span class="st"> </span>x, <span class="dt">data =</span> d)
 }
 
-reg2 =<span class="st"> </span>function(d){
-  d$x2 =<span class="st"> </span>d$x^<span class="dv">2</span>
+reg2 &lt;-<span class="st"> </span>function(d){
+  d$x2 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">2</span>
   <span class="kw">lm</span>(y ~<span class="st"> </span>x2, <span class="dt">data =</span> d)
 }</code></pre></div>
 <p>Finally, we will generate a <a href="http://rmarkdown.rstudio.com/">dynamic report</a> to display results.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_knit =<span class="st"> </span>function(file, ...){
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_knit &lt;-<span class="st"> </span>function(file, ...){
   <span class="kw">knit</span>(file)
 }</code></pre></div>
 <p>We need the source file <code>report.Rmd</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">lines =<span class="st"> </span><span class="kw">c</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">lines &lt;-<span class="st"> </span><span class="kw">c</span>(
   <span class="st">&quot;---&quot;</span>,
   <span class="st">&quot;title: Example Report&quot;</span>,
   <span class="st">&quot;author: You&quot;</span>,
@@ -176,8 +192,8 @@ reg2 =<span class="st"> </span>function(d){
   <span class="st">&quot;```{r example_chunk}&quot;</span>,
   <span class="st">&quot;library(drake)&quot;</span>,
   <span class="st">&quot;readd(small)&quot;</span>,
-  <span class="st">&quot;readd(coef_regression2_small)&quot;</span>, <span class="co"># Return an object from the drake cache.</span>
-  <span class="st">&quot;loadd(large)&quot;</span>, <span class="co"># Load an object from the drake cache into your workspace.</span>
+  <span class="st">&quot;readd(coef_regression2_small)&quot;</span>,
+  <span class="st">&quot;loadd(large)&quot;</span>,
   <span class="st">&quot;head(large)&quot;</span>,
   <span class="st">&quot;```&quot;</span>)
 <span class="kw">writeLines</span>(lines, <span class="st">&quot;report.Rmd&quot;</span>)</code></pre></div>
@@ -206,15 +222,14 @@ my_plan</code></pre></div>
 ## 16 coef_regression2_large                      coef(regression2_large)</code></pre>
 <p>Each row is an intermediate step, and each <strong>command</strong> generates a <strong>target</strong>. A target is an output R object (cached when generated) or output file (specified with single quotes), and a command just an ordinary piece of R code (not necessarily a single function call). As input, commands may take objects imported from your workspace, targets generated by other commands, or initial input files. These dependencies give your project an underlying network.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
-<span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>) 
-<span class="co"># See also dataframes_graph(), render_graph().</span>
-<span class="co"># Speed up regraphing with config().</span></code></pre></div>
+<span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
 <iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/a816f791/images/outdated.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
+<p>See also <code>dataframes_graph()</code>, <code>render_graph()</code>, and <code>config()</code> for faster and more customized regraphing.</p>
 <p>You can also check the dependencies of individual targets.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(reg2)</code></pre></div>
 <pre><code>## [1] &quot;lm&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="dv">1</span>]) <span class="co"># report.Rmd is single-quoted because it is a file dependency.</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="dv">1</span>]) <span class="co"># Files like report.Rmd are single-quoted.</span></code></pre></div>
 <pre><code>## [1] &quot;'report.Rmd'&quot;        &quot;my_knit&quot;             &quot;report_dependencies&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="dv">16</span>])</code></pre></div>
 <pre><code>## [1] &quot;coef&quot;              &quot;regression2_large&quot;</code></pre>
@@ -246,9 +261,10 @@ my_plan</code></pre></div>
 <div id="generate-the-workflow-plan" class="section level1">
 <h1>Generate the workflow plan</h1>
 <p>The data frame <code>my_plan</code> would be a pain to write by hand, so <code>drake</code> has functions to help you.</p>
-<div id="my_plan" class="section level2">
-<h2>my_plan</h2>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_datasets =<span class="st"> </span><span class="kw">plan</span>(
+</div>
+<div id="my_plan" class="section level1">
+<h1>my_plan</h1>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_datasets &lt;-<span class="st"> </span><span class="kw">plan</span>(
   <span class="dt">small =</span> <span class="kw">simulate</span>(<span class="dv">5</span>),
   <span class="dt">large =</span> <span class="kw">simulate</span>(<span class="dv">50</span>))
 my_datasets</code></pre></div>
@@ -263,7 +279,7 @@ my_datasets</code></pre></div>
 ## 3 large_rep1 simulate(50)
 ## 4 large_rep2 simulate(50)</code></pre>
 <p>Each dataset is analyzed multiple ways.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">methods =<span class="st"> </span><span class="kw">plan</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">methods &lt;-<span class="st"> </span><span class="kw">plan</span>(
   <span class="dt">regression1 =</span> <span class="kw">reg1</span>(..dataset..),
   <span class="dt">regression2 =</span> <span class="kw">reg2</span>(..dataset..))
 methods</code></pre></div>
@@ -271,7 +287,7 @@ methods</code></pre></div>
 ## 1 regression1 reg1(..dataset..)
 ## 2 regression2 reg2(..dataset..)</code></pre>
 <p>We evaluate the <code>..dataset..</code> wildcard.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_analyses =<span class="st"> </span><span class="kw">analyses</span>(methods, <span class="dt">data =</span> my_datasets)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_analyses &lt;-<span class="st"> </span><span class="kw">analyses</span>(methods, <span class="dt">data =</span> my_datasets)
 my_analyses</code></pre></div>
 <pre><code>##              target     command
 ## 1 regression1_small reg1(small)
@@ -279,14 +295,14 @@ my_analyses</code></pre></div>
 ## 3 regression2_small reg2(small)
 ## 4 regression2_large reg2(large)</code></pre>
 <p>Next, we summarize each analysis of each dataset using summary statistics and regression coefficients.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">summary_types =<span class="st"> </span><span class="kw">plan</span>(
-  <span class="dt">summ =</span> <span class="kw">suppressWarnings</span>(<span class="kw">summary</span>(..analysis..)), <span class="co"># Occasionally there is a perfect regression fit.</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">summary_types &lt;-<span class="st"> </span><span class="kw">plan</span>(
+  <span class="dt">summ =</span> <span class="kw">suppressWarnings</span>(<span class="kw">summary</span>(..analysis..)),
   <span class="dt">coef =</span> <span class="kw">coef</span>(..analysis..))
 summary_types</code></pre></div>
 <pre><code>##   target                                 command
 ## 1   summ suppressWarnings(summary(..analysis..))
 ## 2   coef                      coef(..analysis..)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">results =<span class="st"> </span><span class="kw">summaries</span>(summary_types, <span class="dt">analyses =</span> my_analyses, 
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">results &lt;-<span class="st"> </span><span class="kw">summaries</span>(summary_types, <span class="dt">analyses =</span> my_analyses,
   <span class="dt">datasets =</span> my_datasets, <span class="dt">gather =</span> <span class="ot">NULL</span>)
 results</code></pre></div>
 <pre><code>##                   target                                      command
@@ -300,20 +316,20 @@ results</code></pre></div>
 ## 8 coef_regression2_large                      coef(regression2_large)</code></pre>
 <p>The <code>gather</code> feature groups summaries into a smaller number of more manageable targets. I shut it off here to make the data frames more readable.</p>
 <p>For the dynamic report, we have to declare the dependencies manually.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">load_in_report =<span class="st"> </span><span class="kw">plan</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">load_in_report &lt;-<span class="st"> </span><span class="kw">plan</span>(
   <span class="dt">report_dependencies =</span> <span class="kw">c</span>(small, large, coef_regression2_small))
 load_in_report</code></pre></div>
 <pre><code>##                target                                 command
 ## 1 report_dependencies c(small, large, coef_regression2_small)</code></pre>
 <p>Remember: use single quotes for file dependencies. The functions <code>quotes()</code>, <code>unquote()</code>, and <code>strings()</code> from the <code>eply</code> package may help. Also, please be aware that drake cannot track entire directories/folders.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">report =<span class="st"> </span><span class="kw">plan</span>(
-  <span class="dt">report.md =</span> <span class="kw">my_knit</span>(<span class="st">'report.Rmd'</span>, report_dependencies),
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">report &lt;-<span class="st"> </span><span class="kw">plan</span>(
+  <span class="dt">report.md =</span> <span class="kw">my_knit</span>(<span class="st">'report.Rmd'</span>, report_dependencies), <span class="co"># nolint</span>
   <span class="dt">file_targets =</span> <span class="ot">TRUE</span>, <span class="dt">strings_in_dots =</span> <span class="st">&quot;filenames&quot;</span>)
 report</code></pre></div>
 <pre><code>##        target                                    command
 ## 1 'report.md' my_knit('report.Rmd', report_dependencies)</code></pre>
 <p>Finally, gather your workflow together with <code>rbind()</code>. Row order does not matter.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_plan =<span class="st"> </span><span class="kw">rbind</span>(report, my_datasets, load_in_report, my_analyses, results)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_plan &lt;-<span class="st"> </span><span class="kw">rbind</span>(report, my_datasets, load_in_report, my_analyses, results)
 my_plan</code></pre></div>
 <pre><code>##                    target                                      command
 ## 1             'report.md'   my_knit('report.Rmd', report_dependencies)
@@ -333,14 +349,14 @@ my_plan</code></pre></div>
 ## 15 coef_regression2_small                      coef(regression2_small)
 ## 16 coef_regression2_large                      coef(regression2_large)</code></pre>
 </div>
-<div id="flexible-helpers-to-make-workflow-plans" class="section level2">
-<h2>Flexible helpers to make workflow plans</h2>
+<div id="flexible-helpers-to-make-workflow-plans" class="section level1">
+<h1>Flexible helpers to make workflow plans</h1>
 <p>If your workflow does not fit the rigid datasets/analyses/summaries framework, check out functions <code>expand()</code>, <code>evaluate()</code>, and <code>gather()</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df =<span class="st"> </span><span class="kw">plan</span>(<span class="dt">data =</span> <span class="kw">simulate</span>(<span class="dt">center =</span> MU, <span class="dt">scale =</span> SIGMA))
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class="dt">data =</span> <span class="kw">simulate</span>(<span class="dt">center =</span> MU, <span class="dt">scale =</span> SIGMA))
 df</code></pre></div>
 <pre><code>##   target                              command
 ## 1   data simulate(center = MU, scale = SIGMA)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df =<span class="st"> </span><span class="kw">expand</span>(df, <span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;rep1&quot;</span>, <span class="st">&quot;rep2&quot;</span>))
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">expand</span>(df, <span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;rep1&quot;</span>, <span class="st">&quot;rep2&quot;</span>))
 df</code></pre></div>
 <pre><code>##      target                              command
 ## 1 data_rep1 simulate(center = MU, scale = SIGMA)
@@ -380,11 +396,10 @@ df</code></pre></div>
 <pre><code>##         target                                             command
 ## 1 my_summaries rbind(data_rep1 = data_rep1, data_rep2 = data_rep2)</code></pre>
 </div>
-</div>
 <div id="run-the-workflow" class="section level1">
 <h1>Run the workflow</h1>
 <p>You may want to check for outdated or missing targets/imports first.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">outdated</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># These are the targets that need to be (re)built.</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">outdated</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Targets that need to be (re)built.</span></code></pre></div>
 <pre><code>##  [1] &quot;'report.md'&quot;            &quot;coef_regression1_large&quot;
 ##  [3] &quot;coef_regression1_small&quot; &quot;coef_regression2_large&quot;
 ##  [5] &quot;coef_regression2_small&quot; &quot;large&quot;                 
@@ -393,10 +408,10 @@ df</code></pre></div>
 ## [11] &quot;report_dependencies&quot;    &quot;small&quot;                 
 ## [13] &quot;summ_regression1_large&quot; &quot;summ_regression1_small&quot;
 ## [15] &quot;summ_regression2_large&quot; &quot;summ_regression2_small&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">missed</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Make sure nothing is missing from your workspace.</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">missed</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Checks your workspace.</span></code></pre></div>
 <p>Then just <code>make(my_plan)</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan)</code></pre></div>
-<pre><code>## check 10 items
+<pre><code>## check 10 items: 'report.Rmd', c, summary, suppressWarnings, coef, lm, data.fr...
 ## import 'report.Rmd'
 ## import c
 ## import summary
@@ -407,20 +422,20 @@ df</code></pre></div>
 ## import rpois
 ## import stats::rnorm
 ## import knit
-## check 4 items
+## check 4 items: reg1, reg2, simulate, my_knit
 ## import reg1
 ## import reg2
 ## import simulate
 ## import my_knit
-## check 2 items
+## check 2 items: small, large
 ## target small
 ## target large
-## check 4 items
+## check 4 items: regression1_small, regression1_large, regression2_small, regre...
 ## target regression1_small
 ## target regression1_large
 ## target regression2_small
 ## target regression2_large
-## check 8 items
+## check 8 items: summ_regression1_small, summ_regression1_large, summ_regressio...
 ## target summ_regression1_small
 ## target summ_regression1_large
 ## target summ_regression2_small
@@ -429,50 +444,68 @@ df</code></pre></div>
 ## target coef_regression1_large
 ## target coef_regression2_small
 ## target coef_regression2_large
-## check 1 item
+## check 1 item: report_dependencies
+## unload 11 items: regression1_small, regression1_large, regression2_small, reg...
 ## target report_dependencies
-## check 1 item
+## check 1 item: 'report.md'
+## unload 3 items: small, large, coef_regression2_small
 ## target 'report.md'</code></pre>
 <p>The non-file dependencies of your last target are already loaded in your workspace.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="st">&quot;report_dependencies&quot;</span> %in%<span class="st"> </span><span class="kw">ls</span>() <span class="co"># Should be TRUE.</span></code></pre></div>
 <pre><code>## [1] TRUE</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">outdated</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Everything is up to date.</span>
 <span class="kw">build_times</span>(<span class="dt">digits =</span> <span class="dv">4</span>) <span class="co"># How long did it take to make each target?</span></code></pre></div>
-<pre><code>##                    target   user system elapsed
-## 1             'report.md' 0.018s 0.002s   0.02s
-## 2  coef_regression1_large 0.001s     0s  0.001s
-## 3  coef_regression1_small     0s     0s      0s
-## 4  coef_regression2_large 0.001s     0s      0s
-## 5  coef_regression2_small 0.001s     0s  0.001s
-## 6                   large 0.001s     0s  0.001s
-## 7       regression1_large 0.001s     0s  0.002s
-## 8       regression1_small 0.003s     0s  0.003s
-## 9       regression2_large 0.002s     0s  0.001s
-## 10      regression2_small 0.001s     0s  0.001s
-## 11    report_dependencies 0.001s     0s  0.001s
-## 12                  small 0.002s     0s  0.002s
-## 13 summ_regression1_large 0.001s     0s  0.001s
-## 14 summ_regression1_small 0.002s     0s  0.002s
-## 15 summ_regression2_large 0.001s     0s  0.001s
-## 16 summ_regression2_small 0.001s     0s  0.001s</code></pre>
+<pre><code>##                      item   type elapsed   user system
+## 1            'report.Rmd' import  0.001s 0.004s     0s
+## 2             'report.md' target  0.022s  0.02s 0.004s
+## 3                       c import  0.002s     0s     0s
+## 4                    coef import  0.002s     0s     0s
+## 5  coef_regression1_large target  0.002s     0s     0s
+## 6  coef_regression1_small target  0.002s     0s 0.004s
+## 7  coef_regression2_large target  0.002s     0s     0s
+## 8  coef_regression2_small target  0.004s 0.004s     0s
+## 9              data.frame import  0.004s 0.004s     0s
+## 10                   knit import  0.003s     0s     0s
+## 11                  large target  0.002s 0.004s     0s
+## 12                     lm import  0.002s     0s     0s
+## 13                my_knit import  0.002s 0.004s     0s
+## 14                   reg1 import  0.004s 0.004s     0s
+## 15                   reg2 import  0.002s     0s     0s
+## 16      regression1_large target  0.003s 0.004s     0s
+## 17      regression1_small target  0.004s 0.004s     0s
+## 18      regression2_large target  0.003s 0.004s     0s
+## 19      regression2_small target  0.003s 0.004s     0s
+## 20    report_dependencies target  0.002s     0s     0s
+## 21                  rpois import  0.002s     0s     0s
+## 22               simulate import  0.002s     0s     0s
+## 23                  small target  0.003s     0s     0s
+## 24           stats::rnorm import  0.002s 0.004s     0s
+## 25 summ_regression1_large target  0.002s 0.004s     0s
+## 26 summ_regression1_small target  0.003s 0.004s     0s
+## 27 summ_regression2_large target  0.003s     0s     0s
+## 28 summ_regression2_small target  0.002s     0s     0s
+## 29                summary import  0.004s     0s     0s
+## 30       suppressWarnings import  0.004s 0.004s     0s</code></pre>
+<p>See also <code>predict_runtime()</code> and <code>rate_limiting_times()</code>.</p>
+<p>In the new graph, the red nodes from before are now green.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
-<span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>) <span class="co"># The red nodes from before turned green.</span>
-<span class="co"># dataframes_graph(my_plan) # Get visNetwork nodes and edges so you can</span>
-                            <span class="co"># make your own plot with visNetwork or render_graph().</span></code></pre></div>
+<span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
+<p>Optionally, get <code>visNetwork</code> nodes and edges so you can make your own plot with <code>visNetwork</code> or <code>render_graph()</code>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dataframes_graph</span>(my_plan)</code></pre></div>
 <iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/a816f791/images/built.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
 <p>Use <code>readd()</code> and <code>loadd()</code> to load more targets. (They are cached in the hidden <code>.drake/</code> folder using <a href="https://CRAN.R-project.org/package=storr">storr</a>). Other functions interact and view the cache.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">readd</span>(coef_regression2_large)</code></pre></div>
 <pre><code>## (Intercept)          x2 
-##   0.5682171   0.2275959</code></pre>
+##  1.09974766  0.04536352</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">loadd</span>(small)
 <span class="kw">head</span>(small)</code></pre></div>
 <pre><code>##            x y
-## 1  0.3461223 2
-## 2  1.5181933 1
-## 3  0.2383665 0
-## 4  1.5992608 2
-## 5 -0.1831176 2</code></pre>
+## 1 -1.4318013 2
+## 2 -1.5429977 2
+## 3  0.3550202 1
+## 4 -0.9434383 1
+## 5 -0.4181989 1</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">rm</span>(small)
 <span class="kw">cached</span>(small, large)</code></pre></div>
 <pre><code>## small large 
@@ -516,19 +549,52 @@ df</code></pre></div>
 ## 4 report_dependencies    c(small, large, coef_regression2_small)
 ## 5   regression1_small                                reg1(small)
 ## 6   regression1_large                                reg1(large)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># read_graph() # Plots the graph of the workflow you just ran.</span>
-<span class="kw">head</span>(<span class="kw">progress</span>()) <span class="co"># See also in_progress()</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(<span class="kw">progress</span>()) <span class="co"># See also in_progress()</span></code></pre></div>
 <pre><code>##           'report.Rmd'            'report.md'                      c 
 ##             &quot;finished&quot;             &quot;finished&quot;             &quot;finished&quot; 
 ##                   coef coef_regression1_large coef_regression1_small 
 ##             &quot;finished&quot;             &quot;finished&quot;             &quot;finished&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># session(): sessionInfo() of the last call to make()</span>
-<span class="kw">progress</span>(large)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">progress</span>(large)</code></pre></div>
 <pre><code>##      large 
 ## &quot;finished&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">session</span>() <span class="co"># of the last call to make()</span></code></pre></div>
+<pre><code>## R Under development (unstable) (2017-09-16 r73293)
+## Platform: x86_64-pc-linux-gnu (64-bit)
+## Running under: Ubuntu 17.04
+## 
+## Matrix products: default
+## BLAS: /home/landau/packages/R/R-devel/lib/R/lib/libRblas.so
+## LAPACK: /home/landau/packages/R/R-devel/lib/R/lib/libRlapack.so
+## 
+## locale:
+##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+##  [3] LC_TIME=en_US.UTF-8        LC_COLLATE=C              
+##  [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+##  [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+## [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+## [1] knitr_1.17  drake_4.2.0
+## 
+## loaded via a namespace (and not attached):
+##  [1] igraph_1.1.2      Rcpp_0.12.12      magrittr_1.5     
+##  [4] R6_2.2.2          stringr_1.2.0     storr_1.1.2      
+##  [7] plyr_1.8.4        visNetwork_2.0.1  tools_3.5.0      
+## [10] parallel_3.5.0    R.oo_1.21.0       eply_0.1.0       
+## [13] withr_2.0.0       htmltools_0.3.6   yaml_2.1.14      
+## [16] rprojroot_1.2     digest_0.6.12     crayon_1.3.4     
+## [19] htmlwidgets_0.9   R.utils_2.5.0     codetools_0.2-15 
+## [22] testthat_1.0.2    evaluate_0.10.1   rmarkdown_1.6    
+## [25] stringi_1.1.5     compiler_3.5.0    backports_1.1.0  
+## [28] R.methodsS3_1.7.1 jsonlite_1.5      lubridate_1.6.0  
+## [31] pkgconfig_2.0.1</code></pre>
 <p>The next time you run <code>make(my_plan)</code>, nothing will be built because drake knows everything is up to date.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan)</code></pre></div>
-<pre><code>## check 10 items
+<pre><code>## check 10 items: 'report.Rmd', c, summary, suppressWarnings, coef, data.frame,...
 ## import 'report.Rmd'
 ## import c
 ## import summary
@@ -539,19 +605,19 @@ df</code></pre></div>
 ## import stats::rnorm
 ## import lm
 ## import knit
-## check 4 items
+## check 4 items: simulate, reg1, reg2, my_knit
 ## import simulate
 ## import reg1
 ## import reg2
 ## import my_knit
-## check 2 items
-## check 4 items
-## check 8 items
-## check 1 item
-## check 1 item</code></pre>
+## check 2 items: small, large
+## check 4 items: regression1_small, regression1_large, regression2_small, regre...
+## check 8 items: summ_regression1_small, summ_regression1_large, summ_regressio...
+## check 1 item: report_dependencies
+## check 1 item: 'report.md'</code></pre>
 <p>But if you change one of your functions, commands, or other dependencies, drake will update the affected parts of the workflow. Let’s say we want to change the quadratic term to a cubic term in our <code>reg2()</code> function.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg2 =<span class="st"> </span>function(d){
-  d$x3 =<span class="st"> </span>d$x^<span class="dv">3</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg2 &lt;-<span class="st"> </span>function(d) {
+  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
   <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
 }</code></pre></div>
 <p>The targets depending on <code>reg2()</code> need to be rebuilt and everything else is left alone.</p>
@@ -565,7 +631,7 @@ df</code></pre></div>
 <iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/a816f791/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan)</code></pre></div>
-<pre><code>## check 10 items
+<pre><code>## check 10 items: 'report.Rmd', c, summary, suppressWarnings, coef, data.frame,...
 ## import 'report.Rmd'
 ## import c
 ## import summary
@@ -576,41 +642,44 @@ df</code></pre></div>
 ## import stats::rnorm
 ## import lm
 ## import knit
-## check 4 items
+## check 4 items: simulate, reg1, reg2, my_knit
 ## import simulate
 ## import reg1
 ## import reg2
 ## import my_knit
-## check 2 items
-## check 4 items
+## check 2 items: small, large
+## check 4 items: regression1_small, regression1_large, regression2_small, regre...
+## load 2 items: large, small
 ## target regression2_small
 ## target regression2_large
-## check 8 items
+## check 8 items: summ_regression1_small, summ_regression1_large, summ_regressio...
 ## target summ_regression2_small
 ## target summ_regression2_large
 ## target coef_regression2_small
 ## target coef_regression2_large
-## check 1 item
+## check 1 item: report_dependencies
+## unload 5 items: regression2_small, regression2_large, summ_regression2_small,...
 ## target report_dependencies
-## check 1 item
+## check 1 item: 'report.md'
+## unload 3 items: small, large, coef_regression2_small
 ## target 'report.md'</code></pre>
 <p>But trivial changes to whitespace and comments are totally ignored in your functions and in <code>my_plan$command</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg2 =<span class="st"> </span>function(d){
-  d$x3 =<span class="st"> </span>d$x^<span class="dv">3</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg2 &lt;-<span class="st"> </span>function(d) {
+  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
     <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d) <span class="co"># I indented here.</span>
 }
 <span class="kw">outdated</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Everything is up to date.</span></code></pre></div>
 <p>Need to add new work on the fly? Just append rows to the workflow plan. If the rest of your workflow is up to date, only the new work is run.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">new_simulation =<span class="st"> </span>function(n){
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">new_simulation &lt;-<span class="st"> </span>function(n){
   <span class="kw">data.frame</span>(<span class="dt">x =</span> <span class="kw">rnorm</span>(n), <span class="dt">y =</span> <span class="kw">rnorm</span>(n))
 }
 
-additions =<span class="st"> </span><span class="kw">plan</span>(
-  <span class="dt">new_data =</span> <span class="kw">new_simulation</span>(<span class="dv">36</span>) +<span class="st"> </span><span class="kw">sqrt</span>(<span class="dv">10</span>))  
+additions &lt;-<span class="st"> </span><span class="kw">plan</span>(
+  <span class="dt">new_data =</span> <span class="kw">new_simulation</span>(<span class="dv">36</span>) +<span class="st"> </span><span class="kw">sqrt</span>(<span class="dv">10</span>))
 additions</code></pre></div>
 <pre><code>##     target                       command
 ## 1 new_data new_simulation(36) + sqrt(10)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_plan =<span class="st"> </span><span class="kw">rbind</span>(my_plan, additions)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_plan &lt;-<span class="st"> </span><span class="kw">rbind</span>(my_plan, additions)
 my_plan</code></pre></div>
 <pre><code>##                    target                                      command
 ## 1             'report.md'   my_knit('report.Rmd', report_dependencies)
@@ -631,7 +700,7 @@ my_plan</code></pre></div>
 ## 16 coef_regression2_large                      coef(regression2_large)
 ## 17               new_data                new_simulation(36) + sqrt(10)</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan)</code></pre></div>
-<pre><code>## check 12 items
+<pre><code>## check 12 items: 'report.Rmd', c, summary, suppressWarnings, coef, sqrt, data....
 ## import 'report.Rmd'
 ## import c
 ## import summary
@@ -644,18 +713,18 @@ my_plan</code></pre></div>
 ## import stats::rnorm
 ## import lm
 ## import knit
-## check 5 items
+## check 5 items: new_simulation, simulate, reg1, reg2, my_knit
 ## import new_simulation
 ## import simulate
 ## import reg1
 ## import reg2
 ## import my_knit
-## check 3 items
+## check 3 items: small, large, new_data
 ## target new_data
-## check 4 items
-## check 8 items
-## check 1 item
-## check 1 item</code></pre>
+## check 4 items: regression1_small, regression1_large, regression2_small, regre...
+## check 8 items: summ_regression1_small, summ_regression1_large, summ_regressio...
+## check 1 item: report_dependencies
+## check 1 item: 'report.md'</code></pre>
 <p>If you ever need to erase your work, use <code>clean()</code>. Any targets removed from the cache will have to be rebuilt on the next call to <code>make()</code>, so be careful.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>(small, reg1) <span class="co"># uncaches individual targets and imported objects</span>
 <span class="kw">clean</span>() <span class="co"># cleans all targets out of the cache</span>
@@ -667,8 +736,9 @@ my_plan</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>()
 <span class="kw">load_basic_example</span>()
 <span class="kw">make</span>(my_plan, <span class="dt">jobs =</span> <span class="dv">2</span>, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Parallelize over 2 jobs.</span>
-reg2 =<span class="st"> </span>function(d){ <span class="co"># Change a dependency.</span>
-  d$x3 =<span class="st"> </span>d$x^<span class="dv">3</span>
+<span class="co"># Change a dependency.</span>
+reg2 &lt;-<span class="st"> </span>function(d) {
+  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
   <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
 }</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
@@ -692,12 +762,13 @@ reg2 =<span class="st"> </span>function(d){ <span class="co"># Change a dependen
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;all&quot;</span>) <span class="co"># 10</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;none&quot;</span>) <span class="co"># 0</span>
 <span class="co"># Change a function so some targets are now out of date.</span>
-reg2 =<span class="st"> </span>function(d){
-  d$x3 =<span class="st"> </span>d$x^<span class="dv">3</span>
+reg2 &lt;-<span class="st"> </span>function(d){
+  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
   <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
 }
 <span class="kw">plot_graph</span>(my_plan)
 <span class="kw">max_useful_jobs</span>(my_plan) <span class="co"># 4</span>
+<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">from_scratch =</span> <span class="ot">TRUE</span>) <span class="co"># 8</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;files&quot;</span>) <span class="co"># 4</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;all&quot;</span>) <span class="co"># 10</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;none&quot;</span>) <span class="co"># 4</span></code></pre></div>
@@ -712,21 +783,23 @@ reg2 =<span class="st"> </span>function(d){
 <li><code>make(my_plan, parallelism = &quot;Makefile&quot;, command = &quot;make&quot;, args = &quot;--jobs=4 --silent&quot;)</code> gives you finer control over the arguments and the program for the <a href="https://www.gnu.org/software/make/">Makefile</a>. For example, you could use <a href="https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.2/lsf_command_ref/lsmake.1.html">lsmake</a> instead of <a href="https://www.gnu.org/software/make/">Make</a> itself.</li>
 <li><code>make(my_plan, parallelism = &quot;Makefile&quot;, jobs = 2, prepend = &quot;SHELL=./shell.sh&quot;)</code> is similar, but it uses a helper file <code>shell.sh</code> to distribute the R sessions over different jobs/nodes on a cluster. Your <code>shell.sh</code> file should look something like the following, and you can use <code>shell_file()</code> to write an example.</li>
 </ul>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#!/bin/bash</span>
+<pre><code>#!/bin/bash
 shift
-echo <span class="st">&quot;module load R; $*&quot;</span> |<span class="st"> </span>qsub -sync y -cwd -j y</code></pre></div>
+echo &quot;module load R; $*&quot; | qsub -sync y -cwd -j y
+</code></pre>
 <p>You may need to replace <code>module load R</code> with a command to load a specific version of R. <a href="https://slurm.schedmd.com/">SLURM</a> users can just point to <code>srun</code> and dispense with <code>shell.sh</code> altogether.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">4</span>,
   <span class="dt">prepend =</span> <span class="st">&quot;SHELL=srun&quot;</span>)</code></pre></div>
 <p>For long projects, put your call to <code>make()</code> in an R script (say, <code>script.R</code>) and run it from the <a href="https://www.howtogeek.com/140679/beginner-geek-how-to-start-using-the-linux-terminal/">Linux terminal</a>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nohup nice -<span class="dv">19</span> R CMD BATCH script.R &amp;</code></pre></div>
+<pre><code>nohup nice -19 R CMD BATCH script.R &amp;
+</code></pre>
 <p>Even after you log out, a background process will keep running on the login node and submit new jobs at the appropriate time. Jobs are only submitted if the targets need to be (re)built.</p>
-<div id="important-notes-on-makefile-level-parallelism" class="section level2">
-<h2>Important notes on Makefile-level parallelism</h2>
+</div>
+<div id="important-notes-on-makefile-level-parallelism" class="section level1">
+<h1>Important notes on Makefile-level parallelism</h1>
 <p>Makefile-level parallelism is only used for targets in your workflow plan data frame, not imports. To process imported objects and files, drake selects the best parallel backend for your system and uses the number of jobs you give to the <code>jobs</code> argument to <code>make()</code>. To use at most 2 jobs for imports and at most 4 jobs for targets, run</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(..., <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">2</span>, <span class="dt">args =</span> <span class="st">&quot;--jobs=4&quot;</span>)</code></pre></div>
 <p>The <a href="http://kbroman.org/minimal_make/">Makefile</a> generated by <code>make(plan, parallelism = &quot;Makefile&quot;)</code> is not standalone. Do not run it outside of <code>drake::make()</code>. Drake uses dummy timestamp files to tell the <a href="http://kbroman.org/minimal_make/">Makefile</a> which targets can be skipped and which need to be (re)built, so running <code>make</code> in the <a href="https://www.howtogeek.com/140679/beginner-geek-how-to-start-using-the-linux-terminal/">terminal</a> will most likely give incorrect results.</p>
-</div>
 </div>
 
 

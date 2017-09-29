@@ -1,4 +1,5 @@
 build <- function(target, hash_list, config) {
+  start <- proc.time()
   hashes <- hash_list[[target]]
   config$cache$set(key = target, value = "in progress",
     namespace = "progress")
@@ -8,12 +9,8 @@ build <- function(target, hash_list, config) {
     value <- imported_target(target = target, hashes = hashes,
       config = config)
   } else {
-    time <- system.time({
-      value <- build_target(target = target,
+    value <- build_target(target = target,
         hashes = hashes, config = config)
-    })
-    config$cache$set(key = target, value = time,
-      namespace = "build_times")
   }
   store_target(target = target, value = value, hashes = hashes,
     imported = imported, config = config)
@@ -21,6 +18,10 @@ build <- function(target, hash_list, config) {
     namespace = "depends")
   config$cache$set(key = target, value = "finished",
     namespace = "progress")
+  runtime <- (proc.time() - start) %>%
+    runtime_entry(target = target, imported = imported)
+  config$cache$set(key = target, value = runtime,
+    namespace = "build_times")
   value
 }
 
@@ -89,7 +90,11 @@ store_object <- function(target, value, imported, config) {
 }
 
 store_file <- function(target, hashes, imported, config) {
-  hash <- ifelse(imported, hashes$file, rehash_file(target))
+  hash <- ifelse(
+    imported,
+    hashes$file,
+    rehash_file(target = target, config = config)
+  )
   config$cache$set(key = target, value = file.mtime(eply::unquote(target)),
     namespace = "filemtime")
   config$cache$set(key = target, value = list(type = "file",
@@ -98,18 +103,15 @@ store_file <- function(target, hashes, imported, config) {
 
 store_function <- function(target, value, hashes, imported,
   config) {
-  # Unfortunately, vectorization is removed, but this is for the best.
-  if (is_vectorized(value)){
-    value <- environment(value)[["FUN"]]
-  }
   config$cache$set(key = target, value = value, namespace = "functions")
-  string <- deparse(value)
+  # Unfortunately, vectorization is removed, but this is for the best.
+  string <- deparse(unwrap_function(value))
   config$cache$set(key = target, value = list(type = "function",
     value = string, imported = imported,
     depends = hashes$depends)) # for nested functions
 }
 
-# bugfix: turn a command into an anonymous function
+# Turn a command into an anonymous function
 # call to avoid side effects that can interfere
 # with parallelism
 functionize <- function(command) {

@@ -10,8 +10,12 @@
 #' @param targets names of targets to bulid, same as for function
 #' \code{\link{make}()}.
 #' @param envir environment to import from, same as for function
-#' \code{\link{make}()}.
+#' \code{\link{make}()}. \code{config$envir} is ignored in favor
+#' of \code{envir}.
 #' @param verbose logical, whether to output messages to the console.
+#' @param cache optional drake cache. See code{\link{new_cache}()}. If
+#' The \code{cache} argument is ignored if a non-null \code{config}
+#' argument is supplied.
 #' @param jobs The \code{outdated()} function is called internally,
 #' and it needs to import objects and examine your
 #' input files to see what has been updated. This could take some time,
@@ -35,7 +39,8 @@
 #' external resources placed in an adjacent directory. If \code{TRUE},
 #' pandoc is required.
 #' @param build_times logical, whether to print the \code{\link{build_times}()}
-#' in the graph. These are just elapsed times from \code{system.time()}.
+#' in the graph.
+#' @param digits number of digits for rounding the build times
 #' @param targets_only logical, whether to skip the imports and only show the
 #' targets in the workflow plan.
 #' @param split_columns logical, whether to break up the
@@ -66,7 +71,8 @@
 #' @param config option internal runtime parameter list of
 #' \code{\link{make}(...)},
 #' produced with \code{\link{config}()}.
-#' Computing this
+#' \code{config$envir} is ignored.
+#' Otherwise, computing this
 #' in advance could save time if you plan multiple calls to
 #' \code{outdated()}.
 #' @param main title of the graph
@@ -80,10 +86,11 @@
 #' plot_graph(my_plan) # The red nodes from before are now green.
 #' }
 plot_graph <- function(plan, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, jobs = 1,
+  envir = parent.frame(), verbose = TRUE, cache = NULL, jobs = 1,
   parallelism = drake::default_parallelism(),
   packages = (.packages()), prework = character(0), file = character(0),
-  selfcontained = FALSE, build_times = TRUE, targets_only = FALSE,
+  selfcontained = FALSE, build_times = TRUE, digits = 0,
+  targets_only = FALSE,
   split_columns = FALSE, config = NULL, font_size = 20,
   layout = "layout_with_sugiyama",
   main = drake::default_graph_title(
@@ -94,8 +101,10 @@ plot_graph <- function(plan, targets = drake::possible_targets(plan),
 
   force(envir)
   raw_graph <- dataframes_graph(plan = plan, targets = targets,
-    envir = envir, verbose = verbose, jobs = jobs, parallelism = parallelism,
-    packages = packages, prework = prework, build_times = build_times,
+    envir = envir, verbose = verbose, cache = cache,
+    jobs = jobs, parallelism = parallelism,
+    packages = packages, prework = prework,
+    build_times = build_times, digits = digits,
     targets_only = targets_only, split_columns = split_columns,
     config = config, font_size = font_size)
   render_graph(raw_graph, file = file, selfcontained = selfcontained,

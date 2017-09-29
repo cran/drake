@@ -61,7 +61,7 @@ parallelism_choices <- function() {
 #' @examples
 #' default_parallelism()
 default_parallelism <- function() {
-  ifelse(Sys.info()["sysname"] == "Windows", "parLapply", "mclapply") %>%
+  ifelse(on_windows(), "parLapply", "mclapply") %>%
     unname
 }
 
@@ -81,11 +81,18 @@ default_parallelism <- function() {
 #' \code{\link{shell_file}}
 #' @param plan workflow plan data frame, same as for function
 #' \code{\link{make}()}.
+#' @param from_scratch logical, whether to compute the max
+#' useful jobs as if the workflow were to run from scratch
+#' (with all targets out of date).
 #' @param targets names of targets to bulid, same as for function
 #' \code{\link{make}()}.
 #' @param envir environment to import from, same as for function
-#' \code{\link{make}()}.
+#' \code{\link{make}()}. \code{config$envir} is ignored in favor of
+#' \code{envir}.
 #' @param verbose logical, whether to output messages to the console.
+#' @param cache optional drake cache. See code{\link{new_cache}()}. If
+#' The \code{cache} argument is ignored if a non-null
+#' \code{config} argument is supplied.
 #' @param jobs The \code{outdated()} function is called internally,
 #' and it needs to import objects and examine your
 #' input files to see what has been updated. This could take some time,
@@ -104,7 +111,8 @@ default_parallelism <- function() {
 #' @param prework same as for \code{\link{make}}
 #' @param config internal configuration list of \code{\link{make}(...)},
 #' produced also with \code{\link{config}()}.
-#' Computing this
+#' \code{config$envir} is ignored.
+#' Otherwise, computing this
 #' in advance could save time if you plan multiple calls to
 #' \code{dataframes_graph()}.
 #' @param imports Set the \code{imports} argument to change your
@@ -147,14 +155,16 @@ default_parallelism <- function() {
 #' max_useful_jobs(my_plan, imports = 'all') # 10
 #' max_useful_jobs(my_plan, imports = 'none') # 4
 #' }
-max_useful_jobs <- function(plan, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, jobs = 1,
+max_useful_jobs <- function(plan, from_scratch = FALSE,
+  targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE, cache = NULL, jobs = 1,
   parallelism = drake::default_parallelism(),
   packages = (.packages()), prework = character(0), config = NULL,
   imports = c("files", "all", "none")) {
   force(envir)
   nodes <- dataframes_graph(plan = plan, targets = targets,
-    envir = envir, verbose = verbose, jobs = jobs, parallelism = parallelism,
+    envir = envir, verbose = verbose, cache = cache, jobs = jobs,
+    parallelism = parallelism,
     packages = packages, prework = prework, config = config,
     split_columns = FALSE)$nodes
   imports <- match.arg(imports)
@@ -164,7 +174,9 @@ max_useful_jobs <- function(plan, targets = drake::possible_targets(plan),
   if (imports == "none")
     nodes <- nodes[just_targets, ] else if (imports == "files")
     nodes <- nodes[targets_and_files, ]
-  nodes <- nodes[nodes$status != "up to date", ]
+  if (!from_scratch){
+    nodes <- nodes[nodes$status != "up to date", ]
+  }
   if (!nrow(nodes))
     return(0)
   dlply(nodes, "level", nrow) %>%
@@ -182,12 +194,12 @@ max_useful_jobs <- function(plan, targets = drake::possible_targets(plan),
 #' \code{\link{parallelism_choices}}
 #' @export
 #' @param path file path of the shell file
-shell_file <- function(path = file.path(getwd(), "shell.sh")) {
-  writeLines(
-    c(
-      "#!/bin/bash",
-      "shift",
-      "echo \"module load R; $*\" | qsub -sync y -cwd -j y"),
-    path)
-  system2("chmod", args = c("+x", path))
+#' @param overwrite logical, whether to overwrite a possible
+#' destination file with the same name
+shell_file <- function(
+  path = file.path(getwd(), "shell.sh"),
+  overwrite = FALSE
+){
+  from <- system.file("shell.sh", package = "drake", mustWork = TRUE)
+  file.copy(from = from, to = path, copy.mode = TRUE)
 }

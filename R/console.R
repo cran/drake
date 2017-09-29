@@ -1,29 +1,44 @@
+console_length <- 80
+
 console <- function(imported, target, config) {
-  if (!config$verbose)
+  if (!config$verbose) {
     return()
-  if (is.na(imported))
-    action <- color("could not find", "darkorchid3")
-  else if (imported)
-    action <- color("import", "dodgerblue3")
-  else
-    action <- color("target", "forestgreen")
-  target <- crop_text(target, length = 50)
-  cat(action, " ", target, "\n", sep = "")
+  }
+  if (is.na(imported)) {
+    message <- "missing"
+  } else if (imported) {
+    message <- "import"
+  } else {
+    message <- "target"
+  }
+  paste(message, target) %>%
+    finish_console(message = message)
 }
 
-console_parallel_stage <- function(targets, config){
-  if (!config$verbose) return(invisible())
+console_many_targets <- function(
+  targets, message, config, color = color_of(message)
+){
+  if (!config$verbose) {
+    return(invisible())
+  }
   n <- length(targets)
   if (n < 1){
     return(invisible())
   }
-  cat(color("check", "slateblue2"), " ", n, " item",
-    ifelse(n == 1, "", "s"), "\n", sep = "")
+  paste0(
+    message,
+    " ", n, " item",
+    ifelse(n == 1, "", "s"),
+    ": ",
+    paste(targets, collapse = ", ")
+  ) %>%
+    finish_console(message = message)
 }
 
-color <- function(x, color) {
-  if (is.null(color))
-    x else make_style(color)(x)
+finish_console <- function(text, message){
+  crop_text(x = text, length = console_length) %>%
+    color_grep(pattern = message, color = color_of(message)) %>%
+    cat("\n", sep = "")
 }
 
 crop_text <- Vectorize(function(x, length = 50) {
@@ -32,3 +47,11 @@ crop_text <- Vectorize(function(x, length = 50) {
   x
 },
 "x", USE.NAMES = FALSE)
+
+multiline_message <- function(x) {
+  n <- 30
+  if (length(x) > n){
+    x <- c(x[1:(n - 1)], "...")
+  }
+  paste0("  ", x) %>% paste(collapse = "\n")
+}

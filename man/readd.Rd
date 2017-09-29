@@ -8,9 +8,9 @@ readd(target, character_only = FALSE, path = getwd(), search = TRUE,
   cache = NULL)
 }
 \arguments{
-\item{target}{If \code{character_only} is \code{TRUE}, 
+\item{target}{If \code{character_only} is \code{TRUE},
 \code{target} is a character string naming the object to read.
-Otherwise, \code{target} is an unquoted symbol with the name of the 
+Otherwise, \code{target} is an unquoted symbol with the name of the
 object. Note: \code{target} could be the name of an imported object.}
 
 \item{character_only}{logical, whether \code{name} should be treated
@@ -25,7 +25,9 @@ project root or a subdirectory of the project.}
 to find the nearest drake cache. Otherwise, look in the
 current working directory only.}
 
-\item{cache}{a storr cache. Mainly for internal use.}
+\item{cache}{optional drake cache. See code{\link{new_cache}()}.
+If \code{cache} is supplied,
+the \code{path} and \code{search} arguments are ignored.}
 }
 \value{
 drake target item from the cache
@@ -45,7 +47,7 @@ readd("'report.md'") # just a fingerprint of the file (md5 sum)
 }
 }
 \seealso{
-\code{\link{loadd}}, \code{\link{cached}}, 
-\code{\link{built}}, \code{link{imported}}, \code{\link{plan}}, 
+\code{\link{loadd}}, \code{\link{cached}},
+\code{\link{built}}, \code{link{imported}}, \code{\link{plan}},
 \code{\link{make}}
 }

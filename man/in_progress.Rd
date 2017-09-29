@@ -4,7 +4,7 @@
 \alias{in_progress}
 \title{Function \code{in_progress}}
 \usage{
-in_progress(path = getwd(), search = TRUE)
+in_progress(path = getwd(), search = TRUE, cache = NULL)
 }
 \arguments{
 \item{path}{Root directory of the drake project,
@@ -14,6 +14,10 @@ project root or a subdirectory of the project.}
 \item{search}{If \code{TRUE}, search parent directories
 to find the nearest drake cache. Otherwise, look in the
 current working directory only.}
+
+\item{cache}{optional drake cache. See code{\link{new_cache}()}.
+If \code{cache} is supplied,
+the \code{path} and \code{search} arguments are ignored.}
 }
 \value{
 A character vector of target names
@@ -21,7 +25,7 @@ A character vector of target names
 \description{
 List the targets that either
 (1) are currently being built if \code{\link{make}()} is running, or
-(2) were in the process of being built if the previous call to 
+(2) were in the process of being built if the previous call to
 \code{\link{make}()} quit unexpectedly.
 }
 \examples{

@@ -5,10 +5,11 @@
 \title{Function \code{dataframes_graph}}
 \usage{
 dataframes_graph(plan, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, jobs = 1,
+  envir = parent.frame(), verbose = TRUE, cache = NULL, jobs = 1,
   parallelism = drake::default_parallelism(), packages = (.packages()),
-  prework = character(0), build_times = TRUE, targets_only = FALSE,
-  split_columns = FALSE, font_size = 20, config = NULL)
+  prework = character(0), build_times = TRUE, digits = 0,
+  targets_only = FALSE, split_columns = FALSE, font_size = 20,
+  config = NULL)
 }
 \arguments{
 \item{plan}{workflow plan data frame, same as for function
@@ -18,9 +19,13 @@ dataframes_graph(plan, targets = drake::possible_targets(plan),
 \code{\link{make}()}.}
 
 \item{envir}{environment to import from, same as for function
-\code{\link{make}()}.}
+\code{\link{make}()}. \code{config$envir} is ignored in favor
+of \code{envir}.}
 
 \item{verbose}{logical, whether to output messages to the console.}
+
+\item{cache}{optional drake cache. Only used if the \code{config}
+argument is \code{NULL} (default). See code{\link{new_cache}()}.}
 
 \item{jobs}{The \code{outdated()} function is called internally,
 and it needs to import objects and examine your
@@ -42,8 +47,10 @@ See \code{?parallelism_choices} for details.}
 \item{prework}{same as for \code{\link{make}}}
 
 \item{build_times}{logical, whether to show the \code{\link{build_times}()}
-of the targets, if available.
+of the targets and imports, if available.
 These are just elapsed times from \code{system.time()}.}
+
+\item{digits}{number of digits for rounding the build times}
 
 \item{targets_only}{logical,
 whether to skip the imports and only include the
@@ -63,7 +70,8 @@ indicates.)}
 \item{config}{option internal runtime parameter list of
 \code{\link{make}(...)},
 produced with \code{\link{config}()}.
-Computing this
+\code{config$envir} is ignored.
+Otherwise, computing this
 in advance could save time if you plan multiple calls to
 \code{dataframes_graph()}.}
 }
@@ -76,7 +84,6 @@ default title of the graph.
 \description{
 Get the information about nodes, edges, and the legend/key
 so you can plot your own custom \code{visNetwork}.
-IMPORTANT: you must be in the root directory of your project.
 }
 \examples{
 \dontrun{

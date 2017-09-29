@@ -12,7 +12,7 @@
 
 <meta name="author" content="William Michael Landau" />
 
-<meta name="date" content="2017-09-01" />
+<meta name="date" content="2017-09-29" />
 
 <title>Caution</title>
 
@@ -71,7 +71,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1 class="title toc-ignore">Caution</h1>
 <h3 class="subtitle"><em>Cautionary notes for drake</em></h3>
 <h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-09-01</em></h4>
+<h4 class="date"><em>2017-09-29</em></h4>
 
 
 
@@ -80,10 +80,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 </div>
 <p>With drake, there is room for error with respect to tracking dependencies, managing environments and workspaces, etc. For example, in some edge cases, it is possible to trick drake into ignoring dependencies. For the most up-to-date information on unhandled edge cases, please visit the <a href="https://github.com/wlandau-lilly/drake/issues">issue tracker</a>, where you can submit your own bug reports as well. Be sure to search the closed issues too, especially if you are not using the most up-to-date development version. In this vignette, I will try to address some of the main issues to keep in mind for writing reproducible workflows safely.</p>
-<div id="beware-unparsable-symbols-in-your-workflow-plan" class="section level2">
-<h2>Beware unparsable symbols in your workflow plan</h2>
+<div id="workflow-plans" class="section level1">
+<h1>Workflow plans</h1>
+<div id="beware-unparsable-symbols-in-your-workflow-plan." class="section level2">
+<h2>Beware unparsable symbols in your workflow plan.</h2>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">template &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class="dt">x =</span> <span class="kw">process</span>(..setting..))
-processed &lt;-<span class="st"> </span><span class="kw">evaluate</span>(template, <span class="dt">wildcard =</span> <span class="st">&quot;..setting..&quot;</span>, 
+processed &lt;-<span class="st"> </span><span class="kw">evaluate</span>(template, <span class="dt">wildcard =</span> <span class="st">&quot;..setting..&quot;</span>,
   <span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;</span><span class="ch">\&quot;</span><span class="st">option1</span><span class="ch">\&quot;</span><span class="st">&quot;</span>, <span class="st">&quot;</span><span class="ch">\&quot;</span><span class="st">option2</span><span class="ch">\&quot;</span><span class="st">&quot;</span>))
 gathered &lt;-<span class="st"> </span><span class="kw">gather</span>(processed, <span class="dt">target =</span> <span class="st">&quot;bad_target&quot;</span>)
 my_plan &lt;-<span class="st"> </span><span class="kw">rbind</span>(processed, gathered)
@@ -105,26 +107,43 @@ my_plan</code></pre></div>
 ## 3 bad_target list(x_option1 = x_option1, x_option2 = x_option2)</code></pre>
 <p>To be safe, use <code>check(my_plan)</code> to screen for problems like this one.</p>
 </div>
+<div id="commands-are-not-perfectly-flexible." class="section level2">
+<h2>Commands are NOT perfectly flexible.</h2>
+<p>In your workflow plan data frame (produced by <code>plan()</code> and accepted by <code>make()</code>), your commands can usually be flexible R expressions.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plan</span>(<span class="dt">target1 =</span> <span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span> -<span class="st"> </span><span class="kw">sqrt</span>(<span class="kw">sqrt</span>(<span class="dv">3</span>)),
+     <span class="dt">target2 =</span> <span class="kw">my_function</span>(web_scraped_data) %&gt;%<span class="st"> </span>my_tidy)</code></pre></div>
+<pre><code>##    target                                   command
+## 1 target1                     1 + 1 - sqrt(sqrt(3))
+## 2 target2 my_function(web_scraped_data) %&gt;% my_tidy</code></pre>
+<p>However, please try to avoid formulas and function definitions in your commands. You may be able to get away with <code>plan(f = function(x){x + 1})</code> or <code>plan(f = y ~ x)</code> in some use cases, but be careful. Rather than using commands for this, it is better to define functions and formulas in your workspace before calling <code>make()</code>. (Alternatively, use the <code>envir</code> argument to <code>make()</code> to tightly control which imported functions are available.) Use the <code>check()</code> function to help screen and quality-control your workflow plan data frame, use <code>tracked()</code> to see the items that are reproducibly tracked, and use <code>plot_graph()</code> and <code>build_graph()</code> to see the dependency structure of your project.</p>
+</div>
+</div>
+<div id="execution-environment-and-files" class="section level1">
+<h1>Execution environment and files</h1>
+<div id="install-all-your-packages." class="section level2">
+<h2>Install all your packages.</h2>
+<p>Your workflow may depend on external packages such as <a href="https://CRAN.R-project.org/package=ggplot2">ggplot2</a>, <a href="https://CRAN.R-project.org/package=dplyr">dplyr</a>, or <a href="https://CRAN.R-project.org/package=MASS">MASS</a>. Such packages must be formally installed with <code>install.packages()</code>, <code>devtools::install_github()</code>, <code>devtools::install_local()</code>, or a similar command. If you load uninstalled packages with <code>devtools::load_all()</code>, results may be unpredictable and incorrect.</p>
+</div>
 <div id="your-workspace-is-modified-by-default." class="section level2">
 <h2>Your workspace is modified by default.</h2>
 <p>As of version 3.0.0, drake’s execution environment is the user’s workspace by default. As an upshot, the workspace is vulnerable to side-effects of <code>make()</code>. To protect your workspace, you may want to create a custom evaluation environment containing all your imported objects and then pass it to the envir argument of <code>make()</code>. Here is how.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
-envir =<span class="st"> </span><span class="kw">new.env</span>(<span class="dt">parent =</span> <span class="kw">globalenv</span>())
+envir &lt;-<span class="st"> </span><span class="kw">new.env</span>(<span class="dt">parent =</span> <span class="kw">globalenv</span>())
 <span class="kw">eval</span>(<span class="kw">expression</span>({
-  f =<span class="st"> </span>function(x){
+  f &lt;-<span class="st"> </span>function(x){
     <span class="kw">g</span>(x) +<span class="st"> </span><span class="dv">1</span>
   }
-  g =<span class="st"> </span>function(x){
+  g &lt;-<span class="st"> </span>function(x){
     x +<span class="st"> </span><span class="dv">1</span>
   }
 }), <span class="dt">envir =</span> envir)
-myplan =<span class="st"> </span><span class="kw">plan</span>(<span class="dt">out =</span> <span class="kw">f</span>(<span class="dv">1</span>:<span class="dv">3</span>))
+myplan &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class="dt">out =</span> <span class="kw">f</span>(<span class="dv">1</span>:<span class="dv">3</span>))
 <span class="kw">make</span>(myplan, <span class="dt">envir =</span> envir)</code></pre></div>
-<pre><code>## check 1 item
+<pre><code>## check 1 item: g
 ## import g
-## check 1 item
+## check 1 item: f
 ## import f
-## check 1 item
+## check 1 item: out
 ## target out</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">ls</span>() <span class="co"># Check that your workspace did not change.</span></code></pre></div>
 <pre><code>## [1] &quot;envir&quot;     &quot;gathered&quot;  &quot;my_plan&quot;   &quot;myplan&quot;    &quot;processed&quot; &quot;template&quot;</code></pre>
@@ -135,20 +154,10 @@ myplan =<span class="st"> </span><span class="kw">plan</span>(<span class="dt">o
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">readd</span>(out)</code></pre></div>
 <pre><code>## [1] 3 4 5</code></pre>
 </div>
-<div id="commands-are-not-perfectly-flexible." class="section level2">
-<h2>Commands are NOT perfectly flexible.</h2>
-<p>In your workflow plan data frame (produced by <code>plan()</code> and accepted by <code>make()</code>), your commands can usually be flexible R expressions.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plan</span>(<span class="dt">target1 =</span> <span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span> -<span class="st"> </span><span class="kw">sqrt</span>(<span class="kw">sqrt</span>(<span class="dv">3</span>)), 
-     <span class="dt">target2 =</span> <span class="kw">my_function</span>(web_scraped_data) %&gt;%<span class="st"> </span>my_tidy)</code></pre></div>
-<pre><code>##    target                                   command
-## 1 target1                     1 + 1 - sqrt(sqrt(3))
-## 2 target2 my_function(web_scraped_data) %&gt;% my_tidy</code></pre>
-<p>However, please try to avoid formulas and function definitions in your commands. You may be able to get away with <code>plan(f = function(x){x + 1})</code> or <code>plan(f = y ~ x)</code> in some use cases, but be careful. Rather than using commands for this, it is better to define functions and formulas in your workspace before calling <code>make()</code>. (Alternatively, use the <code>envir</code> argument to <code>make()</code> to tightly control which imported functions are available.) Use the <code>check()</code> function to help screen and quality-control your workflow plan data frame, use <code>tracked()</code> to see the items that are reproducibly tracked, and use <code>plot_graph()</code> and <code>build_graph()</code> to see the dependency structure of your project.</p>
-</div>
 <div id="minimize-the-side-effects-of-your-commands." class="section level2">
 <h2>Minimize the side effects of your commands.</h2>
 <p>Consider the workflow plan data frame below.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_plan =<span class="st"> </span><span class="kw">plan</span>(<span class="dt">list =</span> <span class="kw">c</span>(<span class="dt">a =</span> <span class="st">&quot;x &lt;- 1; return(x)&quot;</span>))
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_plan &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class="dt">list =</span> <span class="kw">c</span>(<span class="dt">a =</span> <span class="st">&quot;x &lt;- 1; return(x)&quot;</span>))
 my_plan</code></pre></div>
 <pre><code>##   target           command
 ## 1      a x &lt;- 1; return(x)</code></pre>
@@ -160,12 +169,11 @@ my_plan</code></pre></div>
 <h2>Do not change your working directory.</h2>
 <p>During the execution workflow of a drake project, please do not change your working directory (with <code>setwd()</code>, for example). At the very least, if you do change your working directory during a command in your workflow plan, please return to the original working directory before the command is completed. Drake relies on a hidden cache (the <code>.drake/</code> folder) at the root of your project, so navigating to a different folder may confuse drake.</p>
 </div>
-<div id="directories-folders-are-not-reproducibly-tracked." class="section level2">
-<h2>Directories (folders) are not reproducibly tracked.</h2>
-<p>Yes, you can declare a file target or input file by enclosing it in single quotes in your workflow plan data frame. But entire directories (i.e. folders) cannot yet be tracked this way. Tracking directories is a tricky problem, and lots of individual edge cases need to be ironed out before I can deliver a clean, reliable solution. Please see <a href="https://github.com/wlandau-lilly/drake/issues/12">issue 12</a> for updates and a discussion.</p>
 </div>
-<div id="check-your-dependencies" class="section level2">
-<h2>CHECK YOUR DEPENDENCIES</h2>
+<div id="dependencies" class="section level1">
+<h1>Dependencies</h1>
+<div id="check-your-dependencies." class="section level2">
+<h2>Check your dependencies.</h2>
 <p>As the user, you should take responsibility for how the steps of your workflow are interconnected. This will affect which targets are built and which ones are skipped. There are several ways to explore the dependency relatoinsihp.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">load_basic_example</span>()
 my_plan</code></pre></div>
@@ -187,13 +195,13 @@ my_plan</code></pre></div>
 ## 15 coef_regression2_small                      coef(regression2_small)
 ## 16 coef_regression2_large                      coef(regression2_large)</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
-<span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>) </code></pre></div>
+<span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
 <iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/a816f791/images/outdated.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
 <p>You can also check the dependencies of individual targets.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(reg2)</code></pre></div>
 <pre><code>## [1] &quot;lm&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="dv">1</span>]) <span class="co"># report.Rmd is single-quoted because it is a file dependency.</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="dv">1</span>]) <span class="co"># File dependencies like report.Rmd are single-quoted.</span></code></pre></div>
 <pre><code>## [1] &quot;'report.Rmd'&quot;        &quot;my_knit&quot;             &quot;report_dependencies&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="dv">16</span>])</code></pre></div>
 <pre><code>## [1] &quot;coef&quot;              &quot;regression2_large&quot;</code></pre>
@@ -226,35 +234,42 @@ my_plan</code></pre></div>
 ?plot_graph</code></pre></div>
 <p>Drake can be fooled into skipping objects that should be treated as dependencies. For example:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">f &lt;-<span class="st"> </span>function(){
-  b =<span class="st"> </span><span class="kw">get</span>(<span class="st">&quot;x&quot;</span>, <span class="dt">envir =</span> <span class="kw">globalenv</span>()) <span class="co"># x is incorrectly ignored</span>
-  file_dependency =<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">'input_file.rds'</span>) <span class="co"># 'input_file.rds' is incorrectly ignored</span>
+  b &lt;-<span class="st"> </span><span class="kw">get</span>(<span class="st">&quot;x&quot;</span>, <span class="dt">envir =</span> <span class="kw">globalenv</span>()) <span class="co"># x is incorrectly ignored</span>
+  file_dependency &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">'input_file.rds'</span>) <span class="co"># 'input_file.rds' is incorrectly ignored # nolint</span>
   digest::<span class="kw">digest</span>(file_dependency)
 }
 <span class="kw">deps</span>(f)</code></pre></div>
 <pre><code>## [1] &quot;digest::digest&quot; &quot;get&quot;            &quot;globalenv&quot;      &quot;readRDS&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">command =<span class="st"> &quot;x &lt;- digest::digest('input_file.rds'); assign(</span><span class="ch">\&quot;</span><span class="st">x</span><span class="ch">\&quot;</span><span class="st">, 1); x&quot;</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">command &lt;-<span class="st"> &quot;x &lt;- digest::digest('input_file.rds'); assign(</span><span class="ch">\&quot;</span><span class="st">x</span><span class="ch">\&quot;</span><span class="st">, 1); x&quot;</span>
 <span class="kw">deps</span>(command)</code></pre></div>
 <pre><code>## [1] &quot;'input_file.rds'&quot; &quot;assign&quot;           &quot;digest::digest&quot;</code></pre>
+</div>
+<div id="functions-produced-by-vectorize" class="section level2">
+<h2>Functions produced by <code>Vectorize()</code></h2>
 <p>With functions produced by <code>Vectorize()</code>, detecting dependencies is especially hard because the body of every such a function is</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">{
-    args &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">as.list</span>(<span class="kw">match.call</span>())[-1L], eval, <span class="kw">parent.frame</span>())
-    names &lt;-<span class="st"> </span>if (<span class="kw">is.null</span>(<span class="kw">names</span>(args))) 
-        <span class="kw">character</span>(<span class="kw">length</span>(args))
-    else <span class="kw">names</span>(args)
-    dovec &lt;-<span class="st"> </span>names %in%<span class="st"> </span>vectorize.args
-    <span class="kw">do.call</span>(<span class="st">&quot;mapply&quot;</span>, <span class="kw">c</span>(<span class="dt">FUN =</span> FUN, args[dovec], <span class="dt">MoreArgs =</span> <span class="kw">list</span>(args[!dovec]), 
-        <span class="dt">SIMPLIFY =</span> SIMPLIFY, <span class="dt">USE.NAMES =</span> USE.NAMES))
-}</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">args &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">as.list</span>(<span class="kw">match.call</span>())[-1L], eval, <span class="kw">parent.frame</span>())
+names &lt;-<span class="st"> </span>if (<span class="kw">is.null</span>(<span class="kw">names</span>(args)))
+    <span class="kw">character</span>(<span class="kw">length</span>(args)) else <span class="kw">names</span>(args)
+dovec &lt;-<span class="st"> </span>names %in%<span class="st"> </span>vectorize.args
+<span class="kw">do.call</span>(<span class="st">&quot;mapply&quot;</span>, <span class="kw">c</span>(<span class="dt">FUN =</span> FUN, args[dovec], <span class="dt">MoreArgs =</span> <span class="kw">list</span>(args[!dovec]),
+    <span class="dt">SIMPLIFY =</span> SIMPLIFY, <span class="dt">USE.NAMES =</span> USE.NAMES))</code></pre></div>
 <p>Thus, If <code>f &lt;- Vectorize(g, ...)</code> is such a function, drake searches <code>g()</code> for dependencies, not <code>f()</code>. Specifically, if drake sees that <code>environment(f)[[&quot;FUN&quot;]]</code> exists and is a function, then <code>environment(f)[[&quot;FUN&quot;]]</code> will be searched instead of <code>f()</code>.</p>
-<p>In addition, if <code>f()</code> is the output of <code>Vectorize()</code>, then drake reacts to changes in <code>environment(f)[[&quot;FUN&quot;]]</code>, not <code>f()</code>. Thus, if the configuration settings of vectorization change (such as which arguments are vectorized), but the core element-wise functionality remains the same, then <code>make()</code> still thinks everything is up to date.</p>
+<p>In addition, if <code>f()</code> is the output of <code>Vectorize()</code>, then drake reacts to changes in <code>environment(f)[[&quot;FUN&quot;]]</code>, not <code>f()</code>. Thus, if the configuration settings of vectorization change (such as which arguments are vectorized), but the core element-wise functionality remains the same, then <code>make()</code> still thinks everything is up to date. Also, if you hover over the <code>f</code> node in <code>plot_graph(hover = TRUE)</code>, then you will see the body of <code>environment(f)[[&quot;FUN&quot;]]</code>, not the body of <code>f()</code>.</p>
 </div>
 <div id="compiled-code-is-not-reproducibly-tracked." class="section level2">
 <h2>Compiled code is not reproducibly tracked.</h2>
 <p>Some R functions use <code>.Call()</code> to run compiled code in the backend. The R code in these functions is tracked, but not the compiled code called with <code>.Call()</code>.</p>
 </div>
+<div id="directories-folders-are-not-reproducibly-tracked." class="section level2">
+<h2>Directories (folders) are not reproducibly tracked.</h2>
+<p>Yes, you can declare a file target or input file by enclosing it in single quotes in your workflow plan data frame. But entire directories (i.e. folders) cannot yet be tracked this way. Tracking directories is a tricky problem, and lots of individual edge cases need to be ironed out before I can deliver a clean, reliable solution. Please see <a href="https://github.com/wlandau-lilly/drake/issues/12">issue 12</a> for updates and a discussion.</p>
+</div>
+</div>
+<div id="high-performance-computing" class="section level1">
+<h1>High-performance computing</h1>
 <div id="parallel-computing-on-windows" class="section level2">
 <h2>Parallel computing on Windows</h2>
-<p>On Windows, do not use <code>make(..., parallelism = &quot;mclapply&quot;)</code>. Replace <code>&quot;mclapply&quot;</code> with one of the other <code>parallelism_choices()</code> or let <code>drake</code> choose the <code>parallelism</code> for you. For <code>make(..., parallelism = &quot;Makefile&quot;)</code>, Windows users need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>.</p>
+<p>On Windows, do not use <code>make(..., parallelism = &quot;mclapply&quot;, jobs = n)</code> with <code>n</code> greater than 1. You could try, but <code>jobs</code> will just be demoted to 1. Instead, please replace <code>&quot;mclapply&quot;</code> with one of the other <code>parallelism_choices()</code> or let <code>drake</code> choose the <code>parallelism</code> backend for you. For <code>make(..., parallelism = &quot;Makefile&quot;)</code>, Windows users need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>.</p>
 </div>
 <div id="proper-makefiles-are-not-standalone." class="section level2">
 <h2>Proper Makefiles are not standalone.</h2>
@@ -264,6 +279,18 @@ my_plan</code></pre></div>
 <h2>Makefile-level parallelism for imported objects and files</h2>
 <p>Makefile-level parallelism is only used for targets in your workflow plan data frame, not imports. To process imported objects and files, drake selects the best parallel backend for your system and uses the number of jobs you give to the <code>jobs</code> argument to <code>make()</code>. To use at most 2 jobs for imports and at most 4 jobs for targets, run</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(..., <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">2</span>, <span class="dt">args =</span> <span class="st">&quot;--jobs=4&quot;</span>)</code></pre></div>
+</div>
+</div>
+<div id="storage" class="section level1">
+<h1>Storage</h1>
+<div id="storage-customization-pitfalls" class="section level2">
+<h2>Storage customization pitfalls</h2>
+<p>The <a href="https://github.com/wlandau-lilly/drake/blob/master/vignettes/storage.Rmd">storage vignette</a> describes how storage works in <code>drake</code> and opens up options for customization. But please do not try to change the short hash algorithm of an existing cache, and beware in-memory caches for parallel computing and persistent projects. See the <a href="https://github.com/wlandau-lilly/drake/blob/master/vignettes/storage.Rmd">storage vignette</a> for details.</p>
+</div>
+<div id="runtime-predictions" class="section level2">
+<h2>Runtime predictions</h2>
+<p>In <code>predict_runtime()</code> and <code>rate_limiting_times()</code>, <code>drake</code> only accounts for the targets with logged build times. If some targets have not been timed, <code>drake</code> throws a warning and prints the untimed targets.</p>
+</div>
 </div>
 
 

@@ -1,26 +1,13 @@
 # For hover text
 hover_text_length <- 250
 
-# colors in graphs
-generic_color <- "gray"
-import_color <- "#1874cd"
-in_progress_color <- "#ff7221"
-missing_color <- "#9a32cd"
-outdated_color <- "#aa0000"
-up_to_date_color <- "#228b22"
-
-# shapes in graph
-file_shape <- "square"
-function_shape <- "triangle"
-generic_shape <- "dot"
-
-append_build_times <- function(nodes, cache) {
-  time_data <- build_times(cache = cache)
-  timed <- intersect(time_data$target, nodes$id)
+append_build_times <- function(nodes, digits, cache) {
+  time_data <- build_times(digits = digits, cache = cache)
+  timed <- intersect(time_data$item, nodes$id)
   if (!length(timed))
     return(nodes)
   time_labels <- as.character(time_data$elapsed)
-  names(time_labels) <- time_data$target
+  names(time_labels) <- time_data$item
   time_labels <- time_labels[timed]
   nodes[timed, "label"] <-
     paste(nodes[timed, "label"], time_labels, sep = "\n")
@@ -56,7 +43,7 @@ categorize_nodes <- function(nodes, functions, imports,
 
 configure_nodes <- function(nodes, plan, envir, parallelism, graph, cache,
   files, functions, imports, in_progress, missing, outdated, targets,
-  font_size, build_times) {
+  font_size, build_times, digits) {
   force(envir)
   functions <- intersect(nodes$id, functions)
   in_progress <- intersect(in_progress, nodes$id)
@@ -71,7 +58,7 @@ configure_nodes <- function(nodes, plan, envir, parallelism, graph, cache,
     graph = graph, imports = imports, targets = targets)
   nodes <- style_nodes(nodes, font_size = font_size)
   if (build_times)
-    nodes <- append_build_times(nodes = nodes, cache = cache)
+    nodes <- append_build_times(nodes = nodes, digits = digits, cache = cache)
   hover_text(nodes = nodes, plan = plan, envir = envir,
     files = files, functions = functions, targets = targets)
 }
@@ -116,6 +103,7 @@ function_hover_text <- Vectorize(function(function_name, envir){
   tryCatch(
     eval(parse(text = function_name), envir = envir),
       error = function(e) function_name) %>%
+        unwrap_function %>%
         deparse %>%
         paste(collapse = "\n") %>%
         crop_text(length = hover_text_length)
@@ -133,23 +121,6 @@ hover_text <- function(nodes, plan, targets, files, functions, envir) {
     plan[plan$target %in% targets, "command"] %>%
     wrap_text %>% crop_text(length = hover_text_length)
   nodes
-}
-
-legend_nodes <- function(font_size = 20) {
-  out <- data.frame(
-    label = c(
-      "Up to date", "In progress", "Outdated", "Imported",
-      "Missing", "Object", "Function", "File"),
-    color = c(
-      up_to_date_color, in_progress_color,
-      outdated_color, import_color, missing_color,
-      rep(generic_color, 3)),
-    shape = c(rep(generic_shape, 6),
-      function_shape, file_shape),
-      font.color = "black",
-      font.size = font_size)
-  out$id <- seq_len(nrow(out))
-  out
 }
 
 null_graph <- function() {
@@ -172,15 +143,17 @@ resolve_levels <- function(nodes, graph) {
   stopifnot(is_dag(graph))
   level <- 1
   nodes$level <- NA
-  graph_remaining_targets <- graph
+  keep_these <- setdiff(V(graph)$name, rownames(nodes))
+  graph_remaining_targets <- delete_vertices(graph, v = keep_these)
   while (length(V(graph_remaining_targets))) {
     candidates <- next_targets(graph_remaining_targets)
-    nodes[candidates, "level"] <- level
-    level <- level + 1
+    if (length(candidates)){
+      nodes[candidates, "level"] <- level
+      level <- level + 1
+    }
     graph_remaining_targets <-
       delete_vertices(graph_remaining_targets, v = candidates)
   }
-  stopifnot(all(!is.na(nodes$level)))
   nodes
 }
 
@@ -227,13 +200,61 @@ split_node_columns <- function(nodes){
 
 style_nodes <- function(nodes, font_size) {
   nodes$font.size <- font_size # nolint
-  nodes[nodes$status == "imported", "color"] <- import_color
-  nodes[nodes$status == "in progress", "color"] <- in_progress_color
-  nodes[nodes$status == "missing", "color"] <- missing_color
-  nodes[nodes$status == "outdated", "color"] <- outdated_color
-  nodes[nodes$status == "up to date", "color"] <- up_to_date_color
-  nodes[nodes$type == "object", "shape"] <- generic_shape
-  nodes[nodes$type == "file", "shape"] <- file_shape
-  nodes[nodes$type == "function", "shape"] <- function_shape
+  nodes[nodes$status == "imported", "color"] <- color_of("import_node")
+  nodes[nodes$status == "in progress", "color"] <- color_of("in_progress")
+  nodes[nodes$status == "missing", "color"] <- color_of("missing_node")
+  nodes[nodes$status == "outdated", "color"] <- color_of("outdated")
+  nodes[nodes$status == "up to date", "color"] <- color_of("up_to_date")
+  nodes[nodes$type == "object", "shape"] <- shape_of("object")
+  nodes[nodes$type == "file", "shape"] <- shape_of("file")
+  nodes[nodes$type == "function", "shape"] <- shape_of("funct")
   nodes
+}
+
+#' @title Function legend_nodes
+#' @export
+#' @seealso \code{\link{drake_palette}()},
+#' \code{\link{plot_graph}()},
+#' \code{\link{dataframes_graph}()}
+#' @description Output a \code{visNetwork}-friendly
+#' data frame of nodes. It tells you what
+#' the colors and shapes mean
+#' in \code{\link{plot_graph}()}.
+#' @param font_size font size of the node label text
+#' @examples
+#' \dontrun{
+#' visNetwork::visNetwork(nodes = legend_nodes())
+#' }
+legend_nodes <- function(font_size = 20) {
+  out <- data.frame(
+    label = c(
+      "Up to date",
+      "In progress",
+      "Outdated",
+      "Imported",
+      "Missing",
+      "Object",
+      "Function",
+      "File"
+    ),
+    color = color_of(c(
+      "up_to_date",
+      "in_progress",
+      "outdated",
+      "import_node",
+      "missing_node",
+      "generic",
+      "generic",
+      "generic"
+    )),
+    shape = shape_of(c(
+      rep("object", 6),
+      "funct",
+      "file"
+    )),
+    font.color = "black",
+    font.size = font_size
+  )
+  out$id <- seq_len(nrow(out))
+  out
 }

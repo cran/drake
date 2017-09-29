@@ -1,10 +1,11 @@
 ## ---- echo = F-----------------------------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
 clean(destroy = TRUE)
+unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 
 ## ----unparsable_plan-----------------------------------------------------
 template <- plan(x = process(..setting..))
-processed <- evaluate(template, wildcard = "..setting..", 
+processed <- evaluate(template, wildcard = "..setting..",
   values = c("\"option1\"", "\"option2\""))
 gathered <- gather(processed, target = "bad_target")
 my_plan <- rbind(processed, gathered)
@@ -18,33 +19,33 @@ gathered <- gather(processed, target = "bad_target")
 my_plan <- rbind(processed, gathered)
 my_plan
 
+## ------------------------------------------------------------------------
+plan(target1 = 1 + 1 - sqrt(sqrt(3)),
+     target2 = my_function(web_scraped_data) %>% my_tidy)
+
 ## ----envir---------------------------------------------------------------
 library(drake)
-envir = new.env(parent = globalenv())
+envir <- new.env(parent = globalenv())
 eval(expression({
-  f = function(x){
+  f <- function(x){
     g(x) + 1
   }
-  g = function(x){
+  g <- function(x){
     x + 1
   }
 }), envir = envir)
-myplan = plan(out = f(1:3))
+myplan <- plan(out = f(1:3))
 make(myplan, envir = envir)
 ls() # Check that your workspace did not change.
 ls(envir) # Check your evaluation environment.
 envir$out
 readd(out)
 
-## ------------------------------------------------------------------------
-plan(target1 = 1 + 1 - sqrt(sqrt(3)), 
-     target2 = my_function(web_scraped_data) %>% my_tidy)
-
 ## ----cautionlibdrake, echo = FALSE---------------------------------------
 library(drake)
 
 ## ----depscheck-----------------------------------------------------------
-my_plan = plan(list = c(a = "x <- 1; return(x)"))
+my_plan <- plan(list = c(a = "x <- 1; return(x)"))
 my_plan
 deps(my_plan$command[1])
 
@@ -52,26 +53,50 @@ deps(my_plan$command[1])
 load_basic_example()
 my_plan
 
+## ----demoplotgraphcaution, eval = FALSE----------------------------------
+#  # Hover, click, drag, zoom, and pan.
+#  plot_graph(my_plan, width = "100%", height = "500px")
+
 ## ----checkdeps-----------------------------------------------------------
 deps(reg2)
-deps(my_plan$command[1]) # report.Rmd is single-quoted because it is a file dependency.
+deps(my_plan$command[1]) # File dependencies like report.Rmd are single-quoted.
 deps(my_plan$command[16])
 
 ## ----tracked-------------------------------------------------------------
 tracked(my_plan, targets = "small")
 tracked(my_plan)
 
+## ----helpfuncitons, eval = FALSE-----------------------------------------
+#  ?deps
+#  ?tracked
+#  ?plot_graph
+
 ## ----cautiondeps---------------------------------------------------------
 f <- function(){
-  b = get("x", envir = globalenv()) # x is incorrectly ignored
-  file_dependency = readRDS('input_file.rds') # 'input_file.rds' is incorrectly ignored
+  b <- get("x", envir = globalenv()) # x is incorrectly ignored
+  file_dependency <- readRDS('input_file.rds') # 'input_file.rds' is incorrectly ignored # nolint
   digest::digest(file_dependency)
 }
 deps(f)
-command = "x <- digest::digest('input_file.rds'); assign(\"x\", 1); x"
+command <- "x <- digest::digest('input_file.rds'); assign(\"x\", 1); x"
 deps(command)
+
+## ----vectorizedfunctioncaution, eval = FALSE-----------------------------
+#  args <- lapply(as.list(match.call())[-1L], eval, parent.frame())
+#  names <- if (is.null(names(args)))
+#      character(length(args)) else names(args)
+#  dovec <- names %in% vectorize.args
+#  do.call("mapply", c(FUN = FUN, args[dovec], MoreArgs = list(args[!dovec]),
+#      SIMPLIFY = SIMPLIFY, USE.NAMES = USE.NAMES))
 
 ## ----clean, echo = FALSE-------------------------------------------------
 clean(destroy = TRUE)
 unlink(c("report.Rmd", "Thumbs.db"))
+
+## ----makejobs, eval = FALSE----------------------------------------------
+#  make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")
+
+## ----rmfiles_caution, echo = FALSE---------------------------------------
+clean(destroy = TRUE)
+unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 

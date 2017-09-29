@@ -12,7 +12,7 @@
 
 <meta name="author" content="William Michael Landau" />
 
-<meta name="date" content="2017-09-01" />
+<meta name="date" content="2017-09-29" />
 
 <title>drake</title>
 
@@ -71,7 +71,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1 class="title toc-ignore">drake</h1>
 <h3 class="subtitle"><em>data frames in R for Make</em></h3>
 <h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-09-01</em></h4>
+<h4 class="date"><em>2017-09-29</em></h4>
 
 
 
@@ -88,9 +88,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ol>
 <p>Organize your work in a data frame. Then <code>make()</code> it.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
-<span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd. `example_drake(&quot;basic&quot;)`, `vignette(&quot;quickstart&quot;)`.</span>
-my_plan
-##                    target                                      command
+<span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd.</span>
+my_plan <span class="co"># Each target is a file (single-quoted) or object</span></code></pre></div>
+<pre><code>##                    target                                      command
 ## 1             'report.md'   my_knit('report.Rmd', report_dependencies)
 ## 2                   small                                  simulate(5)
 ## 3                   large                                 simulate(50)
@@ -106,21 +106,24 @@ my_plan
 ## 13 coef_regression1_small                      coef(regression1_small)
 ## 14 coef_regression1_large                      coef(regression1_large)
 ## 15 coef_regression2_small                      coef(regression2_small)
-## 16 coef_regression2_large                      coef(regression2_large)
-<span class="kw">make</span>(my_plan)</code></pre></div>
+## 16 coef_regression2_large                      coef(regression2_large)</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan) <span class="co"># Run the commands to build the targets.</span></code></pre></div>
 </div>
 <div id="installation" class="section level1">
 <h1>Installation</h1>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">&quot;drake&quot;</span>) <span class="co"># latest CRAN release</span>
-devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-lilly/drake@v3.1.0&quot;</span>, <span class="dt">build =</span> <span class="ot">TRUE</span>) <span class="co"># latest GitHub release</span>
-devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-lilly/drake&quot;</span>, <span class="dt">build =</span> <span class="ot">TRUE</span>) <span class="co"># development version</span></code></pre></div>
+devtools::<span class="kw">install_github</span>(
+  <span class="st">&quot;wlandau-lilly/drake@v4.2.0&quot;</span>,
+  <span class="dt">build =</span> <span class="ot">TRUE</span>
+) <span class="co"># GitHub release</span>
+devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-lilly/drake&quot;</span>, <span class="dt">build =</span> <span class="ot">TRUE</span>) <span class="co"># dev version</span></code></pre></div>
 <p>For <code>make(..., parallelism = &quot;Makefile&quot;)</code>, Windows users need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>.</p>
 </div>
 <div id="quickstart" class="section level1">
 <h1>Quickstart</h1>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
-<span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd. `example_drake(&quot;basic&quot;)`, `vignette(&quot;quickstart&quot;)`.</span>
-<span class="kw">plot_graph</span>(my_plan) <span class="co"># Hover, click, drag, zoom, pan. Try file = &quot;graph.html&quot; and targets_only = TRUE.</span>
+<span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd.</span>
+<span class="kw">plot_graph</span>(my_plan) <span class="co"># Hover, click, drag, zoom, pan.</span>
 <span class="kw">outdated</span>(my_plan) <span class="co"># Which targets need to be (re)built?</span>
 <span class="kw">missed</span>(my_plan) <span class="co"># Are you missing anything from your workspace?</span>
 <span class="kw">check</span>(my_plan) <span class="co"># Are you missing files? Is your workflow plan okay?</span>
@@ -130,7 +133,7 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-
 <p>Dive deeper into the built-in examples.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">example_drake</span>(<span class="st">&quot;basic&quot;</span>) <span class="co"># Write the code files of the canonical tutorial.</span>
 <span class="kw">examples_drake</span>() <span class="co"># List the other examples.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>) <span class="co"># Same as https://cran.r-project.org/package=drake/vignettes/quickstart.html</span></code></pre></div>
+<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>) <span class="co"># See https://cran.r-project.org/package=drake/vignettes</span></code></pre></div>
 </div>
 <div id="useful-functions" class="section level1">
 <h1>Useful functions</h1>
@@ -161,23 +164,39 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-
 <span class="kw">cached</span>()
 <span class="kw">imported</span>()
 <span class="kw">built</span>()
-<span class="kw">build_times</span>()
 <span class="kw">readd</span>()
 <span class="kw">loadd</span>()
 <span class="kw">find_project</span>()
 <span class="kw">find_cache</span>()</code></pre></div>
-<p>debug your work,</p>
+<p>make use of recorded build times,</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">build_times</span>()
+<span class="kw">predict_runtime</span>()
+<span class="kw">rate_limiting_times</span>()</code></pre></div>
+<p>speed up your project with parallel computing,</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>() <span class="co"># with jobs &gt; 2</span>
+<span class="kw">max_useful_jobs</span>()
+<span class="kw">parallelism_choices</span>()
+<span class="kw">shell_file</span>()</code></pre></div>
+<p>finely tune the caching and hashing,</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">available_hash_algos</span>()
+<span class="kw">cache_path</span>()
+<span class="kw">cache_types</span>()
+<span class="kw">configure_cache</span>()
+<span class="kw">default_long_hash_algo</span>()
+<span class="kw">default_short_hash_algo</span>()
+<span class="kw">long_hash</span>()
+<span class="kw">short_hash</span>()
+<span class="kw">new_cache</span>()
+<span class="kw">recover_cache</span>()
+<span class="kw">this_cache</span>()
+<span class="kw">type_of_cache</span>()</code></pre></div>
+<p>and debug your work.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">check</span>()
 <span class="kw">session</span>()
 <span class="kw">in_progress</span>()
 <span class="kw">progress</span>()
 <span class="kw">config</span>()
 <span class="kw">read_config</span>()</code></pre></div>
-<p>and speed up your project with parallel computing.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>() <span class="co"># with jobs &gt; 2</span>
-<span class="kw">max_useful_jobs</span>()
-<span class="kw">parallelism_choices</span>()
-<span class="kw">shell_file</span>()</code></pre></div>
 </div>
 <div id="documentation" class="section level1">
 <h1>Documentation</h1>
@@ -185,6 +204,7 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">vignette</span>(<span class="dt">package =</span> <span class="st">&quot;drake&quot;</span>) <span class="co"># List the vignettes.</span>
 <span class="kw">vignette</span>(<span class="st">&quot;drake&quot;</span>) <span class="co"># High-level intro.</span>
 <span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>) <span class="co"># Walk through a simple example.</span>
+<span class="kw">vignette</span>(<span class="st">&quot;storage&quot;</span>) <span class="co"># Learn how drake stores your stuff.</span>
 <span class="kw">vignette</span>(<span class="st">&quot;caution&quot;</span>) <span class="co"># Avoid common pitfalls.</span></code></pre></div>
 </div>
 <div id="help-and-troubleshooting" class="section level1">
@@ -199,8 +219,9 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-
 <span class="kw">outdated</span>(my_plan) <span class="co"># Which targets need to be (re)built?</span>
 <span class="kw">make</span>(my_plan) <span class="co"># Build what needs to be built.</span>
 <span class="kw">outdated</span>(my_plan) <span class="co"># Everything is up to date.</span>
-reg2 =<span class="st"> </span>function(d){ <span class="co"># Change one of your functions.</span>
-  d$x3 =<span class="st"> </span>d$x^<span class="dv">3</span>
+<span class="co"># Change one of your functions.</span>
+reg2 &lt;-<span class="st"> </span>function(d) {
+  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
   <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
 }
 <span class="kw">outdated</span>(my_plan) <span class="co"># Some targets depend on reg2().</span>
@@ -214,9 +235,10 @@ reg2 =<span class="st"> </span>function(d){ <span class="co"># Change one of you
 <p>Similarly to <a href="https://www.gnu.org/software/make/">Make</a>, drake arranges the intermediate steps of your workflow in a dependency web. This network is the key to drake’s parallel computing. For example, consider the network graph of the basic example.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
 <span class="kw">load_basic_example</span>()
-<span class="kw">make</span>(my_plan, <span class="dt">jobs =</span> <span class="dv">2</span>, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Parallelize over 2 jobs.</span>
-reg2 =<span class="st"> </span>function(d){ <span class="co"># Change a dependency.</span>
-  d$x3 =<span class="st"> </span>d$x^<span class="dv">3</span>
+<span class="kw">make</span>(my_plan, <span class="dt">jobs =</span> <span class="dv">2</span>, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Parallelize with 2 jobs.</span>
+<span class="co"># Change one of your functions.</span>
+reg2 &lt;-<span class="st"> </span>function(d){
+  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
   <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
 }</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
@@ -240,12 +262,13 @@ reg2 =<span class="st"> </span>function(d){ <span class="co"># Change a dependen
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;all&quot;</span>) <span class="co"># 10</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;none&quot;</span>) <span class="co"># 0</span>
 <span class="co"># Change a function so some targets are now out of date.</span>
-reg2 =<span class="st"> </span>function(d){
-  d$x3 =<span class="st"> </span>d$x^<span class="dv">3</span>
+reg2 &lt;-<span class="st"> </span>function(d){
+  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
   <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
 }
 <span class="kw">plot_graph</span>(my_plan)
 <span class="kw">max_useful_jobs</span>(my_plan) <span class="co"># 4</span>
+<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">from_scratch =</span> <span class="ot">TRUE</span>) <span class="co"># 8</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;files&quot;</span>) <span class="co"># 4</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;all&quot;</span>) <span class="co"># 10</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;none&quot;</span>) <span class="co"># 4</span></code></pre></div>

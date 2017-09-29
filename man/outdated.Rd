@@ -5,7 +5,7 @@
 \title{Function outdated}
 \usage{
 outdated(plan, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE,
+  envir = parent.frame(), verbose = TRUE, cache = NULL,
   parallelism = drake::default_parallelism(), jobs = 1,
   packages = (.packages()), prework = character(0), config = NULL)
 }
@@ -14,9 +14,14 @@ outdated(plan, targets = drake::possible_targets(plan),
 
 \item{targets}{same as for \code{\link{make}}}
 
-\item{envir}{same as for \code{\link{make}}}
+\item{envir}{same as for \code{\link{make}}. Overrides
+\code{config$envir}.}
 
 \item{verbose}{same as for \code{\link{make}}}
+
+\item{cache}{optional drake cache. See code{\link{new_cache}()}.
+The \code{cache} argument is ignored if a
+non-null \code{config} argument is supplied.}
 
 \item{parallelism}{same as for \code{\link{make}}}
 
@@ -26,11 +31,12 @@ outdated(plan, targets = drake::possible_targets(plan),
 
 \item{prework}{same as for \code{\link{make}}}
 
-\item{config}{option internal runtime parameter list of 
+\item{config}{option internal runtime parameter list of
 \code{\link{make}(...)},
 produced with \code{\link{config}()}.
-Computing this
-in advance could save time if you plan multiple calls to 
+\code{config$envir} is ignored.
+Otherwise, computing \code{config}
+in advance could save time if you plan multiple calls to
 \code{outdated()}.}
 }
 \description{
@@ -46,6 +52,6 @@ outdated(my_plan)
 }
 }
 \seealso{
-\code{\link{missed}}, \code{\link{plan}}, 
+\code{\link{missed}}, \code{\link{plan}},
 \code{\link{make}}, \code{\link{plot_graph}}
 }

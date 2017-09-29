@@ -5,7 +5,8 @@
 \title{Function \code{progress}}
 \usage{
 progress(..., list = character(0), no_imported_objects = FALSE,
-  imported_files_only = logical(0), path = getwd(), search = TRUE)
+  imported_files_only = logical(0), path = getwd(), search = TRUE,
+  cache = NULL)
 }
 \arguments{
 \item{...}{objects to load from the cache, as names (unquoted)
@@ -16,11 +17,12 @@ or character strings (quoted). Similar to \code{...} in
 cache. Similar to the \code{list} argument of \code{\link{remove}()}.}
 
 \item{no_imported_objects}{logical, whether to only return information
-about imported files and targets with commands (i.e. whether to ignore 
+about imported files and targets with commands (i.e. whether to ignore
 imported objects that are not files).}
 
-\item{imported_files_only}{logical, deprecated. Same as \code{no_imported_objects}.
-Use the \code{no_imported_objects} argument instead.}
+\item{imported_files_only}{logical, deprecated. Same as
+\code{no_imported_objects}.  Use the \code{no_imported_objects} argument
+instead.}
 
 \item{path}{Root directory of the drake project,
 or if \code{search} is \code{TRUE}, either the
@@ -29,15 +31,19 @@ project root or a subdirectory of the project.}
 \item{search}{If \code{TRUE}, search parent directories
 to find the nearest drake cache. Otherwise, look in the
 current working directory only.}
+
+\item{cache}{optional drake cache. See code{\link{new_cache}()}.
+If \code{cache} is supplied,
+the \code{path} and \code{search} arguments are ignored.}
 }
 \value{
 Statuses of targets
 }
 \description{
 Get the build progress (overall or individual targets)
-of the last call to \code{\link{make}()}. 
+of the last call to \code{\link{make}()}.
 Objects that drake imported, built, or attempted
-to build are listed as \code{"finished"} or \code{"in progress"}. 
+to build are listed as \code{"finished"} or \code{"in progress"}.
 Skipped objects are not listed.
 }
 \examples{

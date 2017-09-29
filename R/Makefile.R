@@ -1,25 +1,51 @@
-run_Makefile = function(config, run = TRUE, debug = FALSE){
-  if(identical(globalenv(), config$envir))
-    save(list = ls(config$envir, all.names = TRUE), envir = config$envir,
-      file = globalenvpath)
+run_Makefile <- function( #nolint: we want Makefile capitalized.
+  config,
+  run = TRUE,
+  debug = FALSE
+){
+  this_cache_path <- cache_path(config$cache)
+  if (identical(globalenv(), config$envir)){
+    save(
+      list = ls(config$envir, all.names = TRUE),
+      envir = config$envir,
+      file = globalenv_file(this_cache_path)
+    )
+  }
   config$cache$set("config", config, namespace = "makefile")
-  makefile = file.path(cache_dir, "Makefile")
-  sink("Makefile")
-  makefile_head(config)
-  makefile_rules(config)
-  sink()
-  out = outdated(plan = config$plan, targets = config$targets,
-    envir = config$envir, verbose = config$verbose, jobs = config$jobs,
-    parallelism = config$parallelism, packages = config$packages,
-    prework = config$prework)
-  time_stamps(config, outdated = out)
-  if(run) system2(command = config$command, args = config$args)
-  if(!debug) unlink(globalenvpath, force = TRUE)
-  invisible()
+  with_output_sink(
+    new = "Makefile",
+    code = {
+      makefile_head(config)
+      makefile_rules(config)
+    }
+  )
+  out <- outdated(
+    plan = config$plan,
+    targets = config$targets,
+    envir = config$envir,
+    verbose = config$verbose,
+    cache = config$cache,
+    jobs = config$jobs,
+    parallelism = config$parallelism,
+    packages = config$packages,
+    prework = config$prework
+  )
+  time_stamps(config = config, outdated = out)
+  error_code <- ifelse(
+    run,
+    system2(command = config$command, args = config$args),
+    0
+  )
+  if (!debug){
+    dir <- cache_path(config$cache)
+    file <- globalenv_file(dir)
+    unlink(file, force = TRUE)
+  }
+  return(invisible(error_code))
 }
 
 #' @title Internal function \code{default_system2_args}
-#' @description Internal function to configure 
+#' @description Internal function to configure
 #' arguments to \code{\link{system2}()} to run Makefiles.
 #' Not a user-side function.
 #' @export
@@ -29,56 +55,96 @@ run_Makefile = function(config, run = TRUE, debug = FALSE){
 #' @examples
 #' default_system2_args(jobs = 2, verbose = FALSE)
 #' default_system2_args(jobs = 4, verbose = TRUE)
-default_system2_args = function(jobs, verbose){
-  out = paste0("--jobs=", jobs)
-  if(!verbose) out = c(out, "--silent")
-  out
+default_system2_args <- function(jobs, verbose){
+  out <- paste0("--jobs=", jobs)
+  if (!verbose){
+    out <- c(out, "--silent")
+  }
+  return(out)
 }
 
-makefile_head = function(config){
-  if(length(config$prepend)) cat(config$prepend, "\n", sep = "\n")
-  cat("all:", time_stamp(config$targets), sep = " \\\n")
+makefile_head <- function(config){
+  if (length(config$prepend)){
+    cat(config$prepend, "\n", sep = "\n")
+  }
+  cache_path <- cache_path(config$cache) %>%
+    to_unix_path
+  cat(cache_macro, "=", cache_path, "\n\n", sep = "")
+  cat(
+    "all:",
+    time_stamp_target(config$targets, config = config),
+    sep = " \\\n"
+  )
 }
 
-makefile_rules = function(config){
-  targets = intersect(config$plan$target, V(config$graph)$name)
-  for(target in targets){
-    deps = dependencies(target, config) %>%
-      intersect(y = config$plan$target) %>% time_stamp
-    breaker = ifelse(length(deps), " \\\n", "\n")
-    cat("\n", time_stamp(target), ":", breaker, sep = "")
-    if(length(deps)) cat(deps, sep = breaker)
-    if(is_file(target)) 
-      target = paste0("drake::as_file(\"", unquote(target), "\")")
-    else target = quotes(unquote(target), single = FALSE)
-    cat("\tRscript -e 'drake::mk(", target, ")'\n", sep = "")
+makefile_rules <- function(config){
+  targets <- intersect(config$plan$target, V(config$graph)$name)
+  cache_path <- cache_path(config$cache)
+  for (target in targets){
+    deps <- dependencies(target, config) %>%
+      intersect(y = config$plan$target) %>%
+      time_stamp_target(config = config)
+    breaker <- ifelse(length(deps), " \\\n", "\n")
+    cat(
+      "\n",
+      time_stamp_target(
+        target = target,
+        config = config
+      ),
+      ":",
+      breaker,
+      sep = ""
+    )
+    if (length(deps)){
+      cat(deps, sep = breaker)
+    }
+    if (is_file(target)){
+      target <- paste0("drake::as_file(\"", unquote(target), "\")")
+    } else{
+      target <- quotes(unquote(target), single = FALSE)
+    }
+    cat("\tRscript -e 'drake::mk(", target,
+      ", \"$(", cache_macro, ")\")'\n",
+      sep = ""
+    )
   }
 }
 
 #' @title Function \code{mk}
-#' @description Internal drake function to be called 
+#' @description Internal drake function to be called
 #' inside Makefiles only. Makes a single target.
 #' Users, do not invoke directly.
 #' @export
 #' @param target name of target to make
-mk = function(target){
-  config = get_cache()$get("config", namespace = "makefile")
-  if(identical(globalenv(), config$envir))
-    load(file = globalenvpath, envir = config$envir)
-  config = inventory(config)
+#' @param cache_path path to the drake cache
+mk <- function(target, cache_path = NULL){
+  cache <- this_cache(cache_path)
+  config <- cache$get("config", namespace = "makefile")
+  if (identical(globalenv(), config$envir)){
+    dir <- cache_path
+    file <- globalenv_file(dir)
+    load(file = file, envir = config$envir)
+  }
+  config <- inventory(config)
   do_prework(config = config, verbose_packages = FALSE)
   prune_envir(targets = target, config = config)
-  hash_list = hash_list(targets = target, config = config)
-  old_hash = self_hash(target = target, config = config)
-  current = target_current(target = target, 
+  hash_list <- hash_list(targets = target, config = config)
+  old_hash <- self_hash(target = target, config = config)
+  current <- target_current(target = target,
     hashes = hash_list[[target]], config = config)
-  if(current) return(invisible())
-  build(target = target, 
-    hash_list = hash_list, config = config)
-  config = inventory(config)
-  new_hash = self_hash(target = target, config = config)
-  if(!identical(old_hash, new_hash)){
-    file_overwrite(time_stamp(target))
+  if (current){
+    return(invisible())
   }
-  invisible()
+  build(
+    target = target,
+    hash_list = hash_list,
+    config = config
+  )
+  config <- inventory(config)
+  new_hash <- self_hash(target = target, config = config)
+  if (!identical(old_hash, new_hash)){
+    file <- time_stamp_file(target = target, config = config)
+    file_overwrite(file)
+  }
+  return(invisible())
 }
