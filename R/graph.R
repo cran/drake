@@ -9,7 +9,7 @@
 #' @export
 #' @param plan workflow plan data frame, same as for function
 #' \code{\link{make}()}.
-#' @param targets names of targets to bulid, same as for function
+#' @param targets names of targets to build, same as for function
 #' \code{\link{make}()}.
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}.
@@ -21,11 +21,11 @@
 #' class(g)
 #' }
 build_graph <- function(
-  plan,
+  plan = drake::plan(),
   targets = drake::possible_targets(plan),
   envir = parent.frame(),
   verbose = TRUE
-  ){
+){
   force(envir)
   plan <- sanitize_plan(plan)
   targets <- sanitize_targets(plan, targets)
@@ -35,7 +35,7 @@ build_graph <- function(
     targets = plan$target,
     envir = envir,
     verbose = verbose
-    )
+  )
   true_import_names <- setdiff(names(imports), targets)
   imports <- imports[true_import_names]
   import_deps <- lapply(imports, import_dependencies)
@@ -57,7 +57,7 @@ build_graph <- function(
     function(vertex){
       subcomponent(graph = graph, v = vertex, mode = "in")$name
     }
-    ) %>%
+  ) %>%
   unlist() %>%
   unique() %>%
   setdiff(x = vertices)
@@ -74,7 +74,7 @@ build_graph <- function(
 #' @export
 #' @param plan workflow plan data frame, same as for function
 #' \code{\link{make}()}.
-#' @param targets names of targets to bulid, same as for function
+#' @param targets names of targets to build, same as for function
 #' \code{\link{make}()}.
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}.
@@ -84,10 +84,10 @@ build_graph <- function(
 #' tracked(my_plan)
 #' }
 tracked <- function(
-  plan,
+  plan = drake::plan(),
   targets = drake::possible_targets(plan),
   envir = parent.frame()
-  ){
+){
   force(envir)
   graph <- build_graph(plan = plan, targets = targets, envir = envir)
   V(graph)$name

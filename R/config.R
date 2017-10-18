@@ -6,7 +6,7 @@
 #' and objects to compute the configuration list, which in turn
 #' supports user-side functions to help with visualization and parallelism.
 #' The result differs from
-#' \code{\link{make}(..., imports_only = TRUE, return_config = TRUE)}
+#' \code{\link{make}(..., imports_only = TRUE)}
 #' in that the graph includes both the targets and the imports,
 #' not just the imports.
 #' @export
@@ -32,36 +32,44 @@
 #' @param prepend same as for \code{\link{make}}
 #' @param command same as for \code{\link{make}}
 #' @param args same as for \code{\link{make}}
+#' @param recipe_command same as for \code{\link{make}}
 #' @param cache same as for \code{\link{make}}
-config <- function(plan, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = NULL,
+config <- function(
+  plan = drake::plan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(),
   parallelism = drake::default_parallelism(),
   jobs = 1, packages = (.packages()), prework = character(0),
-  prepend = character(0), command = "make",
+  prepend = character(0), command = drake::default_Makefile_command(),
   args = drake::default_system2_args(
     jobs = jobs,
     verbose = verbose
-  )
+  ),
+  recipe_command = drake::default_recipe_command()
 ){
   force(envir)
-  config <- make(imports_only = TRUE, return_config = TRUE,
-    clear_progress = FALSE, plan = plan, targets = targets,
+  config <- make(
+    imports_only = TRUE,
+    clear_progress = FALSE,
+    plan = plan, targets = targets,
     envir = envir, verbose = verbose, cache = cache,
     parallelism = parallelism, jobs = jobs,
     packages = packages, prework = prework,
-    prepend = prepend, command = command, args = args
+    prepend = prepend, command = command, args = args,
+    recipe_command = recipe_command
   )
   config$graph <- build_graph(plan = plan, targets = targets,
     envir = envir, verbose = verbose)
   config
 }
 
-build_config <- function(plan, targets, envir,
+build_config <- function(
+  plan, targets, envir,
   verbose, cache,
   parallelism, jobs,
   packages, prework, prepend, command,
-  args, clear_progress
+  args, clear_progress, recipe_command
 ){
+  seed <- get_valid_seed()
   plan <- sanitize_plan(plan)
   targets <- sanitize_targets(plan, targets)
   parallelism <- match.arg(parallelism, choices = parallelism_choices())
@@ -76,16 +84,18 @@ build_config <- function(plan, targets, envir,
     clear_progress = clear_progress,
     overwrite_hash_algos = FALSE
   )
-  graph <- build_graph(plan = plan,
-    targets = targets, envir = envir, verbose = verbose)
+  graph <- build_graph(plan = plan, targets = targets,
+    envir = envir, verbose = verbose
+  )
   list(plan = plan, targets = targets, envir = envir, cache = cache,
     parallelism = parallelism, jobs = jobs, verbose = verbose,
     prepend = prepend, prework = prework, command = command,
-    args = args, graph = graph,
+    args = args, recipe_command = recipe_command, graph = graph,
     short_hash_algo = cache$get("short_hash_algo", namespace = "config"),
     long_hash_algo = cache$get("long_hash_algo", namespace = "config"),
-    inventory = cache$list(),
-    inventory_filemtime = cache$list(namespace = "filemtime")
+    inventory = cache$list(), seed = seed,
+    inventory_filemtime = cache$list(namespace = "filemtime"),
+    installed_packages = rownames(utils::installed.packages())
   )
 }
 
@@ -123,7 +133,7 @@ inventory <- function(config) {
 #' load_basic_example()
 #' possible_targets(my_plan)
 #' }
-possible_targets <- function(plan) {
+possible_targets <- function(plan = drake::plan()) {
   plan <- sanitize_plan(plan)
   c(as.character(plan$output), as.character(plan$target))
 }

@@ -17,14 +17,19 @@
 #' unlink('report.Rmd')
 #' check(my_plan)
 #' }
-check <- function(plan, targets = drake::possible_targets(plan),
-  envir = parent.frame(), cache = NULL) {
+check <- function(
+  plan = drake::plan(),
+  targets = drake::possible_targets(plan),
+  envir = parent.frame(),
+  cache = drake::get_cache()
+){
   force(envir)
   config <- build_config(plan = plan, targets = targets, envir = envir,
     verbose = TRUE, cache = cache, parallelism = "mclapply",
     jobs = 1, packages = character(0),
     prepend = character(0), prework = character(0), command = character(0),
-    args = character(0), clear_progress = FALSE
+    args = character(0), recipe_command = default_recipe_command(),
+    clear_progress = FALSE
   )
   check_config(config)
   check_strings(config$plan)
@@ -79,7 +84,8 @@ check_strings <- function(plan) {
     sep = "\n")
   for (target in seq_len(length(x))) {
     cat("\ntarget:", names(x)[target], "\n")
-    cat("strings in command:\n", multiline_message(quotes(x[[target]],
+    cat("strings in command:\n",
+      multiline_message(eply::quotes(x[[target]],
       single = FALSE)), "\n", sep = "")
   }
 }

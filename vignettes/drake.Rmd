@@ -3,7 +3,10 @@ title: "drake"
 subtitle: "data frames in R for Make"
 author: "William Michael Landau"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    number_sections: true
 vignette: >
   %\VignetteIndexEntry{drake}
   %\VignetteEngine{knitr::rmarkdown}
@@ -30,7 +33,7 @@ Organize your work in a data frame. Then `make()` it.
 ```{r firstintroindrake}
 library(drake)
 load_basic_example() # Also (over)writes report.Rmd.
-my_plan # Each target is a file (single-quoted) or object
+my_plan              # Each target is a file (single-quoted) or object.
 ```
 
 ```{r makedrakenoevalrmd, eval = FALSE}
@@ -55,20 +58,20 @@ For `make(..., parallelism = "Makefile")`, Windows users need to download and in
 ```{r quickstartdrakermd, eval = FALSE}
 library(drake)
 load_basic_example() # Also (over)writes report.Rmd.
-plot_graph(my_plan) # Hover, click, drag, zoom, pan.
-outdated(my_plan) # Which targets need to be (re)built?
-missed(my_plan) # Are you missing anything from your workspace?
-check(my_plan) # Are you missing files? Is your workflow plan okay?
-make(my_plan) # Run the workflow.
-outdated(my_plan) # Everything is up to date.
-plot_graph(my_plan) # The graph also shows what is up to date.
+plot_graph(my_plan)  # Hover, click, drag, zoom, pan.
+outdated(my_plan)    # Which targets need to be (re)built?
+missed(my_plan)      # Are you missing anything from your workspace?
+check(my_plan)       # Are you missing files? Is your workflow plan okay?
+make(my_plan)        # Run the workflow.
+outdated(my_plan)    # Everything is up to date.
+plot_graph(my_plan)  # The graph also shows what is up to date.
 ```
 
 Dive deeper into the built-in examples.
 
 ```{r examplesdrakermd, eval = FALSE}
 example_drake("basic") # Write the code files of the canonical tutorial.
-examples_drake() # List the other examples.
+examples_drake()       # List the other examples.
 vignette("quickstart") # See https://cran.r-project.org/package=drake/vignettes
 ```
 
@@ -105,6 +108,7 @@ dataframes_graph()
 render_graph()
 read_graph()
 deps()
+knitr_deps
 tracked()
 ```
 
@@ -172,11 +176,13 @@ read_config()
 The [CRAN page](https://CRAN.R-project.org/package=drake) links to multiple rendered vignettes.
 
 ```{r vignettesdrakermd, eval = FALSE}
-vignette(package = "drake") # List the vignettes.
-vignette("drake") # High-level intro.
-vignette("quickstart") # Walk through a simple example.
-vignette("storage") # Learn how drake stores your stuff.
-vignette("caution") # Avoid common pitfalls.
+vignette(package = "drake")            # List the vignettes.
+vignette("drake")                      # High-level intro.
+vignette("quickstart")                 # Walk through a simple example.
+vignette("parallelism") # Lots of parallel computing support.
+vignette("storage")                    # Learn how drake stores your stuff.
+vignette("timing")                     # Build times, runtime predictions
+vignette("caution")                    # Avoid common pitfalls.
 ```
 
 # Help and troubleshooting
@@ -191,19 +197,36 @@ There is room to improve the conversation and the landscape of reproducibility i
 library(drake)
 load_basic_example()
 outdated(my_plan) # Which targets need to be (re)built?
-make(my_plan) # Build what needs to be built.
+make(my_plan)     # Build what needs to be built.
 outdated(my_plan) # Everything is up to date.
 # Change one of your functions.
 reg2 <- function(d) {
   d$x3 <- d$x ^ 3
   lm(y ~ x3, data = d)
 }
-outdated(my_plan) # Some targets depend on reg2().
+outdated(my_plan)   # Some targets depend on reg2().
 plot_graph(my_plan) # Set targets_only to TRUE for smaller graphs.
-make(my_plan) # Rebuild just the outdated targets.
-outdated(my_plan) # Everything is up to date again.
+make(my_plan)       # Rebuild just the outdated targets.
+outdated(my_plan)   # Everything is up to date again.
 plot_graph(my_plan) # The colors changed in the graph.
 ```
+
+Similarly to imported functions like `reg2()`, `drake` reacts to changes in
+
+1. Other imported functions, whether user-defined or from packages.
+1. For imported functions from your environment, any nested functions also in your environment or from packages.
+1. Commands in your workflow plan data frame.
+1. Global variables mentioned in the commands or imported functions.
+1. Upstream targets.
+1. For [dynamic knitr reports](https://yihui.name/knitr/) (with `knit('your_report.Rmd')` as a command in your workflow plan data frame), targets and imports mentioned in calls to `readd()` and `loadd()` in the code chunks to be evaluated. `Drake` treats these targets and imports as dependencies of the compiled output target (say, `report.md`).
+
+See the `quickstart` vignette for demonstrations of `drake`'s reproducibility and reactivity.
+
+```{r drakermdquickvignette, eval = FALSE}
+vignette("quickstart")
+```
+
+You can enhance reprodubility beyond the scope of `drake`. [Packrat](https://rstudio.github.io/packrat) creates a tightly-controlled local library of packages to extend the shelf life of your project. And with [Docker](https://www.docker.com/), you can execute your project on a [virtual machine](https://en.wikipedia.org/wiki/Virtual_machine) to ensure platform independence. Together, [packrat](https://rstudio.github.io/packrat) and [Docker](https://www.docker.com/) can help others reproduce your work even if they have different software and hardware.
 
 # High-performance computing
 
@@ -226,49 +249,19 @@ plot_graph(my_plan, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/wlandau-lilly/drake/a816f791/images/reg2.html"
+src = "https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/reg2.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
 
 
-When you call `make(my_plan, jobs = 4)`, the work proceeds in chronological order from left to right. The items are built or imported column by column in sequence, and up-to-date targets are skipped. Within each column, the targets/objects are all independent of each other conditional on the previous steps, so they are distributed over the 4 available parallel jobs/workers. Assuming the targets are rate-limiting (as opposed to imported objects), the next `make(..., jobs = 4)` should be faster than `make(..., jobs = 1)`, but it would be superfluous to use more than 4 jobs.
+When you call `make(my_plan, jobs = 4)`, the work proceeds in chronological order from left to right. The items are built or imported column by column in sequence, and up-to-date targets are skipped. Within each column, the targets/objects are all independent of each other conditional on the previous steps, so they are distributed over the 4 available parallel jobs/workers. Assuming the targets are rate-limiting (as opposed to imported objects), the next `make(..., jobs = 4)` should be faster than `make(..., jobs = 1)`, but it would be superfluous to use more than 4 jobs. See function `max_useful_jobs()` to suggest the number of jobs, taking into account which targets are already up to date.
 
-See function `max_useful_jobs()` to suggest the number of jobs, taking into account which targets are already up to date. Try out the following in a fresh R session.
+As for the implementation, you can choose from multiple built-in parallel backends, including `parLapply()`, `mclapply()`, and [`Makefiles`](https://www.gnu.org/software/make/), the last of which can be tweaked to distribute targets to different jobs on a cluster. Please see the `parallelism` vignette for details.
 
-```{r masusefuljobsdrakermd, eval = FALSE}
-library(drake)
-load_basic_example()
-plot_graph(my_plan) # Look at the graph to make sense of the output.
-max_useful_jobs(my_plan) # 8
-max_useful_jobs(my_plan, imports = "files") # 8
-max_useful_jobs(my_plan, imports = "all") # 10
-max_useful_jobs(my_plan, imports = "none") # 8
-make(my_plan)
-plot_graph(my_plan)
-# Ignore the targets already built.
-max_useful_jobs(my_plan) # 1
-max_useful_jobs(my_plan, imports = "files") # 1
-max_useful_jobs(my_plan, imports = "all") # 10
-max_useful_jobs(my_plan, imports = "none") # 0
-# Change a function so some targets are now out of date.
-reg2 <- function(d){
-  d$x3 <- d$x ^ 3
-  lm(y ~ x3, data = d)
-}
-plot_graph(my_plan)
-max_useful_jobs(my_plan) # 4
-max_useful_jobs(my_plan, from_scratch = TRUE) # 8
-max_useful_jobs(my_plan, imports = "files") # 4
-max_useful_jobs(my_plan, imports = "all") # 10
-max_useful_jobs(my_plan, imports = "none") # 4
+```{r drakermdhpcvignette, eval = FALSE}
+vignette("parallelism")
 ```
-
-As for how the parallelism is implemented, you can choose from multiple built-in backends.
-
-1. **mclapply**: low-overhead, light-weight. `make(..., parallelism = "mclapply", jobs = 2)` invokes `parallel::mclapply()` under the hood and distributes the work over at most two independent processes (set with `jobs`). Mclapply is an ideal choice for low-overhead single-node parallelism, but it does not work on Windows.
-2. **parLapply**: medium-overhead, light-weight. `make(..., parallelism = "parLapply", jobs = 2)` invokes `parallel::mclapply()` under the hood. This option is similar to mclapply except that it works on Windows and costs a little extra time up front.
-3. **Makefile**: high-overhead, heavy-duty. `make(..., parallelism = "Makefile", jobs = 2)` creates a proper [Makefile](https://www.gnu.org/software/make/) to distribute the work over multiple independent R sessions. With custom settings, you can distribute the R sessions over different jobs/nodes on a cluster. The build order may be different here because all the imports are imported before any of the targets are built with the [Makefile](https://www.gnu.org/software/make/). That means `plot_graph()`, `dataframes_graph()`, and `max_useful_jobs()` behave differently for \code{parallelism = "Makefile"}. For more details, see the [quickstart vignette](https://cran.r-project.org/package=drake/vignettes/quickstart.html).
 
 # Acknowledgements and related work
 
@@ -278,7 +271,7 @@ Thanks also to [Kirill M&uuml;ller](http://krlmlr.github.io/) and [Daniel Falste
 
 Special thanks to [Jarad Niemi](http://www.jarad.me/), my advisor from [graduate school](http://stat.iastate.edu/), for first introducing me to the idea of [Makefiles](https://www.gnu.org/software/make/) for research. It took several months to convince me, and I am glad he succeeded.
 
-In the sphere of reproducibility, drake and [remake](https://github.com/richfitz/remake) are examples of non-literate programming tools (as opposed to literate programming tools such as [knitr](https://CRAN.R-project.org/package=knitr)). Counterparts include [R.cache](https://CRAN.R-project.org/package=R.cache), [archivist](https://CRAN.R-project.org/package=archivist), [trackr](https://github.com/gmbecker/recordr), and [memoise](https://CRAN.R-project.org/package=memoise). See the [reporducible research CRAN task view](https://CRAN.R-project.org/view=ReproducibleResearch) for a more comprehensive list. Drake differentiates itself from these tools with its ability to track the relationships among cached objects and its extensive high-performance computing functionality.
+In the sphere of reproducibility, drake and [remake](https://github.com/richfitz/remake) are examples of non-literate programming tools (as opposed to literate programming tools such as [knitr](https://CRAN.R-project.org/package=knitr)). Counterparts include [R.cache](https://CRAN.R-project.org/package=R.cache), [archivist](https://CRAN.R-project.org/package=archivist), [trackr](https://github.com/gmbecker/recordr), and [memoise](https://CRAN.R-project.org/package=memoise). See the [reproducible research CRAN task view](https://CRAN.R-project.org/view=ReproducibleResearch) for a more comprehensive list. Drake differentiates itself from these tools with its ability to track the relationships among cached objects and its extensive high-performance computing functionality.
 
 ```{r rmfiles_main, echo = FALSE}
 clean(destroy = TRUE)

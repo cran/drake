@@ -7,15 +7,18 @@
 get_cache(path = getwd(), search = TRUE)
 }
 \arguments{
-\item{path}{file path to the folder contianing the cache.
+\item{path}{file path to the folder containing the cache.
 Yes, this is the parent directory containing the cache,
-not the cache itself.}
+not the cache itself, and it assumes the cache is in the
+`.drake` folder. If you are looking for a different cache
+with a known folder different from `.drake`, use
+the \code{\link{this_cache}()} function.}
 
 \item{search}{logical, whether to search back in the file system
 for the cache.}
 }
 \description{
-Search for and return a drake cache.
+Search for and return a drake file system cache.
 }
 \examples{
 \dontrun{
@@ -27,5 +30,6 @@ x$list()
 }
 }
 \seealso{
-\code{\link{config}}
+\code{\link{this_cache}}, \code{\link{new_cache}},
+\code{\link{recover_cache}}, \code{\link{config}}
 }

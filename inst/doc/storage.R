@@ -115,6 +115,15 @@ make(other_plan, cache = memory_cache)
 cached(cache = memory_cache)
 readd(result, cache = memory_cache)
 
+## ----cache_types---------------------------------------------------------
+default_cache_type()
+cache_types()
+in_memory_cache_types()
+env <- new.env()
+my_type <- new_cache(type = "storr_environment")
+my_type_2 <- new_cache(type = "storr_environment", envir = env)
+ls(env)
+
 ## ----cleaning_up---------------------------------------------------------
 clean(small, large)
 cached() # 'small' and 'large' are gone

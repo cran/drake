@@ -4,14 +4,16 @@
 \alias{this_cache}
 \title{Function this_cache}
 \usage{
-this_cache(path = NULL)
+this_cache(path = drake::default_cache_path())
 }
 \arguments{
 \item{path}{file path of the cache}
 }
 \description{
-Get a specific drake cache
+Get a known drake file system cache
 at the exact specified file path
+Do not use for in-memory caches such as
+\code{storr_environment()}.
 }
 \examples{
 \dontrun{

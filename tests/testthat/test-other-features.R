@@ -1,5 +1,20 @@
-cat(get_testing_scenario_name(), ": ", sep = "")
-context("other features")
+drake_context("other features")
+
+test_with_dir("recipe_command", {
+  my_plan <- plan(y = 1)
+  expect_true(is.character(default_recipe_command()))
+  expect_true(is.character(r_recipe_wildcard()))
+  con1 <- make(my_plan, command = default_Makefile_command(),
+    parallelism = "Makefile", recipe_command = "some_command",
+    verbose = FALSE, imports_only = TRUE
+  )
+  expect_equal(con1$recipe_command, "some_command")
+  expect_true(con1$recipe_command != default_recipe_command())
+  con2 <- config(plan = my_plan, parallelism = "Makefile",
+    recipe_command = "my_command", verbose = FALSE)
+  expect_equal(con2$recipe_command, "my_command")
+  expect_true(con2$recipe_command != default_recipe_command())
+})
 
 test_with_dir("colors and shapes", {
   expect_output(drake_palette())
@@ -49,6 +64,9 @@ test_with_dir("in_progress() works", {
 })
 
 test_with_dir("missed() works", {
+  # May have been loaded in a globalenv() testing scenario
+  remove_these <- intersect(ls(envir = globalenv()), c("f", "g"))
+  rm(list = remove_these, envir = globalenv())
   o <- dbug()
   expect_equal(character(0), missed(o$plan, envir = o$envir,
     verbose = F))
@@ -98,15 +116,6 @@ test_with_dir("check_config() via check() and make()", {
     make(config$plan, targets = character(0), envir = config$envir))
 })
 
-test_with_dir("deprecation", {
-  plan <- data.frame(code = 1, output = "x")
-  expect_warning(make(plan, verbose = FALSE))
-
-  expect_warning(make(plan, verbose = FALSE))
-  expect_warning(status())
-  expect_true(is.numeric(readd(x, search = FALSE)))
-})
-
 test_with_dir("targets can be partially specified", {
   config <- dbug()
   config$targets <- "'intermediatefile.rds'"
@@ -124,6 +133,7 @@ test_with_dir("misc stuff", {
 
 test_with_dir("misc empty/NULL cases", {
   clean(list = "no_cache")
+  expect_false(file.exists(default_cache_path()))
 })
 
 test_with_dir("unique_random_string", {

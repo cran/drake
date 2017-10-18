@@ -27,7 +27,7 @@ for computing summaries of analyses and datasets.
 analyses of multiple datasets in multiple ways.
 }
 \description{
-Generate a worklfow plan data frame for summarizing
+Generate a workflow plan data frame for summarizing
 multiple analyses of multiple datasets multiple ways.
 }
 \examples{
@@ -40,7 +40,7 @@ methods <- plan(
 analyses <- analyses(methods, datasets = datasets)
 summary_types <- plan(
   summ = summary(..analysis..),
-  coef = coef(..analysis..))
+  coef = coefficients(..analysis..))
 summaries(summary_types, analyses, datasets, gather = NULL)
 summaries(summary_types, analyses, datasets)
 summaries(summary_types, analyses, datasets, gather = "list")

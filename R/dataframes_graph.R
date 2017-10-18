@@ -10,7 +10,7 @@
 #' @param plan workflow plan data frame, same as for function
 #' \code{\link{make}()}.
 #'
-#' @param targets names of targets to bulid, same as for function
+#' @param targets names of targets to build, same as for function
 #' \code{\link{make}()}.
 #'
 #' @param envir environment to import from, same as for function
@@ -67,6 +67,10 @@
 #' Otherwise, computing this
 #' in advance could save time if you plan multiple calls to
 #' \code{dataframes_graph()}.
+#' If not \code{NULL},
+#' \code{config} overrides all arguments except
+#' \code{build_times}, \code{digits}, \code{targets_only},
+#' \code{split_columns}, and \code{font_size}.
 #'
 #' @examples
 #' \dontrun{
@@ -80,10 +84,12 @@
 #'   visLegend(useGroups = FALSE, addNodes = raw_graph$legend_nodes) %>%
 #'   visHierarchicalLayout(direction = 'LR')
 #' }
-dataframes_graph <- function(plan, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = NULL, jobs = 1,
+dataframes_graph <- function(
+  plan = drake::plan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE,
+  cache = drake::get_cache(), jobs = 1,
   parallelism = drake::default_parallelism(), packages = (.packages()),
-  prework = character(0), build_times = TRUE, digits = 0,
+  prework = character(0), build_times = TRUE, digits = 3,
   targets_only = FALSE,
   split_columns = FALSE, font_size = 20, config = NULL) {
   force(envir)
@@ -93,32 +99,26 @@ dataframes_graph <- function(plan, targets = drake::possible_targets(plan),
       parallelism = parallelism, jobs = jobs,
       packages = packages, prework = prework)
   }
-  network_data <- visNetwork::toVisNetworkData(config$graph)
-  nodes <- network_data$nodes
-  rownames(nodes) <- nodes$label
-  if (!nrow(nodes))
+  if (!length(V(config$graph)$name)){
     return(null_graph())
+  }
+  network_data <- visNetwork::toVisNetworkData(config$graph)
+  config$nodes <- network_data$nodes
+  rownames(config$nodes) <- config$nodes$label
 
-  imports <- setdiff(nodes$id, plan$target)
-  in_progress <- in_progress()
-  outdated <- outdated(plan = plan, targets = targets,
-    envir = envir, verbose = verbose,
-    jobs = jobs, parallelism = parallelism,
-    packages = packages, prework = prework,
-    config = config, cache = cache)
-  files <- Filter(x = nodes$id, f = is_file)
-  functions <- Filter(x = imports,
+  config$imports <- setdiff(config$nodes$id, config$plan$target)
+  config$in_progress <- in_progress()
+  config$outdated <- outdated(config = config)
+  config$files <- Filter(x = config$nodes$id, f = is_file)
+  config$functions <- Filter(x = config$imports,
     f = function(x) can_get_function(x, envir = envir))
-  missing <- Filter(x = imports,
+  config$missing <- Filter(x = config$imports,
     f = function(x) missing_import(x, envir = envir))
+  config$font_size <- font_size
+  config$build_times <- build_times
+  config$digits <- digits
 
-  nodes <- configure_nodes(nodes = nodes, plan = plan, envir = envir,
-    graph = config$graph, cache = config$cache, parallelism = parallelism,
-    files = files, functions = functions, imports = imports,
-    in_progress = in_progress, missing = missing,
-    outdated = outdated, targets = targets,
-    font_size = font_size, build_times = build_times, digits = digits)
-
+  nodes <- configure_nodes(config = config)
   edges <- network_data$edges
   if (nrow(edges))
     edges$arrows <- "to"
@@ -137,5 +137,5 @@ dataframes_graph <- function(plan, targets = drake::possible_targets(plan),
   list(nodes = nodes, edges = edges,
     legend_nodes = legend_nodes(font_size = font_size),
     default_title = default_graph_title(
-      parallelism = parallelism, split_columns = split_columns))
+      parallelism = config$parallelism, split_columns = split_columns))
 }

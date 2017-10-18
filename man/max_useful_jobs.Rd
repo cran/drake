@@ -4,9 +4,9 @@
 \alias{max_useful_jobs}
 \title{Function \code{max_useful_jobs}}
 \usage{
-max_useful_jobs(plan, from_scratch = FALSE,
+max_useful_jobs(plan = drake::plan(), from_scratch = FALSE,
   targets = drake::possible_targets(plan), envir = parent.frame(),
-  verbose = TRUE, cache = NULL, jobs = 1,
+  verbose = TRUE, cache = drake::get_cache(), jobs = 1,
   parallelism = drake::default_parallelism(), packages = (.packages()),
   prework = character(0), config = NULL, imports = c("files", "all",
   "none"))
@@ -19,7 +19,7 @@ max_useful_jobs(plan, from_scratch = FALSE,
 useful jobs as if the workflow were to run from scratch
 (with all targets out of date).}
 
-\item{targets}{names of targets to bulid, same as for function
+\item{targets}{names of targets to build, same as for function
 \code{\link{make}()}.}
 
 \item{envir}{environment to import from, same as for function
@@ -55,7 +55,12 @@ See \code{?parallelism_choices} for details.}
 \item{config}{internal configuration list of \code{\link{make}(...)},
 produced also with \code{\link{config}()}.
 \code{config$envir} is ignored.
-Otherwise, computing this
+Otherwise, if not \code{NULL}, \code{config}
+overrides all the other arguments except
+\code{imports} and \code{from_scratch}.
+For example,
+\code{plan} is replaced with \code{config$plan}.
+Computing \code{\link{config}}
 in advance could save time if you plan multiple calls to
 \code{dataframes_graph()}.}
 

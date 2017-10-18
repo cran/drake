@@ -43,7 +43,7 @@
 #'  \code{\link{make}(..., parallelism = 'Makefile')}
 #'  is NOT standalone. DO NOT run it outside of
 #' \code{\link{make}()} or \code{\link{make}()}.
-#'  Also, Windows users will need to download and intall Rtools.
+#'  Also, Windows users will need to download and install Rtools.
 #' }}
 #' @examples
 #' parallelism_choices()
@@ -84,7 +84,7 @@ default_parallelism <- function() {
 #' @param from_scratch logical, whether to compute the max
 #' useful jobs as if the workflow were to run from scratch
 #' (with all targets out of date).
-#' @param targets names of targets to bulid, same as for function
+#' @param targets names of targets to build, same as for function
 #' \code{\link{make}()}.
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}. \code{config$envir} is ignored in favor of
@@ -112,7 +112,12 @@ default_parallelism <- function() {
 #' @param config internal configuration list of \code{\link{make}(...)},
 #' produced also with \code{\link{config}()}.
 #' \code{config$envir} is ignored.
-#' Otherwise, computing this
+#' Otherwise, if not \code{NULL}, \code{config}
+#' overrides all the other arguments except
+#' \code{imports} and \code{from_scratch}.
+#' For example,
+#' \code{plan} is replaced with \code{config$plan}.
+#' Computing \code{\link{config}}
 #' in advance could save time if you plan multiple calls to
 #' \code{dataframes_graph()}.
 #' @param imports Set the \code{imports} argument to change your
@@ -155,20 +160,33 @@ default_parallelism <- function() {
 #' max_useful_jobs(my_plan, imports = 'all') # 10
 #' max_useful_jobs(my_plan, imports = 'none') # 4
 #' }
-max_useful_jobs <- function(plan, from_scratch = FALSE,
+max_useful_jobs <- function(
+  plan = drake::plan(), from_scratch = FALSE,
   targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = NULL, jobs = 1,
-  parallelism = drake::default_parallelism(),
+  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(),
+  jobs = 1, parallelism = drake::default_parallelism(),
   packages = (.packages()), prework = character(0), config = NULL,
-  imports = c("files", "all", "none")) {
+  imports = c("files", "all", "none")
+){
   force(envir)
-  nodes <- dataframes_graph(plan = plan, targets = targets,
-    envir = envir, verbose = verbose, cache = cache, jobs = jobs,
-    parallelism = parallelism,
-    packages = packages, prework = prework, config = config,
+  if (is.null(config)){
+    config <- config(
+      plan = plan,
+      targets = targets,
+      envir = envir,
+      verbose = verbose,
+      cache = cache,
+      parallelism = parallelism,
+      jobs = jobs,
+      packages = packages,
+      prework = prework
+    )
+  }
+  config <- inventory(config)
+  nodes <- dataframes_graph(plan = config$plan, config = config,
     split_columns = FALSE)$nodes
   imports <- match.arg(imports)
-  just_targets <- intersect(nodes$id, plan$target)
+  just_targets <- intersect(nodes$id, config$plan$target)
   just_files <- Filter(x = nodes$id, f = is_file)
   targets_and_files <- union(just_targets, just_files)
   if (imports == "none")
@@ -201,5 +219,5 @@ shell_file <- function(
   overwrite = FALSE
 ){
   from <- system.file("shell.sh", package = "drake", mustWork = TRUE)
-  file.copy(from = from, to = path, copy.mode = TRUE)
+  invisible(file.copy(from = from, to = path, copy.mode = TRUE))
 }

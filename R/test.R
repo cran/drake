@@ -1,10 +1,16 @@
+drake_context <- function(x){
+  ctx <- paste0(get_testing_scenario_name(), ": ", x)
+  context(ctx)
+}
+
 testrun <- function(config) {
   invisible(
     make(plan = config$plan, targets = config$targets, envir = config$envir,
-      verbose = FALSE, parallelism = config$parallelism, jobs = config$jobs,
+      verbose = config$verbose, parallelism = config$parallelism,
+      jobs = config$jobs,
       packages = config$packages, prework = config$prework,
       prepend = config$prepend, command = config$command,
-      return_config = TRUE, cache = config$cache
+      cache = config$cache
     )
   )
 }
@@ -26,7 +32,10 @@ nobuild <- function(config) {
 test_with_dir <- function(desc, ...){
   root <- tempdir()
   stopifnot(file.exists(root))
-  relative_dir <- digest::digest(desc, algo = default_short_hash_algo())
+  relative_dir <- digest::digest(
+    list(desc, sessionInfo()$platform, rnorm(1)),
+    algo = default_short_hash_algo()
+  )
   dir <- file.path(root, relative_dir)
   dir_empty(dir)
   with_dir(dir, test_that(desc = desc, ...))

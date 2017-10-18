@@ -4,10 +4,11 @@
 \alias{dataframes_graph}
 \title{Function \code{dataframes_graph}}
 \usage{
-dataframes_graph(plan, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = NULL, jobs = 1,
+dataframes_graph(plan = drake::plan(),
+  targets = drake::possible_targets(plan), envir = parent.frame(),
+  verbose = TRUE, cache = drake::get_cache(), jobs = 1,
   parallelism = drake::default_parallelism(), packages = (.packages()),
-  prework = character(0), build_times = TRUE, digits = 0,
+  prework = character(0), build_times = TRUE, digits = 3,
   targets_only = FALSE, split_columns = FALSE, font_size = 20,
   config = NULL)
 }
@@ -15,7 +16,7 @@ dataframes_graph(plan, targets = drake::possible_targets(plan),
 \item{plan}{workflow plan data frame, same as for function
 \code{\link{make}()}.}
 
-\item{targets}{names of targets to bulid, same as for function
+\item{targets}{names of targets to build, same as for function
 \code{\link{make}()}.}
 
 \item{envir}{environment to import from, same as for function
@@ -73,7 +74,11 @@ produced with \code{\link{config}()}.
 \code{config$envir} is ignored.
 Otherwise, computing this
 in advance could save time if you plan multiple calls to
-\code{dataframes_graph()}.}
+\code{dataframes_graph()}.
+If not \code{NULL},
+\code{config} overrides all arguments except
+\code{build_times}, \code{digits}, \code{targets_only},
+\code{split_columns}, and \code{font_size}.}
 }
 \value{
 a list of three data frames: one for nodes,

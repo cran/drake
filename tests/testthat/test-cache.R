@@ -1,8 +1,8 @@
-cat(get_testing_scenario_name(), ": ", sep = "")
-context("cache")
+drake_context("cache")
 
 test_with_dir("clean() works if there is no cache already", {
   clean(list = "no_cache")
+  expect_false(file.exists(default_cache_path()))
 })
 
 test_with_dir("corrupt cache", {
@@ -24,6 +24,10 @@ test_with_dir("try to find a non-existent project", {
 })
 
 test_with_dir("cache functions work", {
+  # May have been loaded in a globalenv() testing scenario
+  remove_these <- intersect(ls(envir = globalenv()), c("h", "j"))
+  rm(list = remove_these, envir = globalenv())
+
   cache_dir <- basename(default_cache_path())
   first_wd <- getwd()
   scratch <- file.path(first_wd, "scratch")
@@ -40,15 +44,20 @@ test_with_dir("cache functions work", {
   expect_error(readd(search = FALSE))
   config <- dbug()
   using_global <- identical(config$envir, globalenv())
-  if (using_global)
-    envir <- globalenv() else envir <- environment()
+  if (using_global){
+    envir <- globalenv()
+  } else {
+    envir <- environment()
+  }
   testrun(config)
 
   # targets
-  all <- sort(c("'input.rds'", "'intermediatefile.rds'", "a",
+  all <- sort(c("'input.rds'",
+    "'intermediatefile.rds'", "a",
     "b", "c", "combined", "f", "final", "g", "h", "i", "j",
     "myinput", "nextone", "readRDS", "saveRDS", "yourinput"))
-  imports <- sort(c("'input.rds'", "a", "b", "c", "f", "g",
+  imports <- sort(c("'input.rds'",
+    "a", "b", "c", "f", "g",
     "h", "i", "j", "readRDS", "saveRDS"))
   builds <- setdiff(all, imports)
 

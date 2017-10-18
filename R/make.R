@@ -57,10 +57,10 @@
 #'
 #' @param packages character vector packages to load, in the order
 #' they should be loaded. Defaults to \code{(.packages())}, so you
-#' shouldn't usually need to set this manually. Just call
+#' should not usually need to set this manually. Just call
 #' \code{\link{library}()} to load your packages before \code{make()}.
 #' However, sometimes packages need to be strictly forced to load
-#' in a certian order, especially if \code{parallelism} is
+#' in a certain order, especially if \code{parallelism} is
 #' \code{"Makefile"}. To do this, do not use \code{\link{library}()}
 #' or \code{\link{require}()} or \code{\link{loadNamespace}()} or
 #' \code{\link{attachNamespace}()} to load any libraries beforehand.
@@ -91,7 +91,9 @@
 #' @param command character scalar, command to call the Makefile
 #' generated for distributed computing.
 #' Only applies when \code{parallelism} is \code{"Makefile"}.
-#' Defaults to the usual \code{"make"}, but it could also be
+#' Defaults to the usual \code{"make"}
+#' (\code{\link{default_Makefile_command}()}),
+#' but it could also be
 #' \code{"lsmake"} on supporting systems, for example.
 #' \code{command} and \code{args} are executed via
 #' \code{\link{system2}(command, args)} to run the Makefile.
@@ -111,8 +113,13 @@
 #' will be distributed over independent parallel R sessions
 #' wherever possible.
 #'
+#' @param recipe_command Character scalar, command for the
+#' Makefile recipe for each target.
+#'
 #' @param return_config logical, whether to return the internal list
-#' of runtime configuration parameters used by \code{make()}
+#' of runtime configuration parameters used by \code{make()}.
+#' This argument is deprecated. Now, a configuration list
+#' is always invisibly returned.
 #'
 #' @param clear_progress logical, whether to clear the saved record of
 #' progress seen by \code{\link{progress}()} and \code{\link{in_progress}()}
@@ -130,7 +137,7 @@
 #' make(my_plan, jobs = my_jobs) # Build what needs to be built.
 #' outdated(my_plan) # Everything is up to date.
 #' reg2 = function(d){ # Change one of your functions.
-#'  d$x3 = d$x^3
+#'   d$x3 = d$x^3
 #'   lm(y ~ x3, data = d)
 #' }
 #' outdated(my_plan) # Some targets depend on reg2().
@@ -138,32 +145,44 @@
 #' make(my_plan) # Rebuild just the outdated targets.
 #' outdated(my_plan) # Everything is up to date again.
 #' plot_graph(my_plan) # The colors changed in the graph.
+#' clean() # Start from scratch
+#' make(my_plan, parallelism = "Makefile", jobs = 4)
+#' clean()
+#' make(my_plan, parallelism = "Makefile", jobs = 4,
+#'   recipe_command = "R -q -e")
 #' }
 make <- function(
-  plan,
+  plan = drake::plan(),
   targets = drake::possible_targets(plan),
   envir = parent.frame(),
   verbose = TRUE,
-  cache = NULL,
+  cache = drake::get_cache(),
   parallelism = drake::default_parallelism(),
   jobs = 1,
   packages = (.packages()),
   prework = character(0),
   prepend = character(0),
-  command = "make",
+  command = drake::default_Makefile_command(),
   args = drake::default_system2_args(
     jobs = jobs,
     verbose = verbose
   ),
-  return_config = FALSE,
+  recipe_command = drake::default_recipe_command(),
+  return_config = NULL,
   clear_progress = TRUE,
   imports_only = FALSE
 ){
   force(envir)
+  if (!is.null(return_config)){
+    warning(
+      "The return_config argument to make() is deprecated. ",
+      "Now, an internal configuration list is always invisibly returned."
+    )
+  }
   parallelism <- match.arg(
     arg = parallelism,
     choices = parallelism_choices()
-    )
+  )
   config <- build_config(
     plan = plan,
     targets = targets,
@@ -176,6 +195,7 @@ make <- function(
     prepend = prepend,
     command = command,
     args = args,
+    recipe_command = recipe_command,
     clear_progress = clear_progress,
     cache = cache
   )
@@ -194,11 +214,7 @@ make <- function(
     }
   }
   get(paste0("run_", parallelism), envir = getNamespace("drake"))(config)
-  if (return_config){
-    return(config)
-  } else{
-    return(invisible())
-  }
+  return(invisible(config))
 }
 
 next_targets <- function(graph_remaining_targets){

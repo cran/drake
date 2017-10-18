@@ -1,5 +1,15 @@
-cat(get_testing_scenario_name(), ": ", sep = "")
-context("time")
+drake_context("time")
+
+test_with_dir("proc_time runtimes can be fetched", {
+  cache <- storr::storr_rds("cache")
+  key <- "x"
+  t <- system.time({
+    z <- 1
+  })
+  cache$set(key = key, value = t, namespace = "build_times")
+  y <- fetch_runtime(key = key, cache = cache)
+  expect_true(nrow(y) > 0)
+})
 
 test_with_dir("build times works if no targets are built", {
   expect_equal(nrow(build_times(search = FALSE)), 0)
@@ -10,16 +20,16 @@ test_with_dir("build times works if no targets are built", {
 
 test_with_dir("build time the same after superfluous make", {
   x <- plan(y = Sys.sleep(0.25))
-  c1 <- make(x, verbose = FALSE, return_config = TRUE)
+  c1 <- make(x, verbose = FALSE)
   expect_equal(justbuilt(c1), "y")
   b1 <- build_times(search = FALSE)
   expect_true(all(complete.cases(b1)))
 
-  c2 <- make(x, verbose = FALSE, return_config = TRUE)
+  c2 <- make(x, verbose = FALSE)
   expect_equal(justbuilt(c2), character(0))
   b2 <- build_times(search = FALSE)
   expect_true(all(complete.cases(b2)))
-  expect_equal(b1, b2)
+  expect_equal(b1[b1$item == "y", ], b2[b2$item == "y", ])
 })
 
 test_with_dir("empty time predictions", {
@@ -95,6 +105,15 @@ test_with_dir("time predictions: incomplete targets", {
   )
   expect_equal(nrow(x), 0)
   expect_warning(
+    x <- rate_limiting_times(
+      plan = config$plan,
+      envir = config$envir,
+      verbose = FALSE
+    ) %>%
+    min_df
+  )
+  expect_equal(nrow(x), 12)
+  expect_warning(
     y <- predict_runtime(
       plan = config$plan,
       targets = dats,
@@ -115,15 +134,6 @@ test_with_dir("time predictions: incomplete targets", {
     )
   )
   expect_equal(length(y), 1)
-  expect_warning(
-    x <- rate_limiting_times(
-      plan = config$plan,
-      envir = config$envir,
-      verbose = FALSE
-    ) %>%
-    min_df
-  )
-  expect_equal(nrow(x), 14)
 
   config$targets <- dats
   con <- testrun(config)
@@ -147,7 +157,7 @@ test_with_dir("time predictions: incomplete targets", {
     ) %>%
     min_df
   )
-  expect_equal(nrow(x), 14)
+  expect_equal(nrow(x), 12)
   expect_warning(
     x <- rate_limiting_times(
       plan = config$plan,
@@ -157,7 +167,7 @@ test_with_dir("time predictions: incomplete targets", {
     ) %>%
     min_df
   )
-  expect_equal(nrow(x), 16)
+  expect_equal(nrow(x), 14)
   expect_silent(
     y <- predict_runtime(
       plan = config$plan,
@@ -172,7 +182,7 @@ test_with_dir("time predictions: incomplete targets", {
 })
 
 test_with_dir("timing predictions with realistic build", {
-    min_df <- function(df){
+  min_df <- function(df){
     df <- df[!grepl("covr", df$item), ]
     df <- df[!grepl(":::", df$item), ]
     df
@@ -224,7 +234,7 @@ test_with_dir("timing predictions with realistic build", {
     envir = config$envir,
     verbose = FALSE,
     digits = Inf,
-    targets_only = TRUE,
+    targets_only = TRUE
   ) %>%
   min_df
   jobs_4_df <- rate_limiting_times(
@@ -312,9 +322,9 @@ test_with_dir("timing predictions with realistic build", {
   expect_true(all(complete.cases(jobs_4_df)))
   expect_true(all(complete.cases(jobs_4_df_targets)))
 
-  expect_equal(nrow(scratch_df), 30)
+  expect_equal(nrow(scratch_df), 27)
   expect_equal(nrow(resume_df), nrow(scratch_df) - 8)
-  expect_equal(nrow(resume_df_targets), nrow(scratch_df) - 22)
+  expect_equal(nrow(resume_df_targets), nrow(scratch_df) - 20)
   expect_true(nrow(jobs_2_df) < nrow(scratch_df))
   expect_true(nrow(jobs_4_df) < nrow(jobs_2_df))
   expect_true(nrow(jobs_4_df_targets) < nrow(jobs_4_df))

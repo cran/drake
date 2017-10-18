@@ -4,8 +4,8 @@
 \alias{build_times}
 \title{Function \code{build_times}}
 \usage{
-build_times(path = getwd(), search = TRUE, digits = 0, cache = NULL,
-  targets_only = FALSE)
+build_times(path = getwd(), search = TRUE, digits = 3,
+  cache = get_cache(path = path, search = search), targets_only = FALSE)
 }
 \arguments{
 \item{path}{Root directory of the drake project,
@@ -29,7 +29,7 @@ data.frame of times from \code{\link{system.time}}
 }
 \description{
 List all the build times.
-This doesn't include the amount of time
+This does not include the amount of time
 spent loading and saving objects!
 }
 \examples{

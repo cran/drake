@@ -17,12 +17,16 @@ cache_path <- function(cache = NULL){
 }
 
 #' @title Function get_cache
-#' @description Search for and return a drake cache.
-#' @seealso \code{\link{config}}
+#' @description Search for and return a drake file system cache.
+#' @seealso \code{\link{this_cache}}, \code{\link{new_cache}},
+#' \code{\link{recover_cache}}, \code{\link{config}}
 #' @export
-#' @param path file path to the folder contianing the cache.
+#' @param path file path to the folder containing the cache.
 #' Yes, this is the parent directory containing the cache,
-#' not the cache itself.
+#' not the cache itself, and it assumes the cache is in the
+#' `.drake` folder. If you are looking for a different cache
+#' with a known folder different from `.drake`, use
+#' the \code{\link{this_cache}()} function.
 #' @param search logical, whether to search back in the file system
 #' for the cache.
 #' @examples
@@ -47,8 +51,10 @@ get_cache <- function(
 
 #' @title Function this_cache
 #' @export
-#' @description Get a specific drake cache
+#' @description Get a known drake file system cache
 #' at the exact specified file path
+#' Do not use for in-memory caches such as
+#' \code{storr_environment()}.
 #' @param path file path of the cache
 #' @examples
 #' \dontrun{
@@ -61,12 +67,9 @@ get_cache <- function(
 #' manual2 <- get_cache("manual_cache") # same as above
 #' }
 this_cache <- function(
-  path = NULL
+  path = drake::default_cache_path()
 ){
-  if (is.null(path)){
-    path <- default_cache_path()
-  }
-  if (!file.exists(path)){
+  if (is.null(path) || !file.exists(path)){
     return(NULL)
   }
   type <- type_of_cache(path)
@@ -80,12 +83,15 @@ this_cache <- function(
 }
 
 #' @title Function new_cache
-#' @description Make a new drake cache.
+#' @description Make a new drake cache. Could be any
+#' type of cache in \code{\link{cache_types}()}.
 #' @export
 #' @seealso \code{\link{default_short_hash_algo}},
 #' \code{\link{default_long_hash_algo}},
-#' \code{\link{make}}, \code{\link{cache_types}}
-#' @param path file path to the cache
+#' \code{\link{make}}, \code{\link{cache_types}},
+#' \code{\link{in_memory_cache_types}}
+#' @param path file path to the cache if the cache
+#' is a file system cache.
 #' @param type character scalar, type of the drake cache.
 #' Must be among the list of supported caches
 #' in \code{\link{cache_types}()}.
@@ -95,18 +101,27 @@ this_cache <- function(
 #' @param long_hash_algo long hash algorithm for the cache.
 #' See \code{\link{default_long_hash_algo}()} and
 #' \code{\link{make}()}
+#' @param ... other arguments to the cache constructor
 #' @examples
 #' \dontrun{
 #' cache1 <- new_cache() # Creates a new hidden '.drake' folder.
 #' cache2 <- new_cache(path = "not_hidden", short_hash_algo = "md5")
 #' }
+#' e <- new.env()
+#' ls(e)
+#' y <- new_cache(type = "storr_environment", envir = e)
+#' ls(e)
+#' ls(e)
 new_cache <- function(
   path = drake::default_cache_path(),
   type = drake::default_cache_type(),
   short_hash_algo = drake::default_short_hash_algo(),
-  long_hash_algo = drake::default_long_hash_algo()
+  long_hash_algo = drake::default_long_hash_algo(),
+  ...
 ){
-  if (file.exists(path)){
+  if (type %in% in_memory_cache_types()){
+    path <- NULL
+  } else if (file.exists(path)){
     stop("Cannot create new cache at ", path, ". File already exists.")
   }
   type <- match.arg(type, choices = cache_types())
@@ -114,7 +129,8 @@ new_cache <- function(
   cache <- get(cache_constructor, envir = getNamespace("drake"))(
     path = path,
     short_hash_algo = short_hash_algo,
-    long_hash_algo = long_hash_algo
+    long_hash_algo = long_hash_algo,
+    ...
   )
   configure_cache(
     cache = cache,
@@ -130,8 +146,10 @@ new_cache <- function(
 #' @export
 #' @seealso \code{\link{new_cache}}, \code{\link{this_cache}},
 #' \code{\link{get_cache}}
-#' @description Load an existing drake cache if it exists
+#' @description Load an existing drake files system cache if it exists
 #' and create a new one otherwise.
+#' Do not use for in-memory caches such as
+#' \code{storr_environment()}.
 #' @param path file path of the cache
 #' @param short_hash_algo short hash algorithm for the cache.
 #' See \code{\link{default_short_hash_algo}()} and
@@ -149,14 +167,11 @@ new_cache <- function(
 #' x <- recover_cache(".drake")
 #' }
 recover_cache <- function(
-  path = NULL,
+  path = drake::default_cache_path(),
   type = drake::default_cache_type(),
-  short_hash_algo = default_short_hash_algo(),
-  long_hash_algo = default_long_hash_algo()
+  short_hash_algo = drake::default_short_hash_algo(),
+  long_hash_algo = drake::default_long_hash_algo()
 ){
-  if (is.null(path)){
-    path <- default_cache_path()
-  }
   cache <- this_cache(path = path)
   if (is.null(cache)){
     cache <- new_cache(
@@ -204,7 +219,7 @@ default_cache_path <- function(){
 #' @examples
 #' \dontrun{
 #' load_basic_example()
-#' config <- make(my_plan, return_config = TRUE)
+#' config <- make(my_plan)
 #' cache <- config$cache
 #' long_hash(cache)
 #' cache <- configure_cache(
@@ -216,18 +231,12 @@ default_cache_path <- function(){
 #' make(my_plan) # Changing the long hash puts targets out of date.
 #' }
 configure_cache <- function(
-  cache,
-  short_hash_algo = NULL,
-  long_hash_algo = NULL,
+  cache = drake::get_cache(),
+  short_hash_algo = drake::default_short_hash_algo(cache = cache),
+  long_hash_algo = drake::default_long_hash_algo(cache = cache),
   clear_progress = FALSE,
   overwrite_hash_algos = FALSE
 ){
-  if (is.null(short_hash_algo)){
-    short_hash_algo <- default_short_hash_algo(cache = cache)
-  }
-  if (is.null(long_hash_algo)){
-    long_hash_algo <- default_long_hash_algo(cache = cache)
-  }
   short_hash_algo <- match.arg(short_hash_algo,
     choices = available_hash_algos())
   long_hash_algo <- match.arg(long_hash_algo,
@@ -252,5 +261,27 @@ configure_cache <- function(
   }
   chosen_algo <- short_hash(cache)
   check_storr_short_hash(cache = cache, chosen_algo = chosen_algo)
+  set_initial_drake_version(cache)
   cache
+}
+
+set_initial_drake_version <- function(cache){
+  keys <- cache$list(namespace = "session")
+  if ("initial_drake_version" %in% keys){
+    return()
+  } else if ("sessionInfo" %in% keys){
+    last_session <- session(cache = cache)
+  } else {
+    last_session <- sessionInfo()
+  }
+  version <- drake_version(last_session)
+  cache$set(
+    key = "initial_drake_version",
+    value = version,
+    namespace = "session"
+  )
+}
+
+drake_version <- function(session_info = sessionInfo()){ # nolint
+  session_info$otherPkgs$drake$Version # nolint
 }

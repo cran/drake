@@ -16,7 +16,6 @@
 # call load_basic_example().
 
 library(knitr) # Drake knows you loaded knitr.
-# library(rmarkdown) # platform-dependent: render() requires pandoc #nolint: optional
 library(drake)
 
 clean() # remove any previous drake output
@@ -27,7 +26,7 @@ simulate <- function(n){
     # Drake tracks calls like `pkg::fn()` (namespaced functions).
     x = stats::rnorm(n),
     y = rpois(n, 1)
-    )
+  )
 }
 
 reg1 <- function(d){
@@ -39,35 +38,8 @@ reg2 <- function(d){
   lm(y ~ x2, data = d)
 }
 
-# Knit and possibly render a dynamic R Markdown report.
-my_knit <- function(file, ...){
-  knit(file, quiet = TRUE) # Drake knows you loaded knitr.
-}
-
-my_render <- function(file, ...){
-  render(file) # Drake will know if you load rmarkdown.
-}
-
-# Write the R Markdown source for a dynamic knitr report
-lines <- c(
-  "---",
-  "title: Example Report",
-  "author: You",
-  "output: html_document",
-  "---",
-  "",
-  "Look how I read outputs from the drake cache.",
-  "",
-  "```{r example_chunk}",
-  "library(drake)",
-  "readd(small)",
-  "readd(coef_regression2_small)",
-  "loadd(large)",
-  "head(large)",
-  "```"
-  )
-
-writeLines(lines, "report.Rmd")
+# At this point, please verify that a dynamic report
+# called report.Rmd is in your working directory.
 
 ###############################
 ### CONSTRUCT WORKFLOW PLAN ###
@@ -79,7 +51,7 @@ writeLines(lines, "report.Rmd")
 my_datasets <- plan(
   small = simulate(5),
   large = simulate(50)
-  )
+)
 
 # Optionally, get replicates with expand(my_datasets,
 #   values = c("rep1", "rep2")).
@@ -87,7 +59,7 @@ my_datasets <- plan(
 methods <- plan(
   regression1 = reg1(..dataset..), ## nolint
   regression2 = reg2(..dataset..) ## nolint
-  )
+)
 
 # same as evaluate(methods, wildcard = "..dataset..",
 #   values = my_datasets$target)
@@ -96,8 +68,8 @@ my_analyses <- analyses(methods, datasets = my_datasets)
 summary_types <- plan(
   # Perfect regression fits can happen.
   summ = suppressWarnings(summary(..analysis..)), ## nolint
-  coef = coef(..analysis..) ## nolint
-  )
+  coef = coefficients(..analysis..) ## nolint
+)
 
 # summaries() also uses evaluate(): once with expand = TRUE,
 #   once with expand = FALSE
@@ -106,11 +78,7 @@ results <- summaries(
   my_analyses,
   my_datasets,
   gather = NULL
-  ) # skip 'gather' (workflow my_plan is more readable)
-
-load_in_report <- plan(
-  report_dependencies = c(small, large, coef_regression2_small)
-  )
+) # skip 'gather' (workflow my_plan is more readable)
 
 # External file targets and dependencies should be single-quoted.
 # Use double quotes to remove any special meaning from character strings.
@@ -118,19 +86,20 @@ load_in_report <- plan(
 # only works inside the workflow my_plan data frame.
 # WARNING: drake cannot track entire directories (folders).
 report <- plan(
-  # report.md = my_knit('report.Rmd', report_dependencies), #nolint optional
-  report.md = my_knit(
+  # As long as `knit()` is visible in your workflow plan command,
+  # drake will dig into the active code chunks of your `report.Rmd`
+  # and find the dependencies of `report.md` in the arguments of
+  # calls to loadd() and readd().
+  report.md = knit(
     'report.Rmd', #nolint: use single quotes to specify file dependency.
-    report_dependencies
-    ),
-  ## The html report requires pandoc. Commented out.
-  ## report.html = my_render('report.md', report_dependencies), #nolint: optional
+     quiet = TRUE
+  ),
   file_targets = TRUE,
   strings_in_dots = "filenames" # Redundant, since we used single quotes
-  )
+)
 
 # Row order doesn't matter in the workflow my_plan.
-my_plan <- rbind(report, my_datasets, load_in_report, my_analyses, results)
+my_plan <- rbind(report, my_datasets, my_analyses, results)
 
 
 #####################################
@@ -146,9 +115,8 @@ check(my_plan)
 
 # Check the dependencies of individual functions and commands.
 deps(reg1)
-deps(my_knit)
 deps(my_plan$command[1])
-deps(my_plan$command[16])
+deps(my_plan$command[nrow(my_plan)])
 
 # List objects that are reproducibly tracked.
 "small" %in% tracked(my_plan)
@@ -177,7 +145,7 @@ make(my_plan) # Run your project.
 # How long did each target take to build?
 build_times()
 
-"report_dependencies" %in% ls() # Should be TRUE.
+ls() # Should contain the non-file dependencies of the last target(s).
 progress() # See also in_progress()
 outdated(my_plan, verbose = FALSE) # Everything is up to date
 # plot_graph(my_plan) # The red nodes from before turned green. #nolint: optional
@@ -273,10 +241,12 @@ if (FALSE){
 # if (TRUE){ # Only attempt this part on a proper computing cluster.
 
   # The file shell.sh tells the Makefile to submit jobs on a cluster.
-  # You could write this file by hand if you wanted.
+  # You could write this file by hand if you want, or you can
+  # generate a starter file with drake::shell_file().
   # You may have to change 'module load R' to a command that
   # loads a specific version of R.
   # Writes an example shell.sh and does a `chmod +x` so drake can execute it.
+
   shell_file()
 
   # In reality, you would put all your code in an R script
@@ -287,7 +257,7 @@ if (FALSE){
   # depending on what is needed. These jobs could go to multiple
   # nodes for true distributed computing.
   make(my_plan, parallelism = "Makefile", jobs = 4, # build
-    prepend = "SHELL=./shell.sh")
+    prepend = "SHELL=./shell.sh") # Generate shell.sh with shell_file().
 
   # Alternatively, users of SLURM (https://slurm.schedmd.com/)
   # can just point to `srun` and dispense with `shell.sh` altogether.
@@ -311,9 +281,10 @@ if (FALSE){
 ###########################
 
 clean(destroy = TRUE) # Totally remove the hidden .drake/ cache.
-unlink(c(
+unlink(
+  c(
     "Makefile",
-    "report.Rmd",
-    "shell.sh",
-    "STDIN.o*"
-    )) # Clean up other files.
+    "STDIN.o*",
+    "shell.sh"
+  )
+) # Clean up other files.

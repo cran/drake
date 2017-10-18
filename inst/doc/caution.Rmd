@@ -3,7 +3,10 @@ title: "Caution"
 subtitle: "Cautionary notes for drake"
 author: "William Michael Landau"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    number_sections: true
 vignette: >
   %\VignetteIndexEntry{caution}
   %\VignetteEngine{knitr::rmarkdown}
@@ -14,6 +17,7 @@ vignette: >
 
 ```{r, echo = F}
 suppressMessages(suppressWarnings(library(drake)))
+suppressMessages(suppressWarnings(library(magrittr)))
 clean(destroy = TRUE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 ```
@@ -24,37 +28,71 @@ With drake, there is room for error with respect to tracking dependencies, manag
 
 ## Beware unparsable symbols in your workflow plan.
 
-```{r unparsable_plan}
-template <- plan(x = process(..setting..))
-processed <- evaluate(template, wildcard = "..setting..",
-  values = c("\"option1\"", "\"option2\""))
-gathered <- gather(processed, target = "bad_target")
-my_plan <- rbind(processed, gathered)
-my_plan
+In your workflow plan, be sure that target names can be parsed as symbols and commands can be parsed as R code. To be safe, use `check(my_plan)` to screen for illegal symbols and other problem areas.
+
+A common pitfall is using the `evaluate()` function to expand wildcards after applying single quotes to file targets.
+
+```{r filethenevaluate}
+library(magrittr) # for the pipe operator %>%
+plan(
+  data = readRDS("data_..datasize...rds")
+) %>%
+  rbind(drake::plan(
+    file.csv = write.csv(
+      data_..datasize.., # nolint
+      "file_..datasize...csv"
+    ),
+    strings_in_dots = "literals",
+    file_targets = T
+  )) %>%
+  evaluate(
+    rules = list(..datasize.. = c("small", "large"))
+  )
 ```
 
-Here, `make(my_plan)` would generate an error because the command for `bad_target` has illegal symbols. To avoid this sort of problem, please keep literal quotes out of your wildcards.
+The single quotes in the middle of `'file.csv'_small` and `'file.csv'large` are illegal, and the target names do not even correspond to the files written. Instead, construct your workflow plan in multiple stages and apply the single quotes at the very end.
 
-```{r parsable_plan}
-template <- plan(x = process("..setting.."), strings_in_dots = "literals")
-processed <- evaluate(template, wildcard = "..setting..",
-  values = c("option1", "option2"))
-gathered <- gather(processed, target = "bad_target")
-my_plan <- rbind(processed, gathered)
-my_plan
+```{r correctevaldatasize}
+rules <- list(..datasize.. = c("small", "large"))
+datasets <- plan(data = readRDS("data_..datasize...rds")) %>%
+  evaluate(rules = rules)
 ```
 
-To be safe, use `check(my_plan)` to screen for problems like this one.
+Plan the CSV files separately.
+```{r correctevaldatasize2}
+files <- plan(
+  file = write.csv(data_..datasize.., "file_..datasize...csv"), # nolint
+  strings_in_dots = "literals"
+) %>%
+  evaluate(rules = rules)
+```
 
+Single-quote the file targets after `evaluate()`.
 
+```{r correctevaldatasize3}
+files$target <- paste0(
+  files$target, ".csv"
+) %>%
+  as_file
+```
+
+Put the workflow plan together.
+
+```{r correctevaldatasize4}
+rbind(datasets, files)
+```
+
+For more control over target names in cases like this, you may want to use the [wildcard package](https://github.com/wlandau/wildcard).
 
 ## Commands are NOT perfectly flexible.
 
 In your workflow plan data frame (produced by `plan()` and accepted by `make()`), your commands can usually be flexible R expressions.
 
-```{r}
-plan(target1 = 1 + 1 - sqrt(sqrt(3)),
-     target2 = my_function(web_scraped_data) %>% my_tidy)
+```{r tidyplancaution}
+plan(
+  target1 = 1 + 1 - sqrt(sqrt(3)),
+  target2 = my_function(web_scraped_data) %>% my_tidy
+)
 ```
 
 However, please try to avoid formulas and function definitions in your commands. You may be able to get away with `plan(f = function(x){x + 1})` or `plan(f = y ~ x)` in some use cases, but be careful. Rather than using commands for this, it is better to define functions and formulas in your workspace before calling `make()`. (Alternatively, use the `envir` argument to `make()` to tightly control which imported functions are available.) Use the `check()` function to help screen and quality-control your workflow plan data frame, use `tracked()` to see the items that are reproducibly tracked, and use `plot_graph()` and `build_graph()` to see the dependency structure of your project.
@@ -80,7 +118,8 @@ eval(expression({
   g <- function(x){
     x + 1
   }
-}), envir = envir)
+}
+), envir = envir)
 myplan <- plan(out = f(1:3))
 make(myplan, envir = envir)
 ls() # Check that your workspace did not change.
@@ -109,13 +148,66 @@ Here, `x` is a mere side effect of the command, and it will not be reproducibly 
 
 During the execution workflow of a drake project, please do not change your working directory (with `setwd()`, for example). At the very least, if you do change your working directory during a command in your workflow plan, please return to the original working directory before the command is completed. Drake relies on a hidden cache (the `.drake/` folder) at the root of your project, so navigating to a different folder may confuse drake.
 
+## Take special precautions if your `drake` project is a package.
 
+Some users like to structure their `drake` projects as [formal R packages](https://cran.r-project.org/doc/manuals/R-exts.html). The straightforward way to run such a project is to 
+
+1. Write all your imported functions in `*.R` files in the package's `R/` folder.
+1. Load the execution environment with `devtools::load_all()`.
+1. Call `drake::make()`.
+
+```{r devtools1, eval = FALSE}
+env <- devtools::load_all("yourProject")$env # Has all your imported functions
+drake::make(my_plan, envir = env)            # Run the project normally.
+```
+
+However, the simple strategy above only works for `parLapply` parallelism with `jobs = 1` and `mcapply` parallelism. For other kinds of parallelism, you must turn  `devtools::load_all("yourProject")$env` into an ordinary environment that does not look like a package namespace. Thanks to [Jasper Clarkberg](https://github.com/dapperjapper) for the following workaround.
+
+1. Clone `devtools::load_all("yourProject")$env` in order to change the *binding environment* of all your functions.
+
+```{r devtools2, eval = FALSE}
+env <- devtools::load_all("yourProject")$env
+env <- list2env(as.list(env), parent = globalenv())
+```
+
+2. Change the [*enclosing environment*](http://adv-r.had.co.nz/Environments.html#function-envs) of your functions using an [unfortunate hack](https://stackoverflow.com/questions/14464442/using-get-with-replacement-functions) involving `environment<-`.
+
+```{r devtools3, eval = FALSE}
+for (name in ls(env)){
+  assign(
+    x = name,
+    envir = env,
+    value = `environment<-`(get(n, envir = env), env)
+  )
+}
+```
+
+3. Make sure `drake` does not attach `yourProject` as an external package.
+
+```{r devtools4, eval = FALSE}
+package_name <- "yourProject" # devtools::as.package(".")$package # nolint
+packages_to_load <- setdiff(.packages(), package_name)
+```
+
+4. Run the project with `make()`.
+
+```{r devtools5, eval = FALSE}
+make(
+  my_plan, # Prepared in advance
+  envir = env,
+  parallelism = "Makefile", # Or "parLapply"
+  jobs = 2,
+  packages = packages_to_load # Does not include "yourProject"
+)
+```
+
+You may need to adapt this last workaround, depending on the structure of the package, `yourProject`.
 
 # Dependencies
 
 ## Check your dependencies.
 
-As the user, you should take responsibility for how the steps of your workflow are interconnected. This will affect which targets are built and which ones are skipped. There are several ways to explore the dependency relatoinsihp.
+As the user, you should take responsibility for how the steps of your workflow are interconnected. This will affect which targets are built and which ones are skipped. There are several ways to explore the dependency relationship.
 
 ```{r previewmyplan}
 load_basic_example()
@@ -128,7 +220,7 @@ plot_graph(my_plan, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/wlandau-lilly/drake/a816f791/images/outdated.html"
+src = "https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/outdated.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -139,7 +231,7 @@ You can also check the dependencies of individual targets.
 ```{r checkdeps}
 deps(reg2)
 deps(my_plan$command[1]) # File dependencies like report.Rmd are single-quoted.
-deps(my_plan$command[16])
+deps(my_plan$command[nrow(my_plan)])
 ```
 
 List all the reproducibly-tracked objects and files, including imports and targets.
@@ -172,6 +264,35 @@ command <- "x <- digest::digest('input_file.rds'); assign(\"x\", 1); x"
 deps(command)
 ```
 
+## Dynamic reports
+
+In [dynamic knitr reports](https://yihui.name/knitr/), you are encouraged to load and read cached targets and imports with the `loadd()` and `readd()` functions. In your workflow plan, as long as your command has an explicit reference to `knit()`, `drake` will automatically look for active code chunks and figure out the targets you are going to load and read. They are treated as dependencies for the final report.
+
+```{r knitrdeps1}
+load_basic_example()
+my_plan[1, ]
+```
+
+The [R Markdown report](http://rmarkdown.rstudio.com/lesson-1.html) loads targets 'small', 'large', and 'coef_regression2_small' using code chunks marked for evaluation.
+
+```{r knitr2}
+deps("knit('report.Rmd')")
+deps("'report.Rmd'") # These are actually dependencies of 'report.md' (output)
+```
+
+However, **you must explicitly mention each and every target loaded into a report**. The following examples are discouraged in code chunks because they do not reference any particular target directly or literally in a way that static code analysis can detect.
+
+```{r badknitr, eval = FALSE}
+var <- "good_target"
+# Works in isolation, but drake sees "var" literally as a dependency,
+# not "good_target".
+readd(target = var, character_only = TRUE)
+loadd(list = var)
+# All cached items are loaded, but none are treated as dependencies.
+loadd()
+loadd(imports_only = TRUE)
+```
+
 ## Functions produced by `Vectorize()`
 
 With functions produced by `Vectorize()`, detecting dependencies is especially hard because the body of every such a function is
@@ -196,6 +317,10 @@ Some R functions use `.Call()` to run compiled code in the backend. The R code i
 ## Directories (folders) are not reproducibly tracked.
 
 Yes, you can declare a file target or input file by enclosing it in single quotes in your workflow plan data frame. But entire directories (i.e. folders) cannot yet be tracked this way. Tracking directories is a tricky problem, and lots of individual edge cases need to be ironed out before I can deliver a clean, reliable solution. Please see [issue 12](https://github.com/wlandau-lilly/drake/issues/12) for updates and a discussion.
+
+## Packages are not tracked as dependencies.
+
+`Drake` may import functions from packages, but the packages themselves are not tracked as dependencies. For this, you will need other tools that support reproducibility beyond the scope of `drake`. [Packrat](https://rstudio.github.io/packrat) creates a tightly-controlled local library of packages to extend the shelf life of your project. And with [Docker](https://www.docker.com/), you can execute your project on a [virtual machine](https://en.wikipedia.org/wiki/Virtual_machine) to ensure platform independence. Together, [packrat](https://rstudio.github.io/packrat) and [Docker](https://www.docker.com/) can help others reproduce your work even if they have different software and hardware.
 
 # High-performance computing
 

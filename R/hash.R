@@ -26,8 +26,11 @@ dependency_hash <- function(target, config) {
 }
 
 self_hash <- Vectorize(function(target, config) {
-  if (target %in% config$inventory)
-    config$cache$get_hash(target) else as.character(NA)
+  if (target %in% config$inventory) {
+    config$cache$get_hash(target)
+  } else {
+    as.character(NA)
+  }
 },
 "target", USE.NAMES = FALSE)
 
@@ -41,9 +44,11 @@ should_rehash_file <- function(filename, new_mtime, old_mtime,
 }
 
 file_hash <- function(target, config, size_cutoff = 1e5) {
-  if (is_not_file(target))
+  if (is_file(target)) {
+    filename <- eply::unquote(target)
+  } else {
     return(as.character(NA))
-  filename <- eply::unquote(target)
+  }
   if (!file.exists(filename))
     return(as.character(NA))
   old_mtime <- ifelse(target %in% config$inventory_filemtime,

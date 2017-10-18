@@ -4,12 +4,13 @@
 \alias{config}
 \title{Function config}
 \usage{
-config(plan, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = NULL,
+config(plan = drake::plan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(),
   parallelism = drake::default_parallelism(), jobs = 1,
   packages = (.packages()), prework = character(0),
-  prepend = character(0), command = "make",
-  args = drake::default_system2_args(jobs = jobs, verbose = verbose))
+  prepend = character(0), command = drake::default_Makefile_command(),
+  args = drake::default_system2_args(jobs = jobs, verbose = verbose),
+  recipe_command = drake::default_recipe_command())
 }
 \arguments{
 \item{plan}{same as for \code{\link{make}}}
@@ -35,6 +36,8 @@ config(plan, targets = drake::possible_targets(plan),
 \item{command}{same as for \code{\link{make}}}
 
 \item{args}{same as for \code{\link{make}}}
+
+\item{recipe_command}{same as for \code{\link{make}}}
 }
 \description{
 Compute the internal runtime parameter list of
@@ -44,7 +47,7 @@ or \code{\link{plot_graph}()}. Drake needs to import and cache files
 and objects to compute the configuration list, which in turn
 supports user-side functions to help with visualization and parallelism.
 The result differs from
-\code{\link{make}(..., imports_only = TRUE, return_config = TRUE)}
+\code{\link{make}(..., imports_only = TRUE)}
 in that the graph includes both the targets and the imports,
 not just the imports.
 }

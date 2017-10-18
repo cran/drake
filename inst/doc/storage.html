@@ -12,7 +12,7 @@
 
 <meta name="author" content="William Michael Landau" />
 
-<meta name="date" content="2017-09-29" />
+<meta name="date" content="2017-10-17" />
 
 <title>Storage</title>
 
@@ -71,45 +71,63 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1 class="title toc-ignore">Storage</h1>
 <h3 class="subtitle"><em>Caching, hashing, and customization</em></h3>
 <h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-09-29</em></h4>
+<h4 class="date"><em>2017-10-17</em></h4>
 
 
+<div id="TOC">
+<ul>
+<li><a href="#storage-basics"><span class="toc-section-number">1</span> Storage basics</a></li>
+<li><a href="#caches-as-r-objects"><span class="toc-section-number">2</span> Caches as R objects</a></li>
+<li><a href="#hash-algorithms"><span class="toc-section-number">3</span> Hash algorithms</a></li>
+<li><a href="#which-hash-algorithm-should-you-choose"><span class="toc-section-number">4</span> Which hash algorithm should you choose?</a></li>
+<li><a href="#select-the-hash-algorithms-of-the-default-cache"><span class="toc-section-number">5</span> Select the hash algorithms of the default cache</a></li>
+<li><a href="#more-on-custom-caches"><span class="toc-section-number">6</span> More on custom caches</a></li>
+<li><a href="#recovering-the-cache"><span class="toc-section-number">7</span> Recovering the cache</a></li>
+<li><a href="#more-on-storr-caches"><span class="toc-section-number">8</span> More on <a href="https://github.com/richfitz/storr">storr</a> caches</a></li>
+<li><a href="#in-memory-caches"><span class="toc-section-number">9</span> In-memory caches</a></li>
+<li><a href="#cache-types"><span class="toc-section-number">10</span> Cache types</a></li>
+<li><a href="#cleaning-up"><span class="toc-section-number">11</span> Cleaning up</a></li>
+</ul>
+</div>
 
 <div class="figure">
 <img src="data:image/png;base64,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" />
 
 </div>
 <div id="storage-basics" class="section level1">
-<h1>Storage basics</h1>
+<h1><span class="header-section-number">1</span> Storage basics</h1>
 <p>When you run <code>make()</code>, <code>drake</code> puts your imports and output targets in a hidden cache, or storage location.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
 <span class="kw">load_basic_example</span>()
 config &lt;-<span class="st"> </span><span class="kw">make</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>, <span class="dt">return_config =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<pre><code>## Warning in make(my_plan, verbose = FALSE, return_config = TRUE):
+## The return_config argument to make() is deprecated. Now, an internal
+## configuration list is always invisibly returned.</code></pre>
 <p>You can explore your cached data using functions like <code>loadd()</code>, <code>readd()</code>, and <code>cached()</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(<span class="kw">cached</span>())</code></pre></div>
 <pre><code>## [1] &quot;'report.Rmd'&quot;           &quot;'report.md'&quot;           
-## [3] &quot;c&quot;                      &quot;coef&quot;                  
-## [5] &quot;coef_regression1_large&quot; &quot;coef_regression1_small&quot;</code></pre>
+## [3] &quot;coef_regression1_large&quot; &quot;coef_regression1_small&quot;
+## [5] &quot;coef_regression2_large&quot; &quot;coef_regression2_small&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">readd</span>(small)</code></pre></div>
 <pre><code>##            x y
-## 1  0.6338833 1
-## 2  0.5048558 1
-## 3 -0.3805770 0
-## 4  1.4403985 3
-## 5  0.5643301 0</code></pre>
+## 1 -0.8405761 1
+## 2  0.3728460 1
+## 3 -0.9197519 4
+## 4 -0.8138454 4
+## 5  0.6081448 0</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">loadd</span>(large)
 <span class="kw">head</span>(large)</code></pre></div>
-<pre><code>##            x y
-## 1  1.0742116 1
-## 2 -1.1818528 4
-## 3  2.1040777 0
-## 4 -0.3906697 2
-## 5 -0.2561074 2
-## 6  1.4532986 2</code></pre>
+<pre><code>##             x y
+## 1 -1.04907427 1
+## 2  1.48356981 0
+## 3 -0.98970865 1
+## 4  0.04199456 0
+## 5 -0.26483752 0
+## 6 -1.02497511 0</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">rm</span>(large) <span class="co"># Does not remove `large` from the cache.</span></code></pre></div>
 </div>
 <div id="caches-as-r-objects" class="section level1">
-<h1>Caches as R objects</h1>
+<h1><span class="header-section-number">2</span> Caches as R objects</h1>
 <p>The <a href="https://github.com/richfitz/storr">storr</a> package does the heavy lifting. A <code>storr</code> is an object in R that serves as an abstraction for a storage backend, usually a file system. See the <a href="https://cran.r-project.org/package=storr/vignettes/storr.html">main storr vignette</a> for a thorough walkthrough.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">class</span>(config$cache) <span class="co"># from `config &lt;- make(..., return_config = TRUE)`</span></code></pre></div>
 <pre><code>## [1] &quot;storr&quot; &quot;R6&quot;</code></pre>
@@ -118,37 +136,36 @@ config &lt;-<span class="st"> </span><span class="kw">make</span>(my_plan, <span
 <pre><code>## [1] &quot;storr&quot; &quot;R6&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">cache$<span class="kw">list</span>() <span class="co"># functionality from storr</span></code></pre></div>
 <pre><code>##  [1] &quot;'report.Rmd'&quot;           &quot;'report.md'&quot;           
-##  [3] &quot;c&quot;                      &quot;coef&quot;                  
-##  [5] &quot;coef_regression1_large&quot; &quot;coef_regression1_small&quot;
-##  [7] &quot;coef_regression2_large&quot; &quot;coef_regression2_small&quot;
-##  [9] &quot;data.frame&quot;             &quot;knit&quot;                  
-## [11] &quot;large&quot;                  &quot;lm&quot;                    
-## [13] &quot;my_knit&quot;                &quot;reg1&quot;                  
-## [15] &quot;reg2&quot;                   &quot;regression1_large&quot;     
-## [17] &quot;regression1_small&quot;      &quot;regression2_large&quot;     
-## [19] &quot;regression2_small&quot;      &quot;report_dependencies&quot;   
-## [21] &quot;rpois&quot;                  &quot;simulate&quot;              
-## [23] &quot;small&quot;                  &quot;stats::rnorm&quot;          
-## [25] &quot;summ_regression1_large&quot; &quot;summ_regression1_small&quot;
-## [27] &quot;summ_regression2_large&quot; &quot;summ_regression2_small&quot;
-## [29] &quot;summary&quot;                &quot;suppressWarnings&quot;</code></pre>
+##  [3] &quot;coef_regression1_large&quot; &quot;coef_regression1_small&quot;
+##  [5] &quot;coef_regression2_large&quot; &quot;coef_regression2_small&quot;
+##  [7] &quot;coefficients&quot;           &quot;data.frame&quot;            
+##  [9] &quot;knit&quot;                   &quot;large&quot;                 
+## [11] &quot;lm&quot;                     &quot;reg1&quot;                  
+## [13] &quot;reg2&quot;                   &quot;regression1_large&quot;     
+## [15] &quot;regression1_small&quot;      &quot;regression2_large&quot;     
+## [17] &quot;regression2_small&quot;      &quot;rpois&quot;                 
+## [19] &quot;simulate&quot;               &quot;small&quot;                 
+## [21] &quot;stats::rnorm&quot;           &quot;summ_regression1_large&quot;
+## [23] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
+## [25] &quot;summ_regression2_small&quot; &quot;summary&quot;               
+## [27] &quot;suppressWarnings&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">cache$<span class="kw">get</span>(<span class="st">&quot;small&quot;</span>) <span class="co"># functionality from storr</span></code></pre></div>
 <pre><code>## $type
 ## [1] &quot;object&quot;
 ## 
 ## $value
 ##            x y
-## 1  0.6338833 1
-## 2  0.5048558 1
-## 3 -0.3805770 0
-## 4  1.4403985 3
-## 5  0.5643301 0
+## 1 -0.8405761 1
+## 2  0.3728460 1
+## 3 -0.9197519 4
+## 4 -0.8138454 4
+## 5  0.6081448 0
 ## 
 ## $imported
 ## [1] FALSE</code></pre>
 </div>
 <div id="hash-algorithms" class="section level1">
-<h1>Hash algorithms</h1>
+<h1><span class="header-section-number">3</span> Hash algorithms</h1>
 <p>The key to <a href="https://github.com/richfitz/storr">storr</a>’s internals is the concept of <a href="https://en.wikipedia.org/wiki/Hash_function">hashing</a>. <a href="https://github.com/richfitz/storr">Storr</a> uses hashes to label what they store, and <code>drake</code> leverages these hashes to figure out what is up to date and what needs to be (re)built. A hash is like a fingerprint for a piece of data, so the hash should change if the dataset changes. Regardless of the data’s size, the hash always has same number of characters.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(digest) <span class="co"># package for hashing objects and files</span>
 smaller_data &lt;-<span class="st"> </span><span class="dv">12</span>
@@ -156,19 +173,19 @@ larger_data &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span cl
 <span class="kw">digest</span>(smaller_data) <span class="co"># compute the hash</span></code></pre></div>
 <pre><code>## [1] &quot;23c80a31c0713176016e6e18d76a5f31&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">digest</span>(larger_data)</code></pre></div>
-<pre><code>## [1] &quot;ef576359e952fcd50ecbc620908ecba8&quot;</code></pre>
+<pre><code>## [1] &quot;dcac878fe45f6220e8fb6194e67243da&quot;</code></pre>
 <p>However, different hash algorithms vary in output length.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">digest</span>(larger_data, <span class="dt">algo =</span> <span class="st">&quot;sha512&quot;</span>)</code></pre></div>
-<pre><code>## [1] &quot;c539b933f2e7b5acbd65695e22709c05fdfa2047cf890660ed5b22a59b15471b70ada4ea5a785002d5b766888e1c06fffd29d62c23098bb61777810e0c51d24b&quot;</code></pre>
+<pre><code>## [1] &quot;4665f744a15b53d289c95c6cfc9a5c63eec0321756d38b790398c916a42d4779e6e915b63913c30bdac38576eccca7630bc4793e34865f6666acea308dcc5de7&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">digest</span>(larger_data, <span class="dt">algo =</span> <span class="st">&quot;md5&quot;</span>)</code></pre></div>
-<pre><code>## [1] &quot;ef576359e952fcd50ecbc620908ecba8&quot;</code></pre>
+<pre><code>## [1] &quot;dcac878fe45f6220e8fb6194e67243da&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">digest</span>(larger_data, <span class="dt">algo =</span> <span class="st">&quot;xxhash64&quot;</span>)</code></pre></div>
-<pre><code>## [1] &quot;074a0bd8a921c172&quot;</code></pre>
+<pre><code>## [1] &quot;0779a0749e7b5165&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">digest</span>(larger_data, <span class="dt">algo =</span> <span class="st">&quot;murmur32&quot;</span>)</code></pre></div>
-<pre><code>## [1] &quot;1f55d825&quot;</code></pre>
+<pre><code>## [1] &quot;1ba7b6d5&quot;</code></pre>
 </div>
 <div id="which-hash-algorithm-should-you-choose" class="section level1">
-<h1>Which hash algorithm should you choose?</h1>
+<h1><span class="header-section-number">4</span> Which hash algorithm should you choose?</h1>
 <p>Hashing is expensive, and unsurprisingly, shorter hashes are usually faster to compute. So why not always use <code>murmur32</code>? One reason is the risk of collisions: when two different objects have the same hash. In general, shorter hashes have higher risks of collisions. We want our fingerprints to be unique. On the other hand, a longer hash is not always the answer. Besides speed, the decision depends on how we use the output. <code>Drake</code> and <a href="https://github.com/richfitz/storr">storr</a> both use hash keys as names for internal cache files, and in general, file names should respect the 260-character cap on Windows file paths. That is why <code>drake</code> uses a shorter hash algorithm for internal cache-related file names and a longer hash algorithm for everything else.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">default_short_hash_algo</span>() <span class="co"># for drake</span></code></pre></div>
 <pre><code>## [1] &quot;xxhash64&quot;</code></pre>
@@ -180,10 +197,10 @@ larger_data &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span cl
 <pre><code>## [1] &quot;sha256&quot;</code></pre>
 </div>
 <div id="select-the-hash-algorithms-of-the-default-cache" class="section level1">
-<h1>Select the hash algorithms of the default cache</h1>
+<h1><span class="header-section-number">5</span> Select the hash algorithms of the default cache</h1>
 <p>For new projects, use <code>new_cache()</code> to set the hashes of the default cache.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cache_path</span>(cache) <span class="co"># default cache from before</span></code></pre></div>
-<pre><code>## [1] &quot;/tmp/RtmppsMUFL/Rbuild2648747041ea/drake/vignettes/.drake&quot;</code></pre>
+<pre><code>## [1] &quot;/tmp/Rtmp3fe9pW/Rbuild24bf574dbaea/drake/vignettes/.drake&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>(<span class="dt">destroy =</span> <span class="ot">TRUE</span>) <span class="co"># start from scratch to reset both hash algorithms</span>
 tmp &lt;-<span class="st"> </span><span class="kw">new_cache</span>(
   <span class="dt">path =</span> <span class="kw">default_cache_path</span>(), <span class="co"># the `.drake/` folder</span>
@@ -191,8 +208,11 @@ tmp &lt;-<span class="st"> </span><span class="kw">new_cache</span>(
   <span class="dt">long_hash_algo =</span> <span class="st">&quot;sha1&quot;</span>
 )</code></pre></div>
 <p>The cache at <code>default_cache_path()</code> (equivalently, the <code>.drake/</code> folder) is the default cache used for <code>make()</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">config &lt;-<span class="st"> </span><span class="kw">make</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>, <span class="dt">return_config =</span> <span class="ot">TRUE</span>)
-<span class="kw">short_hash</span>(config$cache) <span class="co"># would have been xxhash64 (default_short_hash_algo())</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">config &lt;-<span class="st"> </span><span class="kw">make</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>, <span class="dt">return_config =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<pre><code>## Warning in make(my_plan, verbose = FALSE, return_config = TRUE):
+## The return_config argument to make() is deprecated. Now, an internal
+## configuration list is always invisibly returned.</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">short_hash</span>(config$cache) <span class="co"># would have been xxhash64 (default_short_hash_algo())</span></code></pre></div>
 <pre><code>## [1] &quot;crc32&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">long_hash</span>(config$cache) <span class="co"># would have been sha256 (default_long_hash_algo())</span></code></pre></div>
 <pre><code>## [1] &quot;sha1&quot;</code></pre>
@@ -210,17 +230,20 @@ config$cache &lt;-<span class="st"> </span><span class="kw">configure_cache</spa
 ##  [5] &quot;coef_regression2_small&quot; &quot;large&quot;                 
 ##  [7] &quot;regression1_large&quot;      &quot;regression1_small&quot;     
 ##  [9] &quot;regression2_large&quot;      &quot;regression2_small&quot;     
-## [11] &quot;report_dependencies&quot;    &quot;small&quot;                 
-## [13] &quot;summ_regression1_large&quot; &quot;summ_regression1_small&quot;
-## [15] &quot;summ_regression2_large&quot; &quot;summ_regression2_small&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">config &lt;-<span class="st"> </span><span class="kw">make</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>, <span class="dt">return_config =</span> <span class="ot">TRUE</span>)
-<span class="kw">short_hash</span>(config$cache) <span class="co"># same as before</span></code></pre></div>
+## [11] &quot;small&quot;                  &quot;summ_regression1_large&quot;
+## [13] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
+## [15] &quot;summ_regression2_small&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">config &lt;-<span class="st"> </span><span class="kw">make</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>, <span class="dt">return_config =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<pre><code>## Warning in make(my_plan, verbose = FALSE, return_config = TRUE):
+## The return_config argument to make() is deprecated. Now, an internal
+## configuration list is always invisibly returned.</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">short_hash</span>(config$cache) <span class="co"># same as before</span></code></pre></div>
 <pre><code>## [1] &quot;crc32&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">long_hash</span>(config$cache) <span class="co"># different from before</span></code></pre></div>
 <pre><code>## [1] &quot;murmur32&quot;</code></pre>
 </div>
 <div id="more-on-custom-caches" class="section level1">
-<h1>More on custom caches</h1>
+<h1><span class="header-section-number">6</span> More on custom caches</h1>
 <p>You do not need to use the default cache whose files are at <code>default_cache_path()</code> (<code>.drake/</code>). However, if you use a different file system, such as the custom <code>faster_cache/</code> folder below, you will need to manually supply the cache to all functions that require one.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">faster_cache &lt;-<span class="st"> </span><span class="kw">new_cache</span>(
   <span class="dt">path =</span> <span class="st">&quot;faster_cache&quot;</span>,
@@ -228,9 +251,9 @@ config$cache &lt;-<span class="st"> </span><span class="kw">configure_cache</spa
   <span class="dt">long_hash_algo =</span> <span class="st">&quot;murmur32&quot;</span>
 )
 <span class="kw">cache_path</span>(faster_cache)</code></pre></div>
-<pre><code>## [1] &quot;/tmp/RtmppsMUFL/Rbuild2648747041ea/drake/vignettes/faster_cache&quot;</code></pre>
+<pre><code>## [1] &quot;/tmp/Rtmp3fe9pW/Rbuild24bf574dbaea/drake/vignettes/faster_cache&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cache_path</span>(cache) <span class="co"># location of the previous cache</span></code></pre></div>
-<pre><code>## [1] &quot;/tmp/RtmppsMUFL/Rbuild2648747041ea/drake/vignettes/.drake&quot;</code></pre>
+<pre><code>## [1] &quot;/tmp/Rtmp3fe9pW/Rbuild24bf574dbaea/drake/vignettes/.drake&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">short_hash</span>(faster_cache)</code></pre></div>
 <pre><code>## [1] &quot;murmur32&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">long_hash</span>(faster_cache)</code></pre></div>
@@ -247,13 +270,13 @@ config$cache &lt;-<span class="st"> </span><span class="kw">configure_cache</spa
 <pre><code>## [1] 2</code></pre>
 </div>
 <div id="recovering-the-cache" class="section level1">
-<h1>Recovering the cache</h1>
+<h1><span class="header-section-number">7</span> Recovering the cache</h1>
 <p>You can recover an old cache from the file system. You could use <code>storr::storr_rds()</code> directly if you know the short hash algorithm, but <code>this_cache()</code> and <code>recover_cache()</code> are safer for <code>drake</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">old_cache &lt;-<span class="st"> </span><span class="kw">this_cache</span>(<span class="st">&quot;faste_cache&quot;</span>) <span class="co"># Get a cache you know exists...</span>
 recovered &lt;-<span class="st"> </span><span class="kw">recover_cache</span>(<span class="st">&quot;faster_cache&quot;</span>) <span class="co"># or create a new one if missing.</span></code></pre></div>
 </div>
 <div id="more-on-storr-caches" class="section level1">
-<h1>More on <a href="https://github.com/richfitz/storr">storr</a> caches</h1>
+<h1><span class="header-section-number">8</span> More on <a href="https://github.com/richfitz/storr">storr</a> caches</h1>
 <p>If you want bypass <code>drake</code> and generate a cache directly from <a href="https://github.com/richfitz/storr">storr</a>, it is best to do so right from the beginning.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(storr)
 my_storr &lt;-<span class="st"> </span><span class="kw">storr_rds</span>(<span class="st">&quot;my_storr&quot;</span>, <span class="dt">mangle_key =</span> <span class="ot">TRUE</span>)
@@ -268,7 +291,7 @@ my_storr &lt;-<span class="st"> </span><span class="kw">storr_rds</span>(<span c
 <p><code>Drake</code> supports <a href="https://github.com/richfitz/storr">storr_rds()</a> caches. Other caches may be possible, but they should have a <code>storr</code>-like API and <a href="https://github.com/richfitz/storr/blob/master/vignettes/storr.Rmd#namespaces">namespace support</a>.</p>
 </div>
 <div id="in-memory-caches" class="section level1">
-<h1>In-memory caches</h1>
+<h1><span class="header-section-number">9</span> In-memory caches</h1>
 <p>Some caches store your data in the computer’s memory rather than saved files. <code>Drake</code> can make use of these in-memory caches, but not with any kind of parallel computing. In other words, when you call <code>make()</code>, the <code>parallelism</code> argument cannot be <code>&quot;Makefile&quot;</code> and <code>jobs</code> must be <code>1</code> (default). Also, keep in mind that unless you save your workspace, your in-memory cache will disappear when you close your R session.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">memory_cache &lt;-<span class="st"> </span><span class="kw">storr_environment</span>()
 other_plan &lt;-<span class="st"> </span><span class="kw">plan</span>(
@@ -291,27 +314,42 @@ other_plan &lt;-<span class="st"> </span><span class="kw">plan</span>(
 <pre><code>## [1] &quot;c&quot;         &quot;mean&quot;      &quot;more_data&quot; &quot;result&quot;    &quot;rnorm&quot;     &quot;rpois&quot;    
 ## [7] &quot;some_data&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">readd</span>(result, <span class="dt">cache =</span> memory_cache)</code></pre></div>
-<pre><code>## [1] 5.738956</code></pre>
+<pre><code>## [1] 6.121254</code></pre>
+</div>
+<div id="cache-types" class="section level1">
+<h1><span class="header-section-number">10</span> Cache types</h1>
+<p><code>Drake</code> has functions to help you create caches with known supported types.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">default_cache_type</span>()</code></pre></div>
+<pre><code>## [1] &quot;storr_rds&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cache_types</span>()</code></pre></div>
+<pre><code>## [1] &quot;storr_rds&quot;         &quot;storr_environment&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">in_memory_cache_types</span>()</code></pre></div>
+<pre><code>## [1] &quot;storr_environment&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">env &lt;-<span class="st"> </span><span class="kw">new.env</span>()
+my_type &lt;-<span class="st"> </span><span class="kw">new_cache</span>(<span class="dt">type =</span> <span class="st">&quot;storr_environment&quot;</span>)
+my_type_2 &lt;-<span class="st"> </span><span class="kw">new_cache</span>(<span class="dt">type =</span> <span class="st">&quot;storr_environment&quot;</span>, <span class="dt">envir =</span> env)
+<span class="kw">ls</span>(env)</code></pre></div>
+<pre><code>## [1] &quot;data&quot;           &quot;hash_algorithm&quot; &quot;keys&quot;</code></pre>
+<p>For new in-memory caches, please use <code>new_cache()</code> rather than <code>get_cache()</code> or <code>recover_cache()</code>.</p>
 </div>
 <div id="cleaning-up" class="section level1">
-<h1>Cleaning up</h1>
+<h1><span class="header-section-number">11</span> Cleaning up</h1>
 <p>If you want to start from sratch, you can <code>clean()</code> the cache. Use the <code>destroy</code> argument to remove it completely. <code>cache$del()</code> and <code>cache$destroy()</code> are also options, but they leave output file targets dangling. By contrast, <code>clean(destroy = TRUE)</code> removes file targets generated by <code>drake::make()</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>(small, large)
 <span class="kw">cached</span>() <span class="co"># 'small' and 'large' are gone</span></code></pre></div>
 <pre><code>##  [1] &quot;'report.Rmd'&quot;           &quot;'report.md'&quot;           
-##  [3] &quot;c&quot;                      &quot;coef&quot;                  
-##  [5] &quot;coef_regression1_large&quot; &quot;coef_regression1_small&quot;
-##  [7] &quot;coef_regression2_large&quot; &quot;coef_regression2_small&quot;
-##  [9] &quot;data.frame&quot;             &quot;knit&quot;                  
-## [11] &quot;lm&quot;                     &quot;my_knit&quot;               
-## [13] &quot;reg1&quot;                   &quot;reg2&quot;                  
-## [15] &quot;regression1_large&quot;      &quot;regression1_small&quot;     
-## [17] &quot;regression2_large&quot;      &quot;regression2_small&quot;     
-## [19] &quot;report_dependencies&quot;    &quot;rpois&quot;                 
-## [21] &quot;simulate&quot;               &quot;stats::rnorm&quot;          
-## [23] &quot;summ_regression1_large&quot; &quot;summ_regression1_small&quot;
-## [25] &quot;summ_regression2_large&quot; &quot;summ_regression2_small&quot;
-## [27] &quot;summary&quot;                &quot;suppressWarnings&quot;</code></pre>
+##  [3] &quot;coef_regression1_large&quot; &quot;coef_regression1_small&quot;
+##  [5] &quot;coef_regression2_large&quot; &quot;coef_regression2_small&quot;
+##  [7] &quot;coefficients&quot;           &quot;data.frame&quot;            
+##  [9] &quot;knit&quot;                   &quot;lm&quot;                    
+## [11] &quot;reg1&quot;                   &quot;reg2&quot;                  
+## [13] &quot;regression1_large&quot;      &quot;regression1_small&quot;     
+## [15] &quot;regression2_large&quot;      &quot;regression2_small&quot;     
+## [17] &quot;rpois&quot;                  &quot;simulate&quot;              
+## [19] &quot;stats::rnorm&quot;           &quot;summ_regression1_large&quot;
+## [21] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
+## [23] &quot;summ_regression2_small&quot; &quot;summary&quot;               
+## [25] &quot;suppressWarnings&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>(<span class="dt">destroy =</span> <span class="ot">TRUE</span>)
 <span class="kw">clean</span>(<span class="dt">destroy =</span> <span class="ot">TRUE</span>, <span class="dt">cache =</span> faster_cache)
 <span class="kw">clean</span>(<span class="dt">destroy =</span> <span class="ot">TRUE</span>, <span class="dt">cache =</span> my_storr)</code></pre></div>

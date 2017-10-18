@@ -12,7 +12,7 @@
 
 <meta name="author" content="William Michael Landau" />
 
-<meta name="date" content="2017-09-29" />
+<meta name="date" content="2017-10-17" />
 
 <title>drake</title>
 
@@ -71,16 +71,29 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1 class="title toc-ignore">drake</h1>
 <h3 class="subtitle"><em>data frames in R for Make</em></h3>
 <h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-09-29</em></h4>
+<h4 class="date"><em>2017-10-17</em></h4>
 
 
+<div id="TOC">
+<ul>
+<li><a href="#data-frames-in-r-for-make"><span class="toc-section-number">1</span> Data frames in R for <a href="http://kbroman.org/minimal_make/">Make</a></a></li>
+<li><a href="#installation"><span class="toc-section-number">2</span> Installation</a></li>
+<li><a href="#quickstart"><span class="toc-section-number">3</span> Quickstart</a></li>
+<li><a href="#useful-functions"><span class="toc-section-number">4</span> Useful functions</a></li>
+<li><a href="#documentation"><span class="toc-section-number">5</span> Documentation</a></li>
+<li><a href="#help-and-troubleshooting"><span class="toc-section-number">6</span> Help and troubleshooting</a></li>
+<li><a href="#reproducibility"><span class="toc-section-number">7</span> Reproducibility</a></li>
+<li><a href="#high-performance-computing"><span class="toc-section-number">8</span> High-performance computing</a></li>
+<li><a href="#acknowledgements-and-related-work"><span class="toc-section-number">9</span> Acknowledgements and related work</a></li>
+</ul>
+</div>
 
 <div class="figure">
 <img src="data:image/png;base64,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" />
 
 </div>
 <div id="data-frames-in-r-for-make" class="section level1">
-<h1>Data frames in R for <a href="http://kbroman.org/minimal_make/">Make</a></h1>
+<h1><span class="header-section-number">1</span> Data frames in R for <a href="http://kbroman.org/minimal_make/">Make</a></h1>
 <p>Drake is a workflow manager and build system for</p>
 <ol style="list-style-type: decimal">
 <li><a href="https://CRAN.R-project.org/view=ReproducibleResearch">Reproducibility</a>.</li>
@@ -89,28 +102,27 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <p>Organize your work in a data frame. Then <code>make()</code> it.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
 <span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd.</span>
-my_plan <span class="co"># Each target is a file (single-quoted) or object</span></code></pre></div>
+my_plan              <span class="co"># Each target is a file (single-quoted) or object.</span></code></pre></div>
 <pre><code>##                    target                                      command
-## 1             'report.md'   my_knit('report.Rmd', report_dependencies)
+## 1             'report.md'             knit('report.Rmd', quiet = TRUE)
 ## 2                   small                                  simulate(5)
 ## 3                   large                                 simulate(50)
-## 4     report_dependencies      c(small, large, coef_regression2_small)
-## 5       regression1_small                                  reg1(small)
-## 6       regression1_large                                  reg1(large)
-## 7       regression2_small                                  reg2(small)
-## 8       regression2_large                                  reg2(large)
-## 9  summ_regression1_small suppressWarnings(summary(regression1_small))
-## 10 summ_regression1_large suppressWarnings(summary(regression1_large))
-## 11 summ_regression2_small suppressWarnings(summary(regression2_small))
-## 12 summ_regression2_large suppressWarnings(summary(regression2_large))
-## 13 coef_regression1_small                      coef(regression1_small)
-## 14 coef_regression1_large                      coef(regression1_large)
-## 15 coef_regression2_small                      coef(regression2_small)
-## 16 coef_regression2_large                      coef(regression2_large)</code></pre>
+## 4       regression1_small                                  reg1(small)
+## 5       regression1_large                                  reg1(large)
+## 6       regression2_small                                  reg2(small)
+## 7       regression2_large                                  reg2(large)
+## 8  summ_regression1_small suppressWarnings(summary(regression1_small))
+## 9  summ_regression1_large suppressWarnings(summary(regression1_large))
+## 10 summ_regression2_small suppressWarnings(summary(regression2_small))
+## 11 summ_regression2_large suppressWarnings(summary(regression2_large))
+## 12 coef_regression1_small              coefficients(regression1_small)
+## 13 coef_regression1_large              coefficients(regression1_large)
+## 14 coef_regression2_small              coefficients(regression2_small)
+## 15 coef_regression2_large              coefficients(regression2_large)</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan) <span class="co"># Run the commands to build the targets.</span></code></pre></div>
 </div>
 <div id="installation" class="section level1">
-<h1>Installation</h1>
+<h1><span class="header-section-number">2</span> Installation</h1>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">&quot;drake&quot;</span>) <span class="co"># latest CRAN release</span>
 devtools::<span class="kw">install_github</span>(
   <span class="st">&quot;wlandau-lilly/drake@v4.2.0&quot;</span>,
@@ -120,23 +132,23 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-
 <p>For <code>make(..., parallelism = &quot;Makefile&quot;)</code>, Windows users need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>.</p>
 </div>
 <div id="quickstart" class="section level1">
-<h1>Quickstart</h1>
+<h1><span class="header-section-number">3</span> Quickstart</h1>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
 <span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd.</span>
-<span class="kw">plot_graph</span>(my_plan) <span class="co"># Hover, click, drag, zoom, pan.</span>
-<span class="kw">outdated</span>(my_plan) <span class="co"># Which targets need to be (re)built?</span>
-<span class="kw">missed</span>(my_plan) <span class="co"># Are you missing anything from your workspace?</span>
-<span class="kw">check</span>(my_plan) <span class="co"># Are you missing files? Is your workflow plan okay?</span>
-<span class="kw">make</span>(my_plan) <span class="co"># Run the workflow.</span>
-<span class="kw">outdated</span>(my_plan) <span class="co"># Everything is up to date.</span>
-<span class="kw">plot_graph</span>(my_plan) <span class="co"># The graph also shows what is up to date.</span></code></pre></div>
+<span class="kw">plot_graph</span>(my_plan)  <span class="co"># Hover, click, drag, zoom, pan.</span>
+<span class="kw">outdated</span>(my_plan)    <span class="co"># Which targets need to be (re)built?</span>
+<span class="kw">missed</span>(my_plan)      <span class="co"># Are you missing anything from your workspace?</span>
+<span class="kw">check</span>(my_plan)       <span class="co"># Are you missing files? Is your workflow plan okay?</span>
+<span class="kw">make</span>(my_plan)        <span class="co"># Run the workflow.</span>
+<span class="kw">outdated</span>(my_plan)    <span class="co"># Everything is up to date.</span>
+<span class="kw">plot_graph</span>(my_plan)  <span class="co"># The graph also shows what is up to date.</span></code></pre></div>
 <p>Dive deeper into the built-in examples.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">example_drake</span>(<span class="st">&quot;basic&quot;</span>) <span class="co"># Write the code files of the canonical tutorial.</span>
-<span class="kw">examples_drake</span>() <span class="co"># List the other examples.</span>
+<span class="kw">examples_drake</span>()       <span class="co"># List the other examples.</span>
 <span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>) <span class="co"># See https://cran.r-project.org/package=drake/vignettes</span></code></pre></div>
 </div>
 <div id="useful-functions" class="section level1">
-<h1>Useful functions</h1>
+<h1><span class="header-section-number">4</span> Useful functions</h1>
 <p>Besides <code>make()</code>, here are some useful functions to learn about drake,</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">load_basic_example</span>()
 <span class="kw">drake_tip</span>()
@@ -158,6 +170,7 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-
 <span class="kw">render_graph</span>()
 <span class="kw">read_graph</span>()
 <span class="kw">deps</span>()
+knitr_deps
 <span class="kw">tracked</span>()</code></pre></div>
 <p>interact with the cache,</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>()
@@ -199,39 +212,53 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;wlandau-
 <span class="kw">read_config</span>()</code></pre></div>
 </div>
 <div id="documentation" class="section level1">
-<h1>Documentation</h1>
+<h1><span class="header-section-number">5</span> Documentation</h1>
 <p>The <a href="https://CRAN.R-project.org/package=drake">CRAN page</a> links to multiple rendered vignettes.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">vignette</span>(<span class="dt">package =</span> <span class="st">&quot;drake&quot;</span>) <span class="co"># List the vignettes.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;drake&quot;</span>) <span class="co"># High-level intro.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>) <span class="co"># Walk through a simple example.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;storage&quot;</span>) <span class="co"># Learn how drake stores your stuff.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;caution&quot;</span>) <span class="co"># Avoid common pitfalls.</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">vignette</span>(<span class="dt">package =</span> <span class="st">&quot;drake&quot;</span>)            <span class="co"># List the vignettes.</span>
+<span class="kw">vignette</span>(<span class="st">&quot;drake&quot;</span>)                      <span class="co"># High-level intro.</span>
+<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>)                 <span class="co"># Walk through a simple example.</span>
+<span class="kw">vignette</span>(<span class="st">&quot;parallelism&quot;</span>) <span class="co"># Lots of parallel computing support.</span>
+<span class="kw">vignette</span>(<span class="st">&quot;storage&quot;</span>)                    <span class="co"># Learn how drake stores your stuff.</span>
+<span class="kw">vignette</span>(<span class="st">&quot;timing&quot;</span>)                     <span class="co"># Build times, runtime predictions</span>
+<span class="kw">vignette</span>(<span class="st">&quot;caution&quot;</span>)                    <span class="co"># Avoid common pitfalls.</span></code></pre></div>
 </div>
 <div id="help-and-troubleshooting" class="section level1">
-<h1>Help and troubleshooting</h1>
+<h1><span class="header-section-number">6</span> Help and troubleshooting</h1>
 <p>Please refer to <a href="https://github.com/wlandau-lilly/drake/blob/master/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> on the <a href="https://github.com/wlandau-lilly/drake">GitHub page</a> for instructions.</p>
 </div>
 <div id="reproducibility" class="section level1">
-<h1>Reproducibility</h1>
+<h1><span class="header-section-number">7</span> Reproducibility</h1>
 <p>There is room to improve the conversation and the landscape of reproducibility in the R and Statistics communities. At a more basic level than scientific replicability, literate programming, and version control, reproducibility carries an implicit promise that the alleged results of an analysis really do match the code. Drake helps keep this promise by tracking the relationships among the components of the analysis, a rare and effective approach that also saves time.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
 <span class="kw">load_basic_example</span>()
 <span class="kw">outdated</span>(my_plan) <span class="co"># Which targets need to be (re)built?</span>
-<span class="kw">make</span>(my_plan) <span class="co"># Build what needs to be built.</span>
+<span class="kw">make</span>(my_plan)     <span class="co"># Build what needs to be built.</span>
 <span class="kw">outdated</span>(my_plan) <span class="co"># Everything is up to date.</span>
 <span class="co"># Change one of your functions.</span>
 reg2 &lt;-<span class="st"> </span>function(d) {
   d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
   <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
 }
-<span class="kw">outdated</span>(my_plan) <span class="co"># Some targets depend on reg2().</span>
+<span class="kw">outdated</span>(my_plan)   <span class="co"># Some targets depend on reg2().</span>
 <span class="kw">plot_graph</span>(my_plan) <span class="co"># Set targets_only to TRUE for smaller graphs.</span>
-<span class="kw">make</span>(my_plan) <span class="co"># Rebuild just the outdated targets.</span>
-<span class="kw">outdated</span>(my_plan) <span class="co"># Everything is up to date again.</span>
+<span class="kw">make</span>(my_plan)       <span class="co"># Rebuild just the outdated targets.</span>
+<span class="kw">outdated</span>(my_plan)   <span class="co"># Everything is up to date again.</span>
 <span class="kw">plot_graph</span>(my_plan) <span class="co"># The colors changed in the graph.</span></code></pre></div>
+<p>Similarly to imported functions like <code>reg2()</code>, <code>drake</code> reacts to changes in</p>
+<ol style="list-style-type: decimal">
+<li>Other imported functions, whether user-defined or from packages.</li>
+<li>For imported functions from your environment, any nested functions also in your environment or from packages.</li>
+<li>Commands in your workflow plan data frame.</li>
+<li>Global variables mentioned in the commands or imported functions.</li>
+<li>Upstream targets.</li>
+<li>For <a href="https://yihui.name/knitr/">dynamic knitr reports</a> (with <code>knit('your_report.Rmd')</code> as a command in your workflow plan data frame), targets and imports mentioned in calls to <code>readd()</code> and <code>loadd()</code> in the code chunks to be evaluated. <code>Drake</code> treats these targets and imports as dependencies of the compiled output target (say, <code>report.md</code>).</li>
+</ol>
+<p>See the <code>quickstart</code> vignette for demonstrations of <code>drake</code>’s reproducibility and reactivity.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>)</code></pre></div>
+<p>You can enhance reprodubility beyond the scope of <code>drake</code>. <a href="https://rstudio.github.io/packrat">Packrat</a> creates a tightly-controlled local library of packages to extend the shelf life of your project. And with <a href="https://www.docker.com/">Docker</a>, you can execute your project on a <a href="https://en.wikipedia.org/wiki/Virtual_machine">virtual machine</a> to ensure platform independence. Together, <a href="https://rstudio.github.io/packrat">packrat</a> and <a href="https://www.docker.com/">Docker</a> can help others reproduce your work even if they have different software and hardware.</p>
 </div>
 <div id="high-performance-computing" class="section level1">
-<h1>High-performance computing</h1>
+<h1><span class="header-section-number">8</span> High-performance computing</h1>
 <p>Similarly to <a href="https://www.gnu.org/software/make/">Make</a>, drake arranges the intermediate steps of your workflow in a dependency web. This network is the key to drake’s parallel computing. For example, consider the network graph of the basic example.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
 <span class="kw">load_basic_example</span>()
@@ -243,48 +270,18 @@ reg2 &lt;-<span class="st"> </span>function(d){
 }</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
 <span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
-<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/a816f791/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
-<p>When you call <code>make(my_plan, jobs = 4)</code>, the work proceeds in chronological order from left to right. The items are built or imported column by column in sequence, and up-to-date targets are skipped. Within each column, the targets/objects are all independent of each other conditional on the previous steps, so they are distributed over the 4 available parallel jobs/workers. Assuming the targets are rate-limiting (as opposed to imported objects), the next <code>make(..., jobs = 4)</code> should be faster than <code>make(..., jobs = 1)</code>, but it would be superfluous to use more than 4 jobs.</p>
-<p>See function <code>max_useful_jobs()</code> to suggest the number of jobs, taking into account which targets are already up to date. Try out the following in a fresh R session.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
-<span class="kw">load_basic_example</span>()
-<span class="kw">plot_graph</span>(my_plan) <span class="co"># Look at the graph to make sense of the output.</span>
-<span class="kw">max_useful_jobs</span>(my_plan) <span class="co"># 8</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;files&quot;</span>) <span class="co"># 8</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;all&quot;</span>) <span class="co"># 10</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;none&quot;</span>) <span class="co"># 8</span>
-<span class="kw">make</span>(my_plan)
-<span class="kw">plot_graph</span>(my_plan)
-<span class="co"># Ignore the targets already built.</span>
-<span class="kw">max_useful_jobs</span>(my_plan) <span class="co"># 1</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;files&quot;</span>) <span class="co"># 1</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;all&quot;</span>) <span class="co"># 10</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;none&quot;</span>) <span class="co"># 0</span>
-<span class="co"># Change a function so some targets are now out of date.</span>
-reg2 &lt;-<span class="st"> </span>function(d){
-  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
-  <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
-}
-<span class="kw">plot_graph</span>(my_plan)
-<span class="kw">max_useful_jobs</span>(my_plan) <span class="co"># 4</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">from_scratch =</span> <span class="ot">TRUE</span>) <span class="co"># 8</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;files&quot;</span>) <span class="co"># 4</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;all&quot;</span>) <span class="co"># 10</span>
-<span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;none&quot;</span>) <span class="co"># 4</span></code></pre></div>
-<p>As for how the parallelism is implemented, you can choose from multiple built-in backends.</p>
-<ol style="list-style-type: decimal">
-<li><strong>mclapply</strong>: low-overhead, light-weight. <code>make(..., parallelism = &quot;mclapply&quot;, jobs = 2)</code> invokes <code>parallel::mclapply()</code> under the hood and distributes the work over at most two independent processes (set with <code>jobs</code>). Mclapply is an ideal choice for low-overhead single-node parallelism, but it does not work on Windows.</li>
-<li><strong>parLapply</strong>: medium-overhead, light-weight. <code>make(..., parallelism = &quot;parLapply&quot;, jobs = 2)</code> invokes <code>parallel::mclapply()</code> under the hood. This option is similar to mclapply except that it works on Windows and costs a little extra time up front.</li>
-<li><strong>Makefile</strong>: high-overhead, heavy-duty. <code>make(..., parallelism = &quot;Makefile&quot;, jobs = 2)</code> creates a proper <a href="https://www.gnu.org/software/make/">Makefile</a> to distribute the work over multiple independent R sessions. With custom settings, you can distribute the R sessions over different jobs/nodes on a cluster. The build order may be different here because all the imports are imported before any of the targets are built with the <a href="https://www.gnu.org/software/make/">Makefile</a>. That means <code>plot_graph()</code>, <code>dataframes_graph()</code>, and <code>max_useful_jobs()</code> behave differently for . For more details, see the <a href="https://cran.r-project.org/package=drake/vignettes/quickstart.html">quickstart vignette</a>.</li>
-</ol>
+<p>When you call <code>make(my_plan, jobs = 4)</code>, the work proceeds in chronological order from left to right. The items are built or imported column by column in sequence, and up-to-date targets are skipped. Within each column, the targets/objects are all independent of each other conditional on the previous steps, so they are distributed over the 4 available parallel jobs/workers. Assuming the targets are rate-limiting (as opposed to imported objects), the next <code>make(..., jobs = 4)</code> should be faster than <code>make(..., jobs = 1)</code>, but it would be superfluous to use more than 4 jobs. See function <code>max_useful_jobs()</code> to suggest the number of jobs, taking into account which targets are already up to date.</p>
+<p>As for the implementation, you can choose from multiple built-in parallel backends, including <code>parLapply()</code>, <code>mclapply()</code>, and <a href="https://www.gnu.org/software/make/"><code>Makefiles</code></a>, the last of which can be tweaked to distribute targets to different jobs on a cluster. Please see the <code>parallelism</code> vignette for details.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">vignette</span>(<span class="st">&quot;parallelism&quot;</span>)</code></pre></div>
 </div>
 <div id="acknowledgements-and-related-work" class="section level1">
-<h1>Acknowledgements and related work</h1>
+<h1><span class="header-section-number">9</span> Acknowledgements and related work</h1>
 <p>The original idea of a time-saving reproducible build system extends back decades to <a href="http://kbroman.org/minimal_make/">GNU Make</a>, which today helps <a href="http://blog.kaggle.com/2012/10/15/make-for-data-scientists/">data scientists</a> as well as the original user base of complied-language programmers. More recently, <a href="http://richfitz.github.io/">Rich FitzJohn</a> created <a href="https://github.com/richfitz/remake">remake</a>, a breakthrough reimagining of <a href="http://kbroman.org/minimal_make/">Make</a> for R and the most important inspiration for drake. Drake is a fresh reinterpretation of some of <a href="https://github.com/richfitz/remake">remake</a>’s pioneering fundamental concepts, scaled up for computationally-demanding workflows. There are <a href="https://github.com/pditommaso/awesome-pipeline">many other pipeline toolkits</a>, but few are R-focused.</p>
 <p>Thanks also to <a href="http://krlmlr.github.io/">Kirill Müller</a> and <a href="http://danielfalster.com/">Daniel Falster</a>. They contributed code patches and enhancement ideas to my <a href="https://github.com/wlandau/parallelRemake">parallelRemake</a> and <a href="https://github.com/wlandau/remakeGenerator">remakeGenerator</a> packages, which I have now subsumed into drake.</p>
 <p>Special thanks to <a href="http://www.jarad.me/">Jarad Niemi</a>, my advisor from <a href="http://stat.iastate.edu/">graduate school</a>, for first introducing me to the idea of <a href="https://www.gnu.org/software/make/">Makefiles</a> for research. It took several months to convince me, and I am glad he succeeded.</p>
-<p>In the sphere of reproducibility, drake and <a href="https://github.com/richfitz/remake">remake</a> are examples of non-literate programming tools (as opposed to literate programming tools such as <a href="https://CRAN.R-project.org/package=knitr">knitr</a>). Counterparts include <a href="https://CRAN.R-project.org/package=R.cache">R.cache</a>, <a href="https://CRAN.R-project.org/package=archivist">archivist</a>, <a href="https://github.com/gmbecker/recordr">trackr</a>, and <a href="https://CRAN.R-project.org/package=memoise">memoise</a>. See the <a href="https://CRAN.R-project.org/view=ReproducibleResearch">reporducible research CRAN task view</a> for a more comprehensive list. Drake differentiates itself from these tools with its ability to track the relationships among cached objects and its extensive high-performance computing functionality.</p>
+<p>In the sphere of reproducibility, drake and <a href="https://github.com/richfitz/remake">remake</a> are examples of non-literate programming tools (as opposed to literate programming tools such as <a href="https://CRAN.R-project.org/package=knitr">knitr</a>). Counterparts include <a href="https://CRAN.R-project.org/package=R.cache">R.cache</a>, <a href="https://CRAN.R-project.org/package=archivist">archivist</a>, <a href="https://github.com/gmbecker/recordr">trackr</a>, and <a href="https://CRAN.R-project.org/package=memoise">memoise</a>. See the <a href="https://CRAN.R-project.org/view=ReproducibleResearch">reproducible research CRAN task view</a> for a more comprehensive list. Drake differentiates itself from these tools with its ability to track the relationships among cached objects and its extensive high-performance computing functionality.</p>
 </div>
 
 

@@ -10,7 +10,7 @@ build <- function(target, hash_list, config) {
       config = config)
   } else {
     value <- build_target(target = target,
-        hashes = hashes, config = config)
+      hashes = hashes, config = config)
   }
   store_target(target = target, value = value, hashes = hashes,
     imported = imported, config = config)
@@ -28,7 +28,11 @@ build <- function(target, hash_list, config) {
 build_target <- function(target, hashes, config) {
   command <- get_command(target = target, config = config) %>%
     functionize
-  value <- eval(parse(text = command), envir = config$envir)
+  seed <- list(seed = config$seed, target = target) %>%
+    seed_from_object
+  withr::with_seed(seed, {
+    value <- eval(parse(text = command), envir = config$envir)
+  })
   check_built_file(target)
   value
 }
@@ -44,15 +48,16 @@ check_built_file <- function(target){
 }
 
 imported_target <- function(target, hashes, config) {
-  if (is_file(target))
+  if (is_file(target)) {
     return(hashes$file)
-  else if (target %in% ls(config$envir, all.names = TRUE))
+  } else if (target %in% ls(config$envir, all.names = TRUE)) {
     value <- config$envir[[target]]
-  else
+  } else {
     value <- tryCatch(
       flexible_get(target),
       error = function(e)
         console(imported = NA, target = target, config = config))
+  }
   value
 }
 
@@ -72,14 +77,16 @@ flexible_get <- function(target) {
 }
 
 store_target <- function(target, value, hashes, imported, config) {
-  if (is_file(target))
-    store_file(target, hashes = hashes, imported = imported,
-      config = config) else if (is.function(value))
+  if (is_file(target)) {
+    store_file(target = target, hashes = hashes, imported = imported,
+      config = config)
+  } else if (is.function(value)) {
     store_function(target = target, value = value,
       imported = imported, hashes = hashes, config = config)
-  else
+  } else {
     store_object(target = target, value = value,
       imported = imported, config = config)
+  }
   config$cache$set(key = target, value = hashes$depends,
     namespace = "depends")
 }

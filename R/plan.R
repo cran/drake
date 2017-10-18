@@ -12,7 +12,7 @@
 #' The distinction is important because drake thinks about
 #' how files, objects, targets, etc. depend on each other.
 #' Quotes in the \code{list} argument are left alone,
-#' but R messes with quotes when it parses the freeform
+#' but R messes with quotes when it parses the free-form
 #' arguments in \code{...}, so use the \code{strings_in_dots}
 #' argument to control the quoting in \code{...}.
 #' @seealso \code{link{check}}, \code{\link{make}},
@@ -46,7 +46,7 @@ plan <- function(
   list = character(0),
   file_targets = FALSE,
   strings_in_dots = c("filenames", "literals")
-  ){
+){
   strings_in_dots <- match.arg(strings_in_dots)
   dots <- match.call(expand.dots = FALSE)$...
   commands_dots <- lapply(dots, wide_deparse)
@@ -69,7 +69,7 @@ plan <- function(
   )
   from_dots <- plan$target %in% names(commands_dots)
   if (file_targets){
-    plan$target <- quotes(plan$target, single = T)
+    plan$target <- eply::quotes(plan$target, single = T)
   }
   if (strings_in_dots == "filenames"){
     plan$command[from_dots] <- gsub("\"", "'", plan$command[from_dots])
@@ -90,7 +90,7 @@ plan <- function(
 #' @examples
 #' as_file("my_file.rds")
 as_file <- function(x){
-  quotes(x, single = TRUE)
+  eply::quotes(x, single = TRUE)
 }
 
 wide_deparse <- function(x){

@@ -4,14 +4,14 @@
 \alias{tracked}
 \title{Function \code{tracked}}
 \usage{
-tracked(plan, targets = drake::possible_targets(plan),
+tracked(plan = drake::plan(), targets = drake::possible_targets(plan),
   envir = parent.frame())
 }
 \arguments{
 \item{plan}{workflow plan data frame, same as for function
 \code{\link{make}()}.}
 
-\item{targets}{names of targets to bulid, same as for function
+\item{targets}{names of targets to build, same as for function
 \code{\link{make}()}.}
 
 \item{envir}{environment to import from, same as for function

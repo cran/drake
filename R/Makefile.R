@@ -44,25 +44,6 @@ run_Makefile <- function( #nolint: we want Makefile capitalized.
   return(invisible(error_code))
 }
 
-#' @title Internal function \code{default_system2_args}
-#' @description Internal function to configure
-#' arguments to \code{\link{system2}()} to run Makefiles.
-#' Not a user-side function.
-#' @export
-#' @return \code{args} for \code{\link{system2}(command, args)}
-#' @param jobs number of jobs
-#' @param verbose logical, whether to be verbose
-#' @examples
-#' default_system2_args(jobs = 2, verbose = FALSE)
-#' default_system2_args(jobs = 4, verbose = TRUE)
-default_system2_args <- function(jobs, verbose){
-  out <- paste0("--jobs=", jobs)
-  if (!verbose){
-    out <- c(out, "--silent")
-  }
-  return(out)
-}
-
 makefile_head <- function(config){
   if (length(config$prepend)){
     cat(config$prepend, "\n", sep = "\n")
@@ -98,16 +79,28 @@ makefile_rules <- function(config){
     if (length(deps)){
       cat(deps, sep = breaker)
     }
-    if (is_file(target)){
-      target <- paste0("drake::as_file(\"", unquote(target), "\")")
-    } else{
-      target <- quotes(unquote(target), single = FALSE)
-    }
-    cat("\tRscript -e 'drake::mk(", target,
-      ", \"$(", cache_macro, ")\")'\n",
-      sep = ""
-    )
+    this_recipe <- build_recipe(target, config$recipe_command)
+    cat("\t", this_recipe, "\n", sep = "")
   }
+}
+
+build_recipe <- function(target, recipe_command,
+  cache_path = NULL){
+  if (is.null(cache_path)){
+    cache_path <- cache_value_macro
+  }
+  if (is_file(target)){
+    target <- paste0("drake::as_file(\"", eply::unquote(target), "\")")
+  } else{
+    target <- eply::quotes(
+      eply::unquote(target), single = FALSE)
+  }
+  r_recipe <- paste0("drake::mk(target = ", target,
+    ", cache_path = \"", cache_path, "\")")
+  if (!safe_grepl(r_recipe_wildcard(), recipe_command)){
+    recipe_command <- paste0(recipe_command, " '", r_recipe_wildcard(), "'")
+  }
+  gsub(r_recipe_wildcard(), r_recipe, recipe_command)
 }
 
 #' @title Function \code{mk}
@@ -117,7 +110,10 @@ makefile_rules <- function(config){
 #' @export
 #' @param target name of target to make
 #' @param cache_path path to the drake cache
-mk <- function(target, cache_path = NULL){
+mk <- function(
+  target = character(0),
+  cache_path = drake::default_cache_path()
+){
   cache <- this_cache(cache_path)
   config <- cache$get("config", namespace = "makefile")
   if (identical(globalenv(), config$envir)){
@@ -147,4 +143,32 @@ mk <- function(target, cache_path = NULL){
     file_overwrite(file)
   }
   return(invisible())
+}
+
+#' @title Function \code{default_system2_args}
+#' @description Configures default
+#' arguments to \code{\link{system2}()} to run Makefiles.
+#' @export
+#' @return \code{args} for \code{\link{system2}(command, args)}
+#' @param jobs number of jobs
+#' @param verbose logical, whether to be verbose
+#' @examples
+#' default_system2_args(jobs = 2, verbose = FALSE)
+#' default_system2_args(jobs = 4, verbose = TRUE)
+default_system2_args <- function(jobs, verbose){
+  out <- paste0("--jobs=", jobs)
+  if (!verbose){
+    out <- c(out, "--silent")
+  }
+  return(out)
+}
+
+#' @title Function \code{default_Makefile_command}
+#' @description Give the default \code{command}
+#' argument to \code{\link{make}()}
+#' @export
+#' @examples
+#' default_Makefile_command()
+default_Makefile_command <- function(){
+  "make"
 }

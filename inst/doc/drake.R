@@ -6,7 +6,7 @@ unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 ## ----firstintroindrake---------------------------------------------------
 library(drake)
 load_basic_example() # Also (over)writes report.Rmd.
-my_plan # Each target is a file (single-quoted) or object
+my_plan              # Each target is a file (single-quoted) or object.
 
 ## ----makedrakenoevalrmd, eval = FALSE------------------------------------
 #  make(my_plan) # Run the commands to build the targets.
@@ -22,17 +22,17 @@ my_plan # Each target is a file (single-quoted) or object
 ## ----quickstartdrakermd, eval = FALSE------------------------------------
 #  library(drake)
 #  load_basic_example() # Also (over)writes report.Rmd.
-#  plot_graph(my_plan) # Hover, click, drag, zoom, pan.
-#  outdated(my_plan) # Which targets need to be (re)built?
-#  missed(my_plan) # Are you missing anything from your workspace?
-#  check(my_plan) # Are you missing files? Is your workflow plan okay?
-#  make(my_plan) # Run the workflow.
-#  outdated(my_plan) # Everything is up to date.
-#  plot_graph(my_plan) # The graph also shows what is up to date.
+#  plot_graph(my_plan)  # Hover, click, drag, zoom, pan.
+#  outdated(my_plan)    # Which targets need to be (re)built?
+#  missed(my_plan)      # Are you missing anything from your workspace?
+#  check(my_plan)       # Are you missing files? Is your workflow plan okay?
+#  make(my_plan)        # Run the workflow.
+#  outdated(my_plan)    # Everything is up to date.
+#  plot_graph(my_plan)  # The graph also shows what is up to date.
 
 ## ----examplesdrakermd, eval = FALSE--------------------------------------
 #  example_drake("basic") # Write the code files of the canonical tutorial.
-#  examples_drake() # List the other examples.
+#  examples_drake()       # List the other examples.
 #  vignette("quickstart") # See https://cran.r-project.org/package=drake/vignettes
 
 ## ----learndrakermd, eval = FALSE-----------------------------------------
@@ -58,6 +58,7 @@ my_plan # Each target is a file (single-quoted) or object
 #  render_graph()
 #  read_graph()
 #  deps()
+#  knitr_deps
 #  tracked()
 
 ## ----cachedrakermd, eval = FALSE-----------------------------------------
@@ -104,28 +105,33 @@ my_plan # Each target is a file (single-quoted) or object
 #  read_config()
 
 ## ----vignettesdrakermd, eval = FALSE-------------------------------------
-#  vignette(package = "drake") # List the vignettes.
-#  vignette("drake") # High-level intro.
-#  vignette("quickstart") # Walk through a simple example.
-#  vignette("storage") # Learn how drake stores your stuff.
-#  vignette("caution") # Avoid common pitfalls.
+#  vignette(package = "drake")            # List the vignettes.
+#  vignette("drake")                      # High-level intro.
+#  vignette("quickstart")                 # Walk through a simple example.
+#  vignette("parallelism") # Lots of parallel computing support.
+#  vignette("storage")                    # Learn how drake stores your stuff.
+#  vignette("timing")                     # Build times, runtime predictions
+#  vignette("caution")                    # Avoid common pitfalls.
 
 ## ----reproducibilitydrakermd, eval = FALSE-------------------------------
 #  library(drake)
 #  load_basic_example()
 #  outdated(my_plan) # Which targets need to be (re)built?
-#  make(my_plan) # Build what needs to be built.
+#  make(my_plan)     # Build what needs to be built.
 #  outdated(my_plan) # Everything is up to date.
 #  # Change one of your functions.
 #  reg2 <- function(d) {
 #    d$x3 <- d$x ^ 3
 #    lm(y ~ x3, data = d)
 #  }
-#  outdated(my_plan) # Some targets depend on reg2().
+#  outdated(my_plan)   # Some targets depend on reg2().
 #  plot_graph(my_plan) # Set targets_only to TRUE for smaller graphs.
-#  make(my_plan) # Rebuild just the outdated targets.
-#  outdated(my_plan) # Everything is up to date again.
+#  make(my_plan)       # Rebuild just the outdated targets.
+#  outdated(my_plan)   # Everything is up to date again.
 #  plot_graph(my_plan) # The colors changed in the graph.
+
+## ----drakermdquickvignette, eval = FALSE---------------------------------
+#  vignette("quickstart")
 
 ## ----basicgraph----------------------------------------------------------
 library(drake)
@@ -141,32 +147,8 @@ reg2 <- function(d){
 #  # Hover, click, drag, zoom, and pan.
 #  plot_graph(my_plan, width = "100%", height = "500px")
 
-## ----masusefuljobsdrakermd, eval = FALSE---------------------------------
-#  library(drake)
-#  load_basic_example()
-#  plot_graph(my_plan) # Look at the graph to make sense of the output.
-#  max_useful_jobs(my_plan) # 8
-#  max_useful_jobs(my_plan, imports = "files") # 8
-#  max_useful_jobs(my_plan, imports = "all") # 10
-#  max_useful_jobs(my_plan, imports = "none") # 8
-#  make(my_plan)
-#  plot_graph(my_plan)
-#  # Ignore the targets already built.
-#  max_useful_jobs(my_plan) # 1
-#  max_useful_jobs(my_plan, imports = "files") # 1
-#  max_useful_jobs(my_plan, imports = "all") # 10
-#  max_useful_jobs(my_plan, imports = "none") # 0
-#  # Change a function so some targets are now out of date.
-#  reg2 <- function(d){
-#    d$x3 <- d$x ^ 3
-#    lm(y ~ x3, data = d)
-#  }
-#  plot_graph(my_plan)
-#  max_useful_jobs(my_plan) # 4
-#  max_useful_jobs(my_plan, from_scratch = TRUE) # 8
-#  max_useful_jobs(my_plan, imports = "files") # 4
-#  max_useful_jobs(my_plan, imports = "all") # 10
-#  max_useful_jobs(my_plan, imports = "none") # 4
+## ----drakermdhpcvignette, eval = FALSE-----------------------------------
+#  vignette("parallelism")
 
 ## ----rmfiles_main, echo = FALSE------------------------------------------
 clean(destroy = TRUE)

@@ -1,27 +1,52 @@
 ## ---- echo = F-----------------------------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
+suppressMessages(suppressWarnings(library(magrittr)))
 clean(destroy = TRUE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 
-## ----unparsable_plan-----------------------------------------------------
-template <- plan(x = process(..setting..))
-processed <- evaluate(template, wildcard = "..setting..",
-  values = c("\"option1\"", "\"option2\""))
-gathered <- gather(processed, target = "bad_target")
-my_plan <- rbind(processed, gathered)
-my_plan
+## ----filethenevaluate----------------------------------------------------
+library(magrittr) # for the pipe operator %>%
+plan(
+  data = readRDS("data_..datasize...rds")
+) %>%
+  rbind(drake::plan(
+    file.csv = write.csv(
+      data_..datasize.., # nolint
+      "file_..datasize...csv"
+    ),
+    strings_in_dots = "literals",
+    file_targets = T
+  )) %>%
+  evaluate(
+    rules = list(..datasize.. = c("small", "large"))
+  )
 
-## ----parsable_plan-------------------------------------------------------
-template <- plan(x = process("..setting.."), strings_in_dots = "literals")
-processed <- evaluate(template, wildcard = "..setting..",
-  values = c("option1", "option2"))
-gathered <- gather(processed, target = "bad_target")
-my_plan <- rbind(processed, gathered)
-my_plan
+## ----correctevaldatasize-------------------------------------------------
+rules <- list(..datasize.. = c("small", "large"))
+datasets <- plan(data = readRDS("data_..datasize...rds")) %>%
+  evaluate(rules = rules)
 
-## ------------------------------------------------------------------------
-plan(target1 = 1 + 1 - sqrt(sqrt(3)),
-     target2 = my_function(web_scraped_data) %>% my_tidy)
+## ----correctevaldatasize2------------------------------------------------
+files <- plan(
+  file = write.csv(data_..datasize.., "file_..datasize...csv"), # nolint
+  strings_in_dots = "literals"
+) %>%
+  evaluate(rules = rules)
+
+## ----correctevaldatasize3------------------------------------------------
+files$target <- paste0(
+  files$target, ".csv"
+) %>%
+  as_file
+
+## ----correctevaldatasize4------------------------------------------------
+rbind(datasets, files)
+
+## ----tidyplancaution-----------------------------------------------------
+plan(
+  target1 = 1 + 1 - sqrt(sqrt(3)),
+  target2 = my_function(web_scraped_data) %>% my_tidy
+)
 
 ## ----envir---------------------------------------------------------------
 library(drake)
@@ -33,7 +58,8 @@ eval(expression({
   g <- function(x){
     x + 1
   }
-}), envir = envir)
+}
+), envir = envir)
 myplan <- plan(out = f(1:3))
 make(myplan, envir = envir)
 ls() # Check that your workspace did not change.
@@ -49,6 +75,36 @@ my_plan <- plan(list = c(a = "x <- 1; return(x)"))
 my_plan
 deps(my_plan$command[1])
 
+## ----devtools1, eval = FALSE---------------------------------------------
+#  env <- devtools::load_all("yourProject")$env # Has all your imported functions
+#  drake::make(my_plan, envir = env)            # Run the project normally.
+
+## ----devtools2, eval = FALSE---------------------------------------------
+#  env <- devtools::load_all("yourProject")$env
+#  env <- list2env(as.list(env), parent = globalenv())
+
+## ----devtools3, eval = FALSE---------------------------------------------
+#  for (name in ls(env)){
+#    assign(
+#      x = name,
+#      envir = env,
+#      value = `environment<-`(get(n, envir = env), env)
+#    )
+#  }
+
+## ----devtools4, eval = FALSE---------------------------------------------
+#  package_name <- "yourProject" # devtools::as.package(".")$package # nolint
+#  packages_to_load <- setdiff(.packages(), package_name)
+
+## ----devtools5, eval = FALSE---------------------------------------------
+#  make(
+#    my_plan, # Prepared in advance
+#    envir = env,
+#    parallelism = "Makefile", # Or "parLapply"
+#    jobs = 2,
+#    packages = packages_to_load # Does not include "yourProject"
+#  )
+
 ## ----previewmyplan-------------------------------------------------------
 load_basic_example()
 my_plan
@@ -60,7 +116,7 @@ my_plan
 ## ----checkdeps-----------------------------------------------------------
 deps(reg2)
 deps(my_plan$command[1]) # File dependencies like report.Rmd are single-quoted.
-deps(my_plan$command[16])
+deps(my_plan$command[nrow(my_plan)])
 
 ## ----tracked-------------------------------------------------------------
 tracked(my_plan, targets = "small")
@@ -80,6 +136,24 @@ f <- function(){
 deps(f)
 command <- "x <- digest::digest('input_file.rds'); assign(\"x\", 1); x"
 deps(command)
+
+## ----knitrdeps1----------------------------------------------------------
+load_basic_example()
+my_plan[1, ]
+
+## ----knitr2--------------------------------------------------------------
+deps("knit('report.Rmd')")
+deps("'report.Rmd'") # These are actually dependencies of 'report.md' (output)
+
+## ----badknitr, eval = FALSE----------------------------------------------
+#  var <- "good_target"
+#  # Works in isolation, but drake sees "var" literally as a dependency,
+#  # not "good_target".
+#  readd(target = var, character_only = TRUE)
+#  loadd(list = var)
+#  # All cached items are loaded, but none are treated as dependencies.
+#  loadd()
+#  loadd(imports_only = TRUE)
 
 ## ----vectorizedfunctioncaution, eval = FALSE-----------------------------
 #  args <- lapply(as.list(match.call())[-1L], eval, parent.frame())

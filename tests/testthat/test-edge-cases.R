@@ -1,11 +1,35 @@
-cat(get_testing_scenario_name(), ": ", sep = "")
-context("edge-cases")
+drake_context("edge cases")
+
+test_with_dir("deprecation", {
+  plan <- data.frame(code = 1:2, output = c("x", "y"))
+  expect_warning(make(plan, verbose = FALSE))
+  expect_warning(make(plan, verbose = FALSE))
+  expect_warning(status())
+  expect_true(is.numeric(readd(x, search = FALSE)))
+  expect_warning(prune(plan[1, ]))
+  expect_equal(cached(), "x")
+  expect_warning(make(plan(x = 1), return_config = TRUE,
+    verbose = FALSE))
+  x <- this_cache()
+
+  # We need to be able to set the drake version
+  # to check back compatibility.
+  x$del(key = "initial_drake_version", namespace = "session")
+  expect_false("initial_drake_version" %in% x$list(namespace = "session"))
+  set_initial_drake_version(cache = x)
+  expect_true("initial_drake_version" %in% x$list(namespace = "session"))
+})
 
 test_with_dir("graph does not fail if input file is binary", {
   x <- plan(y = readRDS("input.rds"))
   saveRDS(as.list(mtcars), "input.rds")
   expect_silent(out <- plot_graph(x, verbose = FALSE))
   unlink("input.rds", force = TRUE)
+})
+
+test_with_dir("null graph", {
+  x <- dataframes_graph(config = list(graph = igraph::make_empty_graph()))
+  expect_equal(x, null_graph())
 })
 
 test_with_dir("illegal hashes", {
@@ -23,6 +47,7 @@ test_with_dir("different graphical arrangements for Makefile parallelism", {
     parallelism = "mclapply", jobs = 1))
   expect_equal(1, max_useful_jobs(x, envir = e, config = con,
     parallelism = "parLapply", jobs = 1))
+  con$parallelism <- "Makefile"
   expect_equal(2, max_useful_jobs(x, envir = e, config = con,
     parallelism = "Makefile", jobs = 1))
 })
@@ -122,7 +147,7 @@ test_with_dir("true targets can be functions", {
     x + 1
   })
   plan <- plan(myfunction = generator(), output = myfunction(1))
-  config <- make(plan, verbose = FALSE, return_config = TRUE)
+  config <- make(plan, verbose = FALSE)
   expect_equal(readd(output), 2)
   expect_true(is.list(config$cache$get("myfunction")))
   myfunction <- readd(myfunction)

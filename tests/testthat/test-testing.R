@@ -1,5 +1,4 @@
-cat(get_testing_scenario_name(), ": ", sep = "")
-context("testing")
+drake_context("testing")
 
 test_with_dir("set_testing_scenario", {
   original <- get_testing_scenario_name()
@@ -7,10 +6,10 @@ test_with_dir("set_testing_scenario", {
   with_all_options({
     expect_equal(get_testing_scenario_name(), original)
     expect_error(set_testing_scenario("lskdjf"))
-    set_testing_scenario("local_mcl_8")
-    expect_equal(get_testing_scenario_name(), "local_mcl_8")
+    set_testing_scenario("local_mclapply_9")
+    expect_equal(get_testing_scenario_name(), "local_mclapply_9")
     expect_equal(get_testing_scenario()$parallelism, "mclapply")
-    expect_equal(get_testing_scenario()$jobs, 8)
+    expect_equal(get_testing_scenario()$jobs, 9)
   })
   expect_equal(original, get_testing_scenario_name())
   expect_equal(original_opt, getOption(test_option_name))
@@ -21,12 +20,12 @@ test_with_dir("testing utils", {
   testfiles <- unit_test_files(path = path)
   expect_equal(basename(testfiles), "testthat")
   expect_true(is.character(this_os()))
-  scenario <- names(testing_scenarios)[1]
-  expect_true(is.list(get_testing_scenario()))
-  expect_true(is.list(testing_scenarios))
+  scenario <- default_testing_scenario
+  expect_true(is.data.frame(get_testing_scenario()))
+  expect_true(is.data.frame(testing_scenarios()))
   expect_false(should_skip(scenario, os = "windows"))
   expect_false(should_skip(scenario, os = "linux"))
-  scenario <- "global_mcl_2"
+  scenario <- "global_mclapply_2"
   expect_true(should_skip(scenario, os = "windows"))
   expect_false(should_skip(scenario, os = "linux"))
   expect_error(should_skip("scenario not found"))
@@ -52,15 +51,9 @@ test_with_dir("test_scenarios()", {
     dir.create(subdir)
   }
   file <- file.path(subdir, "test-small.R")
+
   writeLines(
-    text = c(
-      "test_with_dir('super nested test', {",
-      "  cat('logged scenario', getOption(test_option_name), ' ')",
-      "  some_nested_object <- 1",
-      "  expect_true('some_nested_object' %in% ls())",
-      "  expect_false('some_outside_object' %in% ls())",
-      "})"
-    ),
+    text = "cat('logged scenario', getOption('drake_test_scenario'), ' ')",
     con = file
   )
 
@@ -88,7 +81,7 @@ test_with_dir("test_scenarios()", {
   log <- log[loggings]
   log <- gsub("logged scenario ", "", log)
   log <- gsub(" .*", "", log)
-  expect_equal(sort(log), sort(names(testing_scenarios)))
+  expect_equal(sort(log), sort(testing_scenario_names()))
 
   log <- capture.output(
     test_scenarios(

@@ -1,6 +1,6 @@
 #' @title Function \code{build_times}
 #' @description List all the build times.
-#' This doesn't include the amount of time
+#' This does not include the amount of time
 #' spent loading and saving objects!
 #' @seealso \code{\link{built}}
 #' @export
@@ -25,13 +25,10 @@
 build_times <- function(
   path = getwd(),
   search = TRUE,
-  digits = 0,
-  cache = NULL,
+  digits = 3,
+  cache = get_cache(path = path, search = search),
   targets_only = FALSE
 ){
-  if (is.null(cache)){
-    cache <- get_cache(path = path, search = search)
-  }
   if (is.null(cache)){
     return(empty_times())
   }

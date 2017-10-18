@@ -4,14 +4,14 @@
 \alias{build_graph}
 \title{Function \code{build_graph}}
 \usage{
-build_graph(plan, targets = drake::possible_targets(plan),
+build_graph(plan = drake::plan(), targets = drake::possible_targets(plan),
   envir = parent.frame(), verbose = TRUE)
 }
 \arguments{
 \item{plan}{workflow plan data frame, same as for function
 \code{\link{make}()}.}
 
-\item{targets}{names of targets to bulid, same as for function
+\item{targets}{names of targets to build, same as for function
 \code{\link{make}()}.}
 
 \item{envir}{environment to import from, same as for function

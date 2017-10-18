@@ -3,7 +3,10 @@ title: "Storage"
 subtitle: "Caching, hashing, and customization"
 author: "William Michael Landau"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    number_sections: true
 vignette: >
   %\VignetteIndexEntry{storage}
   %\VignetteEngine{knitr::rmarkdown}
@@ -193,6 +196,22 @@ make(other_plan, cache = memory_cache)
 cached(cache = memory_cache)
 readd(result, cache = memory_cache)
 ```
+
+# Cache types
+
+`Drake` has functions to help you create caches with known supported types.
+
+```{r cache_types}
+default_cache_type()
+cache_types()
+in_memory_cache_types()
+env <- new.env()
+my_type <- new_cache(type = "storr_environment")
+my_type_2 <- new_cache(type = "storr_environment", envir = env)
+ls(env)
+```
+
+For new in-memory caches, please use `new_cache()` rather than `get_cache()` or `recover_cache()`.
 
 # Cleaning up
 

@@ -1,5 +1,10 @@
-cat(get_testing_scenario_name(), ": ", sep = "")
-context("dependencies")
+drake_context("dependencies")
+
+test_with_dir("unparsable commands are handled correctly", {
+  x <- "bluh$"
+  expect_false(is_parsable(x))
+  expect_error(deps(x))
+})
 
 test_with_dir(
   "deps() correctly reports dependencies of functions and commands", {
@@ -26,12 +31,22 @@ test_with_dir(
     sort(c("'tracked_input_file.rds'", "readRDS", "x")))
   expect_equal(sort(deps(my_plan$command[3])), sort(c("f", "g", "w",
     "x", "y", "z")))
+
+  load_basic_example()
+  expect_equal(sort(deps("'report.Rmd'")), sort(c(
+    "coef_regression2_small", "large", "small"
+  )))
+  f <- function(x){
+    knit(x)
+  }
+  expect_equal(deps(f), "knit")
 })
 
 test_with_dir("tracked() works", {
   config <- dbug()
   x <- sort(tracked(plan = config$plan, envir = config$envir))
-  y <- sort(c("'intermediatefile.rds'", "yourinput", "nextone",
+  y <- sort(c("'intermediatefile.rds'",
+    "yourinput", "nextone",
     "combined", "myinput", "final", "j", "i", "h", "g", "f",
     "c", "b", "a", "saveRDS", "'input.rds'", "readRDS"))
   expect_equal(x, y)

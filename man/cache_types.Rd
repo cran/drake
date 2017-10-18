@@ -13,6 +13,7 @@ List the supported drake cache types.
 cache_types()
 }
 \seealso{
+\code{\link{in_memory_cache_types}},
 \code{\link{new_cache}}, \code{\link{get_cache}},
 \code{\link{default_cache_type}}
 }

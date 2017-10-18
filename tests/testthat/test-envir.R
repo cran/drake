@@ -1,5 +1,4 @@
-cat(get_testing_scenario_name(), ": ", sep = "")
-context("envir")
+drake_context("envir")
 
 test_with_dir("prune_envir in full build", {
   # workflow with lots of nested deps This will fail if
@@ -42,6 +41,7 @@ test_with_dir("prune_envir in full build", {
     prework = character(0),
     command = "make",
     args = character(0),
+    recipe_command = default_recipe_command(),
     cache = NULL,
     clear_progress = FALSE
   )

@@ -1,5 +1,22 @@
-cat(get_testing_scenario_name(), ": ", sep = "")
-context("Makefile")
+drake_context("Makefile")
+
+test_with_dir("recipe commands", {
+  expect_output(Makefile_recipe())
+  expect_output(Makefile_recipe(recipe_command = "R -e 'R_RECIPE' -q"))
+  my_plan <- plan(y = 1)
+  expect_true(is.character(default_recipe_command()))
+  expect_true(is.character(r_recipe_wildcard()))
+  con1 <- make(my_plan, command = default_Makefile_command(),
+    parallelism = "Makefile", recipe_command = "some_command",
+    verbose = FALSE, imports_only = TRUE
+  )
+  expect_equal(con1$recipe_command, "some_command")
+  expect_true(con1$recipe_command != default_recipe_command())
+  con2 <- config(plan = my_plan, parallelism = "Makefile",
+    recipe_command = "my_command", verbose = FALSE)
+  expect_equal(con2$recipe_command, "my_command")
+  expect_true(con2$recipe_command != default_recipe_command())
+})
 
 test_with_dir("no Makefile if imports_only is TRUE", {
   expect_equal(cached(), character(0))
@@ -35,7 +52,8 @@ test_with_dir("files inside directories can be timestamped", {
   config <- build_config(plan = plan, targets = plan$target[1],
     parallelism = "parLapply", verbose = FALSE, packages = character(0),
     prework = character(0), prepend = character(0), command = character(0),
-    args = character(0), envir = new.env(), jobs = 1,
+    args = character(0), recipe_command = default_recipe_command(),
+    envir = new.env(), jobs = 1,
     cache = NULL, clear_progress = FALSE)
   path <- cache_path(config$cache)
   run_Makefile(config, run = FALSE)
@@ -99,7 +117,6 @@ test_with_dir("Makefile stuff in globalenv()", {
   drake_TESTGLOBAL_config <- make(
     drake_TESTGLOBAL_plan,
     envir = globalenv(),
-    return_config = TRUE,
     verbose = FALSE
   )
   run_Makefile(drake_TESTGLOBAL_config, run = FALSE, debug = TRUE)

@@ -4,13 +4,14 @@
 \alias{make}
 \title{Function \code{make}}
 \usage{
-make(plan, targets = drake::possible_targets(plan), envir = parent.frame(),
-  verbose = TRUE, cache = NULL,
+make(plan = drake::plan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(),
   parallelism = drake::default_parallelism(), jobs = 1,
   packages = (.packages()), prework = character(0),
-  prepend = character(0), command = "make",
+  prepend = character(0), command = drake::default_Makefile_command(),
   args = drake::default_system2_args(jobs = jobs, verbose = verbose),
-  return_config = FALSE, clear_progress = TRUE, imports_only = FALSE)
+  recipe_command = drake::default_recipe_command(), return_config = NULL,
+  clear_progress = TRUE, imports_only = FALSE)
 }
 \arguments{
 \item{plan}{workflow plan data frame.
@@ -68,10 +69,10 @@ most 4 jobs for targets, run
 
 \item{packages}{character vector packages to load, in the order
 they should be loaded. Defaults to \code{(.packages())}, so you
-shouldn't usually need to set this manually. Just call
+should not usually need to set this manually. Just call
 \code{\link{library}()} to load your packages before \code{make()}.
 However, sometimes packages need to be strictly forced to load
-in a certian order, especially if \code{parallelism} is
+in a certain order, especially if \code{parallelism} is
 \code{"Makefile"}. To do this, do not use \code{\link{library}()}
 or \code{\link{require}()} or \code{\link{loadNamespace}()} or
 \code{\link{attachNamespace}()} to load any libraries beforehand.
@@ -102,7 +103,9 @@ to take advantage of multiple nodes of a supercomputer.}
 \item{command}{character scalar, command to call the Makefile
 generated for distributed computing.
 Only applies when \code{parallelism} is \code{"Makefile"}.
-Defaults to the usual \code{"make"}, but it could also be
+Defaults to the usual \code{"make"}
+(\code{\link{default_Makefile_command}()}),
+but it could also be
 \code{"lsmake"} on supporting systems, for example.
 \code{command} and \code{args} are executed via
 \code{\link{system2}(command, args)} to run the Makefile.
@@ -122,8 +125,13 @@ If \code{args} has something like \code{"--jobs=2"}, or if
 will be distributed over independent parallel R sessions
 wherever possible.}
 
+\item{recipe_command}{Character scalar, command for the
+Makefile recipe for each target.}
+
 \item{return_config}{logical, whether to return the internal list
-of runtime configuration parameters used by \code{make()}}
+of runtime configuration parameters used by \code{make()}.
+This argument is deprecated. Now, a configuration list
+is always invisibly returned.}
 
 \item{clear_progress}{logical, whether to clear the saved record of
 progress seen by \code{\link{progress}()} and \code{\link{in_progress}()}
@@ -143,7 +151,7 @@ my_jobs = max_useful_jobs(my_plan) # Depends on what is up to date.
 make(my_plan, jobs = my_jobs) # Build what needs to be built.
 outdated(my_plan) # Everything is up to date.
 reg2 = function(d){ # Change one of your functions.
- d$x3 = d$x^3
+  d$x3 = d$x^3
   lm(y ~ x3, data = d)
 }
 outdated(my_plan) # Some targets depend on reg2().
@@ -151,6 +159,11 @@ plot_graph(my_plan) # See how they fit in an interactive graph.
 make(my_plan) # Rebuild just the outdated targets.
 outdated(my_plan) # Everything is up to date again.
 plot_graph(my_plan) # The colors changed in the graph.
+clean() # Start from scratch
+make(my_plan, parallelism = "Makefile", jobs = 4)
+clean()
+make(my_plan, parallelism = "Makefile", jobs = 4,
+  recipe_command = "R -q -e")
 }
 }
 \seealso{

@@ -11,6 +11,10 @@
 #' Defaults to your workspace.
 #' For an insulated workspace,
 #' set \code{envir = new.env(parent = globalenv())}.
+#' @param to where to write the dynamic report source file
+#' \code{report.Rmd}
+#' @param overwrite logical, whether to overwrite an
+#' existing file \code{report.Rmd}
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -22,7 +26,9 @@
 #' clean(destroy = TRUE)
 #' unlink('report.Rmd')
 #' }
-load_basic_example <- function(envir = parent.frame()) {
+load_basic_example <- function(
+  envir = parent.frame(), to = getwd(), overwrite = TRUE
+){
   eval(parse(text = "base::require(drake, quietly = TRUE)"))
   eval(parse(text = "base::require(knitr, quietly = TRUE)"))
 
@@ -39,31 +45,6 @@ load_basic_example <- function(envir = parent.frame()) {
     d$x2 <- d$x ^ 2
     lm(y ~ x2, data = d)
   }
-
-  # Knit and render a dynamic knitr report
-  envir$my_knit <- function(file, ...) {
-    knit(file, quiet = TRUE)  # drake knows you loaded the knitr package
-  }
-
-  # Write the R Markdown source for a dynamic knitr report
-  lines <- c(
-    "---",
-    "title: Example Report",
-    "author: You",
-    "output: html_document",
-    "---",
-    "",
-    "Look how I read outputs from the drake cache.",
-    "",
-    "```{r example_chunk}",
-    "library(drake)",
-    "readd(small)",
-    "readd(coef_regression2_small)",
-    "loadd(large)",
-    "head(large)",
-    "```")
-
-  writeLines(lines, "report.Rmd")
 
   # construct workflow plan
 
@@ -84,15 +65,12 @@ load_basic_example <- function(envir = parent.frame()) {
 
   summary_types <- plan(list = c(
     summ = "suppressWarnings(summary(..analysis..))",
-    coef = "coef(..analysis..)"))
+    coef = "coefficients(..analysis..)"))
 
   # summaries() also uses evaluate(): once with expand = TRUE,
   # once with expand = FALSE
   # skip 'gather' (workflow my_plan is more readable)
   results <- summaries(summary_types, analyses, datasets, gather = NULL)
-
-  load_in_report <- plan(report_dependencies = c(small, large,
-    coef_regression2_small))
 
   # External file targets and dependencies should be
   # single-quoted.  Use double quotes to remove any special
@@ -100,11 +78,20 @@ load_basic_example <- function(envir = parent.frame()) {
   # imported functions are ignored, so this mechanism only
   # works inside the workflow my_plan data frame.  WARNING:
   # drake cannot track entire directories (folders).
-  report <- plan(report.md = my_knit("report.Rmd", report_dependencies),
+  report <- plan(report.md = knit("report.Rmd", quiet = TRUE),
     file_targets = TRUE, strings_in_dots = "filenames")
 
   # Row order doesn't matter in the workflow my_plan.
-  envir$my_plan <- rbind(report, datasets, load_in_report,
+  envir$my_plan <- rbind(report, datasets,
     analyses, results)
+
+  # Write the R Markdown source for a dynamic knitr report
+  report <- system.file(
+    file.path("examples", "basic", "report.Rmd"),
+    package = "drake",
+    mustWork = TRUE
+  )
+  file.copy(from = report, to = to, overwrite = overwrite)
+
   invisible(envir$my_plan)
 }
