@@ -33,11 +33,12 @@
 #' @param targets_only logical, whether to factor in
 #' just the targets into the calculations or use the
 #' build times for everything, including the imports
-#' @param targets Targets to build in the workflow.
+#' @param targets Targets to build in the workplan.
 #' Timing information is
 #' limited to these targets and their dependencies.
 #' @param envir same as for \code{\link{make}}
 #' @param verbose same as for \code{\link{make}}
+#' @param hook same as for \code{\link{make}}
 #' @param cache optional drake cache. See code{\link{new_cache}()}.
 #' The \code{cache} argument is ignored if a
 #' non-null \code{config} argument is supplied.
@@ -65,17 +66,20 @@
 #' @param search logical, whether to search back in the file system
 #' for the cache.
 predict_runtime <- function(
-  plan = drake::plan(),
+  plan = workplan(),
   from_scratch = FALSE,
   targets_only = FALSE,
   targets = drake::possible_targets(plan),
   envir = parent.frame(),
   verbose = TRUE,
-  cache = drake::get_cache(path = path, search = search),
+  hook = function(code){
+    force(code)
+  },
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
   parallelism = drake::default_parallelism(),
   jobs = 1,
   future_jobs = jobs,
-  packages = (.packages()),
+  packages = rev(.packages()),
   prework = character(0),
   config = NULL,
   digits = 3,
@@ -91,6 +95,7 @@ predict_runtime <- function(
     targets = targets,
     envir = envir,
     verbose = verbose,
+    hook = hook,
     cache = cache,
     parallelism = parallelism,
     jobs = jobs,
@@ -106,10 +111,12 @@ predict_runtime <- function(
     round(digits = digits) %>%
     to_build_duration
 }
-  
+
 #' @title Function rate_limiting_times
 #' @description Return a data frame of elapsed build times of
-#' the rate-limiting targets of a \code{\link{make}()} workflow.
+#' the rate-limiting targets of a \code{\link{make}()} workplan.
+#' @export
+#'
 #' @details The \code{stage} column of the returned data frame
 #' is an index that denotes a parallelizable stage.
 #' Within each stage during \code{\link{make}()},
@@ -129,10 +136,11 @@ predict_runtime <- function(
 #' of all targets need to be available (automatically cached
 #' by \code{\link{make}()}). Otherwise, \code{rate_limiting_times()}
 #' will warn you and tell you which targets have missing times.
-#' @export
+#'
 #' @seealso \code{\link{predict_runtime}},
 #' \code{\link{build_times}}
 #' \code{\link{make}}
+#'
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -153,30 +161,45 @@ predict_runtime <- function(
 #'   digits = 4
 #' )
 #' }
+#'
 #' @param plan same as for \code{\link{make}}
+#'
 #' @param from_scratch logical, whether to assume
 #' next hypothetical call to \code{\link{make}()}
 #' is a build from scratch (after \code{\link{clean}()}).
+#'
 #' @param targets_only logical, whether to factor in just the
 #' targets or use times from everything, including the imports.
-#' @param targets Targets to build in the workflow.
+#'
+#' @param targets Targets to build in the workplan.
 #' Timing information is
 #' limited to these targets and their dependencies.
+#'
 #' @param envir same as for \code{\link{make}}. Supersedes
 #' \code{config$envir}.
+#'
 #' @param verbose same as for \code{\link{make}}
+#'
+#' @param hook same as for \code{\link{make}}
+#'
 #' @param cache optional drake cache. See code{\link{new_cache}()}.
 #' The \code{cache} argument is ignored if a
 #' non-null \code{config} argument is supplied.
+#'
 #' @param parallelism same as for \code{\link{make}}, and
 #' also used to process imported objects/files.
+#'
 #' @param jobs same as for \code{\link{make}}, just used to
 #' process imports.
+#'
 #' @param future_jobs hypothetical number of jobs
 #' assumed for the predicted runtime.
 #' assuming this number of jobs.
+#'
 #' @param packages same as for \code{\link{make}}
+#'
 #' @param prework same as for \code{\link{make}}
+#'
 #' @param config option internal runtime parameter list of
 #' \code{\link{make}(...)},
 #' produced with \code{\link{config}()}.
@@ -185,24 +208,30 @@ predict_runtime <- function(
 #' Computing \code{config}
 #' in advance could save time if you plan multiple calls to
 #' this function.
+#'
 #' @param digits number of digits for rounding the times.
+#'
 #' @param path file path to the folder containing the cache.
 #' Yes, this is the parent directory containing the cache,
 #' not the cache itself.
+#'
 #' @param search logical, whether to search back in the file system
 #' for the cache.
 rate_limiting_times <- function(
-  plan = drake::plan(),
+  plan = workplan(),
   from_scratch = FALSE,
   targets_only = FALSE,
   targets = drake::possible_targets(plan),
   envir = parent.frame(),
   verbose = TRUE,
-  cache = drake::get_cache(path = path, search = search),
+  hook = function(code){
+    force(code)
+  },
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
   parallelism = drake::default_parallelism(),
   jobs = 1,
   future_jobs = jobs,
-  packages = (.packages()),
+  packages = rev(.packages()),
   prework = character(0),
   config = NULL,
   digits = 3,
@@ -216,6 +245,7 @@ rate_limiting_times <- function(
       targets = targets,
       envir = envir,
       verbose = verbose,
+      hook = hook,
       cache = cache,
       parallelism = parallelism,
       jobs = jobs,
@@ -244,7 +274,11 @@ rate_limiting_times <- function(
   rownames(times) <- times$item
   times <- times[intersect(items, keys), ]
   if (!from_scratch){
-    outdated <- outdated(plan = plan, envir = envir, config = config) %>%
+    outdated <- outdated(
+      plan = plan,
+      envir = envir,
+      config = config
+    ) %>%
       intersect(y = plan$target) %>%
       c(import_keys) %>%
       intersect(y = rownames(times)) %>%
@@ -262,7 +296,8 @@ rate_limiting_times <- function(
   }
   keep_these <- setdiff(keys, rownames(times))
   graph <- delete_vertices(config$graph, v = keep_these)
-  times <- resolve_levels(config = list(nodes = times, graph = graph))
+  times <- resolve_levels(
+    config = list(nodes = times, graph = graph, jobs = config$jobs))
   colnames(times) <- gsub("^level$", "stage", colnames(times))
   ddply(times, "stage", rate_limiting_at_stage, future_jobs = future_jobs) %>%
     round_times(digits = digits) %>%
@@ -283,7 +318,8 @@ warn_not_timed <- function(not_timed){
   warning(
     "Some targets have never been built ",
     "and their times are ignored:\n",
-    multiline_message(not_timed)
+    multiline_message(not_timed),
+    call. = FALSE
   )
 }
 

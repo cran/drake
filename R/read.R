@@ -2,7 +2,7 @@
 #' @description Read a drake target object from the cache.
 #' Does not delete the item from the cache.
 #' @seealso \code{\link{loadd}}, \code{\link{cached}},
-#' \code{\link{built}}, \code{link{imported}}, \code{\link{plan}},
+#' \code{\link{built}}, \code{link{imported}}, \code{\link{workplan}},
 #' \code{\link{make}}
 #' @export
 #' @return drake target item from the cache
@@ -22,6 +22,7 @@
 #' @param cache optional drake cache. See code{\link{new_cache}()}.
 #' If \code{cache} is supplied,
 #' the \code{path} and \code{search} arguments are ignored.
+#' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -36,7 +37,8 @@ readd <- function(
   character_only = FALSE,
   path = getwd(),
   search = TRUE,
-  cache = drake::get_cache(path = path, search = search)
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  verbose = TRUE
   ){
   # if the cache is null after trying get_cache:
   if (is.null(cache)){
@@ -62,31 +64,42 @@ readd <- function(
 #' (or all the imported objects if in addition
 #' imported_only is \code{TRUE}).
 #' @seealso \code{\link{cached}}, \code{\link{built}},
-#' \code{\link{imported}}, \code{\link{plan}}, \code{\link{make}},
+#' \code{\link{imported}}, \code{\link{workplan}}, \code{\link{make}},
 #' @export
+#'
 #' @param ... targets to load from the cache, as names (unquoted)
 #' or character strings (quoted). Similar to \code{...} in
 #' \code{\link{remove}(...)}.
+#'
 #' @param list character vector naming targets to be loaded from the
 #' cache. Similar to the \code{list} argument of \code{\link{remove}()}.
+#'
 #' @param imported_only logical, whether only imported objects
 #' should be loaded.
+#'
 #' @param cache optional drake cache. See code{\link{new_cache}()}.
 #' If \code{cache} is supplied,
 #' the \code{path} and \code{search} arguments are ignored.
+#'
 #' @param path Root directory of the drake project,
 #' or if \code{search} is \code{TRUE}, either the
 #' project root or a subdirectory of the project.
+#'
 #' @param search logical. If \code{TRUE}, search parent directories
 #' to find the nearest drake cache. Otherwise, look in the
 #' current working directory only.
+#'
 #' @param envir environment to load objects into. Defaults to the
 #' calling environment (current workspace).
+#'
 #' @param jobs number of parallel jobs for loading objects. On
 #' non-Windows systems, the loading process for multiple objects
 #' can be lightly parallelized via \code{parallel::mclapply()}.
 #' just set jobs to be an integer greater than 1. On Windows,
 #' \code{jobs} is automatically demoted to 1.
+#'
+#' @param verbose whether to print console messages
+#'
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -105,9 +118,10 @@ loadd <- function(
   imported_only = FALSE,
   path = getwd(),
   search = TRUE,
-  cache = drake::get_cache(path = path, search = search),
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
   envir = parent.frame(),
-  jobs = 1
+  jobs = 1,
+  verbose = TRUE
 ){
   if (is.null(cache)){
     stop("cannot find drake cache.")
@@ -125,16 +139,18 @@ loadd <- function(
     stop("no targets to load.")
   }
   lightly_parallelize(
-    X = targets, FUN = load_target, cache = cache, envir = envir
+    X = targets, FUN = load_target, cache = cache,
+    envir = envir, verbose = verbose
   )
   invisible()
 }
 
-load_target <- function(target, cache, envir){
+load_target <- function(target, cache, envir, verbose){
   value <- readd(
     target,
     character_only = TRUE,
-    cache = cache
+    cache = cache,
+    verbose = verbose
   )
   assign(x = target, value = value, envir = envir)
 }
@@ -155,6 +171,7 @@ load_target <- function(target, cache, envir){
 #' @param search logical. If \code{TRUE}, search parent directories
 #' to find the nearest drake cache. Otherwise, look in the
 #' current working directory only.
+#' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -162,7 +179,8 @@ load_target <- function(target, cache, envir){
 #' read_config()
 #' }
 read_config <- function(path = getwd(), search = TRUE,
-  cache = drake::get_cache(path = path, search = search)
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  verbose = TRUE
 ){
   if (is.null(cache)) {
     stop("cannot find drake cache.")
@@ -192,6 +210,7 @@ read_config <- function(path = getwd(), search = TRUE,
 #' @param search logical. If \code{TRUE}, search parent directories
 #' to find the nearest drake cache. Otherwise, look in the
 #' current working directory only.
+#' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -199,7 +218,8 @@ read_config <- function(path = getwd(), search = TRUE,
 #' read_plan()
 #' }
 read_plan <- function(path = getwd(), search = TRUE,
-  cache = drake::get_cache(path = path, search = search)
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  verbose = TRUE
 ){
   read_config(path = path, search = search, cache = cache)$plan
 }
@@ -222,6 +242,7 @@ read_plan <- function(path = getwd(), search = TRUE,
 #' @param search logical. If \code{TRUE}, search parent directories
 #' to find the nearest drake cache. Otherwise, look in the
 #' current working directory only.
+#' @param verbose logical, whether to print console messages
 #' @param ... arguments to \code{visNetwork()} via \code{\link{plot_graph}()}
 #' @examples
 #' \dontrun{
@@ -232,7 +253,8 @@ read_plan <- function(path = getwd(), search = TRUE,
 #' read_graph() # Actually plot the graph as an interactive visNetwork widget.
 #' }
 read_graph <- function(path = getwd(), search = TRUE,
-  cache = drake::get_cache(path = path, search = search),
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  verbose = TRUE,
   ...
 ){
   config <- read_config(path = path, search = search, cache = cache)

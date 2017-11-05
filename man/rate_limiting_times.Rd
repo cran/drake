@@ -4,13 +4,13 @@
 \alias{rate_limiting_times}
 \title{Function rate_limiting_times}
 \usage{
-rate_limiting_times(plan = drake::plan(), from_scratch = FALSE,
+rate_limiting_times(plan = workplan(), from_scratch = FALSE,
   targets_only = FALSE, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(path =
-  path, search = search), parallelism = drake::default_parallelism(),
-  jobs = 1, future_jobs = jobs, packages = (.packages()),
-  prework = character(0), config = NULL, digits = 3, path = getwd(),
-  search = TRUE)
+  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
+  force(code) }, cache = drake::get_cache(path = path, search = search,
+  verbose = verbose), parallelism = drake::default_parallelism(), jobs = 1,
+  future_jobs = jobs, packages = rev(.packages()), prework = character(0),
+  config = NULL, digits = 3, path = getwd(), search = TRUE)
 }
 \arguments{
 \item{plan}{same as for \code{\link{make}}}
@@ -22,7 +22,7 @@ is a build from scratch (after \code{\link{clean}()}).}
 \item{targets_only}{logical, whether to factor in just the
 targets or use times from everything, including the imports.}
 
-\item{targets}{Targets to build in the workflow.
+\item{targets}{Targets to build in the workplan.
 Timing information is
 limited to these targets and their dependencies.}
 
@@ -30,6 +30,8 @@ limited to these targets and their dependencies.}
 \code{config$envir}.}
 
 \item{verbose}{same as for \code{\link{make}}}
+
+\item{hook}{same as for \code{\link{make}}}
 
 \item{cache}{optional drake cache. See code{\link{new_cache}()}.
 The \code{cache} argument is ignored if a
@@ -69,7 +71,7 @@ for the cache.}
 }
 \description{
 Return a data frame of elapsed build times of
-the rate-limiting targets of a \code{\link{make}()} workflow.
+the rate-limiting targets of a \code{\link{make}()} workplan.
 }
 \details{
 The \code{stage} column of the returned data frame
@@ -112,6 +114,7 @@ rate_limiting_times(
   digits = 4
 )
 }
+
 }
 \seealso{
 \code{\link{predict_runtime}},

@@ -23,12 +23,24 @@ unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 
 # Quick examples
 
+Inspect and run your project.
+
 ```{r quickstartquickstart, eval = FALSE}
 library(drake)
 load_basic_example() # Also (over)writes report.Rmd.
-plot_graph(my_plan) # Hover, click, drag, zoom, pan.
+plot_graph(my_plan) # Hover, click, drag, zoom, pan. See args 'from' and 'to'.
 make(my_plan) # Run the workflow.
-make(my_plan) # Check that everything is already up to date.
+outdated(my_plan) # Check that everything is already up to date.
+```
+
+Debug errors.
+
+```{r quickdebug, eval = FALSE}
+failed()                 # Targets that failed in the most recent `make()`
+diagnose()               # Targets that failed in any previous `make()`
+error <- diagnose(large) # Most recent verbose error log of `large`
+str(error)               # Object of class "error"
+error$calls              # Call stack / traceback
 ```
 
 Dive deeper into the built-in examples.
@@ -117,7 +129,7 @@ plot_graph(my_plan, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/outdated.html"
+src = "https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/outdated.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -149,10 +161,8 @@ check(my_plan)
 
 The data frame `my_plan` would be a pain to write by hand, so `drake` has functions to help you.
 
-# my_plan
-
 ```{r datasets}
-my_datasets <- plan(
+my_datasets <- workplan(
   small = simulate(5),
   large = simulate(50))
 my_datasets
@@ -167,7 +177,7 @@ expand(my_datasets, values = c("rep1", "rep2"))
 Each dataset is analyzed multiple ways.
 
 ```{r methods}
-methods <- plan(
+methods <- workplan(
   regression1 = reg1(..dataset..), # nolint
   regression2 = reg2(..dataset..)) # nolint
 methods
@@ -183,7 +193,7 @@ my_analyses
 Next, we summarize each analysis of each dataset using summary statistics and regression coefficients.
 
 ```{r summaries}
-summary_types <- plan(
+summary_types <- workplan(
   summ = suppressWarnings(summary(..analysis..)), # nolint
   coef = coefficients(..analysis..)) # nolint
 summary_types
@@ -198,7 +208,7 @@ The `gather` feature groups summaries into a smaller number of more manageable t
 For the dynamic report, we have to make sure the files are single-quoted. Single quotes denote file targets and file imports, and double quotes denote literal strings that should not be treated as dependencies where they are mentioned. Also, `knit()` needs to be somewhere visible in the workflow plan command so that `drake` knows to dig into the active code chunks of `'report.Rmd'` and look for dependencies mentioned in calls to `loadd()` and `readd()`.
 
 ```{r reportplan}
-report <- plan(
+report <- workplan(
   report.md = knit('report.Rmd', quiet = TRUE), # nolint
   file_targets = TRUE, strings_in_dots = "filenames")
 report
@@ -216,7 +226,7 @@ my_plan
 If your workflow does not fit the rigid datasets/analyses/summaries framework, check out functions `expand()`, `evaluate()`, and `gather()`.
 
 ```{r more_expansions_and_plans}
-df <- plan(data = simulate(center = MU, scale = SIGMA))
+df <- workplan(data = simulate(center = MU, scale = SIGMA))
 df
 df <- expand(df, values = c("rep1", "rep2"))
 df
@@ -264,7 +274,7 @@ plot_graph(my_plan, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/built.html"
+src = "https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/built.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -319,7 +329,7 @@ plot_graph(my_plan, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/reg2.html"
+src = "https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/reg2.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -346,7 +356,7 @@ new_simulation <- function(n){
   data.frame(x = rnorm(n), y = rnorm(n))
 }
 
-additions <- plan(
+additions <- workplan(
   new_data = new_simulation(36) + sqrt(10))
 additions
 
@@ -381,9 +391,9 @@ There is more to reproducibility than just using `drake` to watch for dependenci
 
 # Need more speed?
 
-`Drake` has extensive high-performance computing support, from local multicore computing on your laptop to serious supercomputing across multiple nodes of a large cluster. In `make()`, just set the `jobs` argument to something greater than 1. That unlocks local multicore parallelism. For large-scale distributed parallelism, set `parallelism` to `"Makefile"` and follow the instructions in the `parallelism` vignette.
+`Drake` has extensive high-performance computing support, from local multicore computing on your laptop to serious supercomputing across multiple nodes of a large cluster. See the [parallelism vignette](https://github.com/wlandau-lilly/drake/blob/master/vignettes/parallelism.Rmd) for the full details.
 
 ```{r endofline_quickstart, echo = F}
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 ```

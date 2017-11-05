@@ -4,11 +4,11 @@
 \alias{default_graph_title}
 \title{Function default_graph_title}
 \usage{
-default_graph_title(parallelism = drake::parallelism_choices(),
-  split_columns = FALSE)
+default_graph_title(parallelism = drake::parallelism_choices(distributed_only
+  = FALSE), split_columns = FALSE)
 }
 \arguments{
-\item{parallelism}{Mode of parallelism intended for the workflow.
+\item{parallelism}{Mode of parallelism intended for the workplan.
 See \code{\link{parallelism_choices}()}.}
 
 \item{split_columns}{logical, whether the columns were split

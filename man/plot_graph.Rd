@@ -4,14 +4,17 @@
 \alias{plot_graph}
 \title{Function \code{plot_graph}}
 \usage{
-plot_graph(plan = drake::plan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(),
-  jobs = 1, parallelism = drake::default_parallelism(),
-  packages = (.packages()), prework = character(0), config = NULL,
-  file = character(0), selfcontained = FALSE, build_times = TRUE,
-  digits = 3, targets_only = FALSE, split_columns = FALSE,
-  font_size = 20, layout = "layout_with_sugiyama", main = NULL,
-  direction = "LR", hover = TRUE, navigationButtons = TRUE, ...)
+plot_graph(plan = workplan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
+  force(code) }, cache = drake::get_cache(verbose = verbose), jobs = 1,
+  parallelism = drake::default_parallelism(), packages = rev(.packages()),
+  prework = character(0), config = NULL, file = character(0),
+  selfcontained = FALSE, build_times = TRUE, digits = 3,
+  targets_only = FALSE, split_columns = FALSE, font_size = 20,
+  layout = "layout_with_sugiyama", main = NULL, direction = "LR",
+  hover = TRUE, navigationButtons = TRUE, from = NULL, mode = c("out",
+  "in", "all"), order = NULL, subset = NULL, ncol_legend = 1,
+  from_scratch = FALSE, ...)
 }
 \arguments{
 \item{plan}{workflow plan data frame, same as for function
@@ -25,6 +28,8 @@ plot_graph(plan = drake::plan(), targets = drake::possible_targets(plan),
 of \code{envir}.}
 
 \item{verbose}{logical, whether to output messages to the console.}
+
+\item{hook}{same as for \code{\link{make}}}
 
 \item{cache}{optional drake cache. See code{\link{new_cache}()}. If
 The \code{cache} argument is ignored if a non-null \code{config}
@@ -111,11 +116,45 @@ change with hovering.}
 \item{navigationButtons}{logical, whether to add navigation buttons with
 \code{visNetwork::visInteraction(navigationButtons = TRUE)}}
 
+\item{from}{Optional character vector of target/import names.
+If \code{from} is nonempty,
+the graph will restrict itself to
+a neighborhood of \code{from}.
+Control the neighborhood with
+\code{mode} and \code{order}.}
+
+\item{mode}{Which direction to branch out in the graph
+to create a neighborhood around \code{from}.
+Use \code{"in"} to go upstream,
+\code{"out"} to go downstream,
+and \code{"all"} to go both ways and disregard
+edge direction altogether.}
+
+\item{order}{How far to branch out to create
+a neighborhood around \code{from} (measured
+in the number of nodes). Defaults to
+as far as possible.}
+
+\item{subset}{Optional character vector of of target/import names.
+Subset of nodes to display in the graph.
+Applied after \code{from}, \code{mode}, and \code{order}.
+Be advised: edges are only kept for adjacent nodes in \code{subset}.
+If you do not select all the intermediate nodes,
+edges will drop from the graph.}
+
+\item{ncol_legend}{number of columns in the legend nodes}
+
+\item{from_scratch}{logical, whether to assume that
+all targets are out of date and the next \code{\link{make}()}
+will happen from scratch. Setting to \code{TRUE} will prevent
+the graph from showing you which targets are up to date,
+but it makes computing the graph much faster.}
+
 \item{...}{other arguments passed to
 \code{visNetwork::visNetwork()} to plot the graph.}
 }
 \description{
-Plot the dependency structure of your workflow.
+Plot the dependency structure of your workplan.
 IMPORTANT: you must be in the root directory of your project.
 To save time for repeated plotting, this function is divided into
 \code{\link{dataframes_graph}()} and \code{\link{render_graph}()}.
@@ -126,6 +165,11 @@ load_basic_example()
 plot_graph(my_plan, width = '100\%') # The width is passed to visNetwork
 make(my_plan)
 plot_graph(my_plan) # The red nodes from before are now green.
+plot_graph( # plot a subgraph
+  my_plan,
+  from = c("small", "reg2"),
+  to = "summ_regression2_small"
+)
 }
 }
 \seealso{

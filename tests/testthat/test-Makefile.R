@@ -3,12 +3,12 @@ drake_context("Makefile")
 test_with_dir("recipe commands", {
   expect_output(Makefile_recipe())
   expect_output(Makefile_recipe(recipe_command = "R -e 'R_RECIPE' -q"))
-  my_plan <- plan(y = 1)
+  my_plan <- workplan(y = 1)
   expect_true(is.character(default_recipe_command()))
   expect_true(is.character(r_recipe_wildcard()))
-  con1 <- make(my_plan, command = default_Makefile_command(),
+  con1 <- config(my_plan, command = default_Makefile_command(),
     parallelism = "Makefile", recipe_command = "some_command",
-    verbose = FALSE, imports_only = TRUE
+    verbose = FALSE
   )
   expect_equal(con1$recipe_command, "some_command")
   expect_true(con1$recipe_command != default_recipe_command())
@@ -18,17 +18,17 @@ test_with_dir("recipe commands", {
   expect_true(con2$recipe_command != default_recipe_command())
 })
 
-test_with_dir("no Makefile if imports_only is TRUE", {
+test_with_dir("no Makefile for make_imports()", {
   expect_equal(cached(), character(0))
-  x <- plan(a = ls())
+  x <- workplan(a = ls())
   expect_false(file.exists("Makefile"))
-  make(
+  con <- config(
     x,
     parallelism = "Makefile",
-    imports_only = TRUE,
     verbose = FALSE
   )
-  expect_true(cached("ls"))
+  make_imports(con)
+  expect_true(cached("ls", verbose = FALSE))
   expect_false(file.exists("Makefile"))
 })
 
@@ -42,19 +42,16 @@ test_with_dir("prepend arg works", {
 })
 
 test_with_dir("files inside directories can be timestamped", {
-  plan <- plan(
+  plan <- workplan(
     list = c(
       `'t1/t2'` = "dir.create(\"t1\"); saveRDS(1, file.path(\"t1\", \"t2\"))"
     )
   )
   plan$target[1] <- file <- eply::quotes(file.path("t1",
     "t2"), single = TRUE)
-  config <- build_config(plan = plan, targets = plan$target[1],
-    parallelism = "parLapply", verbose = FALSE, packages = character(0),
-    prework = character(0), prepend = character(0), command = character(0),
-    args = character(0), recipe_command = default_recipe_command(),
-    envir = new.env(), jobs = 1,
-    cache = NULL, clear_progress = FALSE)
+  config <- config(plan = plan, targets = plan$target[1],
+    parallelism = "parLapply", verbose = FALSE,
+    envir = new.env(), cache = NULL)
   path <- cache_path(config$cache)
   run_Makefile(config, run = FALSE)
   expect_silent(mk(config$plan$target[1], cache_path = path))
@@ -76,12 +73,17 @@ test_with_dir("basic Makefile stuff works", {
     verbose = FALSE)
   config$verbose <- FALSE
   cache_path <- cache_path(config$cache)
+  initialize_session(config = config)
+  log_target_attempts(targets = outdated(config = config), config = config)
+  config$recipe_command <- "Rscript -e"
   run_Makefile(config, run = FALSE, debug = TRUE)
   using_global <- identical(config$envir, globalenv())
   if (using_global) {
     expect_true(file.exists(globalenv_file(cache_path)))
   }
   expect_true(file.exists("Makefile"))
+  lines <- paste(readLines("Makefile"), collapse = "\n")
+  expect_true(grepl("Rscript -e 'drake::mk(", lines, fixed = TRUE))
   dir <- time_stamp_dir(cache_path)
   stamps <- unname(sort(list.files(dir, full.names = FALSE)))
   stamps2 <- unname(sort(
@@ -164,7 +166,7 @@ test_with_dir("packages are loaded in prework", {
   # Load packages with the 'packages' argument
   config$packages <- c("abind", "MASS")
   config$prework <- "options(test_drake_option_12345 = 'set')"
-  config$plan <- plan(
+  config$plan <- workplan(
     x = getOption("test_drake_option_12345"),
     y = c(abind("option"), deparse(body(lda)), x),
     strings_in_dots = "literals"

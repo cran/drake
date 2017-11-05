@@ -2,14 +2,15 @@
 #' @description Check a workflow plan, etc. for obvious
 #' errors such as circular dependencies and
 #' missing input files.
-#' @seealso \code{link{plan}}, \code{\link{make}}
+#' @seealso \code{ink{workplan}}, \code{\link{make}}
 #' @export
 #' @return invisibly return \code{plan}
 #' @param plan workflow plan data frame, possibly from
-#' \code{\link{plan}()}.
+#' \code{\link{workplan}()}.
 #' @param targets character vector of targets to make
 #' @param envir environment containing user-defined functions
 #' @param cache optional drake cache. See \code{\link{new_cache}()}
+#' @param verbose logical, whether to log progress to the console.
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -18,18 +19,19 @@
 #' check(my_plan)
 #' }
 check <- function(
-  plan = drake::plan(),
+  plan = workplan(),
   targets = drake::possible_targets(plan),
   envir = parent.frame(),
-  cache = drake::get_cache()
+  cache = drake::get_cache(verbose = verbose),
+  verbose = TRUE
 ){
   force(envir)
-  config <- build_config(plan = plan, targets = targets, envir = envir,
-    verbose = TRUE, cache = cache, parallelism = "mclapply",
-    jobs = 1, packages = character(0),
-    prepend = character(0), prework = character(0), command = character(0),
-    args = character(0), recipe_command = default_recipe_command(),
-    clear_progress = FALSE
+  config <- config(
+    plan = plan,
+    targets = targets,
+    envir = envir,
+    verbose = verbose,
+    cache = cache
   )
   check_config(config)
   check_strings(config$plan)
@@ -49,12 +51,13 @@ check_config <- function(config) {
 }
 
 missing_input_files <- function(config) {
-  missing_files <- next_targets(config$graph) %>%
+  missing_files <- next_targets(config$graph, jobs = config$jobs) %>%
     Filter(f = is_file) %>%
     unquote %>%
     Filter(f = function(x) !file.exists(x))
   if (length(missing_files))
-    warning("missing input files:\n", multiline_message(missing_files))
+    warning("missing input files:\n", multiline_message(missing_files),
+      call. = FALSE)
   invisible(missing_files)
 }
 
@@ -63,7 +66,8 @@ warn_bad_symbols <- function(x) {
   bad <- which(!is_parsable(x)) %>% names
   if (!length(bad))
     return(invisible())
-  warning("Possibly bad target names:\n", multiline_message(bad))
+  warning("Possibly bad target names:\n", multiline_message(bad),
+    call. = FALSE)
   invisible()
 }
 

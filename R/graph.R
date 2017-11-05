@@ -1,7 +1,7 @@
 #' @title Function \code{build_graph}
-#' @description Make a graph of the dependency structure of your workflow.
+#' @description Make a graph of the dependency structure of your workplan.
 #' @details This function returns an igraph object representing how
-#' the targets in your workflow depend on each other.
+#' the targets in your workplan depend on each other.
 #' (\code{help(package = "igraph")}). To plot the graph, call
 #' to \code{\link{plot.igraph}()} on your graph, or just use
 #' \code{\link{plot_graph}()} from the start.
@@ -14,6 +14,9 @@
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}.
 #' @param verbose logical, whether to output messages to the console.
+#' @param jobs number of jobs to accelerate the construction
+#' of the dependency graph. A light \code{mclapply}-based
+#' parallelism is used if your operating system is not Windows.
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -21,10 +24,11 @@
 #' class(g)
 #' }
 build_graph <- function(
-  plan = drake::plan(),
+  plan = workplan(),
   targets = drake::possible_targets(plan),
   envir = parent.frame(),
-  verbose = TRUE
+  verbose = TRUE,
+  jobs = 1
 ){
   force(envir)
   plan <- sanitize_plan(plan)
@@ -38,8 +42,22 @@ build_graph <- function(
   )
   true_import_names <- setdiff(names(imports), targets)
   imports <- imports[true_import_names]
-  import_deps <- lapply(imports, import_dependencies)
-  command_deps <- lapply(plan$command, command_dependencies)
+  console_many_targets(
+    targets = names(imports),
+    message = "connect",
+    type = "import",
+    config = list(verbose = verbose)
+  )
+  import_deps <- lightly_parallelize(
+    imports, import_dependencies, jobs = jobs)
+  console_many_targets(
+    targets = plan$target,
+    message = "connect",
+    type = "target",
+    config = list(verbose = verbose)
+  )
+  command_deps <- lightly_parallelize(
+    plan$command, command_dependencies, jobs = jobs)
   names(command_deps) <- plan$target
   dependency_list <- c(command_deps, import_deps)
   keys <- names(dependency_list)
@@ -52,11 +70,12 @@ build_graph <- function(
   graph <- make_empty_graph() +
     vertex(vertices) +
     edge(edges)
-  ignore <- lapply(
+  ignore <- lightly_parallelize(
     targets,
     function(vertex){
       subcomponent(graph = graph, v = vertex, mode = "in")$name
-    }
+    },
+    jobs = jobs
   ) %>%
   unlist() %>%
   unique() %>%
@@ -78,18 +97,28 @@ build_graph <- function(
 #' \code{\link{make}()}.
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}.
+#' @param jobs number of jobs to accelerate the construction
+#' of the dependency graph. A light \code{mclapply}-based
+#' parallelism is used if your operating system is not Windows.
+#' @param verbose logical, whether to print
+#' progress messages to the console.
 #' @examples
 #' \dontrun{
 #' load_basic_example()
 #' tracked(my_plan)
 #' }
 tracked <- function(
-  plan = drake::plan(),
+  plan = workplan(),
   targets = drake::possible_targets(plan),
-  envir = parent.frame()
+  envir = parent.frame(),
+  jobs = 1,
+  verbose = TRUE
 ){
   force(envir)
-  graph <- build_graph(plan = plan, targets = targets, envir = envir)
+  graph <- build_graph(
+    plan = plan, targets = targets, envir = envir,
+    jobs = jobs, verbose = verbose
+  )
   V(graph)$name
 }
 
@@ -110,4 +139,22 @@ assert_unique_names <- function(imports, targets, envir, verbose){
       )
   }
   remove(list = common, envir = envir)
+}
+
+trim_graph <- function(config){
+  if (!length(config$from)){
+    return(config)
+  }
+  config <- sanitize_from(config)
+  if (!length(config$order)){
+    config$order <- length(V(config$graph))
+  }
+  config$graph <- igraph::make_ego_graph(
+    graph = config$graph,
+    order = config$order,
+    nodes = config$from,
+    mode = config$mode
+  ) %>%
+    do.call(what = igraph::union)
+  config
 }

@@ -4,10 +4,11 @@
 \alias{max_useful_jobs}
 \title{Function \code{max_useful_jobs}}
 \usage{
-max_useful_jobs(plan = drake::plan(), from_scratch = FALSE,
+max_useful_jobs(plan = workplan(), from_scratch = FALSE,
   targets = drake::possible_targets(plan), envir = parent.frame(),
-  verbose = TRUE, cache = drake::get_cache(), jobs = 1,
-  parallelism = drake::default_parallelism(), packages = (.packages()),
+  verbose = TRUE, hook = function(code) {     force(code) },
+  cache = drake::get_cache(verbose = verbose), jobs = 1,
+  parallelism = drake::default_parallelism(), packages = rev(.packages()),
   prework = character(0), config = NULL, imports = c("files", "all",
   "none"))
 }
@@ -16,7 +17,7 @@ max_useful_jobs(plan = drake::plan(), from_scratch = FALSE,
 \code{\link{make}()}.}
 
 \item{from_scratch}{logical, whether to compute the max
-useful jobs as if the workflow were to run from scratch
+useful jobs as if the workplan were to run from scratch
 (with all targets out of date).}
 
 \item{targets}{names of targets to build, same as for function
@@ -27,6 +28,8 @@ useful jobs as if the workflow were to run from scratch
 \code{envir}.}
 
 \item{verbose}{logical, whether to output messages to the console.}
+
+\item{hook}{same as for \code{\link{make}}}
 
 \item{cache}{optional drake cache. See code{\link{new_cache}()}. If
 The \code{cache} argument is ignored if a non-null

@@ -11,7 +11,8 @@
 #' Defaults to your workspace.
 #' For an insulated workspace,
 #' set \code{envir = new.env(parent = globalenv())}.
-#' @param to where to write the dynamic report source file
+#' @param report_file where to write the report file \code{report.Rmd}.
+#' @param to deprecated, where to write the dynamic report source file
 #' \code{report.Rmd}
 #' @param overwrite logical, whether to overwrite an
 #' existing file \code{report.Rmd}
@@ -27,8 +28,16 @@
 #' unlink('report.Rmd')
 #' }
 load_basic_example <- function(
-  envir = parent.frame(), to = getwd(), overwrite = TRUE
+  envir = parent.frame(), report_file = "report.Rmd", overwrite = FALSE,
+  to = report_file
 ){
+  if (to != report_file){
+    warning(
+      "In load_basic_example(), argument 'to' is deprecated. ",
+      "Use 'report_file' instead."
+    )
+  }
+
   eval(parse(text = "base::require(drake, quietly = TRUE)"))
   eval(parse(text = "base::require(knitr, quietly = TRUE)"))
 
@@ -53,9 +62,9 @@ load_basic_example <- function(
     simulate <- knit <- my_knit <- report_dependencies <-
     reg1 <- reg2 <- coef_regression2_small <- NULL
 
-  datasets <- plan(small = simulate(5), large = simulate(50))
+  datasets <- workplan(small = simulate(5), large = simulate(50))
 
-  methods <- plan(list = c(
+  methods <- workplan(list = c(
     regression1 = "reg1(..dataset..)",
     regression2 = "reg2(..dataset..)"))
 
@@ -63,25 +72,25 @@ load_basic_example <- function(
   # = datasets$output)
   analyses <- analyses(methods, datasets = datasets)
 
-  summary_types <- plan(list = c(
+  summary_types <- workplan(list = c(
     summ = "suppressWarnings(summary(..analysis..))",
     coef = "coefficients(..analysis..)"))
 
   # summaries() also uses evaluate(): once with expand = TRUE,
   # once with expand = FALSE
-  # skip 'gather' (workflow my_plan is more readable)
+  # skip 'gather' (workplan my_plan is more readable)
   results <- summaries(summary_types, analyses, datasets, gather = NULL)
 
   # External file targets and dependencies should be
   # single-quoted.  Use double quotes to remove any special
   # meaning from character strings.  Single quotes inside
   # imported functions are ignored, so this mechanism only
-  # works inside the workflow my_plan data frame.  WARNING:
+  # works inside the workplan my_plan data frame.  WARNING:
   # drake cannot track entire directories (folders).
-  report <- plan(report.md = knit("report.Rmd", quiet = TRUE),
+  report <- workplan(report.md = knit("report.Rmd", quiet = TRUE),
     file_targets = TRUE, strings_in_dots = "filenames")
 
-  # Row order doesn't matter in the workflow my_plan.
+  # Row order doesn't matter in the workplan my_plan.
   envir$my_plan <- rbind(report, datasets,
     analyses, results)
 
@@ -91,7 +100,9 @@ load_basic_example <- function(
     package = "drake",
     mustWork = TRUE
   )
-  file.copy(from = report, to = to, overwrite = overwrite)
-
+  if (file.exists(report_file) & overwrite){
+    warning("Overwriting file 'report.Rmd'.")
+  }
+  file.copy(from = report, to = report_file, overwrite = overwrite)
   invisible(envir$my_plan)
 }

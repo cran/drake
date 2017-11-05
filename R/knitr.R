@@ -4,7 +4,7 @@
 #' \code{\link{deps}},
 #' \code{\link{make}}, \code{\link{load_basic_example}}
 #' @description Find the dependencies of a dynamic report. To
-#' enable drake to watch for these dependencies, your workflow
+#' enable drake to watch for these dependencies, your workplan
 #' plan command to compile this report must make direct use of
 #' \code{knitr::knit()}.
 #' That is, it must look something like \code{knit('your_report.Rmd')}
@@ -30,7 +30,8 @@ knitr_deps <- function(target){
   if (!file.exists(file)){
     warning(
       "dynamic report '", file,
-      "' does not exist and cannot be inspected for dependencies."
+      "' does not exist and cannot be inspected for dependencies.",
+      call. = FALSE
     )
     return(character(0))
   }

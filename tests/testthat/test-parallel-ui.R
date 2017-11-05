@@ -1,10 +1,18 @@
 drake_context("parallel UI")
 
+test_with_dir("parallelism_choices", {
+  expect_true(
+    length(parallelism_choices(distributed_only = TRUE)) <
+    length(parallelism_choices(distributed_only = FALSE))
+  )
+})
+
 test_with_dir("shell_file() writes correctly", {
   expect_false(file.exists("shell.sh"))
   shell_file()
   expect_true(file.exists("shell.sh"))
   unlink("shell.sh", force = TRUE)
+
   d <- "exdir"
   dir.create(d)
   p <- file.path(d, "script.txt")
@@ -12,6 +20,10 @@ test_with_dir("shell_file() writes correctly", {
   shell_file(p)
   expect_true(file.exists(p))
   unlink(d, recursive = TRUE, force = TRUE)
+
+  expect_silent(shell_file(overwrite = TRUE))
+  expect_silent(shell_file(overwrite = FALSE))
+  expect_warning(shell_file(overwrite = TRUE))
 })
 
 test_with_dir("mclapply and lapply", {
@@ -30,7 +42,7 @@ test_with_dir("mclapply and lapply", {
   clean()
 
   make(plan = config$plan, envir = config$envir, verbose = FALSE,
-    jobs = 1, parallelism = "parLapply")
+    jobs = 2, parallelism = "parLapply")
   expect_true(is.numeric(readd(final)))
   clean()
 

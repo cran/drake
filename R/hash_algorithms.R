@@ -14,6 +14,7 @@ available_hash_algos <- function(){
 #' @description Get the long hash algorithm of a drake cache.
 #' @details See \code{?\link{default_long_hash_algo}()}
 #' @param cache drake cache
+#' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -21,7 +22,10 @@ available_hash_algos <- function(){
 #' cache <- config$cache
 #' long_hash(cache)
 #' }
-long_hash <- function(cache = drake::get_cache()){
+long_hash <- function(
+  cache = drake::get_cache(verbose = verbose),
+  verbose = TRUE
+){
   if (!("long_hash_algo" %in% cache$list(namespace = "config"))){
     return(NULL)
   }
@@ -35,6 +39,7 @@ long_hash <- function(cache = drake::get_cache()){
 #' @description Get the short hash algorithm of a drake cache.
 #' @details See \code{?\link{default_long_hash_algo}()}
 #' @param cache drake cache
+#' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -42,7 +47,10 @@ long_hash <- function(cache = drake::get_cache()){
 #' cache <- config$cache
 #' short_hash(cache)
 #' }
-short_hash <- function(cache = drake::get_cache()){
+short_hash <- function(
+  cache = drake::get_cache(verbose = verbose),
+  verbose = verbose
+){
   if (!("short_hash_algo" %in% cache$list(namespace = "config"))){
     return(NULL)
   }
@@ -85,6 +93,7 @@ short_hash <- function(cache = drake::get_cache()){
 #' supplying a short hash algorithm,
 #' \code{default_short_hash_algo(cache)} is the short
 #' hash algorithm that drake picks for you.
+#'
 #' @examples
 #' default_short_hash_algo()
 default_short_hash_algo <- function(cache = NULL) {
@@ -138,6 +147,7 @@ default_short_hash_algo <- function(cache = NULL) {
 #' supplying a long hash algorithm,
 #' \code{default_long_hash_algo(cache)} is the long
 #' hash algorithm that drake picks for you.
+#'
 #' @examples
 #' default_long_hash_algo()
 default_long_hash_algo <- function(cache = NULL) {
@@ -161,7 +171,8 @@ check_storr_short_hash <- function(cache, chosen_algo){
       warning(
         "The storr-based cache actually uses ", true_algo,
         " for the short hash algorithm, but ", chosen_algo,
-        " was also supplied. Reverting to ", true_algo, "."
+        " was also supplied. Reverting to ", true_algo, ".",
+        call. = FALSE
       )
       cache$set(
         key = "short_hash_algo",

@@ -4,10 +4,11 @@
 \alias{outdated}
 \title{Function outdated}
 \usage{
-outdated(plan = drake::plan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(),
+outdated(plan = workplan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
+  force(code) }, cache = drake::get_cache(verbose = verbose),
   parallelism = drake::default_parallelism(), jobs = 1,
-  packages = (.packages()), prework = character(0), config = NULL)
+  packages = rev(.packages()), prework = character(0), config = NULL)
 }
 \arguments{
 \item{plan}{same as for \code{\link{make}}}
@@ -18,6 +19,8 @@ outdated(plan = drake::plan(), targets = drake::possible_targets(plan),
 \code{config$envir}.}
 
 \item{verbose}{same as for \code{\link{make}}}
+
+\item{hook}{same as for \code{\link{make}}}
 
 \item{cache}{optional drake cache. See code{\link{new_cache}()}.
 The \code{cache} argument is ignored if a
@@ -55,6 +58,6 @@ outdated(my_plan)
 }
 }
 \seealso{
-\code{\link{missed}}, \code{\link{plan}},
+\code{\link{missed}}, \code{\link{workplan}},
 \code{\link{make}}, \code{\link{plot_graph}}
 }

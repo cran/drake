@@ -3,15 +3,7 @@ run_Makefile <- function( #nolint: we want Makefile capitalized.
   run = TRUE,
   debug = FALSE
 ){
-  this_cache_path <- cache_path(config$cache)
-  if (identical(globalenv(), config$envir)){
-    save(
-      list = ls(config$envir, all.names = TRUE),
-      envir = config$envir,
-      file = globalenv_file(this_cache_path)
-    )
-  }
-  config$cache$set("config", config, namespace = "makefile")
+  prepare_distributed(config = config)
   with_output_sink(
     new = "Makefile",
     code = {
@@ -19,18 +11,7 @@ run_Makefile <- function( #nolint: we want Makefile capitalized.
       makefile_rules(config)
     }
   )
-  out <- outdated(
-    plan = config$plan,
-    targets = config$targets,
-    envir = config$envir,
-    verbose = config$verbose,
-    cache = config$cache,
-    jobs = config$jobs,
-    parallelism = config$parallelism,
-    packages = config$packages,
-    prework = config$prework
-  )
-  time_stamps(config = config, outdated = out)
+  time_stamps(config = config)
   error_code <- ifelse(
     run,
     system2(command = config$command, args = config$args),
@@ -41,7 +22,7 @@ run_Makefile <- function( #nolint: we want Makefile capitalized.
     file <- globalenv_file(dir)
     unlink(file, force = TRUE)
   }
-  return(invisible(error_code))
+  return(invisible(config))
 }
 
 makefile_head <- function(config){
@@ -114,38 +95,17 @@ mk <- function(
   target = character(0),
   cache_path = drake::default_cache_path()
 ){
-  cache <- this_cache(cache_path)
-  config <- cache$get("config", namespace = "makefile")
-  if (identical(globalenv(), config$envir)){
-    dir <- cache_path
-    file <- globalenv_file(dir)
-    load(file = file, envir = config$envir)
-  }
-  config <- inventory(config)
-  do_prework(config = config, verbose_packages = FALSE)
-  prune_envir(targets = target, config = config)
-  hash_list <- hash_list(targets = target, config = config)
-  old_hash <- self_hash(target = target, config = config)
-  current <- target_current(target = target,
-    hashes = hash_list[[target]], config = config)
-  if (current){
-    return(invisible())
-  }
-  build(
-    target = target,
-    hash_list = hash_list,
-    config = config
-  )
-  config <- inventory(config)
+  build_distributed(target = target, cache_path = cache_path)
+  config <- recover_config(cache_path)
   new_hash <- self_hash(target = target, config = config)
-  if (!identical(old_hash, new_hash)){
+  if (!identical(config$old_hash, new_hash)){
     file <- time_stamp_file(target = target, config = config)
     file_overwrite(file)
   }
   return(invisible())
 }
 
-#' @title Function \code{default_system2_args}
+#' @title Function \code{default_Makefile_args}
 #' @description Configures default
 #' arguments to \code{\link{system2}()} to run Makefiles.
 #' @export
@@ -153,9 +113,9 @@ mk <- function(
 #' @param jobs number of jobs
 #' @param verbose logical, whether to be verbose
 #' @examples
-#' default_system2_args(jobs = 2, verbose = FALSE)
-#' default_system2_args(jobs = 4, verbose = TRUE)
-default_system2_args <- function(jobs, verbose){
+#' default_Makefile_args(jobs = 2, verbose = FALSE)
+#' default_Makefile_args(jobs = 4, verbose = TRUE)
+default_Makefile_args <- function(jobs, verbose){
   out <- paste0("--jobs=", jobs)
   if (!verbose){
     out <- c(out, "--silent")

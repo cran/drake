@@ -4,6 +4,7 @@
 #' @seealso \code{\link{make}}, \code{\link{shell_file}}
 #' @return Character vector listing the types of parallel
 #' computing supported.
+#'
 #' @details Run \code{make(..., parallelism = x, jobs = n)} for any of
 #' the following values of \code{x} to distribute targets over parallel
 #' units of execution.
@@ -15,10 +16,28 @@
 #'  but it works on Windows. If \code{jobs} is \code{1} in
 #'  \code{\link{make}()}, then no 'cluster' is created and
 #'  no parallelism is used.}
+#'
 #'  \item{'mclapply'}{uses multiple processes in a single R session.
 #'  This is single-node, (potentially) multicore computing.
 #'  Does not work on Windows for \code{jobs > 1}
 #'  because \code{\link{mclapply}()} is based on forking.}
+#'
+#'  \item{'future_lapply'}{
+#'  opens up a whole trove of parallel backends
+#'  powered by the \code{future} and \code{future.batchtools}
+#'  packages. First, set the parallel backend globally using
+#'  \code{\link{backend}()} (or equivalently, \code{future::plan()}).
+#'  Then, apply the backend to your workplan
+#'  using \code{make(..., parallelism = "future_lapply", jobs = ...)}.
+#'  But be warned: the environment for each target needs to be set up
+#'  from scratch, so this backend type is higher overhead than either
+#'  \code{mclapply} or \code{parLapply}.
+#'  Also, the \code{jobs} argument only applies to the imports.
+#'  for the max number of jobs to use for building targets,
+#'  use options(mc.cores = jobs), or see \code{?future::future::.options}
+#'  for environment variables that set the max number of jobs.
+#'  }
+#'
 #'  \item{'Makefile'}{uses multiple R sessions
 #'  by creating and running a Makefile.
 #'  For distributed computing on a cluster or supercomputer,
@@ -45,10 +64,28 @@
 #' \code{\link{make}()} or \code{\link{make}()}.
 #'  Also, Windows users will need to download and install Rtools.
 #' }}
+#'
+#' @param distributed_only logical, whether to return only
+#' the distributed backend types, such as \code{Makefile} and
+#' \code{parLapply}
+#'
 #' @examples
 #' parallelism_choices()
-parallelism_choices <- function() {
-  c("parLapply", "mclapply", "Makefile")
+#' parallelism_choices(distributed_only = TRUE)
+parallelism_choices <- function(distributed_only = FALSE) {
+  local <- c(
+    "parLapply",
+    "mclapply"
+  )
+  distributed <- c(
+    "Makefile",
+    "future_lapply"
+  )
+  if (distributed_only){
+    distributed
+  } else {
+    c(local, distributed)
+  }
 }
 
 #' @title Function \code{default_parallelism}
@@ -75,30 +112,42 @@ default_parallelism <- function() {
 #' how fast objects/files are imported.
 #' IMPORTANT: you must be in the root directory of your project.
 #' @export
+#'
 #' @return a list of three data frames: one for nodes, one for edges,
 #' and one for the legend/key nodes.
+#'
 #' @seealso \code{\link{plot_graph}}, \code{\link{build_graph}},
 #' \code{\link{shell_file}}
+#'
 #' @param plan workflow plan data frame, same as for function
 #' \code{\link{make}()}.
+#'
 #' @param from_scratch logical, whether to compute the max
-#' useful jobs as if the workflow were to run from scratch
+#' useful jobs as if the workplan were to run from scratch
 #' (with all targets out of date).
+#'
 #' @param targets names of targets to build, same as for function
 #' \code{\link{make}()}.
+#'
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}. \code{config$envir} is ignored in favor of
 #' \code{envir}.
+#'
 #' @param verbose logical, whether to output messages to the console.
+#'
+#' @param hook same as for \code{\link{make}}
+#'
 #' @param cache optional drake cache. See code{\link{new_cache}()}. If
 #' The \code{cache} argument is ignored if a non-null
 #' \code{config} argument is supplied.
+#'
 #' @param jobs The \code{outdated()} function is called internally,
 #' and it needs to import objects and examine your
 #' input files to see what has been updated. This could take some time,
 #' and parallel computing may be needed
 #' to speed up the process. The \code{jobs} argument is number of parallel jobs
 #' to use for faster computation.
+#'
 #' @param parallelism Choice of parallel backend to speed up the computation.
 #' Execution order in \code{\link{make}()} is slightly different
 #' when \code{parallelism} equals \code{'Makefile'}
@@ -107,8 +156,11 @@ default_parallelism <- function() {
 #' Thus, \code{max_useful_jobs()} may give a
 #' different answer for Makefile parallelism.
 #' See \code{?parallelism_choices} for details.
+#'
 #' @param packages same as for \code{\link{make}}
+#'
 #' @param prework same as for \code{\link{make}}
+#'
 #' @param config internal configuration list of \code{\link{make}(...)},
 #' produced also with \code{\link{config}()}.
 #' \code{config$envir} is ignored.
@@ -120,6 +172,7 @@ default_parallelism <- function() {
 #' Computing \code{\link{config}}
 #' in advance could save time if you plan multiple calls to
 #' \code{dataframes_graph()}.
+#'
 #' @param imports Set the \code{imports} argument to change your
 #' assumptions about how fast objects/files are imported.
 #' Possible values:
@@ -134,6 +187,7 @@ default_parallelism <- function() {
 #'  \item{'none'}{: Ignore all the imports and just focus on the max number
 #'    of useful jobs for parallelizing targets.}
 #' }
+#'
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -161,11 +215,15 @@ default_parallelism <- function() {
 #' max_useful_jobs(my_plan, imports = 'none') # 4
 #' }
 max_useful_jobs <- function(
-  plan = drake::plan(), from_scratch = FALSE,
+  plan = workplan(), from_scratch = FALSE,
   targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(),
+  envir = parent.frame(), verbose = TRUE,
+  hook = function(code){
+    force(code)
+  },
+  cache = drake::get_cache(verbose = verbose),
   jobs = 1, parallelism = drake::default_parallelism(),
-  packages = (.packages()), prework = character(0), config = NULL,
+  packages = rev(.packages()), prework = character(0), config = NULL,
   imports = c("files", "all", "none")
 ){
   force(envir)
@@ -175,6 +233,7 @@ max_useful_jobs <- function(
       targets = targets,
       envir = envir,
       verbose = verbose,
+      hook = hook,
       cache = cache,
       parallelism = parallelism,
       jobs = jobs,
@@ -189,9 +248,11 @@ max_useful_jobs <- function(
   just_targets <- intersect(nodes$id, config$plan$target)
   just_files <- Filter(x = nodes$id, f = is_file)
   targets_and_files <- union(just_targets, just_files)
-  if (imports == "none")
-    nodes <- nodes[just_targets, ] else if (imports == "files")
+  if (imports == "none"){
+    nodes <- nodes[just_targets, ]
+  } else if (imports == "files"){
     nodes <- nodes[targets_and_files, ]
+  }
   if (!from_scratch){
     nodes <- nodes[nodes$status != "up to date", ]
   }
@@ -215,9 +276,13 @@ max_useful_jobs <- function(
 #' @param overwrite logical, whether to overwrite a possible
 #' destination file with the same name
 shell_file <- function(
-  path = file.path(getwd(), "shell.sh"),
+  path = "shell.sh",
   overwrite = FALSE
 ){
   from <- system.file("shell.sh", package = "drake", mustWork = TRUE)
-  invisible(file.copy(from = from, to = path, copy.mode = TRUE))
+  if (file.exists(path) & overwrite){
+    warning("Overwriting file ", path)
+  }
+  invisible(file.copy(from = from, to = path, copy.mode = TRUE,
+    overwrite = overwrite))
 }

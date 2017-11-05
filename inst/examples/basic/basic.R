@@ -48,7 +48,7 @@ reg2 <- function(d){
 # To skip to the "CHECK AND DEBUG WORKFLOW PLAN" section, just
 # call load_basic_example().
 
-my_datasets <- plan(
+my_datasets <- workplan(
   small = simulate(5),
   large = simulate(50)
 )
@@ -56,7 +56,7 @@ my_datasets <- plan(
 # Optionally, get replicates with expand(my_datasets,
 #   values = c("rep1", "rep2")).
 
-methods <- plan(
+methods <- workplan(
   regression1 = reg1(..dataset..), ## nolint
   regression2 = reg2(..dataset..) ## nolint
 )
@@ -65,7 +65,7 @@ methods <- plan(
 #   values = my_datasets$target)
 my_analyses <- analyses(methods, datasets = my_datasets)
 
-summary_types <- plan(
+summary_types <- workplan(
   # Perfect regression fits can happen.
   summ = suppressWarnings(summary(..analysis..)), ## nolint
   coef = coefficients(..analysis..) ## nolint
@@ -85,7 +85,7 @@ results <- summaries(
 # Single quotes inside imported functions are ignored, so this mechanism
 # only works inside the workflow my_plan data frame.
 # WARNING: drake cannot track entire directories (folders).
-report <- plan(
+report <- workplan(
   # As long as `knit()` is visible in your workflow plan command,
   # drake will dig into the active code chunks of your `report.Rmd`
   # and find the dependencies of `report.md` in the arguments of
@@ -186,7 +186,7 @@ new_simulation <- function(n){
 
 # Any R expression can be a command
 # except for formulas and function definitions.
-additions <- plan(
+additions <- workplan(
   new_data = new_simulation(36) + sqrt(10)
   )
 
@@ -214,6 +214,41 @@ readd(coef_regression2_large) # see also: loadd(), cached()
 # All up to date.
 make(my_plan, jobs = 2)
 clean() # Start over next time.
+
+######################################
+### PARALLEL COMPUTING WITH FUTURE ###
+######################################
+
+# The `future` and `future.batchtools` packages
+# unlock a huge array of powerful parallel backends.
+# Here is just a taste. You can find a list of
+# future.batchtools backends at
+# https://github.com/HenrikBengtsson/future.batchtools#choosing-batchtools-backend # nolint
+# Note: the `jobs` does not apply to the "future_lapply" backend.
+# Use `options(mc.cores = 4)` or something similar from ?future.options
+# to cap the number of simultaneous jobs.
+options(mc.cores = 2)
+library(future)
+backend(multicore) # Same as future::plan(multicore)
+make(my_plan, parallelism = "future_lapply")
+clean() # Erase the targets to start from scratch.
+
+backend(multisession) # Use separate background R sessions.
+make(my_plan, parallelism = "future_lapply")
+clean()
+
+if (require(future.batchtools)){ # More heavy-duty future-style parallel backends # nolint
+  backend(batchtools_local)
+  make(my_plan, parallelism = "future_lapply")
+  clean()
+
+  # Deploy targets with batchtools_local and use `future`-style
+  # multicore parallism each individual target's command.
+  backend(list(batchtools_local, multicore))
+  make(my_plan, parallelism = "future_lapply")
+  clean()
+}
+clean() # Start over next time
 
 ######################################################
 ### DISTRIBUTED COMPUTING: TWO PARALLEL R SESSIONS ###
@@ -283,8 +318,10 @@ if (FALSE){
 clean(destroy = TRUE) # Totally remove the hidden .drake/ cache.
 unlink(
   c(
+    ".future",
     "Makefile",
-    "STDIN.o*",
-    "shell.sh"
-  )
+    "shell.sh",
+    "STDIN.o*"
+  ),
+  recursive = TRUE
 ) # Clean up other files.

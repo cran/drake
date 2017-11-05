@@ -1,4 +1,4 @@
-#' Drake is a workflow manager and build system,
+#' Drake is a workplan manager and build system,
 #' a scalable solution for reproducibility and high-performance computing.
 #' @docType package
 #' @name drake-package
@@ -31,6 +31,8 @@
 #' @importFrom crayon make_style
 #' @importFrom digest digest
 #' @importFrom eply quotes strings unquote
+#' @importFrom evaluate try_capture_stack
+#' @importFrom future future_lapply plan
 #' @importFrom grDevices col2rgb rgb
 #' @importFrom igraph adjacent_vertices delete_vertices edge
 #' is_dag make_empty_graph plot.igraph subcomponent V vertex
@@ -40,7 +42,7 @@
 #' @importFrom parallel clusterCall clusterExport makePSOCKcluster
 #' mclapply parLapply stopCluster
 #' @importFrom plyr ddply dlply
-#' @importFrom R.utils isPackageLoaded
+#' @importFrom R.utils isPackageLoaded withTimeout
 #' @importFrom rprojroot find_root
 #' @importFrom stats coef complete.cases lm rnorm rpois runif setNames
 #' @importFrom storr encode64 storr_rds
@@ -54,14 +56,3 @@
 #' @importFrom withr with_dir with_options with_output_sink
 #' with_preserve_seed with_seed
 NULL
-
-#' @title Pipe operator
-#' @export
-#' @description Pipe operator from the \code{magrittr} package
-#' @param lhs left-hand side argument
-#' @param rhs right-hand side argument
-#' @examples
-#' rnorm(2) %>%
-#'   mean %>%
-#'   c("third element")
-`%>%` <- magrittr::`%>%`

@@ -4,13 +4,14 @@
 \alias{dataframes_graph}
 \title{Function \code{dataframes_graph}}
 \usage{
-dataframes_graph(plan = drake::plan(),
-  targets = drake::possible_targets(plan), envir = parent.frame(),
-  verbose = TRUE, cache = drake::get_cache(), jobs = 1,
-  parallelism = drake::default_parallelism(), packages = (.packages()),
+dataframes_graph(plan = workplan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
+  force(code) }, cache = drake::get_cache(verbose = verbose), jobs = 1,
+  parallelism = drake::default_parallelism(), packages = rev(.packages()),
   prework = character(0), build_times = TRUE, digits = 3,
   targets_only = FALSE, split_columns = FALSE, font_size = 20,
-  config = NULL)
+  config = NULL, from = NULL, mode = c("out", "in", "all"),
+  order = NULL, subset = NULL, from_scratch = FALSE)
 }
 \arguments{
 \item{plan}{workflow plan data frame, same as for function
@@ -24,6 +25,8 @@ dataframes_graph(plan = drake::plan(),
 of \code{envir}.}
 
 \item{verbose}{logical, whether to output messages to the console.}
+
+\item{hook}{same as for \code{\link{make}}}
 
 \item{cache}{optional drake cache. Only used if the \code{config}
 argument is \code{NULL} (default). See code{\link{new_cache}()}.}
@@ -79,6 +82,38 @@ If not \code{NULL},
 \code{config} overrides all arguments except
 \code{build_times}, \code{digits}, \code{targets_only},
 \code{split_columns}, and \code{font_size}.}
+
+\item{from}{Optional collection of target/import names.
+If \code{from} is nonempty,
+the graph will restrict itself to
+a neighborhood of \code{from}.
+Control the neighborhood with
+\code{mode} and \code{order}.}
+
+\item{mode}{Which direction to branch out in the graph
+to create a neighborhood around \code{from}.
+Use \code{"in"} to go upstream,
+\code{"out"} to go downstream,
+and \code{"all"} to go both ways and disregard
+edge direction altogether.}
+
+\item{order}{How far to branch out to create
+a neighborhood around \code{from} (measured
+in the number of nodes). Defaults to
+as far as possible.}
+
+\item{subset}{Optional character vector of of target/import names.
+Subset of nodes to display in the graph.
+Applied after \code{from}, \code{mode}, and \code{order}.
+Be advised: edges are only kept for adjacent nodes in \code{subset}.
+If you do not select all the intermediate nodes,
+edges will drop from the graph.}
+
+\item{from_scratch}{logical, whether to assume that
+all targets are out of date and the next \code{\link{make}()}
+will happen from scratch. Setting to \code{TRUE} will prevent
+the graph from showing you which targets are up to date,
+but it makes computing the graph much faster.}
 }
 \value{
 a list of three data frames: one for nodes,
@@ -94,6 +129,11 @@ so you can plot your own custom \code{visNetwork}.
 \dontrun{
 load_basic_example()
 raw_graph <- dataframes_graph(my_plan)
+smaller_raw_graph <- dataframes_graph(
+  my_plan,
+  from = c("small", "reg2"),
+  to = "summ_regression2_small"
+)
 str(raw_graph)
 # Plot your own custom visNetwork graph
 library(magrittr)

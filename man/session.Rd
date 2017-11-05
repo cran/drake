@@ -5,7 +5,7 @@
 \title{Function \code{session}}
 \usage{
 session(path = getwd(), search = TRUE, cache = drake::get_cache(path =
-  path, search = search))
+  path, search = search, verbose = verbose), verbose = TRUE)
 }
 \arguments{
 \item{path}{Root directory of the drake project,
@@ -19,6 +19,8 @@ current working directory only.}
 \item{cache}{optional drake cache. See code{\link{new_cache}()}.
 If \code{cache} is supplied,
 the \code{path} and \code{search} arguments are ignored.}
+
+\item{verbose}{whether to print console messages}
 }
 \value{
 \code{\link{sessionInfo}()} of the last
@@ -36,6 +38,6 @@ session()
 }
 }
 \seealso{
-\code{\link{built}}, \code{\link{imported}},
-\code{\link{readd}}, \code{\link{plan}}, \code{\link{make}}
+\code{\link{diagnose}}, \code{\link{built}}, \code{\link{imported}},
+\code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
 }

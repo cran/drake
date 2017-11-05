@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="William Michael Landau" />
+
+<meta name="date" content="2017-11-05" />
+
+<title>Graphs with drake</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Graphs with drake</h1>
+<h3 class="subtitle"><em>Visualize your workflow.</em></h3>
+<h4 class="author"><em>William Michael Landau</em></h4>
+<h4 class="date"><em>2017-11-05</em></h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#dependency-reactivity"><span class="toc-section-number">1</span> Dependency reactivity</a></li>
+<li><a href="#subgraphs"><span class="toc-section-number">2</span> Subgraphs</a></li>
+<li><a href="#parallel-computing-laid-bare"><span class="toc-section-number">3</span> Parallel computing laid bare</a></li>
+<li><a href="#finer-control"><span class="toc-section-number">4</span> Finer control</a></li>
+</ul>
+</div>
+
+<div class="figure">
+<img src="data:image/png;base64,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" />
+
+</div>
+<p><code>Drake</code> has powerful visuals to help you understand and plan your workflow. The workflow plan graph is interactive. Click, drag, hover, zoom, and pan. Use either the mouse or the green buttons near the bottom.</p>
+<div id="dependency-reactivity" class="section level1">
+<h1><span class="header-section-number">1</span> Dependency reactivity</h1>
+<p>Initially, your entire project is out of date.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
+<span class="kw">load_basic_example</span>()
+<span class="kw">plot_graph</span>(my_plan)</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/outdated.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>In the previous graph, all the targets were out of date. But after a <code>make()</code>, we will be all caught up, and the graph will show you.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">jobs =</span> <span class="dv">4</span>)
+<span class="kw">plot_graph</span>(my_plan)</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/built.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>But when you change a dependency, you throw some targets out of date until you call <code>make(my_plan)</code> again.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg2 &lt;-<span class="st"> </span><span class="cf">function</span>(d){
+  d<span class="op">$</span>x3 &lt;-<span class="st"> </span>d<span class="op">$</span>x <span class="op">^</span><span class="st"> </span><span class="dv">3</span>
+  <span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x3, <span class="dt">data =</span> d)
+}
+<span class="kw">plot_graph</span>(my_plan)</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+</div>
+<div id="subgraphs" class="section level1">
+<h1><span class="header-section-number">2</span> Subgraphs</h1>
+<p>Graphs can grow enormous for serious projects, so there are multiple ways to focus on a manageable subgraph. The most brute-force way is to just pick a manual <code>subset</code> of nodes to show. However, with the <code>subset</code> argument, <code>plot_graph()</code> is prone to losing intermediate nodes and thus dropping edges.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot_graph</span>(my_plan, <span class="dt">subset =</span> <span class="kw">c</span>(<span class="st">&quot;regression2_small&quot;</span>, <span class="st">&quot;'report.md'&quot;</span>))</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/subset.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>The other subgraph functionality is much better at preserving connectedness. Use <code>targets_only</code> to ignore the imports.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot_graph</span>(my_plan, <span class="dt">targets_only =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/targetsonly.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>Similarly, you can just show downstream nodes.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot_graph</span>(my_plan, <span class="dt">from =</span> <span class="kw">c</span>(<span class="st">&quot;regression2_small&quot;</span>, <span class="st">&quot;regression2_large&quot;</span>))</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/fromout.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>Or upstream ones.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot_graph</span>(my_plan, <span class="dt">from =</span> <span class="st">&quot;small&quot;</span>, <span class="dt">mode =</span> <span class="st">&quot;in&quot;</span>)</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/fromin.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>In fact, let’s just take a small neighborhood around a target in both directions.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot_graph</span>(my_plan, <span class="dt">from =</span> <span class="st">&quot;small&quot;</span>, <span class="dt">mode =</span> <span class="st">&quot;all&quot;</span>, <span class="dt">order =</span> <span class="dv">1</span>)</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/fromall.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>The <code>report.md</code> node is drawn in somewhat, but it is still the farthest right in order to communicate <code>drake</code>’s parallel computing strategy.</p>
+</div>
+<div id="parallel-computing-laid-bare" class="section level1">
+<h1><span class="header-section-number">3</span> Parallel computing laid bare</h1>
+<p><code>Drake</code> shows its parallel computing strategy plainly in the graph.</p>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>When you call <code>make(my_plan, jobs = 4)</code>, the work proceeds in chronological order from left to right in the above graph. The items are built or imported column by column in sequence, and up-to-date targets are skipped. Within each column, the targets/objects are all independent of each other conditional on the previous steps, so they are distributed over the 4 available parallel jobs/workers. Assuming the targets are rate-limiting (as opposed to imported objects), the next <code>make(..., jobs = 4)</code> should be faster than <code>make(..., jobs = 1)</code>, but it would be superfluous to use more than 4 jobs.</p>
+<p>The division of targets into parallelizable stages depends on the kind of parallelism you use. Even the small workflow plan below is affected.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">f &lt;-<span class="st"> </span><span class="cf">function</span>(x){
+  x
+}
+small_plan &lt;-<span class="st"> </span><span class="kw">workplan</span>(<span class="dt">a =</span> <span class="dv">1</span>, <span class="dt">b =</span> <span class="kw">f</span>(<span class="dv">2</span>))
+small_plan</code></pre></div>
+<pre><code>##   target command
+## 1      a       1
+## 2      b    f(2)</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot_graph</span>(small_plan)</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/small_local.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>However, for any kind of distributed <code>parallelism</code> option such as <code>&quot;Makefile&quot;</code> or <code>&quot;future_lapply&quot;</code>, all the imports are processed before any of the targets are built. For the small workflow, this puts both targets in the same parallelizable stage.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot_graph</span>(small_plan, <span class="dt">parallelism =</span> <span class="st">&quot;future_lapply&quot;</span>)</code></pre></div>
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/small_distributed.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+</iframe>
+<p>You can list the distributed backends quickly, or you can read the <a href="https://github.com/wlandau-lilly/drake/blob/master/vignettes/parallelism.Rmd">parallelism vignette</a>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">parallelism_choices</span>()</code></pre></div>
+<pre><code>## [1] &quot;parLapply&quot;     &quot;mclapply&quot;      &quot;Makefile&quot;      &quot;future_lapply&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">parallelism_choices</span>(<span class="dt">distributed_only =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<pre><code>## [1] &quot;Makefile&quot;      &quot;future_lapply&quot;</code></pre>
+<p>The help file of <code>parallelism_choices()</code> is particularly detailed.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">?parallelism_choices</code></pre></div>
+</div>
+<div id="finer-control" class="section level1">
+<h1><span class="header-section-number">4</span> Finer control</h1>
+<p>We have only scratched the surface of <code>plot_graph()</code>, there is much more functionality documented in the help file (<code>?plot_graph</code>). In addition, <code>dataframes_graph()</code> outputs a list of nodes, edges, and legend nodes that you can modify and then feed right into your own <a href="http://datastorm-open.github.io/visNetwork/">visNetwork graph</a>.</p>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

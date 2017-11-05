@@ -1,6 +1,6 @@
 ## ----suppression, echo = F-----------------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(
   c(
     "Makefile", "report.Rmd", "shell.sh",
@@ -13,7 +13,7 @@ unlink(
 ## ----basic_storage-------------------------------------------------------
 library(drake)
 load_basic_example()
-config <- make(my_plan, verbose = FALSE, return_config = TRUE)
+config <- make(my_plan, verbose = FALSE)
 
 ## ----explore_basic-------------------------------------------------------
 head(cached())
@@ -23,7 +23,7 @@ head(large)
 rm(large) # Does not remove `large` from the cache.
 
 ## ----get_storrs----------------------------------------------------------
-class(config$cache) # from `config <- make(..., return_config = TRUE)`
+class(config$cache) # from `config <- make(...)`
 cache <- get_cache() # Get the default cache from the last build.
 class(cache)
 cache$list() # functionality from storr
@@ -58,7 +58,7 @@ tmp <- new_cache(
 )
 
 ## ----default_cache_control-----------------------------------------------
-config <- make(my_plan, verbose = FALSE, return_config = TRUE)
+config <- make(my_plan, verbose = FALSE)
 short_hash(config$cache) # would have been xxhash64 (default_short_hash_algo())
 long_hash(config$cache) # would have been sha256 (default_long_hash_algo())
 
@@ -72,7 +72,7 @@ config$cache <- configure_cache(
 
 ## ----newhashmorecache----------------------------------------------------
 outdated(my_plan, verbose = FALSE)
-config <- make(my_plan, verbose = FALSE, return_config = TRUE)
+config <- make(my_plan, verbose = FALSE)
 short_hash(config$cache) # same as before
 long_hash(config$cache) # different from before
 
@@ -86,7 +86,7 @@ cache_path(faster_cache)
 cache_path(cache) # location of the previous cache
 short_hash(faster_cache)
 long_hash(faster_cache)
-new_plan <- plan(
+new_plan <- workplan(
   simple = 1 + 1
 )
 make(new_plan, cache = faster_cache)
@@ -100,13 +100,13 @@ readd(simple, cache = faster_cache)
 ## ----use_storr_directly--------------------------------------------------
 library(storr)
 my_storr <- storr_rds("my_storr", mangle_key = TRUE)
-make(new_plan, cache = faster_cache)
-cached(cache = faster_cache)
-readd(simple, cache = faster_cache)
+make(new_plan, cache = my_storr)
+cached(cache = my_storr)
+readd(simple, cache = my_storr)
 
 ## ----memory_caches-------------------------------------------------------
 memory_cache <- storr_environment()
-other_plan <- plan(
+other_plan <- workplan(
   some_data = rnorm(50),
   more_data = rpois(75, lambda = 10),
   result = mean(c(some_data, more_data))

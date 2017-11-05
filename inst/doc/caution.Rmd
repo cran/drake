@@ -18,11 +18,11 @@ vignette: >
 ```{r, echo = F}
 suppressMessages(suppressWarnings(library(drake)))
 suppressMessages(suppressWarnings(library(magrittr)))
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 ```
 
-With drake, there is room for error with respect to tracking dependencies, managing environments and workspaces, etc. For example, in some edge cases, it is possible to trick drake into ignoring dependencies. For the most up-to-date information on unhandled edge cases, please visit the [issue tracker](https://github.com/wlandau-lilly/drake/issues), where you can submit your own bug reports as well. Be sure to search the closed issues too, especially if you are not using the most up-to-date development version. In this vignette, I will try to address some of the main issues to keep in mind for writing reproducible workflows safely.
+`Drake` has edge cases, pitfalls, and weaknesses that may or may not be fixed in future releases. For the most up-to-date information on unhandled edge cases, please visit the [issue tracker](https://github.com/wlandau-lilly/drake/issues), where you can submit your own bug reports as well. Be sure to search the closed issues too, especially if you are not using the most up-to-date development version. In this vignette, I will try to address some of the main issues to keep in mind for writing reproducible workflows safely.
 
 # Workflow plans
 
@@ -34,10 +34,10 @@ A common pitfall is using the `evaluate()` function to expand wildcards after ap
 
 ```{r filethenevaluate}
 library(magrittr) # for the pipe operator %>%
-plan(
+workplan(
   data = readRDS("data_..datasize...rds")
 ) %>%
-  rbind(drake::plan(
+  rbind(drake::workplan(
     file.csv = write.csv(
       data_..datasize.., # nolint
       "file_..datasize...csv"
@@ -54,13 +54,13 @@ The single quotes in the middle of `'file.csv'_small` and `'file.csv'large` are 
 
 ```{r correctevaldatasize}
 rules <- list(..datasize.. = c("small", "large"))
-datasets <- plan(data = readRDS("data_..datasize...rds")) %>%
+datasets <- workplan(data = readRDS("data_..datasize...rds")) %>%
   evaluate(rules = rules)
 ```
 
 Plan the CSV files separately.
 ```{r correctevaldatasize2}
-files <- plan(
+files <- workplan(
   file = write.csv(data_..datasize.., "file_..datasize...csv"), # nolint
   strings_in_dots = "literals"
 ) %>%
@@ -86,23 +86,45 @@ For more control over target names in cases like this, you may want to use the [
 
 ## Commands are NOT perfectly flexible.
 
-In your workflow plan data frame (produced by `plan()` and accepted by `make()`), your commands can usually be flexible R expressions.
+In your workflow plan data frame (produced by `workplan()` and accepted by `make()`), your commands can usually be flexible R expressions.
 
 ```{r tidyplancaution}
-plan(
+workplan(
   target1 = 1 + 1 - sqrt(sqrt(3)),
   target2 = my_function(web_scraped_data) %>% my_tidy
 )
 ```
 
-However, please try to avoid formulas and function definitions in your commands. You may be able to get away with `plan(f = function(x){x + 1})` or `plan(f = y ~ x)` in some use cases, but be careful. Rather than using commands for this, it is better to define functions and formulas in your workspace before calling `make()`. (Alternatively, use the `envir` argument to `make()` to tightly control which imported functions are available.) Use the `check()` function to help screen and quality-control your workflow plan data frame, use `tracked()` to see the items that are reproducibly tracked, and use `plot_graph()` and `build_graph()` to see the dependency structure of your project.
+However, please try to avoid formulas and function definitions in your commands. You may be able to get away with `workplan(f = function(x){x + 1})` or `workplan(f = y ~ x)` in some use cases, but be careful. Rather than using commands for this, it is better to define functions and formulas in your workspace before calling `make()`. (Alternatively, use the `envir` argument to `make()` to tightly control which imported functions are available.) Use the `check()` function to help screen and quality-control your workflow plan data frame, use `tracked()` to see the items that are reproducibly tracked, and use `plot_graph()` and `build_graph()` to see the dependency structure of your project.
 
 # Execution environment and files
+
+## Install `drake` properly.
+
+You must properly install `drake` using `install.packages()`, `devtools::install_github()`, or similar. It is not enough to use `devtools::load_all()`, particularly for the parallel computing functionality, in which multiple R sessions initialize and then try to `require(drake)`.
 
 ## Install all your packages.
 
 Your workflow may depend on external packages such as
 [ggplot2](https://CRAN.R-project.org/package=ggplot2), [dplyr](https://CRAN.R-project.org/package=dplyr), or [MASS](https://CRAN.R-project.org/package=MASS). Such packages must be formally installed with `install.packages()`, `devtools::install_github()`, `devtools::install_local()`, or a similar command. If you load uninstalled packages with `devtools::load_all()`, results may be unpredictable and incorrect.
+
+## Find and diagnose your errors.
+
+When a `make()` fails, use `failed()` and `diagnose()` to debug. Try the following out yourself.
+
+```{r diagnosecaution, eval = FALSE}
+diagnose()
+f <- function(){
+  stop("unusual error")
+}
+bad_plan <- workplan(target = f())
+make(bad_plan)
+failed() # From the last make() only
+diagnose() # From all previous make()s
+error <- diagnose(y)
+str(error)
+error$calls # View the traceback.
+```
 
 ## Your workspace is modified by default.
 
@@ -120,7 +142,7 @@ eval(expression({
   }
 }
 ), envir = envir)
-myplan <- plan(out = f(1:3))
+myplan <- workplan(out = f(1:3))
 make(myplan, envir = envir)
 ls() # Check that your workspace did not change.
 ls(envir) # Check your evaluation environment.
@@ -137,7 +159,7 @@ library(drake)
 ```
 
 ```{r depscheck}
-my_plan <- plan(list = c(a = "x <- 1; return(x)"))
+my_plan <- workplan(list = c(a = "x <- 1; return(x)"))
 my_plan
 deps(my_plan$command[1])
 ```
@@ -203,6 +225,10 @@ make(
 
 You may need to adapt this last workaround, depending on the structure of the package, `yourProject`.
 
+## Timeouts may be unreliable.
+
+You can call `make(..., timeout = 10)` to time out all each target after 10 seconds. However, timeouts rely on [R.utils::withTimeout()](https://github.com/HenrikBengtsson/R.utils/issues/74), which in turn relies on `setTimeLimit()`. These functions are the best that R can offer right now, but they have [known issues](https://github.com/HenrikBengtsson/R.utils/issues/74), and the timeout may fail to take effect for certain environments.
+
 # Dependencies
 
 ## Check your dependencies.
@@ -215,12 +241,12 @@ my_plan
 ```
 
 ```{r demoplotgraphcaution, eval = FALSE}
-# Hover, click, drag, zoom, and pan.
+# Hover, click, drag, zoom, and pan. See args 'from' and 'to'.
 plot_graph(my_plan, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/outdated.html"
+src = "https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/outdated.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -324,9 +350,27 @@ Yes, you can declare a file target or input file by enclosing it in single quote
 
 # High-performance computing
 
+## Maximum number of simultaneous jobs
+
+Be mindful of the maximum number of simultaneous parallel jobs you deploy. At best, too many jobs is poor etiquette on a system with many users and limited resources. At worst, too many jobs will crash a system. The `jobs` argument to `make()` sets the maximum number of simultaneous jobs in most cases, but not all.
+
+For most of `drake`'s parallel backends, `jobs` sets the maximum number of simultaneous parallel jobs. However, there are ways to break the pattern. For example, `make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")` uses at most 2 jobs for the imports and at most 4 jobs for the targets. (In `make()`, `args` overrides `jobs` for the targets). For `make(..., parallelism = "future_lapply")`, the `jobs` argument is ignored altogether. Instead, you might limit the max number of jobs by setting `options(mc.cores = 2)` before calling `make()`. Depending on the `future` backend you select with `backend()` or `future::plan()`, you might make use of one of the other environment variables listed in `?future::future.options`.
+
 ## Parallel computing on Windows
 
 On Windows, do not use `make(..., parallelism = "mclapply", jobs = n)` with `n` greater than 1. You could try, but `jobs` will just be demoted to 1. Instead, please replace `"mclapply"` with one of the other `parallelism_choices()` or let `drake` choose the  `parallelism` backend for you. For `make(..., parallelism = "Makefile")`, Windows users need to download and install [`Rtools`](https://cran.r-project.org/bin/windows/Rtools/).
+
+## Configuring [future](https://github.com/HenrikBengtsson/future)/[batchtools](https://github.com/mllg/batchtools)-based distributed computing on clusters
+
+The `"future_lapply"` backend unlocks a large array of distributed computing options on serious computing clusters. However, it is your responsibility to configure your workflow for your specific job scheduler. In particular, special [batchtools](https://github.com/mllg/batchtools) `*.tmpl` configuration files are required, and the technique is described in the documentation of [batchtools](https://github.com/mllg/batchtools). You can find some examples of these files in the `inst/templates` folders of the [batchtools](https://github.com/mllg/batchtools/tree/master/inst/templates) and [future.batchtools](https://github.com/HenrikBengtsson/future.batchtools/tree/master/inst/templates) GitHub repositories. `Drake` has some [built-in prepackaged example workflows](https://github.com/wlandau-lilly/drake/tree/master/inst/examples). See `examples_drake()` to view your options, and then `example_drake()` to write the files for an example.
+
+```{r writexamples, eval = FALSE}
+example_drake("sge")    # Sun/Univa Grid Engine workflow and supporting files
+example_drake("slurm")  # SLURM
+example_drake("torque") # TORQUE
+```
+
+Unfortunately, there is no one-size-fits-all `*.tmpl` configuration file for any job scheduler, so we cannot guarantee that the above examples will work for you out of the box. To learn how to configure the files to suit your needs, you should make sure you understand how to use your job scheduler and [batchtools](https://github.com/mllg/batchtools).
 
 ## Proper Makefiles are not standalone.
 
@@ -345,6 +389,26 @@ Makefile-level parallelism is only used for targets in your workflow plan data f
 make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")
 ```
 
+## Zombie processes
+
+Some parallel backends, particularly `mclapply` and `future::multicore`, may create zombie processes. Zombies are not usually harmful, but you may wish to kill them yourself. The following function by [Carl Boneri](https://github.com/CarlBoneri) should work on Unix-like systems. For a discussion, see [drake issue 116](https://github.com/wlandau-lilly/drake/issues/116).
+
+```{r cautionzombies, eval = FALSE}
+fork_kill_zombies <- function(){
+  require(inline)
+  includes <- "#include <sys/wait.h>"
+  code <- "int wstat; while (waitpid(-1, &wstat, WNOHANG) > 0) {};"
+
+  wait <- inline::cfunction(
+    body = code,
+    includes = includes,
+    convention = ".C"
+  )
+
+  invisible(wait())
+}
+```
+
 # Storage
 
 ## Storage customization pitfalls
@@ -357,6 +421,6 @@ The [storage vignette](https://github.com/wlandau-lilly/drake/blob/master/vignet
 In `predict_runtime()` and `rate_limiting_times()`, `drake` only accounts for the targets with logged build times. If some targets have not been timed, `drake` throws a warning and prints the untimed targets.
 
 ```{r rmfiles_caution, echo = FALSE}
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 ```

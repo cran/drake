@@ -5,7 +5,7 @@
 \title{Function \code{in_progress}}
 \usage{
 in_progress(path = getwd(), search = TRUE, cache = drake::get_cache(path =
-  path, search = search))
+  path, search = search, verbose = verbose), verbose = TRUE)
 }
 \arguments{
 \item{path}{Root directory of the drake project,
@@ -19,6 +19,8 @@ current working directory only.}
 \item{cache}{optional drake cache. See code{\link{new_cache}()}.
 If \code{cache} is supplied,
 the \code{path} and \code{search} arguments are ignored.}
+
+\item{verbose}{whether to print console messages}
 }
 \value{
 A character vector of target names
@@ -32,15 +34,12 @@ List the targets that either
 \examples{
 \dontrun{
 load_basic_example()
-make(my_plan)
-in_progress() # nothing
-bad_plan = plan(x = function_doesnt_exist())
-make(bad_plan) # error
-in_progress() # "x"
+make(my_plan) # Kill before targets finish.
+in_progress()
 }
 }
 \seealso{
-\code{\link{session}},
+\code{\link{diagnose}}, \code{\link{session}},
 \code{\link{built}}, \code{\link{imported}},
-\code{\link{readd}}, \code{\link{plan}}, \code{\link{make}}
+\code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
 }

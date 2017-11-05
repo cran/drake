@@ -1,15 +1,21 @@
 # Below, the colors from "target" through
-# "unload" are for the console. The rest
+# "fail" are for the console. The rest
 # are for plot_graph().
 colors <- c(
   target = "green3",
   import = "dodgerblue3",
   missing = "darkorchid3",
+  cache = "skyblue1",
   check = "skyblue1",
+  connect = "skyblue1",
   load = "#ff9933",
   unload = "#ff7221",
+  timeout = "maroon",
+  retry = "forestgreen",
+  fail = "red",
   up_to_date = "forestgreen",
-  outdated = "#aa0000",
+  outdated = "#000000",
+  failed = "#aa0000",
   import_node = "dodgerblue3",
   missing_node = "darkorchid3",
   in_progress = "#ff7221",

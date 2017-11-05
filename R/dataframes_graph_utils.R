@@ -17,10 +17,16 @@ append_build_times <- function(config) {
 }
 
 arrange_nodes <- function(config){
-  if (config$parallelism == "Makefile")
-    resolve_levels_Makefile(config = config)
+  if (config$parallelism %in% parallelism_choices(distributed_only = TRUE))
+    resolve_levels_distributed(config = config)
   else
     resolve_levels(config = config)
+}
+
+shrink_levels <- function(nodes){
+  nodes <- nodes[order(nodes$level), ]
+  nodes$level <- c(0, cumsum(diff(nodes$level) > 0))
+  nodes
 }
 
 can_get_function <- function(x, envir) {
@@ -37,6 +43,7 @@ categorize_nodes <- function(config) {
     nodes[missing, "status"] <- "missing"
     nodes[outdated, "status"] <- "outdated"
     nodes[in_progress, "status"] <- "in progress"
+    nodes[failed, "status"] <- "failed"
     nodes$type <- "object"
     nodes[is_file(nodes$id), "type"] <- "file"
     nodes[functions, "type"] <- "function"
@@ -46,7 +53,7 @@ categorize_nodes <- function(config) {
 
 configure_nodes <- function(config){
   elts <- c(
-    "functions", "in_progress", "missing",
+    "failed", "functions", "in_progress", "missing",
     "outdated", "targets"
   )
   for (elt in elts){
@@ -66,13 +73,13 @@ configure_nodes <- function(config){
 #' \code{\link{plot_graph}()}.
 #' @export
 #' @seealso \code{\link{dataframes_graph}}, \code{\link{plot_graph}}
-#' @param parallelism Mode of parallelism intended for the workflow.
+#' @param parallelism Mode of parallelism intended for the workplan.
 #' See \code{\link{parallelism_choices}()}.
 #' @param split_columns logical, whether the columns were split
 #' in \code{\link{dataframes_graph}()} or \code{\link{plot_graph}()}
 #' with the \code{split_columns} argument.
 default_graph_title <- function(
-  parallelism = drake::parallelism_choices(),
+  parallelism = drake::parallelism_choices(distributed_only = FALSE),
   split_columns = FALSE
 ){
   parallelism <- match.arg(parallelism)
@@ -152,7 +159,7 @@ resolve_levels <- function(config) {
     keep_these <- setdiff(V(graph)$name, rownames(nodes))
     graph_remaining_targets <- delete_vertices(graph, v = keep_these)
     while (length(V(graph_remaining_targets))) {
-      candidates <- next_targets(graph_remaining_targets)
+      candidates <- next_targets(graph_remaining_targets, jobs = jobs)
       if (length(candidates)){
         nodes[candidates, "level"] <- level
         level <- level + 1
@@ -164,16 +171,31 @@ resolve_levels <- function(config) {
   })
 }
 
-resolve_levels_Makefile <- function(config) { # nolint
+resolve_levels_distributed <- function(config) { # nolint
   with(config, {
+    targets <- intersect(plan$target, nodes$id)
+    imports <- setdiff(nodes$id, targets)
+    if (!length(targets) | !length(imports)){
+      return(resolve_levels(config))
+    }
     graph_imports <- delete_vertices(graph, v = targets)
     graph_targets <- delete_vertices(graph, v = imports)
     nodes_imports <- nodes[nodes$id %in% imports, ]
     nodes_targets <- nodes[nodes$id %in% targets, ]
     nodes_imports <- resolve_levels(
-      config = list(nodes = nodes_imports, graph = graph_imports))
+      config = list(
+        nodes = nodes_imports,
+        graph = graph_imports,
+        jobs = config$jobs
+      )
+    )
     nodes_targets <- resolve_levels(
-      config = list(nodes = nodes_targets, graph = graph_targets))
+      config = list(
+        nodes = nodes_targets,
+        graph = graph_targets,
+        jobs = config$jobs
+      )
+    )
     nodes_imports$level <- nodes_imports$level - max(nodes_imports$level)
     rbind(nodes_imports, nodes_targets)
   })
@@ -203,6 +225,7 @@ split_node_columns <- function(nodes){
       old_levels = stage$level, max_reps = max_reps)
     stage
   })
+  rownames(out) <- out$id
   out$level <- as.integer(as.factor(out$level))
   out
 }
@@ -212,6 +235,7 @@ style_nodes <- function(config) {
     nodes$font.size <- font_size # nolint
     nodes[nodes$status == "imported", "color"] <- color_of("import_node")
     nodes[nodes$status == "in progress", "color"] <- color_of("in_progress")
+    nodes[nodes$status == "failed", "color"] <- color_of("failed")
     nodes[nodes$status == "missing", "color"] <- color_of("missing_node")
     nodes[nodes$status == "outdated", "color"] <- color_of("outdated")
     nodes[nodes$status == "up to date", "color"] <- color_of("up_to_date")
@@ -220,6 +244,16 @@ style_nodes <- function(config) {
     nodes[nodes$type == "function", "shape"] <- shape_of("funct")
     nodes
   })
+}
+
+subset_nodes_edges <- function(config, keep, choices = V(config$graph)$name){
+  keep <- sanitize_nodes(nodes = keep, choices = choices)
+  config$nodes <- config$nodes[keep, ]
+  config$edges <-
+    config$edges[
+      config$edges$from %in% keep &
+      config$edges$to %in% keep, ]
+  config
 }
 
 #' @title Function legend_nodes
@@ -240,8 +274,9 @@ legend_nodes <- function(font_size = 20) {
   out <- data.frame(
     label = c(
       "Up to date",
-      "In progress",
       "Outdated",
+      "In progress",
+      "Failed",
       "Imported",
       "Missing",
       "Object",
@@ -250,14 +285,15 @@ legend_nodes <- function(font_size = 20) {
     ),
     color = color_of(c(
       "up_to_date",
-      "in_progress",
       "outdated",
+      "in_progress",
+      "failed",
       "import_node",
       "missing_node",
       rep("generic", 3)
     )),
     shape = shape_of(c(
-      rep("object", 6),
+      rep("object", 7),
       "funct",
       "file"
     )),

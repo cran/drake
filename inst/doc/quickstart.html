@@ -12,7 +12,7 @@
 
 <meta name="author" content="William Michael Landau" />
 
-<meta name="date" content="2017-10-17" />
+<meta name="date" content="2017-11-05" />
 
 <title>Quickstart</title>
 
@@ -71,7 +71,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1 class="title toc-ignore">Quickstart</h1>
 <h3 class="subtitle"><em>quickstart example for drake</em></h3>
 <h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-10-17</em></h4>
+<h4 class="date"><em>2017-11-05</em></h4>
 
 
 <div id="TOC">
@@ -80,11 +80,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#setting-up-the-basic-example"><span class="toc-section-number">2</span> Setting up the basic example</a></li>
 <li><a href="#workflow-plan"><span class="toc-section-number">3</span> Workflow plan</a></li>
 <li><a href="#generate-the-workflow-plan"><span class="toc-section-number">4</span> Generate the workflow plan</a></li>
-<li><a href="#my_plan"><span class="toc-section-number">5</span> my_plan</a></li>
-<li><a href="#flexible-helpers-to-make-workflow-plans"><span class="toc-section-number">6</span> Flexible helpers to make workflow plans</a></li>
-<li><a href="#run-the-workflow"><span class="toc-section-number">7</span> Run the workflow</a></li>
-<li><a href="#automatic-watching-for-changed-dependencies"><span class="toc-section-number">8</span> Automatic watching for changed dependencies</a></li>
-<li><a href="#need-more-speed"><span class="toc-section-number">9</span> Need more speed?</a></li>
+<li><a href="#flexible-helpers-to-make-workflow-plans"><span class="toc-section-number">5</span> Flexible helpers to make workflow plans</a></li>
+<li><a href="#run-the-workflow"><span class="toc-section-number">6</span> Run the workflow</a></li>
+<li><a href="#automatic-watching-for-changed-dependencies"><span class="toc-section-number">7</span> Automatic watching for changed dependencies</a></li>
+<li><a href="#need-more-speed"><span class="toc-section-number">8</span> Need more speed?</a></li>
 </ul>
 </div>
 
@@ -92,13 +91,21 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <img src="data:image/png;base64,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" />
 
 </div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <div id="quick-examples" class="section level1">
 <h1><span class="header-section-number">1</span> Quick examples</h1>
+<p>Inspect and run your project.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
 <span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd.</span>
-<span class="kw">plot_graph</span>(my_plan) <span class="co"># Hover, click, drag, zoom, pan.</span>
+<span class="kw">plot_graph</span>(my_plan) <span class="co"># Hover, click, drag, zoom, pan. See args 'from' and 'to'.</span>
 <span class="kw">make</span>(my_plan) <span class="co"># Run the workflow.</span>
-<span class="kw">make</span>(my_plan) <span class="co"># Check that everything is already up to date.</span></code></pre></div>
+<span class="kw">outdated</span>(my_plan) <span class="co"># Check that everything is already up to date.</span></code></pre></div>
+<p>Debug errors.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">failed</span>()                 <span class="co"># Targets that failed in the most recent `make()`</span>
+<span class="kw">diagnose</span>()               <span class="co"># Targets that failed in any previous `make()`</span>
+error &lt;-<span class="st"> </span><span class="kw">diagnose</span>(large) <span class="co"># Most recent verbose error log of `large`</span>
+<span class="kw">str</span>(error)               <span class="co"># Object of class &quot;error&quot;</span>
+error<span class="op">$</span>calls              <span class="co"># Call stack / traceback</span></code></pre></div>
 <p>Dive deeper into the built-in examples.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">example_drake</span>(<span class="st">&quot;basic&quot;</span>) <span class="co"># Write the code files.</span>
 <span class="kw">examples_drake</span>() <span class="co"># List the other examples.</span>
@@ -110,20 +117,20 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(knitr)
 <span class="kw">library</span>(drake)</code></pre></div>
 <p>First, we will generate a few datasets.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">simulate &lt;-<span class="st"> </span>function(n){
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">simulate &lt;-<span class="st"> </span><span class="cf">function</span>(n){
   <span class="kw">data.frame</span>(
-    <span class="dt">x =</span> stats::<span class="kw">rnorm</span>(n),
+    <span class="dt">x =</span> stats<span class="op">::</span><span class="kw">rnorm</span>(n),
     <span class="dt">y =</span> <span class="kw">rpois</span>(n, <span class="dv">1</span>)
   )
 }</code></pre></div>
 <p>Then, we will analyze each dataset with multiple analysis methods.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg1 &lt;-<span class="st"> </span>function(d){
-  <span class="kw">lm</span>(y ~<span class="st"> </span>+<span class="st"> </span>x, <span class="dt">data =</span> d)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg1 &lt;-<span class="st"> </span><span class="cf">function</span>(d){
+  <span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span><span class="op">+</span><span class="st"> </span>x, <span class="dt">data =</span> d)
 }
 
-reg2 &lt;-<span class="st"> </span>function(d){
-  d$x2 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">2</span>
-  <span class="kw">lm</span>(y ~<span class="st"> </span>x2, <span class="dt">data =</span> d)
+reg2 &lt;-<span class="st"> </span><span class="cf">function</span>(d){
+  d<span class="op">$</span>x2 &lt;-<span class="st"> </span>d<span class="op">$</span>x <span class="op">^</span><span class="st"> </span><span class="dv">2</span>
+  <span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x2, <span class="dt">data =</span> d)
 }</code></pre></div>
 <p>We need the source file <code>report.Rmd</code> for the end.k</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">lines &lt;-<span class="st"> </span><span class="kw">c</span>(
@@ -174,27 +181,31 @@ my_plan</code></pre></div>
 <p>Each row is an intermediate step, and each <strong>command</strong> generates a <strong>target</strong>. A target is an output R object (cached when generated) or output file (specified with single quotes), and a command just an ordinary piece of R code (not necessarily a single function call). As input, commands may take objects imported from your workspace, targets generated by other commands, or initial input files. These dependencies give your project an underlying network.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
 <span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
-<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/outdated.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/outdated.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
 <p>See also <code>dataframes_graph()</code>, <code>render_graph()</code>, and <code>config()</code> for faster and more customized regraphing.</p>
 <p>You can also check the dependencies of individual targets.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(reg2)</code></pre></div>
 <pre><code>## [1] &quot;lm&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="dv">1</span>]) <span class="co"># Files like report.Rmd are single-quoted.</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan<span class="op">$</span>command[<span class="dv">1</span>]) <span class="co"># Files like report.Rmd are single-quoted.</span></code></pre></div>
 <pre><code>## [1] &quot;'report.Rmd'&quot;           &quot;coef_regression2_small&quot;
 ## [3] &quot;knit&quot;                   &quot;large&quot;                 
 ## [5] &quot;small&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="kw">nrow</span>(my_plan)])</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan<span class="op">$</span>command[<span class="kw">nrow</span>(my_plan)])</code></pre></div>
 <pre><code>## [1] &quot;coefficients&quot;      &quot;regression2_large&quot;</code></pre>
 <p>List all the reproducibly-tracked objects and files, including imports and targets.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">tracked</span>(my_plan, <span class="dt">targets =</span> <span class="st">&quot;small&quot;</span>)</code></pre></div>
 <pre><code>## Unloading targets from environment:
 ##   small
 ##   large
-##   coef_regression2_small</code></pre>
+##   coef_regression2_small
+## connect 15 imports: f, reg1, reg2, my_plan, myplan, small_plan, simulate, dat...
+## connect 15 targets: 'report.md', small, large, regression1_small, regression1...</code></pre>
 <pre><code>## [1] &quot;small&quot;        &quot;simulate&quot;     &quot;data.frame&quot;   &quot;rpois&quot;       
 ## [5] &quot;stats::rnorm&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">tracked</span>(my_plan)</code></pre></div>
+<pre><code>## connect 13 imports: f, reg1, reg2, my_plan, myplan, small_plan, simulate, dat...
+## connect 15 targets: 'report.md', small, large, regression1_small, regression1...</code></pre>
 <pre><code>##  [1] &quot;'report.md'&quot;            &quot;small&quot;                 
 ##  [3] &quot;large&quot;                  &quot;regression1_small&quot;     
 ##  [5] &quot;regression1_large&quot;      &quot;regression2_small&quot;     
@@ -211,14 +222,14 @@ my_plan</code></pre></div>
 ## [27] &quot;stats::rnorm&quot;</code></pre>
 <p>Check for cycles, missing input files, and other pitfalls.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">check</span>(my_plan)</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...
+## connect 13 imports: f, reg1, reg2, my_plan, myplan, small_plan, simulate, dat...
+## connect 15 targets: 'report.md', small, large, regression1_small, regression1...</code></pre>
 </div>
 <div id="generate-the-workflow-plan" class="section level1">
 <h1><span class="header-section-number">4</span> Generate the workflow plan</h1>
 <p>The data frame <code>my_plan</code> would be a pain to write by hand, so <code>drake</code> has functions to help you.</p>
-</div>
-<div id="my_plan" class="section level1">
-<h1><span class="header-section-number">5</span> my_plan</h1>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_datasets &lt;-<span class="st"> </span><span class="kw">plan</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_datasets &lt;-<span class="st"> </span><span class="kw">workplan</span>(
   <span class="dt">small =</span> <span class="kw">simulate</span>(<span class="dv">5</span>),
   <span class="dt">large =</span> <span class="kw">simulate</span>(<span class="dv">50</span>))
 my_datasets</code></pre></div>
@@ -233,7 +244,7 @@ my_datasets</code></pre></div>
 ## 3 large_rep1 simulate(50)
 ## 4 large_rep2 simulate(50)</code></pre>
 <p>Each dataset is analyzed multiple ways.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">methods &lt;-<span class="st"> </span><span class="kw">plan</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">methods &lt;-<span class="st"> </span><span class="kw">workplan</span>(
   <span class="dt">regression1 =</span> <span class="kw">reg1</span>(..dataset..), <span class="co"># nolint</span>
   <span class="dt">regression2 =</span> <span class="kw">reg2</span>(..dataset..)) <span class="co"># nolint</span>
 methods</code></pre></div>
@@ -249,7 +260,7 @@ my_analyses</code></pre></div>
 ## 3 regression2_small reg2(small)
 ## 4 regression2_large reg2(large)</code></pre>
 <p>Next, we summarize each analysis of each dataset using summary statistics and regression coefficients.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">summary_types &lt;-<span class="st"> </span><span class="kw">plan</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">summary_types &lt;-<span class="st"> </span><span class="kw">workplan</span>(
   <span class="dt">summ =</span> <span class="kw">suppressWarnings</span>(<span class="kw">summary</span>(..analysis..)), <span class="co"># nolint</span>
   <span class="dt">coef =</span> <span class="kw">coefficients</span>(..analysis..)) <span class="co"># nolint</span>
 summary_types</code></pre></div>
@@ -270,7 +281,7 @@ results</code></pre></div>
 ## 8 coef_regression2_large              coefficients(regression2_large)</code></pre>
 <p>The <code>gather</code> feature groups summaries into a smaller number of more manageable targets. I shut it off here to make the data frames more readable.</p>
 <p>For the dynamic report, we have to make sure the files are single-quoted. Single quotes denote file targets and file imports, and double quotes denote literal strings that should not be treated as dependencies where they are mentioned. Also, <code>knit()</code> needs to be somewhere visible in the workflow plan command so that <code>drake</code> knows to dig into the active code chunks of <code>'report.Rmd'</code> and look for dependencies mentioned in calls to <code>loadd()</code> and <code>readd()</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">report &lt;-<span class="st"> </span><span class="kw">plan</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">report &lt;-<span class="st"> </span><span class="kw">workplan</span>(
   <span class="dt">report.md =</span> <span class="kw">knit</span>(<span class="st">'report.Rmd'</span>, <span class="dt">quiet =</span> <span class="ot">TRUE</span>), <span class="co"># nolint</span>
   <span class="dt">file_targets =</span> <span class="ot">TRUE</span>, <span class="dt">strings_in_dots =</span> <span class="st">&quot;filenames&quot;</span>)
 report</code></pre></div>
@@ -297,9 +308,9 @@ my_plan</code></pre></div>
 ## 15 coef_regression2_large              coefficients(regression2_large)</code></pre>
 </div>
 <div id="flexible-helpers-to-make-workflow-plans" class="section level1">
-<h1><span class="header-section-number">6</span> Flexible helpers to make workflow plans</h1>
+<h1><span class="header-section-number">5</span> Flexible helpers to make workflow plans</h1>
 <p>If your workflow does not fit the rigid datasets/analyses/summaries framework, check out functions <code>expand()</code>, <code>evaluate()</code>, and <code>gather()</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class="dt">data =</span> <span class="kw">simulate</span>(<span class="dt">center =</span> MU, <span class="dt">scale =</span> SIGMA))
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">workplan</span>(<span class="dt">data =</span> <span class="kw">simulate</span>(<span class="dt">center =</span> MU, <span class="dt">scale =</span> SIGMA))
 df</code></pre></div>
 <pre><code>##   target                              command
 ## 1   data simulate(center = MU, scale = SIGMA)</code></pre>
@@ -308,21 +319,21 @@ df</code></pre></div>
 <pre><code>##      target                              command
 ## 1 data_rep1 simulate(center = MU, scale = SIGMA)
 ## 2 data_rep2 simulate(center = MU, scale = SIGMA)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">wildcard =</span> <span class="st">&quot;MU&quot;</span>, <span class="dt">values =</span> <span class="dv">1</span>:<span class="dv">2</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">wildcard =</span> <span class="st">&quot;MU&quot;</span>, <span class="dt">values =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">2</span>)</code></pre></div>
 <pre><code>##        target                             command
 ## 1 data_rep1_1 simulate(center = 1, scale = SIGMA)
 ## 2 data_rep1_2 simulate(center = 2, scale = SIGMA)
 ## 3 data_rep2_1 simulate(center = 1, scale = SIGMA)
 ## 4 data_rep2_2 simulate(center = 2, scale = SIGMA)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">wildcard =</span> <span class="st">&quot;MU&quot;</span>, <span class="dt">values =</span> <span class="dv">1</span>:<span class="dv">2</span>, <span class="dt">expand =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">wildcard =</span> <span class="st">&quot;MU&quot;</span>, <span class="dt">values =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">2</span>, <span class="dt">expand =</span> <span class="ot">FALSE</span>)</code></pre></div>
 <pre><code>##      target                             command
 ## 1 data_rep1 simulate(center = 1, scale = SIGMA)
 ## 2 data_rep2 simulate(center = 2, scale = SIGMA)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">rules =</span> <span class="kw">list</span>(<span class="dt">MU =</span> <span class="dv">1</span>:<span class="dv">2</span>, <span class="dt">SIGMA =</span> <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="dv">1</span>)), <span class="dt">expand =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">rules =</span> <span class="kw">list</span>(<span class="dt">MU =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">2</span>, <span class="dt">SIGMA =</span> <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="dv">1</span>)), <span class="dt">expand =</span> <span class="ot">FALSE</span>)</code></pre></div>
 <pre><code>##      target                           command
 ## 1 data_rep1 simulate(center = 1, scale = 0.1)
 ## 2 data_rep2   simulate(center = 2, scale = 1)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">rules =</span> <span class="kw">list</span>(<span class="dt">MU =</span> <span class="dv">1</span>:<span class="dv">2</span>, <span class="dt">SIGMA =</span> <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="dv">1</span>, <span class="dv">10</span>)))</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">evaluate</span>(df, <span class="dt">rules =</span> <span class="kw">list</span>(<span class="dt">MU =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">2</span>, <span class="dt">SIGMA =</span> <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="dv">1</span>, <span class="dv">10</span>)))</code></pre></div>
 <pre><code>##             target                           command
 ## 1  data_rep1_1_0.1 simulate(center = 1, scale = 0.1)
 ## 2    data_rep1_1_1   simulate(center = 1, scale = 1)
@@ -344,7 +355,7 @@ df</code></pre></div>
 ## 1 my_summaries rbind(data_rep1 = data_rep1, data_rep2 = data_rep2)</code></pre>
 </div>
 <div id="run-the-workflow" class="section level1">
-<h1><span class="header-section-number">7</span> Run the workflow</h1>
+<h1><span class="header-section-number">6</span> Run the workflow</h1>
 <p>You may want to check for outdated or missing targets/imports first.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">outdated</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Targets that need to be (re)built.</span></code></pre></div>
 <pre><code>##  [1] &quot;'report.md'&quot;            &quot;coef_regression1_large&quot;
@@ -356,9 +367,13 @@ df</code></pre></div>
 ## [13] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
 ## [15] &quot;summ_regression2_small&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">missed</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Checks your workspace.</span></code></pre></div>
+<pre><code>## character(0)</code></pre>
 <p>Then just <code>make(my_plan)</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan)</code></pre></div>
-<pre><code>## check 9 items: 'report.Rmd', knit, summary, suppressWarnings, coefficients, l...
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...
+## connect 20 imports: f, reg1, df, reg2, my_plan, myplan, results, small_plan, ...
+## connect 15 targets: 'report.md', small, large, regression1_small, regression1...
+## check 9 items: 'report.Rmd', knit, summary, suppressWarnings, coefficients, l...
 ## import 'report.Rmd'
 ## import knit
 ## import summary
@@ -404,62 +419,69 @@ df</code></pre></div>
 ## [15] &quot;reg1&quot;                   &quot;reg2&quot;                  
 ## [17] &quot;report&quot;                 &quot;results&quot;               
 ## [19] &quot;rules&quot;                  &quot;simulate&quot;              
-## [21] &quot;small&quot;                  &quot;summary_types&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">outdated</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Everything is up to date.</span>
-<span class="kw">build_times</span>(<span class="dt">digits =</span> <span class="dv">4</span>) <span class="co"># How long did it take to make each target?</span></code></pre></div>
-<pre><code>##                      item   type elapsed   user system
-## 1            'report.Rmd' import  0.003s 0.001s 0.002s
-## 2             'report.md' target  0.037s 0.035s 0.002s
-## 3  coef_regression1_large target  0.004s 0.003s 0.001s
-## 4  coef_regression1_small target  0.004s 0.003s 0.001s
-## 5  coef_regression2_large target  0.003s 0.002s 0.001s
-## 6  coef_regression2_small target  0.004s 0.004s     0s
-## 7            coefficients import  0.003s 0.003s     0s
-## 8              data.frame import  0.005s 0.005s     0s
-## 9                    knit import  0.004s 0.005s     0s
-## 10                  large target  0.004s 0.004s     0s
-## 11                     lm import  0.003s 0.003s     0s
-## 12                   reg1 import  0.003s 0.003s     0s
-## 13                   reg2 import  0.002s 0.003s     0s
-## 14      regression1_large target  0.004s 0.005s     0s
-## 15      regression1_small target  0.007s 0.006s 0.001s
-## 16      regression2_large target  0.005s 0.005s     0s
-## 17      regression2_small target  0.005s 0.005s     0s
-## 18                  rpois import  0.003s 0.003s     0s
-## 19               simulate import  0.002s 0.001s 0.001s
-## 20                  small target  0.004s 0.004s     0s
-## 21           stats::rnorm import  0.003s 0.003s 0.001s
-## 22 summ_regression1_large target  0.004s 0.002s 0.002s
-## 23 summ_regression1_small target  0.005s 0.005s     0s
-## 24 summ_regression2_large target  0.004s 0.002s 0.002s
-## 25 summ_regression2_small target  0.004s 0.003s 0.001s
-## 26                summary import  0.005s 0.005s     0s
-## 27       suppressWarnings import  0.004s 0.003s 0.001s</code></pre>
+## [21] &quot;small&quot;                  &quot;small_plan&quot;            
+## [23] &quot;summary_types&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">outdated</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Everything is up to date.</span></code></pre></div>
+<pre><code>## character(0)</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">build_times</span>(<span class="dt">digits =</span> <span class="dv">4</span>) <span class="co"># How long did it take to make each target?</span></code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
+<pre><code>##                      item   type elapsed  user system
+## 1            'report.Rmd' import      0s    0s     0s
+## 2             'report.md' target   0.09s 0.03s  0.06s
+## 3  coef_regression1_large target   0.02s    0s  0.01s
+## 4  coef_regression1_small target      0s    0s     0s
+## 5  coef_regression2_large target      0s    0s     0s
+## 6  coef_regression2_small target   0.01s    0s  0.02s
+## 7            coefficients import      0s    0s     0s
+## 8              data.frame import   0.02s    0s  0.01s
+## 9                    knit import      0s    0s     0s
+## 10                  large target   0.02s    0s  0.01s
+## 11                     lm import   0.01s    0s  0.01s
+## 12                   reg1 import      0s    0s     0s
+## 13                   reg2 import      0s    0s     0s
+## 14      regression1_large target   0.02s 0.02s     0s
+## 15      regression1_small target   0.01s    0s  0.01s
+## 16      regression2_large target   0.02s 0.01s     0s
+## 17      regression2_small target      0s    0s     0s
+## 18                  rpois import      0s    0s     0s
+## 19               simulate import   0.02s    0s  0.02s
+## 20                  small target   0.04s 0.03s     0s
+## 21           stats::rnorm import   0.02s    0s  0.02s
+## 22 summ_regression1_large target      0s    0s     0s
+## 23 summ_regression1_small target   0.02s 0.02s     0s
+## 24 summ_regression2_large target   0.02s 0.01s     0s
+## 25 summ_regression2_small target   0.01s    0s  0.02s
+## 26                summary import   0.02s    0s  0.02s
+## 27       suppressWarnings import      0s    0s     0s</code></pre>
 <p>See also <code>predict_runtime()</code> and <code>rate_limiting_times()</code>.</p>
 <p>In the new graph, the red nodes from before are now green.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
 <span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
-<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/built.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/built.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
 <p>Optionally, get <code>visNetwork</code> nodes and edges so you can make your own plot with <code>visNetwork</code> or <code>render_graph()</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dataframes_graph</span>(my_plan)</code></pre></div>
 <p>Use <code>readd()</code> and <code>loadd()</code> to load more targets. (They are cached in the hidden <code>.drake/</code> folder using <a href="https://CRAN.R-project.org/package=storr">storr</a>). Other functions interact and view the cache.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">readd</span>(coef_regression2_large)</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <pre><code>## (Intercept)          x2 
-##   1.0158230  -0.1823097</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">loadd</span>(small)
-<span class="kw">head</span>(small)</code></pre></div>
+##   1.1378831  -0.0494711</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">loadd</span>(small)</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(small)</code></pre></div>
 <pre><code>##            x y
-## 1  1.1134271 0
-## 2 -0.3582157 2
-## 3  0.3513026 1
-## 4  0.5556090 0
-## 5  0.5466293 2</code></pre>
+## 1  1.2557721 1
+## 2  1.4661077 1
+## 3  1.4598818 3
+## 4  0.9595286 0
+## 5 -0.1949191 0</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">rm</span>(small)
 <span class="kw">cached</span>(small, large)</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <pre><code>## small large 
 ##  TRUE  TRUE</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cached</span>()</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <pre><code>##  [1] &quot;'report.Rmd'&quot;           &quot;'report.md'&quot;           
 ##  [3] &quot;coef_regression1_large&quot; &quot;coef_regression1_small&quot;
 ##  [5] &quot;coef_regression2_large&quot; &quot;coef_regression2_small&quot;
@@ -475,6 +497,7 @@ df</code></pre></div>
 ## [25] &quot;summ_regression2_small&quot; &quot;summary&quot;               
 ## [27] &quot;suppressWarnings&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">built</span>()</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <pre><code>##  [1] &quot;'report.md'&quot;            &quot;coef_regression1_large&quot;
 ##  [3] &quot;coef_regression1_small&quot; &quot;coef_regression2_large&quot;
 ##  [5] &quot;coef_regression2_small&quot; &quot;large&quot;                 
@@ -484,11 +507,13 @@ df</code></pre></div>
 ## [13] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
 ## [15] &quot;summ_regression2_small&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">imported</span>()</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <pre><code>##  [1] &quot;'report.Rmd'&quot;     &quot;coefficients&quot;     &quot;data.frame&quot;      
 ##  [4] &quot;knit&quot;             &quot;lm&quot;               &quot;reg1&quot;            
 ##  [7] &quot;reg2&quot;             &quot;rpois&quot;            &quot;simulate&quot;        
 ## [10] &quot;stats::rnorm&quot;     &quot;summary&quot;          &quot;suppressWarnings&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(<span class="kw">read_plan</span>())</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <pre><code>##              target                          command
 ## 1       'report.md' knit('report.Rmd', quiet = TRUE)
 ## 2             small                      simulate(5)
@@ -497,49 +522,54 @@ df</code></pre></div>
 ## 5 regression1_large                      reg1(large)
 ## 6 regression2_small                      reg2(small)</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(<span class="kw">progress</span>()) <span class="co"># See also in_progress()</span></code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <pre><code>##           'report.Rmd'            'report.md' coef_regression1_large 
 ##             &quot;finished&quot;             &quot;finished&quot;             &quot;finished&quot; 
 ## coef_regression1_small coef_regression2_large coef_regression2_small 
 ##             &quot;finished&quot;             &quot;finished&quot;             &quot;finished&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">progress</span>(large)</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <pre><code>##      large 
 ## &quot;finished&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">session</span>() <span class="co"># of the last call to make()</span></code></pre></div>
-<pre><code>## R version 3.4.0 (2017-04-21)
-## Platform: x86_64-pc-linux-gnu (64-bit)
-## Running under: Red Hat Enterprise Linux Server release 6.9 (Santiago)
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
+<pre><code>## R version 3.4.1 (2017-06-30)
+## Platform: x86_64-w64-mingw32/x64 (64-bit)
+## Running under: Windows 7 x64 (build 7601) Service Pack 1
 ## 
 ## Matrix products: default
-## BLAS: /lrlhps/apps/R/qualified/R-3.4.0/lib64/R/lib/libRblas.so
-## LAPACK: /lrlhps/apps/R/qualified/R-3.4.0/lib64/R/lib/libRlapack.so
 ## 
 ## locale:
-##  [1] LC_CTYPE=en_US       LC_NUMERIC=C         LC_TIME=en_US       
-##  [4] LC_COLLATE=C         LC_MONETARY=en_US    LC_MESSAGES=en_US   
-##  [7] LC_PAPER=en_US       LC_NAME=C            LC_ADDRESS=C        
-## [10] LC_TELEPHONE=C       LC_MEASUREMENT=en_US LC_IDENTIFICATION=C 
+## [1] LC_COLLATE=C                          
+## [2] LC_CTYPE=English_United States.1252   
+## [3] LC_MONETARY=English_United States.1252
+## [4] LC_NUMERIC=C                          
+## [5] LC_TIME=English_United States.1252    
 ## 
 ## attached base packages:
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-## [1] knitr_1.17   magrittr_1.5 drake_4.3.0 
+## [1] future_1.6.2 knitr_1.17   magrittr_1.5 drake_4.4.0 
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] igraph_1.1.2        Rcpp_0.12.13        R6_2.2.2           
-##  [4] rlang_0.1.2         stringr_1.2.0       storr_1.1.2        
-##  [7] plyr_1.8.4          visNetwork_2.0.1    tools_3.4.0        
-## [10] parallel_3.4.0      R.oo_1.21.0         eply_0.1.0         
-## [13] withr_2.0.0         htmltools_0.3.6     yaml_2.1.14        
-## [16] rprojroot_1.2       digest_0.6.12       crayon_1.3.4       
-## [19] htmlwidgets_0.9     clisymbols_1.2.0    R.utils_2.5.0      
-## [22] codetools_0.2-15    testthat_1.0.2.9000 evaluate_0.10.1    
-## [25] rmarkdown_1.6       stringi_1.1.5       compiler_3.4.0     
-## [28] backports_1.1.0     R.methodsS3_1.7.1   jsonlite_1.5       
-## [31] lubridate_1.6.0     pkgconfig_2.0.1</code></pre>
+##  [1] igraph_1.1.2      Rcpp_0.12.12      R6_2.2.2         
+##  [4] storr_1.1.2       plyr_1.8.4        stringr_1.2.0    
+##  [7] visNetwork_2.0.1  globals_0.10.3    tools_3.4.1      
+## [10] parallel_3.4.1    R.oo_1.21.0       eply_0.1.0       
+## [13] withr_2.0.0       htmltools_0.3.6   yaml_2.1.14      
+## [16] rprojroot_1.2     digest_0.6.12     crayon_1.3.4     
+## [19] htmlwidgets_0.9   R.utils_2.5.0     codetools_0.2-15 
+## [22] testthat_1.0.2    evaluate_0.10.1   rmarkdown_1.6    
+## [25] stringi_1.1.5     compiler_3.4.1    backports_1.1.0  
+## [28] R.methodsS3_1.7.1 jsonlite_1.5      lubridate_1.6.0  
+## [31] listenv_0.6.0     pkgconfig_2.0.1</code></pre>
 <p>The next time you run <code>make(my_plan)</code>, nothing will be built because drake knows everything is up to date.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan)</code></pre></div>
-<pre><code>## check 9 items: 'report.Rmd', knit, summary, suppressWarnings, coefficients, d...
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...
+## connect 20 imports: summary_types, files, command, simulate, small_plan, reg1...
+## connect 15 targets: 'report.md', small, large, regression1_small, regression1...
+## check 9 items: 'report.Rmd', knit, summary, suppressWarnings, coefficients, d...
 ## import 'report.Rmd'
 ## import knit
 ## import summary
@@ -556,11 +586,12 @@ df</code></pre></div>
 ## check 2 items: small, large
 ## check 4 items: regression1_small, regression1_large, regression2_small, regre...
 ## check 8 items: summ_regression1_small, summ_regression1_large, summ_regressio...
-## check 1 item: 'report.md'</code></pre>
+## check 1 item: 'report.md'
+## All targets are already up to date.</code></pre>
 <p>But if you change one of your functions, commands, or other dependencies, drake will update the affected parts of the workflow. Let’s say we want to change the quadratic term to a cubic term in our <code>reg2()</code> function.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg2 &lt;-<span class="st"> </span>function(d) {
-  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
-  <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg2 &lt;-<span class="st"> </span><span class="cf">function</span>(d) {
+  d<span class="op">$</span>x3 &lt;-<span class="st"> </span>d<span class="op">$</span>x <span class="op">^</span><span class="st"> </span><span class="dv">3</span>
+  <span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x3, <span class="dt">data =</span> d)
 }</code></pre></div>
 <p>The targets depending on <code>reg2()</code> need to be rebuilt and everything else is left alone.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">outdated</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>)</code></pre></div>
@@ -570,10 +601,13 @@ df</code></pre></div>
 ## [7] &quot;summ_regression2_small&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
 <span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
-<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan)</code></pre></div>
-<pre><code>## check 9 items: 'report.Rmd', knit, summary, suppressWarnings, coefficients, d...
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...
+## connect 20 imports: summary_types, files, command, simulate, small_plan, reg1...
+## connect 15 targets: 'report.md', small, large, regression1_small, regression1...
+## check 9 items: 'report.Rmd', knit, summary, suppressWarnings, coefficients, d...
 ## import 'report.Rmd'
 ## import knit
 ## import summary
@@ -601,18 +635,19 @@ df</code></pre></div>
 ## unload 5 items: regression2_small, regression2_large, summ_regression2_small,...
 ## target 'report.md'</code></pre>
 <p>But trivial changes to whitespace and comments are totally ignored in your functions and in <code>my_plan$command</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg2 &lt;-<span class="st"> </span>function(d) {
-  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
-    <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d) <span class="co"># I indented here.</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">reg2 &lt;-<span class="st"> </span><span class="cf">function</span>(d) {
+  d<span class="op">$</span>x3 &lt;-<span class="st"> </span>d<span class="op">$</span>x <span class="op">^</span><span class="st"> </span><span class="dv">3</span>
+    <span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x3, <span class="dt">data =</span> d) <span class="co"># I indented here.</span>
 }
 <span class="kw">outdated</span>(my_plan, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Everything is up to date.</span></code></pre></div>
+<pre><code>## character(0)</code></pre>
 <p>Need to add new work on the fly? Just append rows to the workflow plan. If the rest of your workflow is up to date, only the new work is run.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">new_simulation &lt;-<span class="st"> </span>function(n){
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">new_simulation &lt;-<span class="st"> </span><span class="cf">function</span>(n){
   <span class="kw">data.frame</span>(<span class="dt">x =</span> <span class="kw">rnorm</span>(n), <span class="dt">y =</span> <span class="kw">rnorm</span>(n))
 }
 
-additions &lt;-<span class="st"> </span><span class="kw">plan</span>(
-  <span class="dt">new_data =</span> <span class="kw">new_simulation</span>(<span class="dv">36</span>) +<span class="st"> </span><span class="kw">sqrt</span>(<span class="dv">10</span>))
+additions &lt;-<span class="st"> </span><span class="kw">workplan</span>(
+  <span class="dt">new_data =</span> <span class="kw">new_simulation</span>(<span class="dv">36</span>) <span class="op">+</span><span class="st"> </span><span class="kw">sqrt</span>(<span class="dv">10</span>))
 additions</code></pre></div>
 <pre><code>##     target                       command
 ## 1 new_data new_simulation(36) + sqrt(10)</code></pre>
@@ -636,7 +671,10 @@ my_plan</code></pre></div>
 ## 15 coef_regression2_large              coefficients(regression2_large)
 ## 16               new_data                new_simulation(36) + sqrt(10)</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan)</code></pre></div>
-<pre><code>## check 11 items: 'report.Rmd', knit, summary, suppressWarnings, coefficients, ...
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...
+## connect 22 imports: summary_types, new_simulation, files, command, simulate, ...
+## connect 16 targets: 'report.md', small, large, regression1_small, regression1...
+## check 11 items: 'report.Rmd', knit, summary, suppressWarnings, coefficients, ...
 ## import 'report.Rmd'
 ## import knit
 ## import summary
@@ -659,12 +697,15 @@ my_plan</code></pre></div>
 ## check 8 items: summ_regression1_small, summ_regression1_large, summ_regressio...
 ## check 1 item: 'report.md'</code></pre>
 <p>If you ever need to erase your work, use <code>clean()</code>. Any targets removed from the cache will have to be rebuilt on the next call to <code>make()</code>, so be careful.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>(small, reg1) <span class="co"># uncaches individual targets and imported objects</span>
-<span class="kw">clean</span>() <span class="co"># cleans all targets out of the cache</span>
-<span class="kw">clean</span>(<span class="dt">destroy =</span> <span class="ot">TRUE</span>) <span class="co"># removes the cache entirely</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>(small, reg1) <span class="co"># uncaches individual targets and imported objects</span></code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>() <span class="co"># cleans all targets out of the cache</span></code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>(<span class="dt">destroy =</span> <span class="ot">TRUE</span>) <span class="co"># removes the cache entirely</span></code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 </div>
 <div id="automatic-watching-for-changed-dependencies" class="section level1">
-<h1><span class="header-section-number">8</span> Automatic watching for changed dependencies</h1>
+<h1><span class="header-section-number">7</span> Automatic watching for changed dependencies</h1>
 <p>As you have seen with <code>reg2()</code>, <code>drake</code> reacts to changes. In other words, <code>make()</code> notices when your dependencies are different from last time, rebuilds any affected targets, and continues downstream. In particular, <code>drake</code> watches for nontrivial changes to</p>
 <ol style="list-style-type: decimal">
 <li>Other imported functions, whether user-defined or from packages.</li>
@@ -678,8 +719,8 @@ my_plan</code></pre></div>
 <p>There is more to reproducibility than just using <code>drake</code> to watch for dependencies. <a href="https://rstudio.github.io/packrat">Packrat</a> creates a tightly-controlled local library of packages to extend the shelf life of your project. And with <a href="https://www.docker.com/">Docker</a>, you can execute your project on a <a href="https://en.wikipedia.org/wiki/Virtual_machine">virtual machine</a> to ensure platform independence. Together, <a href="https://rstudio.github.io/packrat">packrat</a> and <a href="https://www.docker.com/">Docker</a> can help others reproduce your work even if they have different software and hardware.</p>
 </div>
 <div id="need-more-speed" class="section level1">
-<h1><span class="header-section-number">9</span> Need more speed?</h1>
-<p><code>Drake</code> has extensive high-performance computing support, from local multicore computing on your laptop to serious supercomputing across multiple nodes of a large cluster. In <code>make()</code>, just set the <code>jobs</code> argument to something greater than 1. That unlocks local multicore parallelism. For large-scale distributed parallelism, set <code>parallelism</code> to <code>&quot;Makefile&quot;</code> and follow the instructions in the <code>parallelism</code> vignette.</p>
+<h1><span class="header-section-number">8</span> Need more speed?</h1>
+<p><code>Drake</code> has extensive high-performance computing support, from local multicore computing on your laptop to serious supercomputing across multiple nodes of a large cluster. See the <a href="https://github.com/wlandau-lilly/drake/blob/master/vignettes/parallelism.Rmd">parallelism vignette</a> for the full details.</p>
 </div>
 
 

@@ -4,6 +4,7 @@ drake_context <- function(x){
 }
 
 testrun <- function(config) {
+  set_test_backend()
   invisible(
     make(plan = config$plan, targets = config$targets, envir = config$envir,
       verbose = config$verbose, parallelism = config$parallelism,
@@ -16,13 +17,20 @@ testrun <- function(config) {
 }
 
 justbuilt <- function(config) {
-  sapply(config$cache$list(namespace = "progress"),
-    function(target)
-      config$cache$get(key = target, namespace = "progress")) %>%
-      Filter(f = function(x) x == "finished") %>%
-      names %>%
-      intersect(y = config$plan$target) %>%
-      sort
+  recorded <- config$cache$list(namespace = "progress")
+  all <- lightly_parallelize(
+    X = recorded,
+    FUN = function(target){
+      config$cache$get(key = target, namespace = "progress")
+    },
+    jobs = config$jobs
+  )
+  names(all) <- recorded
+  unlist(all) %>%
+    Filter(f = function(x) x == "finished") %>%
+    names %>%
+    intersect(y = config$plan$target) %>%
+    sort
 }
 
 nobuild <- function(config) {
@@ -30,21 +38,18 @@ nobuild <- function(config) {
 }
 
 test_with_dir <- function(desc, ...){
-  root <- tempdir()
-  stopifnot(file.exists(root))
-  relative_dir <- digest::digest(
-    list(desc, sessionInfo()$platform, rnorm(1)),
-    algo = default_short_hash_algo()
+  new <- tempfile()
+  dir_empty(new)
+  with_dir(
+    new = new,
+    code = {
+      set_test_backend()
+      tmp <- capture.output(
+        test_that(desc = desc, ...)
+      )
+    }
   )
-  dir <- file.path(root, relative_dir)
-  dir_empty(dir)
-  with_dir(dir, test_that(desc = desc, ...))
-}
-
-with_all_options <- function(code) {
-  old <- options()
-  on.exit(restore_options(old))
-  force(code)
+  invisible()
 }
 
 restore_options <- function(old){
@@ -56,7 +61,17 @@ restore_options <- function(old){
   options(old)
 }
 
+set_test_backend <- function(){
+  eval(parse(text = get_testing_scenario()$backend))
+}
+
 unit_test_files <- function(path = getwd()){
   root <- find_root(criterion = "DESCRIPTION", path = path)
   file.path(root, "tests", "testthat")
+}
+
+with_all_options <- function(code) {
+  old <- options()
+  on.exit(restore_options(old))
+  force(code)
 }

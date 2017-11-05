@@ -1,19 +1,19 @@
 drake_context("other features")
 
-test_with_dir("recipe_command", {
-  my_plan <- plan(y = 1)
-  expect_true(is.character(default_recipe_command()))
-  expect_true(is.character(r_recipe_wildcard()))
-  con1 <- make(my_plan, command = default_Makefile_command(),
-    parallelism = "Makefile", recipe_command = "some_command",
-    verbose = FALSE, imports_only = TRUE
-  )
-  expect_equal(con1$recipe_command, "some_command")
-  expect_true(con1$recipe_command != default_recipe_command())
-  con2 <- config(plan = my_plan, parallelism = "Makefile",
-    recipe_command = "my_command", verbose = FALSE)
-  expect_equal(con2$recipe_command, "my_command")
-  expect_true(con2$recipe_command != default_recipe_command())
+test_with_dir("lightly_parallelize_atomic() is correct", {
+  withr::with_seed(seed = 2017, code = {
+    x <- sample(LETTERS[1:3], size = 1e3, replace = TRUE)
+    append <- function(x){
+      paste0(x, "_text")
+    }
+    out0 <- lightly_parallelize(X = x, FUN = append, jobs = 2)
+    out1 <- lightly_parallelize_atomic(X = x, FUN = append, jobs = 2)
+    out2 <- lapply(X = x, FUN = append)
+    expect_identical(out0, out1)
+    expect_identical(out0, out2)
+    y <- gsub("_text", "", unlist(out1))
+    expect_identical(x, y)
+  })
 })
 
 test_with_dir("colors and shapes", {
@@ -58,9 +58,14 @@ test_with_dir("available hash algos", {
 
 test_with_dir("in_progress() works", {
   expect_equal(in_progress(), character(0))
-  bad_plan <- plan(x = function_doesnt_exist())
-  expect_error(make(bad_plan, verbose = FALSE))
-  expect_equal(in_progress(), "x")
+  bad_plan <- workplan(x = function_doesnt_exist())
+  expect_error(tmp <- capture.output({
+      make(bad_plan, verbose = FALSE)
+    },
+    type = "message")
+  )
+  expect_equal(failed(), "x")
+  expect_equal(in_progress(), character(0))
 })
 
 test_with_dir("missed() works", {
@@ -90,7 +95,7 @@ test_with_dir(".onLoad() warns correctly and .onAttach() works", {
 
 test_with_dir("graph functions work", {
   config <- dbug()
-  expect_equal(class(build_graph(config$plan)), "igraph")
+  expect_equal(class(build_graph(config$plan, verbose = FALSE)), "igraph")
   pdf(NULL)
   tmp <- plot_graph(plan = config$plan, envir = config$envir,
     verbose = FALSE)
@@ -125,6 +130,10 @@ test_with_dir("targets can be partially specified", {
   config$targets <- "final"
   testrun(config)
   expect_true(is.numeric(readd(final, search = FALSE)))
+  pl <- workplan(x = 1, y = 2)
+  expect_error(check(pl, "lskjdf", verbose = FALSE))
+  expect_warning(check(pl, c("lskdjf", "x"), verbose = FALSE))
+  expect_silent(check(pl, verbose = FALSE))
 })
 
 test_with_dir("misc stuff", {

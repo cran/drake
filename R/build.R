@@ -1,4 +1,24 @@
-build <- function(target, hash_list, config) {
+#' @title Internal function build
+#' @export
+#' @description Function to build a target.
+#' For internal use only.
+#' the only reason this function is exported
+#' is to set up PSOCK clusters efficiently.
+#' @param target name of the target
+#' @param hash_list list of hashes that tell which
+#' targets are up to date
+#' @param config internal configuration list
+build <- function(target, hash_list, config){
+  config$hook(
+    build_in_hook(
+      target = target,
+      hash_list = hash_list,
+      config = config
+    )
+  )
+}
+
+build_in_hook <- function(target, hash_list, config) {
   start <- proc.time()
   hashes <- hash_list[[target]]
   config$cache$set(key = target, value = "in progress",
@@ -12,16 +32,18 @@ build <- function(target, hash_list, config) {
     value <- build_target(target = target,
       hashes = hashes, config = config)
   }
-  store_target(target = target, value = value, hashes = hashes,
-    imported = imported, config = config)
+
   config$cache$set(key = target, value = hashes$depends,
     namespace = "depends")
-  config$cache$set(key = target, value = "finished",
-    namespace = "progress")
+  config$cache$set(key = target, value = imported, namespace = "imported")
   runtime <- (proc.time() - start) %>%
     runtime_entry(target = target, imported = imported)
   config$cache$set(key = target, value = runtime,
     namespace = "build_times")
+  store_target(target = target, value = value, hashes = hashes,
+    imported = imported, config = config)
+  config$cache$set(key = target, value = "finished",
+    namespace = "progress")
   value
 }
 
@@ -30,9 +52,9 @@ build_target <- function(target, hashes, config) {
     functionize
   seed <- list(seed = config$seed, target = target) %>%
     seed_from_object
-  withr::with_seed(seed, {
-    value <- eval(parse(text = command), envir = config$envir)
-  })
+  value <- run_command(
+    target = target, command = command, config = config, seed = seed
+  )
   check_built_file(target)
   value
 }
@@ -42,8 +64,11 @@ check_built_file <- function(target){
     return()
   }
   if (!file.exists(eply::unquote(target))){
-    warning("File target ", target, " was built,\n",
-      "but the file itself does not exist.")
+    warning(
+      "File target ", target, " was built,\n",
+      "but the file itself does not exist.",
+      call. = FALSE
+    )
   }
 }
 

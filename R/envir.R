@@ -9,11 +9,12 @@ assign_to_envir <- Vectorize(
   )
 
 prune_envir <- function(targets, config){
-  downstream <- lapply(
+  downstream <- lightly_parallelize(
     targets,
     function(vertex){
       subcomponent(config$graph, v = vertex, mode = "out")$name
-    }
+    },
+    jobs = config$jobs
   ) %>%
     unlist() %>%
     unique()
@@ -45,7 +46,8 @@ prune_envir <- function(targets, config){
       message = "load",
       config = config
     )
-    loadd(list = load_these, envir = config$envir, cache = config$cache)
+    loadd(list = load_these, envir = config$envir, cache = config$cache,
+          verbose = FALSE)
   }
   invisible()
 }

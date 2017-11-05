@@ -4,13 +4,13 @@
 \alias{predict_runtime}
 \title{Function predict_runtime}
 \usage{
-predict_runtime(plan = drake::plan(), from_scratch = FALSE,
+predict_runtime(plan = workplan(), from_scratch = FALSE,
   targets_only = FALSE, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(path =
-  path, search = search), parallelism = drake::default_parallelism(),
-  jobs = 1, future_jobs = jobs, packages = (.packages()),
-  prework = character(0), config = NULL, digits = 3, path = getwd(),
-  search = TRUE)
+  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
+  force(code) }, cache = drake::get_cache(path = path, search = search,
+  verbose = verbose), parallelism = drake::default_parallelism(), jobs = 1,
+  future_jobs = jobs, packages = rev(.packages()), prework = character(0),
+  config = NULL, digits = 3, path = getwd(), search = TRUE)
 }
 \arguments{
 \item{plan}{same as for \code{\link{make}}}
@@ -24,13 +24,15 @@ already up to date and therefore skipped.}
 just the targets into the calculations or use the
 build times for everything, including the imports}
 
-\item{targets}{Targets to build in the workflow.
+\item{targets}{Targets to build in the workplan.
 Timing information is
 limited to these targets and their dependencies.}
 
 \item{envir}{same as for \code{\link{make}}}
 
 \item{verbose}{same as for \code{\link{make}}}
+
+\item{hook}{same as for \code{\link{make}}}
 
 \item{cache}{optional drake cache. See code{\link{new_cache}()}.
 The \code{cache} argument is ignored if a

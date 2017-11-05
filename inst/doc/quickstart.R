@@ -6,9 +6,16 @@ unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 ## ----quickstartquickstart, eval = FALSE----------------------------------
 #  library(drake)
 #  load_basic_example() # Also (over)writes report.Rmd.
-#  plot_graph(my_plan) # Hover, click, drag, zoom, pan.
+#  plot_graph(my_plan) # Hover, click, drag, zoom, pan. See args 'from' and 'to'.
 #  make(my_plan) # Run the workflow.
-#  make(my_plan) # Check that everything is already up to date.
+#  outdated(my_plan) # Check that everything is already up to date.
+
+## ----quickdebug, eval = FALSE--------------------------------------------
+#  failed()                 # Targets that failed in the most recent `make()`
+#  diagnose()               # Targets that failed in any previous `make()`
+#  error <- diagnose(large) # Most recent verbose error log of `large`
+#  str(error)               # Object of class "error"
+#  error$calls              # Call stack / traceback
 
 ## ----noeval2, eval = FALSE-----------------------------------------------
 #  example_drake("basic") # Write the code files.
@@ -83,7 +90,7 @@ tracked(my_plan)
 check(my_plan)
 
 ## ----datasets------------------------------------------------------------
-my_datasets <- plan(
+my_datasets <- workplan(
   small = simulate(5),
   large = simulate(50))
 my_datasets
@@ -92,7 +99,7 @@ my_datasets
 expand(my_datasets, values = c("rep1", "rep2"))
 
 ## ----methods-------------------------------------------------------------
-methods <- plan(
+methods <- workplan(
   regression1 = reg1(..dataset..), # nolint
   regression2 = reg2(..dataset..)) # nolint
 methods
@@ -102,7 +109,7 @@ my_analyses <- analyses(methods, data = my_datasets)
 my_analyses
 
 ## ----summaries-----------------------------------------------------------
-summary_types <- plan(
+summary_types <- workplan(
   summ = suppressWarnings(summary(..analysis..)), # nolint
   coef = coefficients(..analysis..)) # nolint
 summary_types
@@ -112,7 +119,7 @@ results <- summaries(summary_types, analyses = my_analyses,
 results
 
 ## ----reportplan----------------------------------------------------------
-report <- plan(
+report <- workplan(
   report.md = knit('report.Rmd', quiet = TRUE), # nolint
   file_targets = TRUE, strings_in_dots = "filenames")
 report
@@ -122,7 +129,7 @@ my_plan <- rbind(report, my_datasets, my_analyses, results)
 my_plan
 
 ## ----more_expansions_and_plans-------------------------------------------
-df <- plan(data = simulate(center = MU, scale = SIGMA))
+df <- workplan(data = simulate(center = MU, scale = SIGMA))
 df
 df <- expand(df, values = c("rep1", "rep2"))
 df
@@ -199,7 +206,7 @@ new_simulation <- function(n){
   data.frame(x = rnorm(n), y = rnorm(n))
 }
 
-additions <- plan(
+additions <- workplan(
   new_data = new_simulation(36) + sqrt(10))
 additions
 
@@ -214,6 +221,6 @@ clean() # cleans all targets out of the cache
 clean(destroy = TRUE) # removes the cache entirely
 
 ## ----endofline_quickstart, echo = F--------------------------------------
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 

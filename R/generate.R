@@ -12,37 +12,43 @@
 #' as names and vectors of possible values as list elements.
 #' @export
 #' @return a workflow plan data frame with the wildcards evaluated
+#'
 #' @param plan workflow plan data frame, similar to one produced by
-#' \code{link{plan}}
+#' \code{ink{workplan}}
+#'
 #' @param rules Named list with wildcards as names and vectors of
 #' replacements
 #' as values. This is a way to evaluate multiple wildcards at once.
 #' When not \code{NULL}, \code{rules} overrules \code{wildcard} and
 #' \code{values} if
 #' not \code{NULL}.
+#'
 #' @param wildcard character scalar denoting a wildcard placeholder
+#'
 #' @param values vector of values to replace the wildcard
 #' in the drake instructions. Will be treated as a character vector.
 #' Must be the same length as \code{plan$command} if \code{expand} is
 #' \code{TRUE}.
+#'
 #' @param expand If \code{TRUE}, create a new rows in the workflow plan
 #' data frame
 #' if multiple values are assigned to a single wildcard.
 #' If \code{FALSE}, each occurrence of the wildcard
 #' is replaced with the next entry in the \code{values} vector,
 #' and the values are recycled.
+#'
 #' @examples
-#' datasets <- plan(
+#' datasets <- workplan(
 #'   small = simulate(5),
 #'   large = simulate(50))
-#' methods <- plan(
+#' methods <- workplan(
 #'   regression1 = reg1(..dataset..),
 #'   regression2 = reg2(..dataset..))
 #' evaluate(methods, wildcard = "..dataset..",
 #'   values = datasets$target)
 #' evaluate(methods, wildcard = "..dataset..",
 #'   values = datasets$target, expand = FALSE)
-#' x = plan(draws = rnorm(mean = Mean, sd = Sd))
+#' x <- workplan(draws = rnorm(mean = Mean, sd = Sd))
 #' evaluate(x, rules = list(Mean = 1:3, Sd = c(1, 10)))
 evaluate <- function(
   plan,
@@ -115,7 +121,7 @@ evaluations <- function(
 #' @param values values to expand over. These will be appended to
 #' the names of the new targets.
 #' @examples
-#' datasets <- plan(
+#' datasets <- workplan(
 #'   small = simulate(5),
 #'   large = simulate(50))
 #' expand(datasets, values = c("rep1", "rep2", "rep3"))
@@ -144,7 +150,7 @@ expand <- function(plan, values = NULL){
 #' one of \code{\link{list}(...)}, \code{\link{c}(...)},
 #' \code{\link{rbind}(...)}, or similar.
 #' @examples
-#' datasets <- plan(
+#' datasets <- workplan(
 #'   small = simulate(5),
 #'   large = simulate(50))
 #' gather(datasets, target = "my_datasets")
@@ -166,7 +172,7 @@ gather <- function(
 #' @description Generate a workflow plan data frame to
 #' analyze multiple datasets using multiple methods of analysis.
 #' @seealso \code{\link{summaries}},
-#'  \code{\link{make}}, \code{\link{plan}}
+#'  \code{\link{make}}, \code{\link{workplan}}
 #' @export
 #' @return an evaluated workflow plan data frame of analysis instructions
 #' @param plan workflow plan data frame of analysis methods.
@@ -178,10 +184,10 @@ gather <- function(
 #' @param datasets workflow plan data frame with instructions
 #' to make the datasets.
 #' @examples
-#' datasets <- plan(
+#' datasets <- workplan(
 #'   small = simulate(5),
 #'   large = simulate(50))
-#' methods <- plan(
+#' methods <- workplan(
 #'   regression1 = reg1(..dataset..),
 #'   regression2 = reg2(..dataset..))
 #' analyses(methods, datasets = datasets)
@@ -196,7 +202,7 @@ analyses <- function(plan, datasets){
 #' @title Function \code{summaries}
 #' @description Generate a workflow plan data frame for summarizing
 #' multiple analyses of multiple datasets multiple ways.
-#' @seealso \code{\link{analyses}}, \code{\link{make}}, \code{\link{plan}}
+#' @seealso \code{\link{analyses}}, \code{\link{make}}, \code{\link{workplan}}
 #' @export
 #' @return an evaluated workflow plan data frame of instructions
 #' for computing summaries of analyses and datasets.
@@ -212,14 +218,14 @@ analyses <- function(plan, datasets){
 #' rows in the \code{plan}. See the \code{\link{gather}()} function
 #' for more.
 #' @examples
-#' datasets <- plan(
+#' datasets <- workplan(
 #'   small = simulate(5),
 #'   large = simulate(50))
-#' methods <- plan(
+#' methods <- workplan(
 #'   regression1 = reg1(..dataset..),
 #'   regression2 = reg2(..dataset..))
 #' analyses <- analyses(methods, datasets = datasets)
-#' summary_types <- plan(
+#' summary_types <- workplan(
 #'   summ = summary(..analysis..),
 #'   coef = coefficients(..analysis..))
 #' summaries(summary_types, analyses, datasets, gather = NULL)
@@ -281,8 +287,9 @@ with_analyses_only <- function(plan){
       "removing ",
       sum(has_analysis),
       " rows with no ..analysis.. wildcard in the command.",
-      "Use analyses() for these."
-      )
+      "Use analyses() for these.",
+      call. = FALSE
+    )
   }
   return(plan[has_analysis, ])
 }

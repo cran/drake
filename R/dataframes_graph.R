@@ -13,11 +13,39 @@
 #' @param targets names of targets to build, same as for function
 #' \code{\link{make}()}.
 #'
+#' @param from Optional collection of target/import names.
+#' If \code{from} is nonempty,
+#' the graph will restrict itself to
+#' a neighborhood of \code{from}.
+#' Control the neighborhood with
+#' \code{mode} and \code{order}.
+#'
+#' @param mode Which direction to branch out in the graph
+#' to create a neighborhood around \code{from}.
+#' Use \code{"in"} to go upstream,
+#' \code{"out"} to go downstream,
+#' and \code{"all"} to go both ways and disregard
+#' edge direction altogether.
+#'
+#' @param order How far to branch out to create
+#' a neighborhood around \code{from} (measured
+#' in the number of nodes). Defaults to
+#' as far as possible.
+#'
+#' @param subset Optional character vector of of target/import names.
+#' Subset of nodes to display in the graph.
+#' Applied after \code{from}, \code{mode}, and \code{order}.
+#' Be advised: edges are only kept for adjacent nodes in \code{subset}.
+#' If you do not select all the intermediate nodes,
+#' edges will drop from the graph.
+#'
 #' @param envir environment to import from, same as for function
 #' \code{\link{make}()}. \code{config$envir} is ignored in favor
 #' of \code{envir}.
 #'
 #' @param verbose logical, whether to output messages to the console.
+#'
+#' @param hook same as for \code{\link{make}}
 #'
 #' @param cache optional drake cache. Only used if the \code{config}
 #' argument is \code{NULL} (default). See code{\link{new_cache}()}.
@@ -38,7 +66,9 @@
 #' See \code{?parallelism_choices} for details.
 #'
 #' @param font_size numeric, font size of the node labels in the graph
+#'
 #' @param packages same as for \code{\link{make}}
+#'
 #' @param prework same as for \code{\link{make}}
 #'
 #' @param build_times logical, whether to show the \code{\link{build_times}()}
@@ -72,10 +102,21 @@
 #' \code{build_times}, \code{digits}, \code{targets_only},
 #' \code{split_columns}, and \code{font_size}.
 #'
+#' @param from_scratch logical, whether to assume that
+#' all targets are out of date and the next \code{\link{make}()}
+#' will happen from scratch. Setting to \code{TRUE} will prevent
+#' the graph from showing you which targets are up to date,
+#' but it makes computing the graph much faster.
+#'
 #' @examples
 #' \dontrun{
 #' load_basic_example()
 #' raw_graph <- dataframes_graph(my_plan)
+#' smaller_raw_graph <- dataframes_graph(
+#'   my_plan,
+#'   from = c("small", "reg2"),
+#'   to = "summ_regression2_small"
+#' )
 #' str(raw_graph)
 #' # Plot your own custom visNetwork graph
 #' library(magrittr)
@@ -85,56 +126,89 @@
 #'   visHierarchicalLayout(direction = 'LR')
 #' }
 dataframes_graph <- function(
-  plan = drake::plan(), targets = drake::possible_targets(plan),
+  plan = workplan(), targets = drake::possible_targets(plan),
   envir = parent.frame(), verbose = TRUE,
-  cache = drake::get_cache(), jobs = 1,
-  parallelism = drake::default_parallelism(), packages = (.packages()),
+  hook = function(code){
+    force(code)
+  },
+  cache = drake::get_cache(verbose = verbose), jobs = 1,
+  parallelism = drake::default_parallelism(), packages = rev(.packages()),
   prework = character(0), build_times = TRUE, digits = 3,
   targets_only = FALSE,
-  split_columns = FALSE, font_size = 20, config = NULL) {
+  split_columns = FALSE, font_size = 20, config = NULL,
+  from = NULL, mode = c("out", "in", "all"), order = NULL, subset = NULL,
+  from_scratch = FALSE
+) {
   force(envir)
   if (is.null(config)){
     config <- config(plan = plan, targets = targets,
-      envir = envir, verbose = verbose, cache = cache,
+      envir = envir, verbose = verbose,
+      hook = hook, cache = cache,
       parallelism = parallelism, jobs = jobs,
       packages = packages, prework = prework)
   }
   if (!length(V(config$graph)$name)){
     return(null_graph())
   }
+
+  config$plan <- sanitize_plan(plan = plan)
+  config$targets <- sanitize_targets(plan = plan, targets = targets)
+
+  if (from_scratch){
+    config$outdated <- plan$target
+  } else {
+    config$outdated <- outdated(config = config)
+  }
+
   network_data <- visNetwork::toVisNetworkData(config$graph)
   config$nodes <- network_data$nodes
   rownames(config$nodes) <- config$nodes$label
 
+  config$edges <- network_data$edges
+  if (nrow(config$edges)){
+    config$edges$arrows <- "to"
+  }
+
   config$imports <- setdiff(config$nodes$id, config$plan$target)
-  config$in_progress <- in_progress()
-  config$outdated <- outdated(config = config)
+  config$in_progress <- in_progress(cache = config$cache)
+  config$failed <- failed(cache = config$cache)
   config$files <- Filter(x = config$nodes$id, f = is_file)
   config$functions <- Filter(x = config$imports,
-    f = function(x) can_get_function(x, envir = envir))
+    f = function(x) can_get_function(x, envir = config$envir))
   config$missing <- Filter(x = config$imports,
-    f = function(x) missing_import(x, envir = envir))
+    f = function(x) missing_import(x, envir = config$envir))
   config$font_size <- font_size
   config$build_times <- build_times
   config$digits <- digits
 
-  nodes <- configure_nodes(config = config)
-  edges <- network_data$edges
-  if (nrow(edges))
-    edges$arrows <- "to"
+  config$nodes <- configure_nodes(config = config)
+  config$from <- from
+  config$mode <- match.arg(mode)
+  config$order <- order
+  config <- trim_graph(config)
+  config <- subset_nodes_edges(
+    config = config,
+    keep = V(config$graph)$name
+  )
+
   if (targets_only) {
-    nodes <- nodes[targets, ]
-    edges <-
-      edges[edges$from %in% targets & edges$to %in% targets, ]
+    config <- subset_nodes_edges(
+      config = config,
+      keep = intersect(targets, config$nodes$id)
+    )
   }
-
-  # Cannot split columns until imports are removed,
-  # if applicable.
   if (split_columns){
-    nodes <- split_node_columns(nodes = nodes)
+    config$nodes <- split_node_columns(nodes = config$nodes)
   }
+  if (length(subset)){
+    config <- subset_nodes_edges(
+      config = config,
+      keep = subset
+    )
+  }
+  config$nodes <- shrink_levels(config$nodes)
 
-  list(nodes = nodes, edges = edges,
+  list(nodes = config$nodes, edges = config$edges,
     legend_nodes = legend_nodes(font_size = font_size),
     default_title = default_graph_title(
       parallelism = config$parallelism, split_columns = split_columns))

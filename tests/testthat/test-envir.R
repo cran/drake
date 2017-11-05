@@ -1,16 +1,16 @@
 drake_context("envir")
 
 test_with_dir("prune_envir in full build", {
-  # workflow with lots of nested deps This will fail if
+  # workplan with lots of nested deps This will fail if
   # prune_envir() doesn't work.
-  datasets <- plan(x = 1, y = 2, z = 3)
-  methods <- plan(
+  datasets <- workplan(x = 1, y = 2, z = 3)
+  methods <- workplan(
     a = ..dataset.., # nolint
     b = ..dataset.., # nolint
     c = ..dataset.. # nolint
   )
   analyses <- analyses(methods, datasets)
-  heuristics <- plan(
+  heuristics <- workplan(
     s = c(..dataset.., ..analysis..), # nolint
     t = ..analysis..) # nolint
   summaries <- summaries(
@@ -19,7 +19,7 @@ test_with_dir("prune_envir in full build", {
     analyses = analyses,
     gather = c("rbind", "rbind")
   )
-  output <- plan(
+  output <- workplan(
     final1 = mean(s) + mean(t),
     final2 = mean(s) - mean(t),
     waitforme = c(a_x, c_y, s_b_x, t_a_z),
@@ -29,21 +29,11 @@ test_with_dir("prune_envir in full build", {
 
   # set up a workspace to test prune_envir()
   # set verbose to TRUE to see log of loading
-  config <- build_config(
+  config <- config(
     plan,
     targets = plan$target,
     envir = new.env(parent = globalenv()),
-    parallelism = "mclapply",
-    jobs = 1,
-    prepend = character(0),
     verbose = FALSE,
-    packages = character(0),
-    prework = character(0),
-    command = "make",
-    args = character(0),
-    recipe_command = default_recipe_command(),
-    cache = NULL,
-    clear_progress = FALSE
   )
 
   # actually run

@@ -4,13 +4,16 @@
 \alias{config}
 \title{Function config}
 \usage{
-config(plan = drake::plan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, cache = drake::get_cache(),
+config(plan = workplan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
+  force(code) }, cache = drake::get_cache(verbose = verbose),
   parallelism = drake::default_parallelism(), jobs = 1,
-  packages = (.packages()), prework = character(0),
+  packages = rev(.packages()), prework = character(0),
   prepend = character(0), command = drake::default_Makefile_command(),
-  args = drake::default_system2_args(jobs = jobs, verbose = verbose),
-  recipe_command = drake::default_recipe_command())
+  args = drake::default_Makefile_args(jobs = jobs, verbose = verbose),
+  recipe_command = drake::default_recipe_command(), timeout = Inf,
+  cpu = timeout, elapsed = timeout, retries = 0, clear_progress = FALSE,
+  graph = NULL)
 }
 \arguments{
 \item{plan}{same as for \code{\link{make}}}
@@ -20,6 +23,8 @@ config(plan = drake::plan(), targets = drake::possible_targets(plan),
 \item{envir}{same as for \code{\link{make}}}
 
 \item{verbose}{same as for \code{\link{make}}}
+
+\item{hook}{same as for \code{\link{make}}}
 
 \item{cache}{same as for \code{\link{make}}}
 
@@ -38,6 +43,20 @@ config(plan = drake::plan(), targets = drake::possible_targets(plan),
 \item{args}{same as for \code{\link{make}}}
 
 \item{recipe_command}{same as for \code{\link{make}}}
+
+\item{timeout}{same as for \code{\link{make}}}
+
+\item{cpu}{same as for \code{\link{make}}}
+
+\item{elapsed}{same as for \code{\link{make}}}
+
+\item{retries}{same as for \code{\link{make}}}
+
+\item{clear_progress}{logical, whether to clear
+the cached progress of the targets readable by}
+
+\item{graph}{igraph object representing the workflow plan network
+\code{\link{progress}()}}
 }
 \description{
 Compute the internal runtime parameter list of
@@ -63,5 +82,5 @@ dataframes_graph(my_plan, config = con)
 }
 }
 \seealso{
-\code{\link{plan}}, \code{\link{make}}, \code{\link{plot_graph}}
+\code{\link{workplan}}, \code{\link{make}}, \code{\link{plot_graph}}
 }

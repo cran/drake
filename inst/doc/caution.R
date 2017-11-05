@@ -1,15 +1,15 @@
 ## ---- echo = F-----------------------------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
 suppressMessages(suppressWarnings(library(magrittr)))
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 
 ## ----filethenevaluate----------------------------------------------------
 library(magrittr) # for the pipe operator %>%
-plan(
+workplan(
   data = readRDS("data_..datasize...rds")
 ) %>%
-  rbind(drake::plan(
+  rbind(drake::workplan(
     file.csv = write.csv(
       data_..datasize.., # nolint
       "file_..datasize...csv"
@@ -23,11 +23,11 @@ plan(
 
 ## ----correctevaldatasize-------------------------------------------------
 rules <- list(..datasize.. = c("small", "large"))
-datasets <- plan(data = readRDS("data_..datasize...rds")) %>%
+datasets <- workplan(data = readRDS("data_..datasize...rds")) %>%
   evaluate(rules = rules)
 
 ## ----correctevaldatasize2------------------------------------------------
-files <- plan(
+files <- workplan(
   file = write.csv(data_..datasize.., "file_..datasize...csv"), # nolint
   strings_in_dots = "literals"
 ) %>%
@@ -43,10 +43,23 @@ files$target <- paste0(
 rbind(datasets, files)
 
 ## ----tidyplancaution-----------------------------------------------------
-plan(
+workplan(
   target1 = 1 + 1 - sqrt(sqrt(3)),
   target2 = my_function(web_scraped_data) %>% my_tidy
 )
+
+## ----diagnosecaution, eval = FALSE---------------------------------------
+#  diagnose()
+#  f <- function(){
+#    stop("unusual error")
+#  }
+#  bad_plan <- workplan(target = f())
+#  make(bad_plan)
+#  failed() # From the last make() only
+#  diagnose() # From all previous make()s
+#  error <- diagnose(y)
+#  str(error)
+#  error$calls # View the traceback.
 
 ## ----envir---------------------------------------------------------------
 library(drake)
@@ -60,7 +73,7 @@ eval(expression({
   }
 }
 ), envir = envir)
-myplan <- plan(out = f(1:3))
+myplan <- workplan(out = f(1:3))
 make(myplan, envir = envir)
 ls() # Check that your workspace did not change.
 ls(envir) # Check your evaluation environment.
@@ -71,7 +84,7 @@ readd(out)
 library(drake)
 
 ## ----depscheck-----------------------------------------------------------
-my_plan <- plan(list = c(a = "x <- 1; return(x)"))
+my_plan <- workplan(list = c(a = "x <- 1; return(x)"))
 my_plan
 deps(my_plan$command[1])
 
@@ -110,7 +123,7 @@ load_basic_example()
 my_plan
 
 ## ----demoplotgraphcaution, eval = FALSE----------------------------------
-#  # Hover, click, drag, zoom, and pan.
+#  # Hover, click, drag, zoom, and pan. See args 'from' and 'to'.
 #  plot_graph(my_plan, width = "100%", height = "500px")
 
 ## ----checkdeps-----------------------------------------------------------
@@ -163,6 +176,11 @@ deps("'report.Rmd'") # These are actually dependencies of 'report.md' (output)
 #  do.call("mapply", c(FUN = FUN, args[dovec], MoreArgs = list(args[!dovec]),
 #      SIMPLIFY = SIMPLIFY, USE.NAMES = USE.NAMES))
 
+## ----writexamples, eval = FALSE------------------------------------------
+#  example_drake("sge")    # Sun/Univa Grid Engine workflow and supporting files
+#  example_drake("slurm")  # SLURM
+#  example_drake("torque") # TORQUE
+
 ## ----clean, echo = FALSE-------------------------------------------------
 clean(destroy = TRUE)
 unlink(c("report.Rmd", "Thumbs.db"))
@@ -170,7 +188,22 @@ unlink(c("report.Rmd", "Thumbs.db"))
 ## ----makejobs, eval = FALSE----------------------------------------------
 #  make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")
 
+## ----cautionzombies, eval = FALSE----------------------------------------
+#  fork_kill_zombies <- function(){
+#    require(inline)
+#    includes <- "#include <sys/wait.h>"
+#    code <- "int wstat; while (waitpid(-1, &wstat, WNOHANG) > 0) {};"
+#  
+#    wait <- inline::cfunction(
+#      body = code,
+#      includes = includes,
+#      convention = ".C"
+#    )
+#  
+#    invisible(wait())
+#  }
+
 ## ----rmfiles_caution, echo = FALSE---------------------------------------
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 

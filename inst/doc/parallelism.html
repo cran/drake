@@ -12,7 +12,7 @@
 
 <meta name="author" content="William Michael Landau" />
 
-<meta name="date" content="2017-10-17" />
+<meta name="date" content="2017-11-05" />
 
 <title>Parallel computing</title>
 
@@ -70,25 +70,33 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Parallel computing</h1>
 <h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-10-17</em></h4>
+<h4 class="date"><em>2017-11-05</em></h4>
 
 
 <div id="TOC">
 <ul>
 <li><a href="#the-approach"><span class="toc-section-number">1</span> The approach</a></li>
-<li><a href="#max-useful-jobs"><span class="toc-section-number">2</span> Max useful jobs</a></li>
+<li><a href="#how-many-parallel-jobs-should-you-use"><span class="toc-section-number">2</span> How many parallel jobs should you use?</a><ul>
+<li><a href="#not-too-many"><span class="toc-section-number">2.1</span> Not too many!</a></li>
+<li><a href="#drake-can-suggest-a-maximum-number-of-useful-jobs"><span class="toc-section-number">2.2</span> Drake can suggest a maximum number of useful jobs</a></li>
+</ul></li>
 <li><a href="#parallel-backends"><span class="toc-section-number">3</span> Parallel backends</a><ul>
 <li><a href="#mclapply"><span class="toc-section-number">3.1</span> mclapply</a></li>
 <li><a href="#parlapply"><span class="toc-section-number">3.2</span> parLapply</a></li>
-<li><a href="#makefile"><span class="toc-section-number">3.3</span> Makefile</a><ul>
-<li><a href="#basic-makefile-parallelism"><span class="toc-section-number">3.3.1</span> Basic Makefile parallelism</a></li>
-<li><a href="#makefile-parallelism-on-a-cluster"><span class="toc-section-number">3.3.2</span> Makefile parallelism on a cluster</a></li>
+<li><a href="#future_lapply"><span class="toc-section-number">3.3</span> future_lapply</a></li>
+<li><a href="#makefile"><span class="toc-section-number">3.4</span> Makefile</a><ul>
+<li><a href="#basic-makefile-parallelism"><span class="toc-section-number">3.4.1</span> Basic Makefile parallelism</a></li>
+<li><a href="#makefile-parallelism-on-a-cluster"><span class="toc-section-number">3.4.2</span> Makefile parallelism on a cluster</a></li>
 </ul></li>
 </ul></li>
-<li><a href="#more-resources"><span class="toc-section-number">4</span> More resources</a></li>
+<li><a href="#final-thoughts"><span class="toc-section-number">4</span> Final thoughts</a><ul>
+<li><a href="#zombies"><span class="toc-section-number">4.1</span> Zombies</a></li>
+<li><a href="#more-resources"><span class="toc-section-number">4.2</span> More resources</a></li>
+</ul></li>
 </ul>
 </div>
 
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <p><code>Drake</code> has extensive high-performance computing support, from local multicore computing on your laptop to serious supercomputing across multiple nodes of a large cluster. In <code>make()</code>, just set the <code>jobs</code> argument to something greater than 1. That unlocks local multicore parallelism. For large-scale distributed parallelism, set <code>parallelism</code> to <code>&quot;Makefile&quot;</code> and stay tuned for an explanation.</p>
 <div id="the-approach" class="section level1">
 <h1><span class="header-section-number">1</span> The approach</h1>
@@ -97,19 +105,26 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <span class="kw">load_basic_example</span>()
 <span class="kw">make</span>(my_plan, <span class="dt">jobs =</span> <span class="dv">2</span>, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Parallelize over 2 jobs.</span>
 <span class="co"># Change a dependency.</span>
-reg2 &lt;-<span class="st"> </span>function(d) {
-  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
-  <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
+reg2 &lt;-<span class="st"> </span><span class="cf">function</span>(d) {
+  d<span class="op">$</span>x3 &lt;-<span class="st"> </span>d<span class="op">$</span>x <span class="op">^</span><span class="st"> </span><span class="dv">3</span>
+  <span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x3, <span class="dt">data =</span> d)
 }
 <span class="co"># Hover, click, drag, zoom, and pan.</span>
 <span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
-<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
 <p>When you call <code>make(my_plan, jobs = 4)</code>, the work proceeds in chronological order from left to right. The items are built or imported column by column in sequence, and up-to-date targets are skipped. Within each column, the targets/objects are all independent of each other conditional on the previous steps, so they are distributed over the 4 available parallel jobs/workers. Assuming the targets are rate-limiting (as opposed to imported objects), the next <code>make(..., jobs = 4)</code> should be faster than <code>make(..., jobs = 1)</code>, but it would be superfluous to use more than 4 jobs.</p>
 </div>
-<div id="max-useful-jobs" class="section level1">
-<h1><span class="header-section-number">2</span> Max useful jobs</h1>
-<p>See function <code>max_useful_jobs()</code> to suggest the number of jobs, taking into account which targets are already up to date. Try out the following in a fresh R session.</p>
+<div id="how-many-parallel-jobs-should-you-use" class="section level1">
+<h1><span class="header-section-number">2</span> How many parallel jobs should you use?</h1>
+<div id="not-too-many" class="section level2">
+<h2><span class="header-section-number">2.1</span> Not too many!</h2>
+<p>Be mindful of the maximum number of simultaneous parallel jobs you deploy. At best, too many jobs is poor etiquette on a system with many users and limited resources. At worst, too many jobs will crash a system. The <code>jobs</code> argument to <code>make()</code> sets the maximum number of simultaneous jobs in most cases, but not all.</p>
+<p>For most of <code>drake</code>’s parallel backends, <code>jobs</code> sets the maximum number of simultaneous parallel jobs. However, there are ways to break the pattern. For example, <code>make(..., parallelism = &quot;Makefile&quot;, jobs = 2, args = &quot;--jobs=4&quot;)</code> uses at most 2 jobs for the imports and at most 4 jobs for the targets. (In <code>make()</code>, <code>args</code> overrides <code>jobs</code> for the targets). For <code>make(..., parallelism = &quot;future_lapply&quot;)</code>, the <code>jobs</code> argument is ignored altogether. Instead, you might limit the max number of jobs by setting <code>options(mc.cores = 2)</code> before calling <code>make()</code>. Depending on the <code>future</code> backend you select with <code>backend()</code> or <code>future::plan()</code>, you might make use of one of the other environment variables listed in <code>?future::future.options</code>.</p>
+</div>
+<div id="drake-can-suggest-a-maximum-number-of-useful-jobs" class="section level2">
+<h2><span class="header-section-number">2.2</span> Drake can suggest a maximum number of useful jobs</h2>
+<p>For <code>drake</code>, the max useful jobs is the maximum number of targets in any parallelizable stage. Unless <code>from_scratch</code> is <code>TRUE</code> in <code>max_useful_jobs()</code>, all up-to-date targets are ignored.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
 <span class="kw">load_basic_example</span>()
 <span class="kw">plot_graph</span>(my_plan) <span class="co"># Set targets_only to TRUE for smaller graphs.</span>
@@ -125,9 +140,9 @@ reg2 &lt;-<span class="st"> </span>function(d) {
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;all&quot;</span>) <span class="co"># 8</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;none&quot;</span>) <span class="co"># 0</span>
 <span class="co"># Change a function so some targets are now out of date.</span>
-reg2 &lt;-<span class="st"> </span>function(d){
-  d$x3 &lt;-<span class="st"> </span>d$x ^<span class="st"> </span><span class="dv">3</span>
-  <span class="kw">lm</span>(y ~<span class="st"> </span>x3, <span class="dt">data =</span> d)
+reg2 &lt;-<span class="st"> </span><span class="cf">function</span>(d){
+  d<span class="op">$</span>x3 &lt;-<span class="st"> </span>d<span class="op">$</span>x <span class="op">^</span><span class="st"> </span><span class="dv">3</span>
+  <span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x3, <span class="dt">data =</span> d)
 }
 <span class="kw">plot_graph</span>(my_plan)
 <span class="kw">max_useful_jobs</span>(my_plan) <span class="co"># 4</span>
@@ -136,11 +151,15 @@ reg2 &lt;-<span class="st"> </span>function(d){
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;all&quot;</span>) <span class="co"># 8</span>
 <span class="kw">max_useful_jobs</span>(my_plan, <span class="dt">imports =</span> <span class="st">&quot;none&quot;</span>) <span class="co"># 4</span></code></pre></div>
 </div>
+</div>
 <div id="parallel-backends" class="section level1">
 <h1><span class="header-section-number">3</span> Parallel backends</h1>
 <p><code>Drake</code> has multiple parallel backends, i.e. separate mechanisms for achieving parallelism. Some are low-overhead and limited, others are high-overhead and scalable. Just set the <code>parallelism</code> argument of <code>Make</code> to choose a backend. The best choice usually depends on your project’s scale and stage of deployment.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">parallelism_choices</span>() <span class="co"># List the parallel backends.</span>
-?parallelism_choices  <span class="co"># Read an explanation of each backend.</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">parallelism_choices</span>()</code></pre></div>
+<pre><code>## [1] &quot;parLapply&quot;     &quot;mclapply&quot;      &quot;Makefile&quot;      &quot;future_lapply&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">parallelism_choices</span>(<span class="dt">distributed_only =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<pre><code>## [1] &quot;Makefile&quot;      &quot;future_lapply&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">?parallelism_choices  <span class="co"># Read an explanation of each backend.</span>
 <span class="kw">default_parallelism</span>() <span class="co"># &quot;parLapply&quot; on Windows, &quot;mclapply&quot; everywhere else</span></code></pre></div>
 <div id="mclapply" class="section level2">
 <h2><span class="header-section-number">3.1</span> mclapply</h2>
@@ -153,17 +172,75 @@ reg2 &lt;-<span class="st"> </span>function(d){
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(.., <span class="dt">parallelism =</span> <span class="st">&quot;parLapply&quot;</span>, <span class="dt">jobs =</span> <span class="dv">2</span>)
 <span class="kw">default_parallelism</span>() <span class="co"># &quot;parLapply&quot; on Windows, &quot;mclapply&quot; everywhere else</span></code></pre></div>
 </div>
+<div id="future_lapply" class="section level2">
+<h2><span class="header-section-number">3.3</span> future_lapply</h2>
+<p>The <code>future</code> package unlocks a wide array of powerful parallel backends. The idea is to set up a <code>future</code> backend in advance (with <code>drake::backend()</code> or <code>future::plan()</code>) and then call <code>make(parallelism = &quot;future_lapply&quot;)</code>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(future)
+<span class="kw">backend</span>() <span class="co"># same as future::plan()</span></code></pre></div>
+<pre><code>## sequential:
+## - args: function (expr, envir = parent.frame(), substitute = TRUE, lazy = FALSE, seed = NULL, globals = TRUE, local = TRUE, earlySignal = FALSE, label = NULL, ...)
+## - tweaked: FALSE
+## - call: plan(&quot;default&quot;, .init = FALSE)</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">backend</span>(multicore)
+<span class="kw">backend</span>()</code></pre></div>
+<pre><code>## multicore:
+## - args: function (expr, envir = parent.frame(), substitute = TRUE, lazy = FALSE, seed = NULL, globals = TRUE, workers = availableCores(constraints = &quot;multicore&quot;), earlySignal = FALSE, label = NULL, ...)
+## - tweaked: FALSE
+## - call: future::plan(...)</code></pre>
+<p><code>make()</code> knows which <code>future</code> backend you selected.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;future_lapply&quot;</span>)</code></pre></div>
+<p>You can try different backends in an R session. Here are examples for forked processes</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">backend</span>(multicore)
+<span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;future_lapply&quot;</span>)</code></pre></div>
+<p>and multiple R sessions.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">backend</span>(multisession)
+<span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;future_lapply&quot;</span>)</code></pre></div>
+<p>You can even deploy to your own PSOCK clusters. We recommend <code>future::makeClusterPSOCK()</code> rather than <code>parallel::makePSOCKcluster()</code></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">cl &lt;-<span class="st"> </span>future<span class="op">::</span><span class="kw">makeClusterPSOCK</span>(2L, <span class="dt">dryrun =</span> <span class="ot">TRUE</span>)(<span class="dv">2</span>)
+<span class="kw">backend</span>(cluster, <span class="dt">workers =</span> cl)
+<span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;future_lapply&quot;</span>)</code></pre></div>
+<p>This approach should allow you to deploy targets to a <a href="https://www.docker.com/what-container">Docker container</a>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## Setup of Docker worker running rocker and r-base
+## (requires installation of future package)
+cl &lt;-<span class="st"> </span>future<span class="op">::</span><span class="kw">makeClusterPSOCK</span>(
+  <span class="st">&quot;localhost&quot;</span>,
+  ## Launch Rscript inside Docker container
+  <span class="dt">rscript =</span> <span class="kw">c</span>(
+    <span class="st">&quot;docker&quot;</span>, <span class="st">&quot;run&quot;</span>, <span class="st">&quot;--net=host&quot;</span>, <span class="st">&quot;rocker/r-base&quot;</span>,
+    <span class="st">&quot;Rscript&quot;</span>
+  ),
+  ## Install drake
+  <span class="dt">rscript_args =</span> <span class="kw">c</span>(
+    <span class="st">&quot;-e&quot;</span>, <span class="kw">shQuote</span>(<span class="st">&quot;install.packages('drake')&quot;</span>)
+  )
+)
+<span class="kw">backend</span>(cluster, <span class="dt">workers =</span> cl)
+<span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;future_lapply&quot;</span>)</code></pre></div>
+<p>The <a href="https://github.com/HenrikBengtsson/future.batchtools">future.batchtools</a> has <a href="https://github.com/HenrikBengtsson/future.batchtools#choosing-batchtools-backend">even more parallel backends</a>, particularly for popular job schedulers such as <a href="https://slurm.schedmd.com/">SLURM</a>, <a href="http://www.adaptivecomputing.com/products/open-source/torque/">TORQUE</a>, and the <a href="https://supcom.hgc.jp/english/utili_info/manual/uge.html">Univa Grid Engine</a>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(future.batchtools)
+<span class="kw">backend</span>(batchtools_local)
+<span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;future_lapply&quot;</span>)</code></pre></div>
+<p>You can even nest parallelism strategies together. In the following example, targets are submitted as jobs on the Univa Grid engine, and then <code>future</code>-style multicore parallelism is applied to each target’s command individually.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">backend</span>(<span class="kw">list</span>(batchjobs_sge, multiprocess))
+<span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;future_lapply&quot;</span>)</code></pre></div>
+<p>For parallelism on clusters and job schedulers, special <a href="https://github.com/mllg/batchtools">batchtools</a> <code>*.tmpl</code> configuration files are required, and the technique is described in the documentation of <a href="https://github.com/mllg/batchtools">batchtools</a>. It is your responsibility to configure these files for your job scheduler. You can find some examples on the <code>inst/templates</code> folders of the <a href="https://github.com/mllg/batchtools/tree/master/inst/templates">batchtools</a> and <a href="https://github.com/HenrikBengtsson/future.batchtools/tree/master/inst/templates">future.batchtools</a> GitHub repositories. <code>Drake</code> has some <a href="https://github.com/wlandau-lilly/drake/tree/master/inst/examples">built-in prepackaged example workflows</a>. See <code>examples_drake()</code> to view your options, and then <code>example_drake()</code> to write the files for an example.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">example_drake</span>(<span class="st">&quot;sge&quot;</span>)   <span class="co"># Sun/Univa Grid Engine workflow and supporting files</span>
+<span class="kw">example_drake</span>(<span class="st">&quot;slurm&quot;</span>) <span class="co"># SLURM workflow and supporting files</span></code></pre></div>
+<p>Be sure to heed the previously-mentioned cautionary note about deploying too many jobs. In <code>&quot;future_lapply&quot;</code> parallelism, the <code>jobs</code> argument is totally ignored. In at least some cases, you can limit the maximum number of jobs to 2 by calling <code>options(mc.cores = 2)</code> before <code>make()</code>. Depending on the <code>future</code> backend you select with <code>backend()</code> or <code>future::plan()</code>, you might make use of one of the other environment variables listed in <code>?future::future.options</code>.</p>
+</div>
 <div id="makefile" class="section level2">
-<h2><span class="header-section-number">3.3</span> Makefile</h2>
+<h2><span class="header-section-number">3.4</span> Makefile</h2>
 <p>The <code>Makefile</code> backend uses proper <a href="https://www.gnu.org/software/make/">Makefiles</a> to distribute targets across different R sessions. After processing all the imports in parallel using the default backend, <code>make(..., parallelism = &quot;Makefile&quot;)</code> spins up whole new separate R session for each target individually. The <code>Makefile</code> acts as a job scheduler, waiting until the dependencies are finished before initiating the next targets at each parallelizable stage. Thanks to a <a href="https://github.com/wlandau/parallelRemake/issues/4">clever idea</a> by <a href="https://github.com/krlmlr">Kirill Muller</a>, <code>drake</code> communicates with the <code>Makefile</code> by writing hidden dummy files in the cache whose only job is to hold a timestamp. The <code>Makefile</code> sees these timestamps and knows which jobs to run and which ones to skip.</p>
 <p>Unlike other backends, the <code>Makefile</code> backend processes all the imports first before beginning the first target. This is different from the other backends, where some targets are sometimes built before or simultaneously with independent imports. In addition, during import processing, <code>make()</code> uses the system’s default parallelism (<code>mclapply</code> or <code>parLapply</code>) and the number of jobs you supplied to the <code>jobs</code> argument. Stay tuned for how to use different numbers of jobs for imports versus targets.</p>
 <div id="basic-makefile-parallelism" class="section level3">
-<h3><span class="header-section-number">3.3.1</span> Basic Makefile parallelism</h3>
+<h3><span class="header-section-number">3.4.1</span> Basic Makefile parallelism</h3>
 <p>Before running <code>Makefile</code> parallelism, Windows users need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>. For everyone else, just make sure <a href="https://www.gnu.org/software/make/">Make</a> is installed. Then, in the next <code>make()</code>, simply set the <code>parallelism</code> and <code>jobs</code> arguments as before.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">2</span>)</code></pre></div>
 <p>You will see a <code>Makefile</code> written to your working directory. Do not run this <code>Makefile</code> by itself. It will not work correctly by itself because it depends on the transient dummy timestamp files created by <code>make()</code>.</p>
-<p><code>Makefile</code> parallelism is just a bit richer. You can now use the <code>args</code> argument to send custom arguments to the <code>Makefile</code>. For example, you could use 4 parallel jobs for the imports and 6 parallel jobs for the targets.</p>
+<p><code>Makefile</code> parallelism has its own kind of flexibility. You can now use the <code>args</code> argument to send custom arguments to the <code>Makefile</code>. For example, you could use 4 parallel jobs for the imports and 6 parallel jobs for the targets.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">4</span>, <span class="dt">args =</span> <span class="st">&quot;--jobs=6 --silent&quot;</span>)</code></pre></div>
+<p>The <code>args</code> also let you print out the <code>Makefile</code> without running it, which helps during troubleshooting.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">args =</span> <span class="kw">c</span>(<span class="st">&quot;--touch&quot;</span>, <span class="st">&quot;--silent&quot;</span>))</code></pre></div>
 <p>In addition, you can use a program other than <a href="https://www.gnu.org/software/make/">GNU Make</a> to run the <code>Makefile</code>. You may be interested in <code>lsmake</code> as an alternative, for example.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">4</span>, <span class="dt">command =</span> <span class="st">&quot;lsmake&quot;</span>)</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">default_Makefile_command</span>()</code></pre></div>
@@ -185,7 +262,7 @@ reg2 &lt;-<span class="st"> </span>function(d){
 <p>That particular recipe fails on Windows, but you have flexibility.</p>
 <p>Use the <code>Makefile_recipe()</code> function to show and tweak <code>Makefile</code> recipes in advance.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">Makefile_recipe</span>()</code></pre></div>
-<pre><code>## Rscript -e 'drake::mk(target = &quot;your_target&quot;, cache_path = &quot;/tmp/Rtmp3fe9pW/Rbuild24bf574dbaea/drake/vignettes/.drake&quot;)'</code></pre>
+<pre><code>## Rscript -e 'drake::mk(target = &quot;your_target&quot;, cache_path = &quot;C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/vignettes/.drake&quot;)'</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">Makefile_recipe</span>(
   <span class="dt">recipe_command =</span> <span class="st">&quot;R -e 'R_RECIPE' -q&quot;</span>,
   <span class="dt">target =</span> <span class="st">&quot;this_target&quot;</span>,
@@ -194,7 +271,7 @@ reg2 &lt;-<span class="st"> </span>function(d){
 <pre><code>## R -e 'drake::mk(target = &quot;this_target&quot;, cache_path = &quot;custom_cache&quot;)' -q</code></pre>
 <p>If <code>recipe_command</code> contains no mention of <code>R_RECIPE</code>, then <code>R_RECIPE</code> is single-quoted and appended automatically.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">Makefile_recipe</span>(<span class="dt">recipe_command =</span> <span class="st">&quot;R -q -e&quot;</span>)</code></pre></div>
-<pre><code>## R -q -e 'drake::mk(target = &quot;your_target&quot;, cache_path = &quot;/tmp/Rtmp3fe9pW/Rbuild24bf574dbaea/drake/vignettes/.drake&quot;)'</code></pre>
+<pre><code>## R -q -e 'drake::mk(target = &quot;your_target&quot;, cache_path = &quot;C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/vignettes/.drake&quot;)'</code></pre>
 <p>Try each of the following and look at the generated <code>Makefile</code> after each call to <code>make()</code>. To see the recipes printed to the console, run <code>clean()</code> between each <code>make()</code> and leave <code>verbose</code> equal to <code>TRUE</code> (default).</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">4</span>)
 <span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">4</span>,
@@ -210,7 +287,7 @@ reg2 &lt;-<span class="st"> </span>function(d){
   <span class="dt">recipe_command =</span> <span class="st">&quot;R -q -e&quot;</span>)</code></pre></div>
 </div>
 <div id="makefile-parallelism-on-a-cluster" class="section level3">
-<h3><span class="header-section-number">3.3.2</span> Makefile parallelism on a cluster</h3>
+<h3><span class="header-section-number">3.4.2</span> Makefile parallelism on a cluster</h3>
 <p>For the recommended approach to supercomputing with <code>drake</code>, you need a new configuration file to tell the <code>Makefile</code> how to talk to the cluster. The <code>shell_file()</code> function writes a starter.</p>
 <pre><code>#!/bin/bash
 shift
@@ -219,9 +296,16 @@ echo &quot;module load R; $*&quot; | qsub -sync y -cwd -j y
 <p>This file acts as the “shell” of the <code>Makefile</code> instead of, say, the <a href="https://www.gnu.org/software/bash">Unix shell</a> alone. It is a mechanism for tricking the <code>Makefile</code> into submitting each target as a job on your cluster rather than a new R session on your local machine. You may need to configure <code>shell.sh</code> for your system, such as changing <code>module load R</code> to reference the version of R installed on the compute nodes of the cluster.</p>
 <p>To tell the <code>Makefile</code> to use <code>shell.sh</code>, you will need to add the line <code>SHELL=./shell.sh</code> to the top of the <code>Makefile</code>. This should not be done manually. Instead, use the <code>prepend</code> argument of <code>make()</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">2</span>, <span class="dt">prepend =</span> <span class="st">&quot;SHELL=./shell.sh&quot;</span>)</code></pre></div>
-<p><a href="https://slurm.schedmd.com/">SLURM</a> users may be able to <a href="http://plindenbaum.blogspot.com/2014/09/parallelizing-gnu-make-4-in-slurm.html">invoke <code>srun</code> and dispense with <code>shell.sh</code> altogether</a>, although this has been known to fail on some SLURM systems.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">4</span>,
-  <span class="dt">prepend =</span> <span class="st">&quot;SHELL=srun&quot;</span>)</code></pre></div>
+<p><a href="https://slurm.schedmd.com/">SLURM</a> users may be able to <a href="http://plindenbaum.blogspot.com/2014/09/parallelizing-gnu-make-4-in-slurm.html">invoke <code>srun</code> and dispense with <code>shell.sh</code> altogether</a>, though success may vary depending on the SLURM system. You will probably also need to set resource allocation parameters such as upper bounds on memory and runtime. See <code>man srun</code> for the possible <code>.SHELLFLAGS</code>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(
+  my_plan,
+  <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>,
+  <span class="dt">jobs =</span> <span class="dv">2</span>,
+  <span class="dt">prepend =</span> <span class="kw">c</span>(
+    <span class="st">&quot;SHELL=srun&quot;</span>,
+    <span class="st">&quot;.SHELLFLAGS=-N1 -n1 bash -c&quot;</span>
+  )
+)</code></pre></div>
 <p>And you may be able to use <code>recipe_command</code> to to talk to the cluster rather than <code>prepend</code> (though most job schedulers require a script file).</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan, <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">4</span>,
   <span class="dt">recipe_command =</span> <span class="st">&quot;tell_cluster_to_submit Rscript -e&quot;</span>)</code></pre></div>
@@ -231,9 +315,29 @@ echo &quot;module load R; $*&quot; | qsub -sync y -cwd -j y
 </div>
 </div>
 </div>
-<div id="more-resources" class="section level1">
-<h1><span class="header-section-number">4</span> More resources</h1>
+<div id="final-thoughts" class="section level1">
+<h1><span class="header-section-number">4</span> Final thoughts</h1>
+<div id="zombies" class="section level2">
+<h2><span class="header-section-number">4.1</span> Zombies</h2>
+<p>Some parallel backends, particularly <code>mclapply</code> and <code>future::multicore</code>, may create zombie processes. Zombie children are not usually harmful, but you may wish to kill them yourself. The following function by <a href="https://github.com/CarlBoneri">Carl Boneri</a> should work on Unix-like systems. For a discussion, see <a href="https://github.com/wlandau-lilly/drake/issues/116">drake issue 116</a>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">fork_kill_zombies &lt;-<span class="st"> </span><span class="cf">function</span>(){
+  <span class="kw">require</span>(inline)
+  includes &lt;-<span class="st"> &quot;#include &lt;sys/wait.h&gt;&quot;</span>
+  code &lt;-<span class="st"> &quot;int wstat; while (waitpid(-1, &amp;wstat, WNOHANG) &gt; 0) {};&quot;</span>
+
+  wait &lt;-<span class="st"> </span>inline<span class="op">::</span><span class="kw">cfunction</span>(
+    <span class="dt">body =</span> code,
+    <span class="dt">includes =</span> includes,
+    <span class="dt">convention =</span> <span class="st">&quot;.C&quot;</span>
+  )
+
+  <span class="kw">invisible</span>(<span class="kw">wait</span>())
+}</code></pre></div>
+</div>
+<div id="more-resources" class="section level2">
+<h2><span class="header-section-number">4.2</span> More resources</h2>
 <p>See the timing vignette for explanations of functions <code>rate_limiting_times()</code> and <code>predict_runtime()</code>, which can help predict the possible speed gains of having multiple independent jobs. If you suspect <code>drake</code> itself is slowing down your project, you may want to read the storage vignette to learn how to set the hashing algorithms of your project.</p>
+</div>
 </div>
 
 

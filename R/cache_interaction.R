@@ -7,16 +7,19 @@
 #' \code{\link{loadd}()}.
 #' @seealso \code{\link{built}}, \code{\link{imported}},
 #' \code{\link{readd}}, \code{\link{loadd}},
-#' \code{\link{plan}}, \code{\link{make}}
+#' \code{\link{workplan}}, \code{\link{make}}
 #' @export
 #' @return Either a named logical indicating whether the given
 #' targets or cached or a character vector listing all cached
 #' items, depending on whether any targets are specified
+#'
 #' @param ... objects to load from the cache, as names (unquoted)
 #' or character strings (quoted). Similar to \code{...} in
 #' \code{\link{remove}(...)}.
+#'
 #' @param list character vector naming objects to be loaded from the
 #' cache. Similar to the \code{list} argument of \code{\link{remove}()}.
+#'
 #' @param no_imported_objects logical, applies only when
 #' no targets are specified and a list of cached targets is returned.
 #' If \code{no_imported_objects} is \code{TRUE}, then \code{cached()}
@@ -25,16 +28,22 @@
 #' all cached objects will be listed. Since all your functions and
 #' all their global variables are imported, the full list of
 #' imported objects could get really cumbersome.
+#'
 #' @param cache drake cache. See \code{\link{new_cache}()}.
 #' If supplied, \code{path} and \code{search} are ignored.
+#'
 #' @param path Root directory of the drake project,
 #' or if \code{search} is \code{TRUE}, either the
 #' project root or a subdirectory of the project.
 #' Ignored if a \code{cache} is supplied.
+#'
 #' @param search logical. If \code{TRUE}, search parent directories
 #' to find the nearest drake cache. Otherwise, look in the
 #' current working directory only.
 #' Ignored if a \code{cache} is supplied.
+#'
+#' @param verbose whether to print console messages
+#'
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -47,7 +56,8 @@ cached <- function(
   ...,
   list = character(0), no_imported_objects = FALSE,
   path = getwd(), search = TRUE,
-  cache = drake::get_cache(path = path, search = search)
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  verbose = TRUE
 ){
   if (is.null(cache)){
     return(character(0))
@@ -92,6 +102,7 @@ list_cache <- function(no_imported_objects, cache) {
 #' @param search logical. If \code{TRUE}, search parent directories
 #' to find the nearest drake cache. Otherwise, look in the
 #' current working directory only.
+#' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -100,7 +111,8 @@ list_cache <- function(no_imported_objects, cache) {
 #' }
 built <- function(
   path = getwd(), search = TRUE,
-  cache = drake::get_cache(path = path, search = search)
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  verbose = TRUE
 ){
   if (is.null(cache)){
     return(character(0))
@@ -127,6 +139,7 @@ built <- function(
 #' @param search logical. If \code{TRUE}, search parent directories
 #' to find the nearest drake cache. Otherwise, look in the
 #' current working directory only.
+#' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -135,7 +148,8 @@ built <- function(
 #' }
 imported <- function(
   files_only = FALSE, path = getwd(), search = TRUE,
-  cache = drake::get_cache(path = path, search = search)
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  verbose = TRUE
 ){
   if (is.null(cache)){
     return(character(0))
@@ -170,9 +184,14 @@ no_imported_objects <- function(targets, cache) {
 }
 
 is_imported <- Vectorize(function(target, cache) {
-  if (!(target %in% cache$list()))
+  if (!(target %in% cache$list())){
     return(FALSE)
-  cache$get(target)$imported
+  }
+  ifelse(
+    target %in% cache$list(namespace = "imported"),
+    cache$get(target, namespace = "imported"),
+    cache$get(target)$imported
+  )
 },
 "target", SIMPLIFY = TRUE)
 

@@ -5,7 +5,8 @@
 \title{Function \code{readd}}
 \usage{
 readd(target, character_only = FALSE, path = getwd(), search = TRUE,
-  cache = drake::get_cache(path = path, search = search))
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  verbose = TRUE)
 }
 \arguments{
 \item{target}{If \code{character_only} is \code{TRUE},
@@ -28,6 +29,8 @@ current working directory only.}
 \item{cache}{optional drake cache. See code{\link{new_cache}()}.
 If \code{cache} is supplied,
 the \code{path} and \code{search} arguments are ignored.}
+
+\item{verbose}{whether to print console messages}
 }
 \value{
 drake target item from the cache
@@ -48,6 +51,6 @@ readd("'report.md'") # just a fingerprint of the file (md5 sum)
 }
 \seealso{
 \code{\link{loadd}}, \code{\link{cached}},
-\code{\link{built}}, \code{link{imported}}, \code{\link{plan}},
+\code{\link{built}}, \code{link{imported}}, \code{\link{workplan}},
 \code{\link{make}}
 }

@@ -11,6 +11,13 @@ my_plan              # Each target is a file (single-quoted) or object.
 ## ----makedrakenoevalrmd, eval = FALSE------------------------------------
 #  make(my_plan) # Run the commands to build the targets.
 
+## ----diagnose, eval = FALSE----------------------------------------------
+#  failed()                 # Targets that failed in the most recent `make()`
+#  diagnose()               # Targets that failed in any previous `make()`
+#  error <- diagnose(large) # Most recent verbose error log of `large`
+#  str(error)               # Object of class "error"
+#  error$calls              # Call stack / traceback
+
 ## ----devinstall, eval = FALSE--------------------------------------------
 #  install.packages("drake") # latest CRAN release
 #  devtools::install_github(
@@ -22,11 +29,12 @@ my_plan              # Each target is a file (single-quoted) or object.
 ## ----quickstartdrakermd, eval = FALSE------------------------------------
 #  library(drake)
 #  load_basic_example() # Also (over)writes report.Rmd.
-#  plot_graph(my_plan)  # Hover, click, drag, zoom, pan.
+#  plot_graph(my_plan)  # Hover, click, drag, zoom, pan. See args 'from' and 'to'.
 #  outdated(my_plan)    # Which targets need to be (re)built?
 #  missed(my_plan)      # Are you missing anything from your workspace?
 #  check(my_plan)       # Are you missing files? Is your workflow plan okay?
 #  make(my_plan)        # Run the workflow.
+#  diagnose(large)      # View error info if the target "large" failed to build.
 #  outdated(my_plan)    # Everything is up to date.
 #  plot_graph(my_plan)  # The graph also shows what is up to date.
 
@@ -42,7 +50,6 @@ my_plan              # Each target is a file (single-quoted) or object.
 #  example_drake()
 
 ## ----plandrakermd, eval = FALSE------------------------------------------
-#  plan()
 #  analyses()
 #  summaries()
 #  evaluate()
@@ -53,7 +60,7 @@ my_plan              # Each target is a file (single-quoted) or object.
 ## ----draakedepsdrakermd, eval = FALSE------------------------------------
 #  outdated()
 #  missed()
-#  plot_graph()
+#  plot_graph() # Now with subgraphs too.
 #  dataframes_graph()
 #  render_graph()
 #  read_graph()
@@ -97,6 +104,7 @@ my_plan              # Each target is a file (single-quoted) or object.
 #  type_of_cache()
 
 ## ----debugdrakermd, eval = FALSE-----------------------------------------
+#  diagnose()
 #  check()
 #  session()
 #  in_progress()
@@ -107,6 +115,7 @@ my_plan              # Each target is a file (single-quoted) or object.
 ## ----vignettesdrakermd, eval = FALSE-------------------------------------
 #  vignette(package = "drake")            # List the vignettes.
 #  vignette("drake")                      # High-level intro.
+#  vignette("graph")                      # Visualilze the workflow graph.
 #  vignette("quickstart")                 # Walk through a simple example.
 #  vignette("parallelism") # Lots of parallel computing support.
 #  vignette("storage")                    # Learn how drake stores your stuff.
@@ -131,6 +140,7 @@ my_plan              # Each target is a file (single-quoted) or object.
 #  plot_graph(my_plan) # The colors changed in the graph.
 
 ## ----drakermdquickvignette, eval = FALSE---------------------------------
+#  vignette("graph")
 #  vignette("quickstart")
 
 ## ----basicgraph----------------------------------------------------------
@@ -144,7 +154,7 @@ reg2 <- function(d){
 }
 
 ## ----fakegraphdrakermd, eval = FALSE-------------------------------------
-#  # Hover, click, drag, zoom, and pan.
+#  # Hover, click, drag, zoom, and pan. See args 'from' and 'to'.
 #  plot_graph(my_plan, width = "100%", height = "500px")
 
 ## ----drakermdhpcvignette, eval = FALSE-----------------------------------

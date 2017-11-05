@@ -29,6 +29,7 @@ cache_path <- function(cache = NULL){
 #' the \code{\link{this_cache}()} function.
 #' @param search logical, whether to search back in the file system
 #' for the cache.
+#' @param verbose logical, whether to print the location of the cache
 #' @examples
 #' \dontrun{
 #' get_cache()
@@ -39,13 +40,15 @@ cache_path <- function(cache = NULL){
 #' }
 get_cache <- function(
   path = getwd(),
-  search = TRUE
+  search = TRUE,
+  verbose = TRUE
 ){
   if (search){
     path <- find_cache(path = path)
   } else {
     path <- default_cache_path()
   }
+  console_cache(path = path, verbose = verbose)
   this_cache(path = path)
 }
 
@@ -200,22 +203,31 @@ default_cache_path <- function(){
 #' \code{\link{default_long_hash_algo}}
 #' @description configure a cache for drake. This is
 #' to prepare the cache to be called from \code{\link{make}()}.
+#'
 #' @param cache cache to configure
+#'
 #' @param short_hash_algo short hash algorithm for drake.
+#'
 #' The short algorithm must be among \code{\link{available_hash_algos}{}},
 #' which is just the collection of algorithms available to the `algo`
 #' argument in \code{digest::digest()}.
 #' See \code{?\link{default_short_hash_algo}} for more.
+#'
 #' @param long_hash_algo short hash algorithm for drake.
 #' The long algorithm must be among \code{\link{available_hash_algos}{}},
 #' which is just the collection of algorithms available to the `algo`
 #' argument in \code{digest::digest()}.
 #' See \code{?\link{default_long_hash_algo}} for more.
+#'
 #' @param clear_progress logical, whether to clear the recorded
 #' build progress if this cache was used for previous calls to
 #' \code{\link{make}()}
+#'
 #' @param overwrite_hash_algos logical, whether to try to overwrite
 #' the hash algorithms in the cache with any user-specified ones.
+#'
+#' @param verbose whether to print console messages
+#'
 #' @examples
 #' \dontrun{
 #' load_basic_example()
@@ -231,11 +243,12 @@ default_cache_path <- function(){
 #' make(my_plan) # Changing the long hash puts targets out of date.
 #' }
 configure_cache <- function(
-  cache = drake::get_cache(),
+  cache = drake::get_cache(verbose = verbose),
   short_hash_algo = drake::default_short_hash_algo(cache = cache),
   long_hash_algo = drake::default_long_hash_algo(cache = cache),
   clear_progress = FALSE,
-  overwrite_hash_algos = FALSE
+  overwrite_hash_algos = FALSE,
+  verbose = TRUE
 ){
   short_hash_algo <- match.arg(short_hash_algo,
     choices = available_hash_algos())

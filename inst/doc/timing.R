@@ -1,6 +1,6 @@
 ## ----suppression_timing, echo = F----------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 
 ## ----timing_intro--------------------------------------------------------
@@ -95,6 +95,6 @@ rate_limiting_times(
 )
 
 ## ----endofline_timing, echo = F------------------------------------------
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 

@@ -7,6 +7,13 @@
 #' cat(drake_tip())
 drake_tip <- function() {
   tips <- c(
+    "In drake >= 4.4.0, you can select subgraphs of the workflow graph:
+     e.g. plot_graph(..., from = some_targets, mode = \"out\", order = 2).
+     See the new 'graph' vignette for more.",
+
+    "Use diagnose() to retrieve diagnostic information on
+     a target that fails to build.",
+
     "Predict the runtime of the next make() with predict_runtime().
      See also build_times() and rate_limiting_times().",
 
@@ -19,6 +26,11 @@ drake_tip <- function() {
 
     "Use suppressPackageStartupMessages() to eliminate
      package startup messages like this one.",
+
+    "Check out the \"future_lapply\" backends. Example:
+    load_basic_example();
+    backend(future::multisession);
+    make(my_plan, parallelism = \"future_lapply\")",
 
     "Drake quickstart:
      load_basic_example();

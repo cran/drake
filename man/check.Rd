@@ -4,18 +4,21 @@
 \alias{check}
 \title{Function \code{check}}
 \usage{
-check(plan = drake::plan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), cache = drake::get_cache())
+check(plan = workplan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), cache = drake::get_cache(verbose = verbose),
+  verbose = TRUE)
 }
 \arguments{
 \item{plan}{workflow plan data frame, possibly from
-\code{\link{plan}()}.}
+\code{\link{workplan}()}.}
 
 \item{targets}{character vector of targets to make}
 
 \item{envir}{environment containing user-defined functions}
 
 \item{cache}{optional drake cache. See \code{\link{new_cache}()}}
+
+\item{verbose}{logical, whether to log progress to the console.}
 }
 \value{
 invisibly return \code{plan}
@@ -34,5 +37,5 @@ check(my_plan)
 }
 }
 \seealso{
-\code{link{plan}}, \code{\link{make}}
+\code{ink{workplan}}, \code{\link{make}}
 }

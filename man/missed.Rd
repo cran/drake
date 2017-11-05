@@ -4,9 +4,9 @@
 \alias{missed}
 \title{Function \code{missed}}
 \usage{
-missed(plan = drake::plan(), targets = drake::possible_targets(plan),
+missed(plan = workplan(), targets = drake::possible_targets(plan),
   envir = parent.frame(), verbose = TRUE, jobs = 1,
-  parallelism = drake::default_parallelism(), packages = (.packages()),
+  parallelism = drake::default_parallelism(), packages = rev(.packages()),
   prework = character(0), config = NULL)
 }
 \arguments{
@@ -47,7 +47,7 @@ in advance could save time if you plan multiple calls to
 \code{missed()}.}
 }
 \description{
-Report any import objects required by your workflow
+Report any import objects required by your workplan
 plan but missing from your workspace.
 IMPORTANT: you must be in the root directory of your project.
 }

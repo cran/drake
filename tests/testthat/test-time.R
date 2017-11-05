@@ -12,14 +12,16 @@ test_with_dir("proc_time runtimes can be fetched", {
 })
 
 test_with_dir("build times works if no targets are built", {
+  expect_equal(cached(), character(0))
   expect_equal(nrow(build_times(search = FALSE)), 0)
-  my_plan <- plan(x = 1)
-  make(my_plan, verbose = FALSE, imports_only = TRUE)
+  my_plan <- workplan(x = 1)
+  con <- config(my_plan, verbose = FALSE)
+  make_imports(con)
   expect_equal(nrow(build_times(search = FALSE)), 0)
 })
 
 test_with_dir("build time the same after superfluous make", {
-  x <- plan(y = Sys.sleep(0.25))
+  x <- workplan(y = Sys.sleep(0.25))
   c1 <- make(x, verbose = FALSE)
   expect_equal(justbuilt(c1), "y")
   b1 <- build_times(search = FALSE)
@@ -39,7 +41,7 @@ test_with_dir("empty time predictions", {
     df
   }
 
-  my_plan <- plan(y = 1)
+  my_plan <- workplan(y = 1)
   expect_warning(
     x <- rate_limiting_times(plan = my_plan, verbose = FALSE) %>%
       min_df
@@ -81,6 +83,7 @@ test_with_dir("time predictions: incomplete targets", {
   my_plan <- e$my_plan
   config <- config(my_plan, envir = e,
     jobs = 1, verbose = FALSE)
+  make_imports(config)
 
   dats <- c("small", "large")
   expect_warning(
@@ -195,6 +198,7 @@ test_with_dir("timing predictions with realistic build", {
 
   load_basic_example(envir = e)
   my_plan <- e$my_plan
+  my_plan$command <- paste("Sys.sleep(0.001);", my_plan$command)
   config <- config(my_plan, envir = e, parallelism = "mclapply",
     jobs = 1, verbose = FALSE)
   config <- testrun(config)
@@ -322,9 +326,9 @@ test_with_dir("timing predictions with realistic build", {
   expect_true(all(complete.cases(jobs_4_df)))
   expect_true(all(complete.cases(jobs_4_df_targets)))
 
-  expect_equal(nrow(scratch_df), 27)
+  expect_equal(nrow(scratch_df), 28)
   expect_equal(nrow(resume_df), nrow(scratch_df) - 8)
-  expect_equal(nrow(resume_df_targets), nrow(scratch_df) - 20)
+  expect_equal(nrow(resume_df_targets), nrow(scratch_df) - 21)
   expect_true(nrow(jobs_2_df) < nrow(scratch_df))
   expect_true(nrow(jobs_4_df) < nrow(jobs_2_df))
   expect_true(nrow(jobs_4_df_targets) < nrow(jobs_4_df))

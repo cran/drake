@@ -12,7 +12,7 @@
 
 <meta name="author" content="William Michael Landau" />
 
-<meta name="date" content="2017-10-17" />
+<meta name="date" content="2017-11-05" />
 
 <title>Caution</title>
 
@@ -71,7 +71,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1 class="title toc-ignore">Caution</h1>
 <h3 class="subtitle"><em>Cautionary notes for drake</em></h3>
 <h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-10-17</em></h4>
+<h4 class="date"><em>2017-11-05</em></h4>
 
 
 <div id="TOC">
@@ -81,11 +81,14 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#commands-are-not-perfectly-flexible."><span class="toc-section-number">1.2</span> Commands are NOT perfectly flexible.</a></li>
 </ul></li>
 <li><a href="#execution-environment-and-files"><span class="toc-section-number">2</span> Execution environment and files</a><ul>
-<li><a href="#install-all-your-packages."><span class="toc-section-number">2.1</span> Install all your packages.</a></li>
-<li><a href="#your-workspace-is-modified-by-default."><span class="toc-section-number">2.2</span> Your workspace is modified by default.</a></li>
-<li><a href="#minimize-the-side-effects-of-your-commands."><span class="toc-section-number">2.3</span> Minimize the side effects of your commands.</a></li>
-<li><a href="#do-not-change-your-working-directory."><span class="toc-section-number">2.4</span> Do not change your working directory.</a></li>
-<li><a href="#take-special-precautions-if-your-drake-project-is-a-package."><span class="toc-section-number">2.5</span> Take special precautions if your <code>drake</code> project is a package.</a></li>
+<li><a href="#install-drake-properly."><span class="toc-section-number">2.1</span> Install <code>drake</code> properly.</a></li>
+<li><a href="#install-all-your-packages."><span class="toc-section-number">2.2</span> Install all your packages.</a></li>
+<li><a href="#find-and-diagnose-your-errors."><span class="toc-section-number">2.3</span> Find and diagnose your errors.</a></li>
+<li><a href="#your-workspace-is-modified-by-default."><span class="toc-section-number">2.4</span> Your workspace is modified by default.</a></li>
+<li><a href="#minimize-the-side-effects-of-your-commands."><span class="toc-section-number">2.5</span> Minimize the side effects of your commands.</a></li>
+<li><a href="#do-not-change-your-working-directory."><span class="toc-section-number">2.6</span> Do not change your working directory.</a></li>
+<li><a href="#take-special-precautions-if-your-drake-project-is-a-package."><span class="toc-section-number">2.7</span> Take special precautions if your <code>drake</code> project is a package.</a></li>
+<li><a href="#timeouts-may-be-unreliable."><span class="toc-section-number">2.8</span> Timeouts may be unreliable.</a></li>
 </ul></li>
 <li><a href="#dependencies"><span class="toc-section-number">3</span> Dependencies</a><ul>
 <li><a href="#check-your-dependencies."><span class="toc-section-number">3.1</span> Check your dependencies.</a></li>
@@ -97,9 +100,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#packages-are-not-tracked-as-dependencies."><span class="toc-section-number">3.7</span> Packages are not tracked as dependencies.</a></li>
 </ul></li>
 <li><a href="#high-performance-computing"><span class="toc-section-number">4</span> High-performance computing</a><ul>
-<li><a href="#parallel-computing-on-windows"><span class="toc-section-number">4.1</span> Parallel computing on Windows</a></li>
-<li><a href="#proper-makefiles-are-not-standalone."><span class="toc-section-number">4.2</span> Proper Makefiles are not standalone.</a></li>
-<li><a href="#makefile-level-parallelism-for-imported-objects-and-files"><span class="toc-section-number">4.3</span> Makefile-level parallelism for imported objects and files</a></li>
+<li><a href="#maximum-number-of-simultaneous-jobs"><span class="toc-section-number">4.1</span> Maximum number of simultaneous jobs</a></li>
+<li><a href="#parallel-computing-on-windows"><span class="toc-section-number">4.2</span> Parallel computing on Windows</a></li>
+<li><a href="#configuring-futurebatchtools-based-distributed-computing-on-clusters"><span class="toc-section-number">4.3</span> Configuring <a href="https://github.com/HenrikBengtsson/future">future</a>/<a href="https://github.com/mllg/batchtools">batchtools</a>-based distributed computing on clusters</a></li>
+<li><a href="#proper-makefiles-are-not-standalone."><span class="toc-section-number">4.4</span> Proper Makefiles are not standalone.</a></li>
+<li><a href="#makefile-level-parallelism-for-imported-objects-and-files"><span class="toc-section-number">4.5</span> Makefile-level parallelism for imported objects and files</a></li>
+<li><a href="#zombie-processes"><span class="toc-section-number">4.6</span> Zombie processes</a></li>
 </ul></li>
 <li><a href="#storage"><span class="toc-section-number">5</span> Storage</a><ul>
 <li><a href="#storage-customization-pitfalls"><span class="toc-section-number">5.1</span> Storage customization pitfalls</a></li>
@@ -112,7 +118,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <img src="data:image/png;base64,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" />
 
 </div>
-<p>With drake, there is room for error with respect to tracking dependencies, managing environments and workspaces, etc. For example, in some edge cases, it is possible to trick drake into ignoring dependencies. For the most up-to-date information on unhandled edge cases, please visit the <a href="https://github.com/wlandau-lilly/drake/issues">issue tracker</a>, where you can submit your own bug reports as well. Be sure to search the closed issues too, especially if you are not using the most up-to-date development version. In this vignette, I will try to address some of the main issues to keep in mind for writing reproducible workflows safely.</p>
+<p><code>Drake</code> has edge cases, pitfalls, and weaknesses that may or may not be fixed in future releases. For the most up-to-date information on unhandled edge cases, please visit the <a href="https://github.com/wlandau-lilly/drake/issues">issue tracker</a>, where you can submit your own bug reports as well. Be sure to search the closed issues too, especially if you are not using the most up-to-date development version. In this vignette, I will try to address some of the main issues to keep in mind for writing reproducible workflows safely.</p>
 <div id="workflow-plans" class="section level1">
 <h1><span class="header-section-number">1</span> Workflow plans</h1>
 <div id="beware-unparsable-symbols-in-your-workflow-plan." class="section level2">
@@ -120,17 +126,17 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <p>In your workflow plan, be sure that target names can be parsed as symbols and commands can be parsed as R code. To be safe, use <code>check(my_plan)</code> to screen for illegal symbols and other problem areas.</p>
 <p>A common pitfall is using the <code>evaluate()</code> function to expand wildcards after applying single quotes to file targets.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(magrittr) <span class="co"># for the pipe operator %&gt;%</span>
-<span class="kw">plan</span>(
+<span class="kw">workplan</span>(
   <span class="dt">data =</span> <span class="kw">readRDS</span>(<span class="st">&quot;data_..datasize...rds&quot;</span>)
-) %&gt;%
-<span class="st">  </span><span class="kw">rbind</span>(drake::<span class="kw">plan</span>(
+) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">rbind</span>(drake<span class="op">::</span><span class="kw">workplan</span>(
     <span class="dt">file.csv =</span> <span class="kw">write.csv</span>(
       data_..datasize.., <span class="co"># nolint</span>
       <span class="st">&quot;file_..datasize...csv&quot;</span>
     ),
     <span class="dt">strings_in_dots =</span> <span class="st">&quot;literals&quot;</span>,
     <span class="dt">file_targets =</span> T
-  )) %&gt;%
+  )) <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">evaluate</span>(
     <span class="dt">rules =</span> <span class="kw">list</span>(<span class="dt">..datasize.. =</span> <span class="kw">c</span>(<span class="st">&quot;small&quot;</span>, <span class="st">&quot;large&quot;</span>))
   )</code></pre></div>
@@ -141,18 +147,18 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 ## 4 'file.csv'_large write.csv(data_large, &quot;file_large.csv&quot;)</code></pre>
 <p>The single quotes in the middle of <code>'file.csv'_small</code> and <code>'file.csv'large</code> are illegal, and the target names do not even correspond to the files written. Instead, construct your workflow plan in multiple stages and apply the single quotes at the very end.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">rules &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">..datasize.. =</span> <span class="kw">c</span>(<span class="st">&quot;small&quot;</span>, <span class="st">&quot;large&quot;</span>))
-datasets &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class="dt">data =</span> <span class="kw">readRDS</span>(<span class="st">&quot;data_..datasize...rds&quot;</span>)) %&gt;%
+datasets &lt;-<span class="st"> </span><span class="kw">workplan</span>(<span class="dt">data =</span> <span class="kw">readRDS</span>(<span class="st">&quot;data_..datasize...rds&quot;</span>)) <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">evaluate</span>(<span class="dt">rules =</span> rules)</code></pre></div>
 <p>Plan the CSV files separately.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">files &lt;-<span class="st"> </span><span class="kw">plan</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">files &lt;-<span class="st"> </span><span class="kw">workplan</span>(
   <span class="dt">file =</span> <span class="kw">write.csv</span>(data_..datasize.., <span class="st">&quot;file_..datasize...csv&quot;</span>), <span class="co"># nolint</span>
   <span class="dt">strings_in_dots =</span> <span class="st">&quot;literals&quot;</span>
-) %&gt;%
+) <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">evaluate</span>(<span class="dt">rules =</span> rules)</code></pre></div>
 <p>Single-quote the file targets after <code>evaluate()</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">files$target &lt;-<span class="st"> </span><span class="kw">paste0</span>(
-  files$target, <span class="st">&quot;.csv&quot;</span>
-) %&gt;%
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">files<span class="op">$</span>target &lt;-<span class="st"> </span><span class="kw">paste0</span>(
+  files<span class="op">$</span>target, <span class="st">&quot;.csv&quot;</span>
+) <span class="op">%&gt;%</span>
 <span class="st">  </span>as_file</code></pre></div>
 <p>Put the workflow plan together.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">rbind</span>(datasets, files)</code></pre></div>
@@ -165,40 +171,62 @@ datasets &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class=
 </div>
 <div id="commands-are-not-perfectly-flexible." class="section level2">
 <h2><span class="header-section-number">1.2</span> Commands are NOT perfectly flexible.</h2>
-<p>In your workflow plan data frame (produced by <code>plan()</code> and accepted by <code>make()</code>), your commands can usually be flexible R expressions.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plan</span>(
-  <span class="dt">target1 =</span> <span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span> -<span class="st"> </span><span class="kw">sqrt</span>(<span class="kw">sqrt</span>(<span class="dv">3</span>)),
-  <span class="dt">target2 =</span> <span class="kw">my_function</span>(web_scraped_data) %&gt;%<span class="st"> </span>my_tidy
+<p>In your workflow plan data frame (produced by <code>workplan()</code> and accepted by <code>make()</code>), your commands can usually be flexible R expressions.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">workplan</span>(
+  <span class="dt">target1 =</span> <span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="op">-</span><span class="st"> </span><span class="kw">sqrt</span>(<span class="kw">sqrt</span>(<span class="dv">3</span>)),
+  <span class="dt">target2 =</span> <span class="kw">my_function</span>(web_scraped_data) <span class="op">%&gt;%</span><span class="st"> </span>my_tidy
 )</code></pre></div>
 <pre><code>##    target                                   command
 ## 1 target1                     1 + 1 - sqrt(sqrt(3))
 ## 2 target2 my_function(web_scraped_data) %&gt;% my_tidy</code></pre>
-<p>However, please try to avoid formulas and function definitions in your commands. You may be able to get away with <code>plan(f = function(x){x + 1})</code> or <code>plan(f = y ~ x)</code> in some use cases, but be careful. Rather than using commands for this, it is better to define functions and formulas in your workspace before calling <code>make()</code>. (Alternatively, use the <code>envir</code> argument to <code>make()</code> to tightly control which imported functions are available.) Use the <code>check()</code> function to help screen and quality-control your workflow plan data frame, use <code>tracked()</code> to see the items that are reproducibly tracked, and use <code>plot_graph()</code> and <code>build_graph()</code> to see the dependency structure of your project.</p>
+<p>However, please try to avoid formulas and function definitions in your commands. You may be able to get away with <code>workplan(f = function(x){x + 1})</code> or <code>workplan(f = y ~ x)</code> in some use cases, but be careful. Rather than using commands for this, it is better to define functions and formulas in your workspace before calling <code>make()</code>. (Alternatively, use the <code>envir</code> argument to <code>make()</code> to tightly control which imported functions are available.) Use the <code>check()</code> function to help screen and quality-control your workflow plan data frame, use <code>tracked()</code> to see the items that are reproducibly tracked, and use <code>plot_graph()</code> and <code>build_graph()</code> to see the dependency structure of your project.</p>
 </div>
 </div>
 <div id="execution-environment-and-files" class="section level1">
 <h1><span class="header-section-number">2</span> Execution environment and files</h1>
+<div id="install-drake-properly." class="section level2">
+<h2><span class="header-section-number">2.1</span> Install <code>drake</code> properly.</h2>
+<p>You must properly install <code>drake</code> using <code>install.packages()</code>, <code>devtools::install_github()</code>, or similar. It is not enough to use <code>devtools::load_all()</code>, particularly for the parallel computing functionality, in which multiple R sessions initialize and then try to <code>require(drake)</code>.</p>
+</div>
 <div id="install-all-your-packages." class="section level2">
-<h2><span class="header-section-number">2.1</span> Install all your packages.</h2>
+<h2><span class="header-section-number">2.2</span> Install all your packages.</h2>
 <p>Your workflow may depend on external packages such as <a href="https://CRAN.R-project.org/package=ggplot2">ggplot2</a>, <a href="https://CRAN.R-project.org/package=dplyr">dplyr</a>, or <a href="https://CRAN.R-project.org/package=MASS">MASS</a>. Such packages must be formally installed with <code>install.packages()</code>, <code>devtools::install_github()</code>, <code>devtools::install_local()</code>, or a similar command. If you load uninstalled packages with <code>devtools::load_all()</code>, results may be unpredictable and incorrect.</p>
 </div>
+<div id="find-and-diagnose-your-errors." class="section level2">
+<h2><span class="header-section-number">2.3</span> Find and diagnose your errors.</h2>
+<p>When a <code>make()</code> fails, use <code>failed()</code> and <code>diagnose()</code> to debug. Try the following out yourself.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">diagnose</span>()
+f &lt;-<span class="st"> </span><span class="cf">function</span>(){
+  <span class="kw">stop</span>(<span class="st">&quot;unusual error&quot;</span>)
+}
+bad_plan &lt;-<span class="st"> </span><span class="kw">workplan</span>(<span class="dt">target =</span> <span class="kw">f</span>())
+<span class="kw">make</span>(bad_plan)
+<span class="kw">failed</span>() <span class="co"># From the last make() only</span>
+<span class="kw">diagnose</span>() <span class="co"># From all previous make()s</span>
+error &lt;-<span class="st"> </span><span class="kw">diagnose</span>(y)
+<span class="kw">str</span>(error)
+error<span class="op">$</span>calls <span class="co"># View the traceback.</span></code></pre></div>
+</div>
 <div id="your-workspace-is-modified-by-default." class="section level2">
-<h2><span class="header-section-number">2.2</span> Your workspace is modified by default.</h2>
+<h2><span class="header-section-number">2.4</span> Your workspace is modified by default.</h2>
 <p>As of version 3.0.0, drake’s execution environment is the user’s workspace by default. As an upshot, the workspace is vulnerable to side-effects of <code>make()</code>. To protect your workspace, you may want to create a custom evaluation environment containing all your imported objects and then pass it to the envir argument of <code>make()</code>. Here is how.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
 envir &lt;-<span class="st"> </span><span class="kw">new.env</span>(<span class="dt">parent =</span> <span class="kw">globalenv</span>())
 <span class="kw">eval</span>(<span class="kw">expression</span>({
-  f &lt;-<span class="st"> </span>function(x){
-    <span class="kw">g</span>(x) +<span class="st"> </span><span class="dv">1</span>
+  f &lt;-<span class="st"> </span><span class="cf">function</span>(x){
+    <span class="kw">g</span>(x) <span class="op">+</span><span class="st"> </span><span class="dv">1</span>
   }
-  g &lt;-<span class="st"> </span>function(x){
-    x +<span class="st"> </span><span class="dv">1</span>
+  g &lt;-<span class="st"> </span><span class="cf">function</span>(x){
+    x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>
   }
 }
 ), <span class="dt">envir =</span> envir)
-myplan &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class="dt">out =</span> <span class="kw">f</span>(<span class="dv">1</span>:<span class="dv">3</span>))
+myplan &lt;-<span class="st"> </span><span class="kw">workplan</span>(<span class="dt">out =</span> <span class="kw">f</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">3</span>))
 <span class="kw">make</span>(myplan, <span class="dt">envir =</span> envir)</code></pre></div>
-<pre><code>## check 1 item: g
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...
+## connect 2 imports: f, g
+## connect 1 target: out
+## check 1 item: g
 ## import g
 ## check 1 item: f
 ## import f
@@ -208,46 +236,47 @@ myplan &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class="d
 <pre><code>## [1] &quot;datasets&quot; &quot;envir&quot;    &quot;files&quot;    &quot;myplan&quot;   &quot;rules&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">ls</span>(envir) <span class="co"># Check your evaluation environment.</span></code></pre></div>
 <pre><code>## [1] &quot;f&quot;   &quot;g&quot;   &quot;out&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">envir$out</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">envir<span class="op">$</span>out</code></pre></div>
 <pre><code>## [1] 3 4 5</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">readd</span>(out)</code></pre></div>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 <pre><code>## [1] 3 4 5</code></pre>
 </div>
 <div id="minimize-the-side-effects-of-your-commands." class="section level2">
-<h2><span class="header-section-number">2.3</span> Minimize the side effects of your commands.</h2>
+<h2><span class="header-section-number">2.5</span> Minimize the side effects of your commands.</h2>
 <p>Consider the workflow plan data frame below.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_plan &lt;-<span class="st"> </span><span class="kw">plan</span>(<span class="dt">list =</span> <span class="kw">c</span>(<span class="dt">a =</span> <span class="st">&quot;x &lt;- 1; return(x)&quot;</span>))
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">my_plan &lt;-<span class="st"> </span><span class="kw">workplan</span>(<span class="dt">list =</span> <span class="kw">c</span>(<span class="dt">a =</span> <span class="st">&quot;x &lt;- 1; return(x)&quot;</span>))
 my_plan</code></pre></div>
 <pre><code>##   target           command
 ## 1      a x &lt;- 1; return(x)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="dv">1</span>])</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan<span class="op">$</span>command[<span class="dv">1</span>])</code></pre></div>
 <pre><code>## [1] &quot;return&quot;</code></pre>
 <p>Here, <code>x</code> is a mere side effect of the command, and it will not be reproducibly tracked. And if you add a proper target called <code>x</code> to the workflow plan data frame, the results of your analysis may not be correct. Side effects of commands can be unpredictable, so please try to minimize them. It is a good practice to write your commands as function calls. Nested function calls are okay.</p>
 </div>
 <div id="do-not-change-your-working-directory." class="section level2">
-<h2><span class="header-section-number">2.4</span> Do not change your working directory.</h2>
+<h2><span class="header-section-number">2.6</span> Do not change your working directory.</h2>
 <p>During the execution workflow of a drake project, please do not change your working directory (with <code>setwd()</code>, for example). At the very least, if you do change your working directory during a command in your workflow plan, please return to the original working directory before the command is completed. Drake relies on a hidden cache (the <code>.drake/</code> folder) at the root of your project, so navigating to a different folder may confuse drake.</p>
 </div>
 <div id="take-special-precautions-if-your-drake-project-is-a-package." class="section level2">
-<h2><span class="header-section-number">2.5</span> Take special precautions if your <code>drake</code> project is a package.</h2>
+<h2><span class="header-section-number">2.7</span> Take special precautions if your <code>drake</code> project is a package.</h2>
 <p>Some users like to structure their <code>drake</code> projects as <a href="https://cran.r-project.org/doc/manuals/R-exts.html">formal R packages</a>. The straightforward way to run such a project is to</p>
 <ol style="list-style-type: decimal">
 <li>Write all your imported functions in <code>*.R</code> files in the package’s <code>R/</code> folder.</li>
 <li>Load the execution environment with <code>devtools::load_all()</code>.</li>
 <li>Call <code>drake::make()</code>.</li>
 </ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">env &lt;-<span class="st"> </span>devtools::<span class="kw">load_all</span>(<span class="st">&quot;yourProject&quot;</span>)$env <span class="co"># Has all your imported functions</span>
-drake::<span class="kw">make</span>(my_plan, <span class="dt">envir =</span> env)            <span class="co"># Run the project normally.</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">env &lt;-<span class="st"> </span>devtools<span class="op">::</span><span class="kw">load_all</span>(<span class="st">&quot;yourProject&quot;</span>)<span class="op">$</span>env <span class="co"># Has all your imported functions</span>
+drake<span class="op">::</span><span class="kw">make</span>(my_plan, <span class="dt">envir =</span> env)            <span class="co"># Run the project normally.</span></code></pre></div>
 <p>However, the simple strategy above only works for <code>parLapply</code> parallelism with <code>jobs = 1</code> and <code>mcapply</code> parallelism. For other kinds of parallelism, you must turn <code>devtools::load_all(&quot;yourProject&quot;)$env</code> into an ordinary environment that does not look like a package namespace. Thanks to <a href="https://github.com/dapperjapper">Jasper Clarkberg</a> for the following workaround.</p>
 <ol style="list-style-type: decimal">
 <li>Clone <code>devtools::load_all(&quot;yourProject&quot;)$env</code> in order to change the <em>binding environment</em> of all your functions.</li>
 </ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">env &lt;-<span class="st"> </span>devtools::<span class="kw">load_all</span>(<span class="st">&quot;yourProject&quot;</span>)$env
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">env &lt;-<span class="st"> </span>devtools<span class="op">::</span><span class="kw">load_all</span>(<span class="st">&quot;yourProject&quot;</span>)<span class="op">$</span>env
 env &lt;-<span class="st"> </span><span class="kw">list2env</span>(<span class="kw">as.list</span>(env), <span class="dt">parent =</span> <span class="kw">globalenv</span>())</code></pre></div>
 <ol start="2" style="list-style-type: decimal">
 <li>Change the <a href="http://adv-r.had.co.nz/Environments.html#function-envs"><em>enclosing environment</em></a> of your functions using an <a href="https://stackoverflow.com/questions/14464442/using-get-with-replacement-functions">unfortunate hack</a> involving <code>environment&lt;-</code>.</li>
 </ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">for (name in <span class="kw">ls</span>(env)){
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="cf">for</span> (name <span class="cf">in</span> <span class="kw">ls</span>(env)){
   <span class="kw">assign</span>(
     <span class="dt">x =</span> name,
     <span class="dt">envir =</span> env,
@@ -270,6 +299,10 @@ packages_to_load &lt;-<span class="st"> </span><span class="kw">setdiff</span>(<
   <span class="dt">packages =</span> packages_to_load <span class="co"># Does not include &quot;yourProject&quot;</span>
 )</code></pre></div>
 <p>You may need to adapt this last workaround, depending on the structure of the package, <code>yourProject</code>.</p>
+</div>
+<div id="timeouts-may-be-unreliable." class="section level2">
+<h2><span class="header-section-number">2.8</span> Timeouts may be unreliable.</h2>
+<p>You can call <code>make(..., timeout = 10)</code> to time out all each target after 10 seconds. However, timeouts rely on <a href="https://github.com/HenrikBengtsson/R.utils/issues/74">R.utils::withTimeout()</a>, which in turn relies on <code>setTimeLimit()</code>. These functions are the best that R can offer right now, but they have <a href="https://github.com/HenrikBengtsson/R.utils/issues/74">known issues</a>, and the timeout may fail to take effect for certain environments.</p>
 </div>
 </div>
 <div id="dependencies" class="section level1">
@@ -295,24 +328,28 @@ my_plan</code></pre></div>
 ## 13 coef_regression1_large              coefficients(regression1_large)
 ## 14 coef_regression2_small              coefficients(regression2_small)
 ## 15 coef_regression2_large              coefficients(regression2_large)</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan.</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan. See args 'from' and 'to'.</span>
 <span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
-<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/98a49f04/images/outdated.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
+<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/outdated.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
 </iframe>
 <p>You can also check the dependencies of individual targets.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(reg2)</code></pre></div>
 <pre><code>## [1] &quot;lm&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="dv">1</span>]) <span class="co"># File dependencies like report.Rmd are single-quoted.</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan<span class="op">$</span>command[<span class="dv">1</span>]) <span class="co"># File dependencies like report.Rmd are single-quoted.</span></code></pre></div>
 <pre><code>## [1] &quot;'report.Rmd'&quot;           &quot;coef_regression2_small&quot;
 ## [3] &quot;knit&quot;                   &quot;large&quot;                 
 ## [5] &quot;small&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan$command[<span class="kw">nrow</span>(my_plan)])</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deps</span>(my_plan<span class="op">$</span>command[<span class="kw">nrow</span>(my_plan)])</code></pre></div>
 <pre><code>## [1] &quot;coefficients&quot;      &quot;regression2_large&quot;</code></pre>
 <p>List all the reproducibly-tracked objects and files, including imports and targets.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">tracked</span>(my_plan, <span class="dt">targets =</span> <span class="st">&quot;small&quot;</span>)</code></pre></div>
+<pre><code>## connect 9 imports: envir, files, datasets, myplan, simulate, rules, reg1, reg...
+## connect 15 targets: 'report.md', small, large, regression1_small, regression1...</code></pre>
 <pre><code>## [1] &quot;small&quot;        &quot;simulate&quot;     &quot;data.frame&quot;   &quot;rpois&quot;       
 ## [5] &quot;stats::rnorm&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">tracked</span>(my_plan)</code></pre></div>
+<pre><code>## connect 9 imports: envir, files, datasets, myplan, simulate, rules, reg1, reg...
+## connect 15 targets: 'report.md', small, large, regression1_small, regression1...</code></pre>
 <pre><code>##  [1] &quot;'report.md'&quot;            &quot;small&quot;                 
 ##  [3] &quot;large&quot;                  &quot;regression1_small&quot;     
 ##  [5] &quot;regression1_large&quot;      &quot;regression2_small&quot;     
@@ -335,10 +372,10 @@ my_plan</code></pre></div>
 ?tracked
 ?plot_graph</code></pre></div>
 <p>Drake can be fooled into skipping objects that should be treated as dependencies. For example:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">f &lt;-<span class="st"> </span>function(){
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">f &lt;-<span class="st"> </span><span class="cf">function</span>(){
   b &lt;-<span class="st"> </span><span class="kw">get</span>(<span class="st">&quot;x&quot;</span>, <span class="dt">envir =</span> <span class="kw">globalenv</span>()) <span class="co"># x is incorrectly ignored</span>
   file_dependency &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">'input_file.rds'</span>) <span class="co"># 'input_file.rds' is incorrectly ignored # nolint</span>
-  digest::<span class="kw">digest</span>(file_dependency)
+  digest<span class="op">::</span><span class="kw">digest</span>(file_dependency)
 }
 <span class="kw">deps</span>(f)</code></pre></div>
 <pre><code>## [1] &quot;digest::digest&quot; &quot;get&quot;            &quot;globalenv&quot;      &quot;readRDS&quot;</code></pre>
@@ -374,11 +411,11 @@ my_plan[<span class="dv">1</span>, ]</code></pre></div>
 <div id="functions-produced-by-vectorize" class="section level2">
 <h2><span class="header-section-number">3.4</span> Functions produced by <code>Vectorize()</code></h2>
 <p>With functions produced by <code>Vectorize()</code>, detecting dependencies is especially hard because the body of every such a function is</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">args &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">as.list</span>(<span class="kw">match.call</span>())[-1L], eval, <span class="kw">parent.frame</span>())
-names &lt;-<span class="st"> </span>if (<span class="kw">is.null</span>(<span class="kw">names</span>(args)))
-    <span class="kw">character</span>(<span class="kw">length</span>(args)) else <span class="kw">names</span>(args)
-dovec &lt;-<span class="st"> </span>names %in%<span class="st"> </span>vectorize.args
-<span class="kw">do.call</span>(<span class="st">&quot;mapply&quot;</span>, <span class="kw">c</span>(<span class="dt">FUN =</span> FUN, args[dovec], <span class="dt">MoreArgs =</span> <span class="kw">list</span>(args[!dovec]),
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">args &lt;-<span class="st"> </span><span class="kw">lapply</span>(<span class="kw">as.list</span>(<span class="kw">match.call</span>())[<span class="op">-</span>1L], eval, <span class="kw">parent.frame</span>())
+names &lt;-<span class="st"> </span><span class="cf">if</span> (<span class="kw">is.null</span>(<span class="kw">names</span>(args)))
+    <span class="kw">character</span>(<span class="kw">length</span>(args)) <span class="cf">else</span> <span class="kw">names</span>(args)
+dovec &lt;-<span class="st"> </span>names <span class="op">%in%</span><span class="st"> </span>vectorize.args
+<span class="kw">do.call</span>(<span class="st">&quot;mapply&quot;</span>, <span class="kw">c</span>(<span class="dt">FUN =</span> FUN, args[dovec], <span class="dt">MoreArgs =</span> <span class="kw">list</span>(args[<span class="op">!</span>dovec]),
     <span class="dt">SIMPLIFY =</span> SIMPLIFY, <span class="dt">USE.NAMES =</span> USE.NAMES))</code></pre></div>
 <p>Thus, If <code>f &lt;- Vectorize(g, ...)</code> is such a function, drake searches <code>g()</code> for dependencies, not <code>f()</code>. Specifically, if drake sees that <code>environment(f)[[&quot;FUN&quot;]]</code> exists and is a function, then <code>environment(f)[[&quot;FUN&quot;]]</code> will be searched instead of <code>f()</code>.</p>
 <p>In addition, if <code>f()</code> is the output of <code>Vectorize()</code>, then drake reacts to changes in <code>environment(f)[[&quot;FUN&quot;]]</code>, not <code>f()</code>. Thus, if the configuration settings of vectorization change (such as which arguments are vectorized), but the core element-wise functionality remains the same, then <code>make()</code> still thinks everything is up to date. Also, if you hover over the <code>f</code> node in <code>plot_graph(hover = TRUE)</code>, then you will see the body of <code>environment(f)[[&quot;FUN&quot;]]</code>, not the body of <code>f()</code>.</p>
@@ -398,18 +435,49 @@ dovec &lt;-<span class="st"> </span>names %in%<span class="st"> </span>vectorize
 </div>
 <div id="high-performance-computing" class="section level1">
 <h1><span class="header-section-number">4</span> High-performance computing</h1>
+<div id="maximum-number-of-simultaneous-jobs" class="section level2">
+<h2><span class="header-section-number">4.1</span> Maximum number of simultaneous jobs</h2>
+<p>Be mindful of the maximum number of simultaneous parallel jobs you deploy. At best, too many jobs is poor etiquette on a system with many users and limited resources. At worst, too many jobs will crash a system. The <code>jobs</code> argument to <code>make()</code> sets the maximum number of simultaneous jobs in most cases, but not all.</p>
+<p>For most of <code>drake</code>’s parallel backends, <code>jobs</code> sets the maximum number of simultaneous parallel jobs. However, there are ways to break the pattern. For example, <code>make(..., parallelism = &quot;Makefile&quot;, jobs = 2, args = &quot;--jobs=4&quot;)</code> uses at most 2 jobs for the imports and at most 4 jobs for the targets. (In <code>make()</code>, <code>args</code> overrides <code>jobs</code> for the targets). For <code>make(..., parallelism = &quot;future_lapply&quot;)</code>, the <code>jobs</code> argument is ignored altogether. Instead, you might limit the max number of jobs by setting <code>options(mc.cores = 2)</code> before calling <code>make()</code>. Depending on the <code>future</code> backend you select with <code>backend()</code> or <code>future::plan()</code>, you might make use of one of the other environment variables listed in <code>?future::future.options</code>.</p>
+</div>
 <div id="parallel-computing-on-windows" class="section level2">
-<h2><span class="header-section-number">4.1</span> Parallel computing on Windows</h2>
+<h2><span class="header-section-number">4.2</span> Parallel computing on Windows</h2>
 <p>On Windows, do not use <code>make(..., parallelism = &quot;mclapply&quot;, jobs = n)</code> with <code>n</code> greater than 1. You could try, but <code>jobs</code> will just be demoted to 1. Instead, please replace <code>&quot;mclapply&quot;</code> with one of the other <code>parallelism_choices()</code> or let <code>drake</code> choose the <code>parallelism</code> backend for you. For <code>make(..., parallelism = &quot;Makefile&quot;)</code>, Windows users need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>.</p>
 </div>
+<div id="configuring-futurebatchtools-based-distributed-computing-on-clusters" class="section level2">
+<h2><span class="header-section-number">4.3</span> Configuring <a href="https://github.com/HenrikBengtsson/future">future</a>/<a href="https://github.com/mllg/batchtools">batchtools</a>-based distributed computing on clusters</h2>
+<p>The <code>&quot;future_lapply&quot;</code> backend unlocks a large array of distributed computing options on serious computing clusters. However, it is your responsibility to configure your workflow for your specific job scheduler. In particular, special <a href="https://github.com/mllg/batchtools">batchtools</a> <code>*.tmpl</code> configuration files are required, and the technique is described in the documentation of <a href="https://github.com/mllg/batchtools">batchtools</a>. You can find some examples of these files in the <code>inst/templates</code> folders of the <a href="https://github.com/mllg/batchtools/tree/master/inst/templates">batchtools</a> and <a href="https://github.com/HenrikBengtsson/future.batchtools/tree/master/inst/templates">future.batchtools</a> GitHub repositories. <code>Drake</code> has some <a href="https://github.com/wlandau-lilly/drake/tree/master/inst/examples">built-in prepackaged example workflows</a>. See <code>examples_drake()</code> to view your options, and then <code>example_drake()</code> to write the files for an example.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">example_drake</span>(<span class="st">&quot;sge&quot;</span>)    <span class="co"># Sun/Univa Grid Engine workflow and supporting files</span>
+<span class="kw">example_drake</span>(<span class="st">&quot;slurm&quot;</span>)  <span class="co"># SLURM</span>
+<span class="kw">example_drake</span>(<span class="st">&quot;torque&quot;</span>) <span class="co"># TORQUE</span></code></pre></div>
+<p>Unfortunately, there is no one-size-fits-all <code>*.tmpl</code> configuration file for any job scheduler, so we cannot guarantee that the above examples will work for you out of the box. To learn how to configure the files to suit your needs, you should make sure you understand how to use your job scheduler and <a href="https://github.com/mllg/batchtools">batchtools</a>.</p>
+</div>
 <div id="proper-makefiles-are-not-standalone." class="section level2">
-<h2><span class="header-section-number">4.2</span> Proper Makefiles are not standalone.</h2>
+<h2><span class="header-section-number">4.4</span> Proper Makefiles are not standalone.</h2>
 <p>The <a href="http://kbroman.org/minimal_make/">Makefile</a> generated by <code>make(myplan, parallelism = &quot;Makefile&quot;)</code> is not standalone. Do not run it outside of <code>drake::make()</code>. Drake uses dummy timestamp files to tell the <a href="http://kbroman.org/minimal_make/">Makefile</a> what to do, and running <code>make</code> in the <a href="https://www.howtogeek.com/140679/beginner-geek-how-to-start-using-the-linux-terminal/">terminal</a> will most likely give incorrect results.</p>
+<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
 </div>
 <div id="makefile-level-parallelism-for-imported-objects-and-files" class="section level2">
-<h2><span class="header-section-number">4.3</span> Makefile-level parallelism for imported objects and files</h2>
+<h2><span class="header-section-number">4.5</span> Makefile-level parallelism for imported objects and files</h2>
 <p>Makefile-level parallelism is only used for targets in your workflow plan data frame, not imports. To process imported objects and files, drake selects the best parallel backend for your system and uses the number of jobs you give to the <code>jobs</code> argument to <code>make()</code>. To use at most 2 jobs for imports and at most 4 jobs for targets, run</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(..., <span class="dt">parallelism =</span> <span class="st">&quot;Makefile&quot;</span>, <span class="dt">jobs =</span> <span class="dv">2</span>, <span class="dt">args =</span> <span class="st">&quot;--jobs=4&quot;</span>)</code></pre></div>
+</div>
+<div id="zombie-processes" class="section level2">
+<h2><span class="header-section-number">4.6</span> Zombie processes</h2>
+<p>Some parallel backends, particularly <code>mclapply</code> and <code>future::multicore</code>, may create zombie processes. Zombies are not usually harmful, but you may wish to kill them yourself. The following function by <a href="https://github.com/CarlBoneri">Carl Boneri</a> should work on Unix-like systems. For a discussion, see <a href="https://github.com/wlandau-lilly/drake/issues/116">drake issue 116</a>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">fork_kill_zombies &lt;-<span class="st"> </span><span class="cf">function</span>(){
+  <span class="kw">require</span>(inline)
+  includes &lt;-<span class="st"> &quot;#include &lt;sys/wait.h&gt;&quot;</span>
+  code &lt;-<span class="st"> &quot;int wstat; while (waitpid(-1, &amp;wstat, WNOHANG) &gt; 0) {};&quot;</span>
+
+  wait &lt;-<span class="st"> </span>inline<span class="op">::</span><span class="kw">cfunction</span>(
+    <span class="dt">body =</span> code,
+    <span class="dt">includes =</span> includes,
+    <span class="dt">convention =</span> <span class="st">&quot;.C&quot;</span>
+  )
+
+  <span class="kw">invisible</span>(<span class="kw">wait</span>())
+}</code></pre></div>
 </div>
 </div>
 <div id="storage" class="section level1">

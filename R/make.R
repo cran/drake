@@ -1,14 +1,17 @@
 #' @title Function \code{make}
 #' @description Run your project (build the targets).
-#' @seealso \code{\link{plan}}, \code{\link{plot_graph}},
-#' \code{\link{max_useful_jobs}}, \code{\link{shell_file}}
+#' @seealso \code{\link{workplan}}, \code{\link{workplan}},
+#' \code{\link{backend}}, \code{\link{plot_graph}},
+#' \code{\link{max_useful_jobs}}, \code{\link{shell_file}},
+#' \code{\link{silencer_hook}}
 #' @export
+#'
 #' @param plan workflow plan data frame.
 #' A workflow plan data frame is a data frame
 #' with a \code{target} column and a \code{command} column.
 #' Targets are the objects and files that drake generates,
 #' and commands are the pieces of R code that produce them.
-#' Use the function \code{\link{plan}()} to generate workflow plan
+#' Use the function \code{\link{workplan}()} to generate workflow plan
 #' data frames easily, and see functions \code{\link{analyses}()},
 #' \code{\link{summaries}()}, \code{\link{evaluate}()},
 #' \code{\link{expand}()}, and \code{\link{gather}()} for
@@ -29,6 +32,23 @@
 #' @param verbose logical, whether to print progress to the console.
 #' Skipped objects are not printed.
 #'
+#' @param hook function with at least one argument.
+#' The hook is as a wrapper around the code that drake uses
+#' to build a target (see the body of \code{drake:::build()}).
+#' Hooks can control the side effects of build behavior.
+#' For example, to redirect output and error messages to text files,
+#' you might use the built-in \code{\link{silencer_hook}()}, as in
+#' \code{make(my_plan, hook = silencer_hook)}.
+#' The silencer hook is useful for distributed parallelism,
+#' where the calling R process does not have control over all the
+#' error and output streams. See also \code{\link{output_sink_hook}()}
+#' and \code{\link{message_sink_hook}()}.
+#' For your own custom hooks, treat the first argument as the code
+#' that builds a target, and make sure this argument is actually evaluated.
+#' Otherwise, the code will not run and none of your targets will build.
+#' For example, \code{function(code){force(code)}} is a good hook
+#' and \code{function(code){cat("Avoiding the code")}} is a bad hook.
+#'
 #' @param imports_only logical, whether to skip building the targets
 #' in \code{plan} and just import objects and files.
 #'
@@ -39,6 +59,11 @@
 #' \code{\link{example_drake}("basic")}
 #'
 #' @param jobs number of parallel processes or jobs to run.
+#' For \code{"future_lapply"} parallelism, \code{jobs}
+#' only applies to the imports.
+#' See \code{future::future.options} for environment variables that
+#' control the number of \code{future_lapply()} jobs for building targets.
+#' For example, you might use \code{options(mc.cores = max_jobs)}.
 #' See \code{\link{max_useful_jobs}()} or \code{\link{plot_graph}()}
 #' to help figure out what the number of jobs should be.
 #' Windows users should not set \code{jobs > 1} if
@@ -56,7 +81,7 @@
 #' \code{make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")}
 #'
 #' @param packages character vector packages to load, in the order
-#' they should be loaded. Defaults to \code{(.packages())}, so you
+#' they should be loaded. Defaults to \code{rev(.packages())}, so you
 #' should not usually need to set this manually. Just call
 #' \code{\link{library}()} to load your packages before \code{make()}.
 #' However, sometimes packages need to be strictly forced to load
@@ -116,11 +141,6 @@
 #' @param recipe_command Character scalar, command for the
 #' Makefile recipe for each target.
 #'
-#' @param return_config logical, whether to return the internal list
-#' of runtime configuration parameters used by \code{make()}.
-#' This argument is deprecated. Now, a configuration list
-#' is always invisibly returned.
-#'
 #' @param clear_progress logical, whether to clear the saved record of
 #' progress seen by \code{\link{progress}()} and \code{\link{in_progress}()}
 #' before anything is imported or built.
@@ -128,6 +148,22 @@
 #' @param cache drake cache as created by \code{\link{new_cache}()}.
 #' See also \code{\link{get_cache}()}, \code{\link{this_cache}()},
 #' and \code{\link{recover_cache}()}
+#'
+#' @param timeout Seconds of overall time to allow before imposing
+#' a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+#'
+#' @param cpu Seconds of cpu time to allow before imposing
+#' a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+#'
+#' @param elapsed Seconds of elapsed time to allow before imposing
+#' a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+#'
+#' @param retries Number of retries to execute if the target fails.
+#'
+#' @param return_config logical, whether to return the internal list
+#' of runtime configuration parameters used by \code{make()}.
+#' This argument is deprecated. Now, a configuration list
+#' is always invisibly returned.
 #'
 #' @examples
 #' \dontrun{
@@ -152,42 +188,56 @@
 #'   recipe_command = "R -q -e")
 #' }
 make <- function(
-  plan = drake::plan(),
+  plan = workplan(),
   targets = drake::possible_targets(plan),
   envir = parent.frame(),
   verbose = TRUE,
-  cache = drake::get_cache(),
+  hook = function(code){
+    force(code)
+  },
+  cache = drake::get_cache(verbose = verbose),
   parallelism = drake::default_parallelism(),
   jobs = 1,
-  packages = (.packages()),
+  packages = rev(.packages()),
   prework = character(0),
   prepend = character(0),
   command = drake::default_Makefile_command(),
-  args = drake::default_system2_args(
+  args = drake::default_Makefile_args(
     jobs = jobs,
     verbose = verbose
   ),
   recipe_command = drake::default_recipe_command(),
-  return_config = NULL,
-  clear_progress = TRUE,
-  imports_only = FALSE
+  clear_progress = NULL,
+  imports_only = FALSE,
+  timeout = Inf,
+  cpu = timeout,
+  elapsed = timeout,
+  retries = 0,
+  return_config = NULL
 ){
   force(envir)
+
   if (!is.null(return_config)){
     warning(
       "The return_config argument to make() is deprecated. ",
-      "Now, an internal configuration list is always invisibly returned."
+      "Now, an internal configuration list is always invisibly returned.",
+      call. = FALSE
     )
   }
-  parallelism <- match.arg(
-    arg = parallelism,
-    choices = parallelism_choices()
-  )
-  config <- build_config(
+  if (!is.null(clear_progress)){
+    warning(
+      "The clear_progress argument to make() is deprecated. ",
+      "Progress is always cleared.",
+      call. = FALSE
+    )
+  }
+
+  config <- config(
     plan = plan,
     targets = targets,
     envir = envir,
     verbose = verbose,
+    hook = hook,
     parallelism = parallelism,
     jobs = jobs,
     packages = packages,
@@ -196,36 +246,49 @@ make <- function(
     command = command,
     args = args,
     recipe_command = recipe_command,
-    clear_progress = clear_progress,
-    cache = cache
+    clear_progress = TRUE,
+    cache = cache,
+    timeout = timeout,
+    cpu = cpu,
+    elapsed = elapsed,
+    retries = retries
   )
-  check_config(config)
-  store_config(config)
+  check_config(config = config)
+  store_config(config = config)
+  initialize_session(config = config)
+  if (imports_only){
+    make_imports(config = config)
+    return(invisible(config))
+  }
+  run_parallel_backend(config = config)
+  console_up_to_date(config = config)
+  return(invisible(config))
+}
+
+#' @title Function make_imports
+#' @description just make the imports
+#' @export
+#' @seealso \code{\link{make}}, \code{\link{config}}
+#' @param config a configuration list returned by \code{\link{config}()}
+#' @examples
+#' \dontrun{
+#' load_basic_example()
+#' con <- config(my_plan)
+#' make_imports(config = con)
+#' }
+make_imports <- function(config){
+  delete_these <- intersect(config$plan$target, V(config$graph)$name)
+  config$graph <- delete_vertices(config$graph, v = delete_these)
+  config$parallelism <- use_default_parallelism(config$parallelism)
+  run_parallel_backend(config = config)
+  invisible()
+}
+
+initialize_session <- function(config){
+  config$cache$clear(namespace = "target_attempts")
   config$cache$set(
     key = "sessionInfo",
     value = sessionInfo(),
     namespace = "session"
-    )
-  if (imports_only){
-    delete_these <- intersect(config$plan$target, V(config$graph)$name)
-    config$graph <- delete_vertices(config$graph, v = delete_these)
-    if (parallelism == "Makefile"){
-      parallelism <- default_parallelism()
-    }
-  }
-  get(paste0("run_", parallelism), envir = getNamespace("drake"))(config)
-  return(invisible(config))
-}
-
-next_targets <- function(graph_remaining_targets){
-  number_dependencies <- sapply(
-    V(graph_remaining_targets),
-    function(x){
-      adjacent_vertices(graph_remaining_targets, x, mode = "in") %>%
-        unlist() %>%
-        length()
-    }
   )
-  which(!number_dependencies) %>%
-    names()
 }
