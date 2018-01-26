@@ -1,92 +1,109 @@
-## ---- echo = F-----------------------------------------------------------
+## ----cautionstart, echo = F----------------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
 suppressMessages(suppressWarnings(library(magrittr)))
 clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  error = TRUE,
+  warning = TRUE
+)
 
 ## ----filethenevaluate----------------------------------------------------
 library(magrittr) # for the pipe operator %>%
-workplan(
-  data = readRDS("data_..datasize...rds")
+drake_plan(
+  data = readRDS("data_DATASIZE__rds")
 ) %>%
-  rbind(drake::workplan(
+  rbind(drake::drake_plan(
     file.csv = write.csv(
-      data_..datasize.., # nolint
-      "file_..datasize...csv"
+      data_DATASIZE__, # nolint
+      "file_DATASIZE__csv"
     ),
     strings_in_dots = "literals",
     file_targets = T
   )) %>%
-  evaluate(
-    rules = list(..datasize.. = c("small", "large"))
+  evaluate_plan(
+    rules = list(DATASIZE__ = c("small", "large"))
   )
 
 ## ----correctevaldatasize-------------------------------------------------
-rules <- list(..datasize.. = c("small", "large"))
-datasets <- workplan(data = readRDS("data_..datasize...rds")) %>%
-  evaluate(rules = rules)
+rules <- list(DATASIZE__ = c("small", "large"))
+datasets <- drake_plan(data = readRDS("data_DATASIZE__rds")) %>%
+  evaluate_plan(rules = rules)
 
 ## ----correctevaldatasize2------------------------------------------------
-files <- workplan(
-  file = write.csv(data_..datasize.., "file_..datasize...csv"), # nolint
+files <- drake_plan(
+  file = write.csv(data_DATASIZE__, "file_DATASIZE__csv"), # nolint
   strings_in_dots = "literals"
 ) %>%
-  evaluate(rules = rules)
+  evaluate_plan(rules = rules)
 
 ## ----correctevaldatasize3------------------------------------------------
 files$target <- paste0(
   files$target, ".csv"
 ) %>%
-  as_file
+  as_drake_filename
 
 ## ----correctevaldatasize4------------------------------------------------
 rbind(datasets, files)
 
 ## ----tidyplancaution-----------------------------------------------------
-workplan(
+drake_plan(
   target1 = 1 + 1 - sqrt(sqrt(3)),
   target2 = my_function(web_scraped_data) %>% my_tidy
 )
 
-## ----diagnosecaution, eval = FALSE---------------------------------------
-#  diagnose()
-#  f <- function(){
-#    stop("unusual error")
-#  }
-#  bad_plan <- workplan(target = f())
-#  make(bad_plan)
-#  failed() # From the last make() only
-#  diagnose() # From all previous make()s
-#  error <- diagnose(y)
-#  str(error)
-#  error$calls # View the traceback.
+## ----diagnosecaution-----------------------------------------------------
+diagnose()
 
-## ----envir---------------------------------------------------------------
-library(drake)
-envir <- new.env(parent = globalenv())
-eval(expression({
-  f <- function(x){
-    g(x) + 1
-  }
-  g <- function(x){
-    x + 1
-  }
+f <- function(){
+  stop("unusual error")
 }
-), envir = envir)
-myplan <- workplan(out = f(1:3))
-make(myplan, envir = envir)
-ls() # Check that your workspace did not change.
-ls(envir) # Check your evaluation environment.
-envir$out
-readd(out)
 
-## ----cautionlibdrake, echo = FALSE---------------------------------------
+bad_plan <- drake_plan(target = f())
+
+withr::with_message_sink(
+  stdout(),
+  make(bad_plan)
+)
+
+failed() # From the last make() only
+
+diagnose() # From all previous make()s
+
+error <- diagnose(target)
+
+str(error)
+
+error$calls # View the traceback.
+
+## ----envircaution--------------------------------------------------------
 library(drake)
+clean(verbose = FALSE)
+envir <- new.env(parent = globalenv())
+eval(
+  expression({
+    f <- function(x){
+      g(x) + 1
+    }
+    g <- function(x){
+      x + 1
+    }
+  }
+  ),
+  envir = envir
+)
+myplan <- drake_plan(out = f(1:3))
 
-## ----depscheck-----------------------------------------------------------
-my_plan <- workplan(list = c(a = "x <- 1; return(x)"))
-my_plan
-deps(my_plan$command[1])
+make(myplan, envir = envir)
+
+ls() # Check that your workspace did not change.
+
+ls(envir) # Check your evaluation environment.
+
+envir$out
+
+readd(out)
 
 ## ----devtools1, eval = FALSE---------------------------------------------
 #  env <- devtools::load_all("yourProject")$env # Has all your imported functions
@@ -111,51 +128,45 @@ deps(my_plan$command[1])
 
 ## ----devtools5, eval = FALSE---------------------------------------------
 #  make(
-#    my_plan, # Prepared in advance
-#    envir = env,
-#    parallelism = "Makefile", # Or "parLapply"
+#    my_plan,                    # Prepared in advance
+#    envir = env,                # Environment of package "yourProject"
+#    parallelism = "Makefile",   # Or "parLapply"
 #    jobs = 2,
 #    packages = packages_to_load # Does not include "yourProject"
 #  )
 
-## ----previewmyplan-------------------------------------------------------
-load_basic_example()
-my_plan
-
-## ----demoplotgraphcaution, eval = FALSE----------------------------------
-#  # Hover, click, drag, zoom, and pan. See args 'from' and 'to'.
-#  plot_graph(my_plan, width = "100%", height = "500px")
-
-## ----checkdeps-----------------------------------------------------------
-deps(reg2)
-deps(my_plan$command[1]) # File dependencies like report.Rmd are single-quoted.
-deps(my_plan$command[nrow(my_plan)])
-
-## ----tracked-------------------------------------------------------------
-tracked(my_plan, targets = "small")
-tracked(my_plan)
+## ----lazyloadfuture, eval = FALSE----------------------------------------
+#  library(future)
+#  future::plan(multisession)
+#  load_basic_example() # Get the code with drake_example("basic").
+#  make(my_plan, lazy_load = TRUE, parallelism = "future_lapply")
 
 ## ----helpfuncitons, eval = FALSE-----------------------------------------
 #  ?deps
 #  ?tracked
-#  ?plot_graph
+#  ?vis_drake_graph
 
 ## ----cautiondeps---------------------------------------------------------
 f <- function(){
-  b <- get("x", envir = globalenv()) # x is incorrectly ignored
+  b <- get("x", envir = globalenv())           # x is incorrectly ignored
   file_dependency <- readRDS('input_file.rds') # 'input_file.rds' is incorrectly ignored # nolint
   digest::digest(file_dependency)
 }
+
 deps(f)
+
 command <- "x <- digest::digest('input_file.rds'); assign(\"x\", 1); x"
 deps(command)
 
 ## ----knitrdeps1----------------------------------------------------------
-load_basic_example()
+load_basic_example() # Get the code with drake_example("basic").
 my_plan[1, ]
 
 ## ----knitr2--------------------------------------------------------------
 deps("knit('report.Rmd')")
+
+deps("render('report.Rmd')")
+
 deps("'report.Rmd'") # These are actually dependencies of 'report.md' (output)
 
 ## ----badknitr, eval = FALSE----------------------------------------------
@@ -177,13 +188,9 @@ deps("'report.Rmd'") # These are actually dependencies of 'report.md' (output)
 #      SIMPLIFY = SIMPLIFY, USE.NAMES = USE.NAMES))
 
 ## ----writexamples, eval = FALSE------------------------------------------
-#  example_drake("sge")    # Sun/Univa Grid Engine workflow and supporting files
-#  example_drake("slurm")  # SLURM
-#  example_drake("torque") # TORQUE
-
-## ----clean, echo = FALSE-------------------------------------------------
-clean(destroy = TRUE)
-unlink(c("report.Rmd", "Thumbs.db"))
+#  drake_example("sge")    # Sun/Univa Grid Engine workflow and supporting files
+#  drake_example("slurm")  # SLURM
+#  drake_example("torque") # TORQUE
 
 ## ----makejobs, eval = FALSE----------------------------------------------
 #  make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")

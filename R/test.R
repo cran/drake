@@ -11,7 +11,9 @@ testrun <- function(config) {
       jobs = config$jobs,
       packages = config$packages, prework = config$prework,
       prepend = config$prepend, command = config$command,
-      cache = config$cache
+      cache = config$cache, lazy_load = config$lazy_load,
+      session_info = config$session_info,
+      fetch_cache = config$fetch_cache
     )
   )
 }
@@ -37,6 +39,24 @@ nobuild <- function(config) {
   expect_true(length(justbuilt(config)) < 1)
 }
 
+#' @title Run a unit test in a way that quarantines
+#' the side effects from your workspace and file system.
+#' @description Typical users of drake should not need this function.
+#' It is exported so it can be used to quarantine the side effects
+#' of the examples in the help files.
+#' @export
+#' @keywords internal
+#' @return nothing
+#' @param desc character, description of the test
+#' @param ... code to test
+#' @examples
+#' \dontrun{
+#' test_with_dir(
+#'   "Write a file to a temporary folder",
+#'   writeLines("hello", "world.txt")
+#' )
+#' file.exists("world.txt") # FALSE
+#' }
 test_with_dir <- function(desc, ...){
   new <- tempfile()
   dir_empty(new)
@@ -44,9 +64,7 @@ test_with_dir <- function(desc, ...){
     new = new,
     code = {
       set_test_backend()
-      tmp <- capture.output(
-        test_that(desc = desc, ...)
-      )
+      test_that(desc = desc, ...)
     }
   )
   invisible()
@@ -74,4 +92,13 @@ with_all_options <- function(code) {
   old <- options()
   on.exit(restore_options(old))
   force(code)
+}
+
+write_v4.3.0_project <- function(){ # nolint
+  zip <- system.file(
+    file.path("testing", "built_basic_example_v4.3.0.zip"),
+    package = "drake",
+    mustWork = TRUE
+  )
+  unzip(zip, exdir = ".", setTimes = TRUE)
 }

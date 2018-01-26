@@ -1,14 +1,14 @@
-#' @title Function drake_tip
-#' @description Output a random tip about drake.
-#' Tips are usually related to news and usage.
+#' @title Output a random tip about drake.
+#' @description Tips are usually related to news and usage.
 #' @export
+#' @return A character scalar with a tip on how to use drake.
 #' @examples
-#' drake_tip()
-#' cat(drake_tip())
+#' drake_tip() # Show a tip about using drake.
+#' message(drake_tip()) # Print out a tip as a message.
 drake_tip <- function() {
   tips <- c(
     "In drake >= 4.4.0, you can select subgraphs of the workflow graph:
-     e.g. plot_graph(..., from = some_targets, mode = \"out\", order = 2).
+     e.g. vis_drake_graph(..., from = some_targets, mode = \"out\", order = 2).
      See the new 'graph' vignette for more.",
 
     "Use diagnose() to retrieve diagnostic information on
@@ -17,7 +17,7 @@ drake_tip <- function() {
     "Predict the runtime of the next make() with predict_runtime().
      See also build_times() and rate_limiting_times().",
 
-    "Use example_drake('basic') to generate code files
+    "Use drake_example('basic') to generate code files
      for a minimal drake example walkthrough.",
 
     "See the vignettes at
@@ -29,14 +29,14 @@ drake_tip <- function() {
 
     "Check out the \"future_lapply\" backends. Example:
     load_basic_example();
-    backend(future::multisession);
+    future::plan(future::multisession);
     make(my_plan, parallelism = \"future_lapply\")",
 
     "Drake quickstart:
      load_basic_example();
-     plot_graph(my_plan);
+     vis_drake_graph(my_plan);
      make(my_plan);
-     plot_graph(my_plan)"
+     vis_drake_graph(my_plan)"
   ) %>% wrap_text
   sample(tips, 1)
 }

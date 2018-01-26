@@ -2,18 +2,25 @@
 % Please edit documentation in R/predict_runtime.R
 \name{predict_runtime}
 \alias{predict_runtime}
-\title{Function predict_runtime}
+\title{Predict the elapsed runtime of the next call to `make()`.}
 \usage{
-predict_runtime(plan = workplan(), from_scratch = FALSE,
-  targets_only = FALSE, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
-  force(code) }, cache = drake::get_cache(path = path, search = search,
-  verbose = verbose), parallelism = drake::default_parallelism(), jobs = 1,
-  future_jobs = jobs, packages = rev(.packages()), prework = character(0),
-  config = NULL, digits = 3, path = getwd(), search = TRUE)
+predict_runtime(config, targets = NULL, future_jobs = 1,
+  from_scratch = FALSE, targets_only = FALSE, digits = 3)
 }
 \arguments{
-\item{plan}{same as for \code{\link{make}}}
+\item{config}{option internal runtime parameter list of
+\code{\link{make}(...)},
+produced by both \code{\link{make}()} and
+\code{\link{drake_config}()}.}
+
+\item{targets}{Character vector, names of targets.
+Predict the runtime of building these targets
+plus dependencies.
+Defaults to all targets.}
+
+\item{future_jobs}{hypothetical number of jobs
+assumed for the predicted runtime.
+assuming this number of jobs.}
 
 \item{from_scratch}{logical, whether to predict a
 \code{\link{make}()} build from scratch or to
@@ -24,56 +31,18 @@ already up to date and therefore skipped.}
 just the targets into the calculations or use the
 build times for everything, including the imports}
 
-\item{targets}{Targets to build in the workplan.
-Timing information is
-limited to these targets and their dependencies.}
-
-\item{envir}{same as for \code{\link{make}}}
-
-\item{verbose}{same as for \code{\link{make}}}
-
-\item{hook}{same as for \code{\link{make}}}
-
-\item{cache}{optional drake cache. See code{\link{new_cache}()}.
-The \code{cache} argument is ignored if a
-non-null \code{config} argument is supplied.}
-
-\item{parallelism}{same as for \code{\link{make}}. Used
-to parallelize import objects.}
-
-\item{jobs}{same as for \code{\link{make}}, just used to
-process imports}
-
-\item{future_jobs}{hypothetical number of jobs
-assumed for the predicted runtime.
-assuming this number of jobs.}
-
-\item{packages}{same as for \code{\link{make}}}
-
-\item{prework}{same as for \code{\link{make}}}
-
-\item{config}{option internal runtime parameter list of
-\code{\link{make}(...)},
-produced with \code{\link{config}()}.
-Overrides all arguments except \code{from_scratch},
-\code{targets_only}, and \code{digits}.
-Computing \code{config}
-in advance could save time if you plan multiple calls to
-this function.}
-
-\item{digits}{number of digits for rounding the times.}
-
-\item{path}{file path to the folder containing the cache.
-Yes, this is the parent directory containing the cache,
-not the cache itself.}
-
-\item{search}{logical, whether to search back in the file system
-for the cache.}
+\item{digits}{number of digits for rounding the time}
+}
+\value{
+A \code{lubridate} \code{Duration} object
+with the predicted runtime of the next \code{\link{make}()}.
 }
 \description{
-Predict the elapsed runtime of the next call to `make()`.
-This function simply sums the elapsed build times.
-from \code{\link{rate_limiting_times}()}.
+This function simply sums the elapsed build times
+from \code{\link{rate_limiting_times}()}, and this
+feature is experimental.
+To date, the accuracy/precision of the results
+has not yet been confirmed by performance studies.
 }
 \details{
 For the results to make sense, the previous build times
@@ -83,18 +52,22 @@ will warn you and tell you which targets have missing times.
 }
 \examples{
 \dontrun{
-load_basic_example()
-make(my_plan)
-predict_runtime(my_plan, digits = 4) # everything is up to date
-predict_runtime(my_plan, digits = 4, from_scratch = TRUE) # 1 job
-predict_runtime(my_plan, future_jobs = 2, digits = 4, from_scratch = TRUE)
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
+config <- make(my_plan) # Run the project, build the targets.
+predict_runtime(config, digits = 4) # Everything is up to date.
+predict_runtime(config, digits = 4, from_scratch = TRUE) # 1 job
+# Assumes you clean() out your project and start from scratch with 2 jobs.
+predict_runtime(config, future_jobs = 2, digits = 4, from_scratch = TRUE)
+# Predict the runtime of just building targets
+# "small" and "large".
 predict_runtime(
-  my_plan,
+  config,
   targets = c("small", "large"),
-  future_jobs = 2,
-  digits = 4,
-  from_scratch = TRUE
+  from_scratch = TRUE,
+  digits = 4
 )
+})
 }
 }
 \seealso{

@@ -2,23 +2,27 @@
 % Please edit documentation in R/dataframes_graph_utils.R
 \name{default_graph_title}
 \alias{default_graph_title}
-\title{Function default_graph_title}
+\title{Return the default title of the graph for
+\code{\link{vis_drake_graph}()}.}
 \usage{
-default_graph_title(parallelism = drake::parallelism_choices(distributed_only
-  = FALSE), split_columns = FALSE)
+default_graph_title(split_columns = FALSE)
 }
 \arguments{
-\item{parallelism}{Mode of parallelism intended for the workplan.
-See \code{\link{parallelism_choices}()}.}
-
 \item{split_columns}{logical, whether the columns were split
-in \code{\link{dataframes_graph}()} or \code{\link{plot_graph}()}
+in \code{\link{dataframes_graph}()} or \code{\link{vis_drake_graph}()}
 with the \code{split_columns} argument.}
 }
+\value{
+a character scalar with the default graph title for
+\code{\link{vis_drake_graph}()}.
+}
 \description{
-Default title of the graph from
-\code{\link{plot_graph}()}.
+For internal use only.
+}
+\examples{
+default_graph_title()
 }
 \seealso{
-\code{\link{dataframes_graph}}, \code{\link{plot_graph}}
+\code{\link{dataframes_graph}}, \code{\link{vis_drake_graph}}
 }
+\keyword{internal}

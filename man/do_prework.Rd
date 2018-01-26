@@ -2,7 +2,8 @@
 % Please edit documentation in R/config.R
 \name{do_prework}
 \alias{do_prework}
-\title{Internal function do_prework}
+\title{Do the prework in the \code{prework}
+argument to \code{\link{make}()}.}
 \usage{
 do_prework(config, verbose_packages)
 }
@@ -12,9 +13,27 @@ do_prework(config, verbose_packages)
 \item{verbose_packages}{logical, whether to print
 package startup messages}
 }
-\description{
-Run the \code{prework} of a \code{\link{make}()}.
-For internal use only.
-the only reason this function is exported
-is to set up PSOCK clusters efficiently.
+\value{
+Inivisibly returns \code{NULL}.
 }
+\description{
+For internal use only.
+The only reason this function is exported
+is to set up parallel socket (PSOCK) clusters
+without too much fuss.
+}
+\examples{
+\dontrun{
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
+# Create a master internal configuration list with prework.
+con <- drake_config(my_plan, prework = c("library(knitr)", "x <- 1"))
+# Do the prework. Usually done at the beginning of `make()`,
+# and for distributed computing backends like "future_lapply",
+# right before each target is built.
+do_prework(config = con, verbose_packages = TRUE)
+identical(x, 1) # Should be TRUE.
+})
+}
+}
+\keyword{internal}

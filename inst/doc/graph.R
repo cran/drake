@@ -1,56 +1,41 @@
 ## ---- echo = FALSE-------------------------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
 knitr::opts_chunk$set(eval = FALSE)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  error = TRUE,
+  warning = TRUE
+)
 
 ## ----graphoutdated-------------------------------------------------------
 #  library(drake)
-#  load_basic_example()
-#  plot_graph(my_plan)
+#  load_basic_example() # Get the code with drake_example("basic").
+#  config <- drake_config(my_plan)
+#  vis_drake_graph(config) # Same as drake_graph()
 
 ## ----graphmake-----------------------------------------------------------
-#  make(my_plan, jobs = 4)
-#  plot_graph(my_plan)
+#  config <- make(my_plan, jobs = 4, verbose = FALSE)
+#  vis_drake_graph(config)
 
 ## ----reg2graphvisual-----------------------------------------------------
 #  reg2 <- function(d){
 #    d$x3 <- d$x ^ 3
 #    lm(y ~ x3, data = d)
 #  }
-#  plot_graph(my_plan)
+#  vis_drake_graph(config)
 
 ## ----subsetgraph---------------------------------------------------------
-#  plot_graph(my_plan, subset = c("regression2_small", "'report.md'"))
+#  vis_drake_graph(config, subset = c("regression2_small", "'report.md'"))
 
 ## ----targetsonly---------------------------------------------------------
-#  plot_graph(my_plan, targets_only = TRUE)
+#  vis_drake_graph(config, targets_only = TRUE)
 
 ## ----fromout-------------------------------------------------------------
-#  plot_graph(my_plan, from = c("regression2_small", "regression2_large"))
+#  vis_drake_graph(config, from = c("regression2_small", "regression2_large"))
 
 ## ----fromin--------------------------------------------------------------
-#  plot_graph(my_plan, from = "small", mode = "in")
+#  vis_drake_graph(config, from = "small", mode = "in")
 
 ## ----fromall-------------------------------------------------------------
-#  plot_graph(my_plan, from = "small", mode = "all", order = 1)
-
-## ----smallplan, eval = TRUE----------------------------------------------
-f <- function(x){
-  x
-}
-small_plan <- workplan(a = 1, b = f(2))
-small_plan
-
-## ----plotgraphusualsmall-------------------------------------------------
-#  plot_graph(small_plan)
-
-## ----plotgraphsmalldistributed-------------------------------------------
-#  
-#  plot_graph(small_plan, parallelism = "future_lapply")
-
-## ----listbackendsgraph, eval = TRUE--------------------------------------
-parallelism_choices()
-parallelism_choices(distributed_only = TRUE)
-
-## ----lookupparallelism---------------------------------------------------
-#  ?parallelism_choices
+#  vis_drake_graph(config, from = "small", mode = "all", order = 1)
 

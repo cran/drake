@@ -1,6 +1,6 @@
 ---
 title: "Quickstart"
-subtitle: "quickstart example for drake"
+subtitle: "A walk through drake's basic example"
 author: "William Michael Landau"
 date: "`r Sys.Date()`"
 output:
@@ -17,8 +17,13 @@ vignette: >
 
 ```{r suppression, echo = F}
 suppressMessages(suppressWarnings(library(drake)))
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  error = TRUE,
+  warning = TRUE
+)
 ```
 
 # Quick examples
@@ -27,10 +32,11 @@ Inspect and run your project.
 
 ```{r quickstartquickstart, eval = FALSE}
 library(drake)
-load_basic_example() # Also (over)writes report.Rmd.
-plot_graph(my_plan) # Hover, click, drag, zoom, pan. See args 'from' and 'to'.
-make(my_plan) # Run the workflow.
-outdated(my_plan) # Check that everything is already up to date.
+load_basic_example()            # Get the code with drake_example("basic").
+config <- drake_config(my_plan) # Master configuration list
+vis_drake_graph(config)         # Hover, click, drag, zoom, pan.
+make(my_plan)                   # Run the workflow.
+outdated(config)                # Everything is up to date.
 ```
 
 Debug errors.
@@ -46,196 +52,222 @@ error$calls              # Call stack / traceback
 Dive deeper into the built-in examples.
 
 ```{r noeval2, eval = FALSE}
-example_drake("basic") # Write the code files.
-examples_drake() # List the other examples.
+drake_example("basic") # Write the code files.
+drake_examples()       # List the other examples.
 vignette("quickstart") # This vignette
 ```
 
-# Setting up the basic example
+# The motivation of the basic example
 
-Let's establish the building blocks of a data analysis workflow.
+Is there an association between the weight and the fuel efficiency of cars? To find out, we use the `mtcars` dataset from the `datasets` package. The `mtcars` dataset originally came from the 1974 Motor Trend US magazine, and it contains design and performance data on 32 models of automobile.
+
+```{r mtcarsquickstart}
+# ?mtcars # more info
+head(mtcars)
+```
+
+Here, `wt` is weight in tons, and `mpg` is fuel efficiency in miles per gallon. We want to figure out if there is an association between `wt` and `mpg`. The `mtcars` dataset itself only has 32 rows, so we generate two larger bootstrapped datasets and then analyze them with regression models. We summarize the regression models to see if there is an association.
+
+# Set up the basic example
+
+Before you run your project, you need to set up the workspace. In other words, you need to gather the "imports": functions, pre-loaded data objects, and saved files that you want to be available before the real work begins.
 
 ```{r libs}
-library(knitr)
+library(knitr) # Drake knows which packages you load.
 library(drake)
 ```
 
-First, we will generate a few datasets.
+We need a function to bootstrap larger datasets from `mtcars`.
 
 ```{r sim}
 simulate <- function(n){
+  # Pick a random set of cars to bootstrap from the mtcars data.
+  index <- sample.int(n = nrow(mtcars), size = n, replace = TRUE)
+  data <- mtcars[index, ]
+
+  # x is the car's weight, and y is the fuel efficiency.
   data.frame(
-    x = stats::rnorm(n),
-    y = rpois(n, 1)
+    x = data$wt,
+    y = data$mpg
   )
 }
 ```
 
-Then, we will analyze each dataset with multiple analysis methods.
+We also need functions to apply the regression models we need for detecting associations.
 
 ```{r reg}
+# Is fuel efficiency linearly related to weight?
 reg1 <- function(d){
   lm(y ~ + x, data = d)
 }
 
+# Is fuel efficiency related to the SQUARE of the weight?
 reg2 <- function(d){
   d$x2 <- d$x ^ 2
   lm(y ~ x2, data = d)
 }
 ```
 
-We need the source file `report.Rmd` for the end.k
+We want to summarize the final results in an R Markdown report, so we need the following `report.Rmd` source file.
 
 ```{r file}
-lines <- c(
-  "---",
-  "title: Example Report",
-  "author: You",
-  "output: html_document",
-  "---",
-  "",
-  "Look how I read outputs from the drake cache.",
-  "Drake notices that `small`, `coef_regression2_small`,",
-  "and `large` are dependencies of the",
-  "future compiled output report file target, `report.md`.",
-  "Just be sure that the workflow plan command for the target `'report.md'`",
-  "has an explicit call to `knit()`, something like `knit('report.Rmd')` or",
-  "`knitr::knit(input = 'report.Rmd', quiet = TRUE)`.",
-  "",
-  "```{r example_chunk}",
-  "library(drake)",
-  "readd(small)",
-  "readd(coef_regression2_small)",
-  "loadd(large)",
-  "head(large)",
-  "```")
-writeLines(lines, "report.Rmd")
+path <- file.path("examples", "basic", "report.Rmd")
+report_file <- system.file(path, package = "drake", mustWork = TRUE)
+file.copy(from = report_file, to = getwd(), overwrite = TRUE)
 ```
 
-# Workflow plan
+Here are the contents of the report. It will serve as a final summary of our work, and we will process it at the very end. Admittedly, some of the text spoils the punch line.
 
-The workflow plan lists the intermediate steps of your project.
+```{r readlinesofreport}
+cat(readLines("report.Rmd"), sep = "\n")
+```
+
+Now, all our imports are set up. When the real work begins, `drake` will import functions and data objects from your R session environment
+
+```{r robjimportsquickstart}
+ls()
+```
+
+and saved files from your file system.
+
+```{r filesystemimportsquickstart}
+list.files()
+```
+
+# The workflow plan data frame
+
+Now that your workspace of imports is prepared, we can outline the real work step by step in a workflow plan data frame.
 
 ```{r previewmyplan}
-load_basic_example()
+load_basic_example() # Get the code with drake_example("basic").
 my_plan
 ```
 
-Each row is an intermediate step, and each **command** generates a **target**. A target is an output R object (cached when generated) or output file (specified with single quotes), and a command just an ordinary piece of R code (not necessarily a single function call). As input, commands may take objects imported from your workspace, targets generated by other commands, or initial input files. These dependencies give your project an underlying network.
+Each row is an intermediate step, and each **command** generates a single **target**. A target is an output R object (cached when generated) or an output file (specified with single quotes), and a command just an ordinary piece of R code (not necessarily a single function call). Commands make use of R objects imported from your workspace, targets generated by other commands, and initial input files. These dependencies give your project an underlying network representation.
 
 ```{r graph1quick, eval = FALSE}
 # Hover, click, drag, zoom, and pan.
-plot_graph(my_plan, width = "100%", height = "500px")
+config <- drake_config(my_plan)
+vis_drake_graph(config, width = "100%", height = "500px") # Also drake_graph()
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/outdated.html"
+src = "https://cdn.rawgit.com/ropensci/drake/0b76e536/images/outdated.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
 
-See also `dataframes_graph()`, `render_graph()`, and `config()` for faster and more customized regraphing.
-
-You can also check the dependencies of individual targets.
+You can also check the dependencies of individual targets and imported functions.
 
 ```{r checkdeps}
 deps(reg2)
+
 deps(my_plan$command[1]) # Files like report.Rmd are single-quoted.
+
 deps(my_plan$command[nrow(my_plan)])
 ```
 
-List all the reproducibly-tracked objects and files, including imports and targets.
+List all the reproducibly-tracked objects and files.
 
 ```{r tracked}
 tracked(my_plan, targets = "small")
+
 tracked(my_plan)
 ```
 
-Check for cycles, missing input files, and other pitfalls.
+Check for circular reasoning, missing input files, and other pitfalls.
 
 ```{r check}
-check(my_plan)
+check_plan(my_plan)
 ```
 
 # Generate the workflow plan
 
-The data frame `my_plan` would be a pain to write by hand, so `drake` has functions to help you.
+The workflow plan data frame `my_plan` would be a pain to write by hand, so `drake` has functions to help you. Here are the commands to generate the bootstrapped datasets.
 
 ```{r datasets}
-my_datasets <- workplan(
-  small = simulate(5),
-  large = simulate(50))
+my_datasets <- drake_plan(
+  small = simulate(48),
+  large = simulate(64))
 my_datasets
 ```
 
 For multiple replicates:
 
 ```{r expand}
-expand(my_datasets, values = c("rep1", "rep2"))
+expand_plan(my_datasets, values = c("rep1", "rep2"))
 ```
 
-Each dataset is analyzed multiple ways.
+Here is a template for applying our regression models to our bootstrapped datasets.
 
 ```{r methods}
-methods <- workplan(
-  regression1 = reg1(..dataset..), # nolint
-  regression2 = reg2(..dataset..)) # nolint
+methods <- drake_plan(
+  regression1 = reg1(dataset__),
+  regression2 = reg2(dataset__))
 methods
 ```
 
-We evaluate the `..dataset..` wildcard.
+We evaluate the `dataset__` wildcard to generate all the regression commands we need.
 
 ```{r analyses}
-my_analyses <- analyses(methods, data = my_datasets)
+my_analyses <- plan_analyses(methods, data = my_datasets)
 my_analyses
 ```
 
-Next, we summarize each analysis of each dataset using summary statistics and regression coefficients.
+Next, we summarize each analysis of each dataset. We calculate descriptive statistics on the residuals, and we collect the regression coefficients and their p-values.
 
 ```{r summaries}
-summary_types <- workplan(
-  summ = suppressWarnings(summary(..analysis..)), # nolint
-  coef = coefficients(..analysis..)) # nolint
+summary_types <- drake_plan(
+  summ = suppressWarnings(summary(analysis__$residuals)),
+  coef = suppressWarnings(summary(analysis__))$coefficients
+)
 summary_types
 
-results <- summaries(summary_types, analyses = my_analyses,
+results <- plan_summaries(summary_types, analyses = my_analyses,
   datasets = my_datasets, gather = NULL)
 results
 ```
 
-The `gather` feature groups summaries into a smaller number of more manageable targets. I shut it off here to make the data frames more readable.
+The `gather` feature reduces a collection of targets to a single target. The resulting commands are long, so gathering is deactivated for the sake of readability.
 
-For the dynamic report, we have to make sure the files are single-quoted. Single quotes denote file targets and file imports, and double quotes denote literal strings that should not be treated as dependencies where they are mentioned. Also, `knit()` needs to be somewhere visible in the workflow plan command so that `drake` knows to dig into the active code chunks of `'report.Rmd'` and look for dependencies mentioned in calls to `loadd()` and `readd()`.
+For the dynamic report `'report.Rmd'`/`'report.md'`, be sure the file names are single-quoted. Single quotes denote file targets/imports, and double quotes denote literal strings that should not be treated as dependencies. To tell `drake` to look for the other dependencies of `'report.md'`, be sure the source file `'report.Rmd'` exists and `knit()` is in the workflow plan command. That way, `drake` searches the active code chunks in `'report.Rmd'` for any targets/imports mentioned in calls to `loadd()` and `readd()`.
 
 ```{r reportplan}
-report <- workplan(
+report <- drake_plan(
   report.md = knit('report.Rmd', quiet = TRUE), # nolint
   file_targets = TRUE, strings_in_dots = "filenames")
 report
 ```
 
-Finally, gather your workflow together with `rbind()`. Row order does not matter.
+Finally, consolidate your workflow using `rbind()`. Row order does not matter.
 
 ```{r wholeplan}
 my_plan <- rbind(report, my_datasets, my_analyses, results)
 my_plan
 ```
 
-# Flexible helpers to make workflow plans
+# Flexible workflow plan generation
 
-If your workflow does not fit the rigid datasets/analyses/summaries framework, check out functions `expand()`, `evaluate()`, and `gather()`.
+If your workflow does not fit the rigid datasets/analyses/summaries framework, consider using functions `expand_plan()`, `evaluate_plan()`, and `gather_plan()`.
 
 ```{r more_expansions_and_plans}
-df <- workplan(data = simulate(center = MU, scale = SIGMA))
+df <- drake_plan(data = simulate(center = MU, scale = SIGMA))
 df
-df <- expand(df, values = c("rep1", "rep2"))
+
+df <- expand_plan(df, values = c("rep1", "rep2"))
 df
-evaluate(df, wildcard = "MU", values = 1:2)
-evaluate(df, wildcard = "MU", values = 1:2, expand = FALSE)
-evaluate(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1)), expand = FALSE)
-evaluate(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1, 10)))
-gather(df)
-gather(df, target = "my_summaries", gather = "rbind")
+
+evaluate_plan(df, wildcard = "MU", values = 1:2)
+
+evaluate_plan(df, wildcard = "MU", values = 1:2, expand = FALSE)
+
+evaluate_plan(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1)), expand = FALSE)
+
+evaluate_plan(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1, 10)))
+
+gather_plan(df)
+
+gather_plan(df, target = "my_summaries", gather = "rbind")
 ```
 
 # Run the workflow
@@ -243,14 +275,22 @@ gather(df, target = "my_summaries", gather = "rbind")
 You may want to check for outdated or missing targets/imports first.
 
 ```{r firstmake}
-outdated(my_plan, verbose = FALSE) # Targets that need to be (re)built.
-missed(my_plan, verbose = FALSE) # Checks your workspace.
+config <- drake_config(my_plan, verbose = FALSE)
+outdated(config) # Targets that need to be (re)built.
+
+missed(config) # Checks your workspace.
 ```
 
 Then just `make(my_plan)`.
 
 ```{r firstmakeforreal}
 make(my_plan)
+```
+
+For the `reg2()` model on the small dataset, the p-value on `x2` is so small that there may be an association between weight and fuel efficiency after all.
+
+```{r getmtcarsanswer}
+readd(coef_regression2_small)
 ```
 
 The non-file dependencies of your last target are already loaded in your workspace.
@@ -260,55 +300,66 @@ ls()
 ```
 
 ```{r plotgraphfirstmake}
-outdated(my_plan, verbose = FALSE) # Everything is up to date.
+outdated(config) # Everything is up to date.
+
 build_times(digits = 4) # How long did it take to make each target?
 ```
 
 See also `predict_runtime()` and `rate_limiting_times()`.
 
-In the new graph, the red nodes from before are now green.
+In the new graph, the black nodes from before are now green.
 
 ```{r graph2quick, eval = FALSE}
 # Hover, click, drag, zoom, and pan.
-plot_graph(my_plan, width = "100%", height = "500px")
+vis_drake_graph(config, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/built.html"
+src = "https://cdn.rawgit.com/ropensci/drake/0b76e536/images/built.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
 
-Optionally, get `visNetwork` nodes and edges so you can make your own plot with `visNetwork` or `render_graph()`.
+Optionally, get [visNetwork](http://datastorm-open.github.io/visNetwork/) nodes and edges so you can make your own plot with `visNetwork()` or `render_drake_graph()`.
 
 ```{r dfgraph2quick, eval = FALSE}
-dataframes_graph(my_plan)
+dataframes_graph(config)
 ```
 
-Use `readd()` and `loadd()` to load more targets. (They are cached in the hidden `.drake/` folder using [storr](https://CRAN.R-project.org/package=storr)). Other functions interact and view the cache.
+Use `readd()` and `loadd()` to load targets into your workspace. (They are cached in the hidden `.drake/` folder using [storr](https://CRAN.R-project.org/package=storr)). There are many more functions for interacting with the cache.
 
 ```{r cache}
 readd(coef_regression2_large)
+
 loadd(small)
+
 head(small)
+
 rm(small)
 cached(small, large)
+
 cached()
+
 built()
+
 imported()
-head(read_plan())
+
+head(read_drake_plan())
+
 head(progress()) # See also in_progress()
+
 progress(large)
-session() # of the last call to make()
+
+# drake_session() # sessionInfo() of the last make() # nolint
 ```
 
-The next time you run `make(my_plan)`, nothing will be built because drake knows everything is up to date.
+The next time you run `make(my_plan)`, nothing will build because `drake` knows everything is already up to date.
 
 ```{r uptodateinvig}
-make(my_plan)
+config <- make(my_plan) # Will use config later. See also drake_config().
 ```
 
-But if you change one of your functions, commands, or other dependencies, drake will update the affected parts of the workflow. Let's say we want to change the quadratic term to a cubic term in our `reg2()` function.
+But if you change one of your functions, commands, or other dependencies, drake will update the affected targets. Suppose we change the quadratic term to a cubic term in `reg2()`. We might want to do this if we suspect a cubic relationship between tons and miles per gallon.
 
 ```{r changereg2invignette}
 reg2 <- function(d) {
@@ -317,36 +368,49 @@ reg2 <- function(d) {
 }
 ```
 
-The targets depending on `reg2()` need to be rebuilt and everything else is left alone.
+The targets that depend on `reg2()` need to be rebuilt.
 
 ```{r plotwithreg2}
-outdated(my_plan, verbose = FALSE)
+outdated(config)
+```
+
+**Advanced**: To find out why a target is out of date, you can load the [storr](https://github.com/richfitz/storr) cache and compare the appropriate hash keys to the output of `dependency_profile()`.
+
+```{r depprofile}
+dependency_profile(target = "regression2_small", config = config)
+
+config$cache$get_hash(key = "small") # same
+
+config$cache$get_hash(key = "reg2") # different
 ```
 
 ```{r graph3quick, eval = FALSE}
 # Hover, click, drag, zoom, and pan.
-plot_graph(my_plan, width = "100%", height = "500px")
+# Same as drake_graph():
+vis_drake_graph(config, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/reg2.html"
+src = "https://cdn.rawgit.com/ropensci/drake/0b76e536/images/reg2.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
 
 
+The next `make()` will rebuild the targets depending on `reg2()` and leave everything else alone.
+
 ```{r remakewithreg2}
 make(my_plan)
 ```
 
-But trivial changes to whitespace and comments are totally ignored in your functions and in `my_plan$command`.
+Trivial changes to whitespace and comments are totally ignored.
 
 ```{r trivial}
 reg2 <- function(d) {
   d$x3 <- d$x ^ 3
     lm(y ~ x3, data = d) # I indented here.
 }
-outdated(my_plan, verbose = FALSE) # Everything is up to date.
+outdated(config) # Everything is up to date.
 ```
 
 Need to add new work on the fly? Just append rows to the workflow plan. If the rest of your workflow is up to date, only the new work is run.
@@ -356,7 +420,7 @@ new_simulation <- function(n){
   data.frame(x = rnorm(n), y = rnorm(n))
 }
 
-additions <- workplan(
+additions <- drake_plan(
   new_data = new_simulation(36) + sqrt(10))
 additions
 
@@ -366,32 +430,36 @@ my_plan
 make(my_plan)
 ```
 
-If you ever need to erase your work, use `clean()`. Any targets removed from the cache will have to be rebuilt on the next call to `make()`, so be careful.
+If you ever need to erase your work, use `clean()`. The next `make()` will rebuild any cleaned targets, so be careful. You may notice that by default, the size of the cache does not go down very much. To purge old data, you could use `clean(garbage_collection = TRUE, purge = TRUE)`. To do garbage collection without removing any important targets, use `drake_gc()`.
 
 ```{r cleanup}
-clean(small, reg1) # uncaches individual targets and imported objects
-clean() # cleans all targets out of the cache
-clean(destroy = TRUE) # removes the cache entirely
+# Uncaches individual targets and imported objects.
+clean(small, reg1, verbose = FALSE)
+clean(verbose = FALSE) # Cleans all targets out of the cache.
+drake_gc(verbose = FALSE) # Just garbage collection.
+clean(destroy = TRUE, verbose = FALSE) # removes the cache entirely
 ```
 
 # Automatic watching for changed dependencies
 
-As you have seen with `reg2()`, `drake` reacts to changes. In other words, `make()` notices when your dependencies are different from last time, rebuilds any affected targets, and continues downstream. In particular, `drake` watches for nontrivial changes to
+As you have seen with `reg2()`, `drake` reacts to changes in dependencies. In other words, `make()` notices when your dependencies are different from last time, rebuilds any affected targets, and continues downstream. In particular, `drake` watches for nontrivial changes to the following.
 
 1. Other imported functions, whether user-defined or from packages.
 1. For imported functions from your environment, any nested functions also in your environment or from packages.
 1. Commands in your workflow plan data frame.
 1. Global variables mentioned in the commands or imported functions.
-1. Upstream targets.
-1. For [dynamic knitr reports](https://yihui.name/knitr/) (with `knit('your_report.Rmd')` as a command in your workflow plan data frame), targets and imports mentioned in calls to `readd()` and `loadd()` in the code chunks to be evaluated. `Drake` treats these targets and imports as dependencies of the compiled output target (say, 'report.md').
+1. The output values of upstream targets.
+1. For [dynamic knitr reports](https://yihui.name/knitr/) generated with the right commands, targets and imports mentioned in calls to `readd()` and `loadd()` in the code chunks to be evaluated. `Drake` treats these targets and imports as dependencies of the compiled output target (say, `'report.md'` or `report.html`). **To activate this feature, the command in your workflow plan data frame must call `knitr::knit()` or `rmarkdown::render()`. Examples of acceptable commands:
+    - `knit('report.Rmd')`
+    - `knitr::knit(input = 'report.Rmd', quiet = TRUE)`
+    - `render('report.Rmd')`
+    - `rmarkdown::('report.Rmd', output_file = "report.html")`
 
-To explore the dependencies, please refer to the `deps()` and `tracked()` functions. Better yet, generate interactive graphs with `plot_graph()` as shown above. Hover over the nodes in the graph to see the content that `drake` watches.
-
-There is more to reproducibility than just using `drake` to watch for dependencies. [Packrat](https://rstudio.github.io/packrat) creates a tightly-controlled local library of packages to extend the shelf life of your project. And with [Docker](https://www.docker.com/), you can execute your project on a [virtual machine](https://en.wikipedia.org/wiki/Virtual_machine) to ensure platform independence. Together, [packrat](https://rstudio.github.io/packrat) and [Docker](https://www.docker.com/) can help others reproduce your work even if they have different software and hardware.
+To enhance reproducibility beyond the scope of drake, you might consider [packrat](https://rstudio.github.io/packrat) and [Docker](https://www.docker.com/). [Packrat](https://rstudio.github.io/packrat) creates a tightly-controlled local library of packages to extend the shelf life of your project. And with [Docker](https://www.docker.com/), you can execute your project on a [virtual machine](https://en.wikipedia.org/wiki/Virtual_machine) to ensure platform independence. Together, [packrat](https://rstudio.github.io/packrat) and [Docker](https://www.docker.com/) can help others reproduce your work even if they have different software and hardware.
 
 # Need more speed?
 
-`Drake` has extensive high-performance computing support, from local multicore computing on your laptop to serious supercomputing across multiple nodes of a large cluster. See the [parallelism vignette](https://github.com/wlandau-lilly/drake/blob/master/vignettes/parallelism.Rmd) for the full details.
+`Drake` has extensive high-performance computing support, from local multicore processing to serious distributed computing across multiple nodes of a cluster. See the [parallelism vignette](https://github.com/ropensci/drake/blob/master/vignettes/parallelism.Rmd) for detailed instructions.
 
 ```{r endofline_quickstart, echo = F}
 clean(destroy = TRUE, verbose = FALSE)

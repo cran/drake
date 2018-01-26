@@ -1,8 +1,10 @@
-#' @title Function \code{session}
-#' @description Load the \code{\link{sessionInfo}()}
+#' @title Return the \code{\link{sessionInfo}()}
 #' of the last call to \code{\link{make}()}.
+#' @description By default, session info is saved
+#' during \code{\link{make}()} to ensure reproducibility.
+#' Your loaded packages and their versions are recorded, for example.
 #' @seealso \code{\link{diagnose}}, \code{\link{built}}, \code{\link{imported}},
-#' \code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
+#' \code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
 #' @export
 #' @return \code{\link{sessionInfo}()} of the last
 #' call to \code{\link{make}()}
@@ -18,11 +20,13 @@
 #' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
-#' load_basic_example()
-#' make(my_plan)
-#' session()
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' make(my_plan) # Run the project, build the targets.
+#' drake_session() # Retrieve the cached sessionInfo() of the last make().
+#' })
 #' }
-session <- function(path = getwd(), search = TRUE,
+drake_session <- function(path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
   verbose = TRUE
 ){
@@ -32,16 +36,15 @@ session <- function(path = getwd(), search = TRUE,
   return(cache$get("sessionInfo", namespace = "session"))
 }
 
-#' @title Function \code{in_progress}
-#' @description List the targets that either
-#' (1) are currently being built if \code{\link{make}()} is running, or
-#' (2) were in the process of being built if the previous call to
-#' \code{\link{make}()} quit unexpectedly.
+#' @title List the targets that either
+#' (1) are currently being built during a \code{\link{make}()}, or
+#' (2) were being built if the last \code{\link{make}()} quit unexpectedly.
+#' @description Similar to \code{\link{progress}()}.
 #' @seealso \code{\link{diagnose}}, \code{\link{session}},
 #' \code{\link{built}}, \code{\link{imported}},
-#' \code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
+#' \code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
 #' @export
-#' @return A character vector of target names
+#' @return A character vector of target names.
 #' @param cache optional drake cache. See code{\link{new_cache}()}.
 #' If \code{cache} is supplied,
 #' the \code{path} and \code{search} arguments are ignored.
@@ -54,9 +57,12 @@ session <- function(path = getwd(), search = TRUE,
 #' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
-#' load_basic_example()
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
 #' make(my_plan) # Kill before targets finish.
+#' # If you interrupted make(), some targets will probably be listed:
 #' in_progress()
+#' })
 #' }
 in_progress <- function(path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
@@ -68,17 +74,16 @@ in_progress <- function(path = getwd(), search = TRUE,
     as.character()
 }
 
-#' @title Function \code{failed}
-#' @description List the targets that failed in the last call
+#' @title List the targets that failed in the last call
 #' to \code{\link{make}()}.
-#' Together, functions \code{failed} and
+#' @description Together, functions \code{failed} and
 #' \code{\link{diagnose}()} should eliminate the strict need
 #' for ordinary error messages printed to the console.
 #' @seealso \code{\link{diagnose}}, \code{\link{session}},
 #' \code{\link{built}}, \code{\link{imported}},
-#' \code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
+#' \code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
 #' @export
-#' @return A character vector of target names
+#' @return A character vector of target names.
 #' @param cache optional drake cache. See code{\link{new_cache}()}.
 #' If \code{cache} is supplied,
 #' the \code{path} and \code{search} arguments are ignored.
@@ -91,13 +96,16 @@ in_progress <- function(path = getwd(), search = TRUE,
 #' @param verbose whether to print console messages
 #' @examples
 #' \dontrun{
-#' load_basic_example()
-#' make(my_plan)
-#' failed() # nothing
-#' bad_plan <- workplan(x = function_doesnt_exist())
-#' make(bad_plan) # error
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' make(my_plan) # Run the project, build the targets.
+#' failed() # Should show that no targets failed.
+#' # Build a workflow plan doomed to fail:
+#' bad_plan <- drake_plan(x = function_doesnt_exist())
+#' try(make(bad_plan), silent = TRUE) # error
 #' failed() # "x"
-#' diagnose(x)
+#' diagnose(x) # Retrieve the cached error log of x.
+#' })
 #' }
 failed <- function(path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
@@ -109,18 +117,18 @@ failed <- function(path = getwd(), search = TRUE,
     as.character()
 }
 
-#' @title Function \code{progress}
-#' @description Get the build progress (overall or individual targets)
-#' of the last call to \code{\link{make}()}.
-#' Objects that drake imported, built, or attempted
+#' @title Get the build progress of your targets
+#' during a \code{\link{make}()}.
+#' @description Objects that drake imported, built, or attempted
 #' to build are listed as \code{"finished"} or \code{"in progress"}.
 #' Skipped objects are not listed.
 #' @seealso \code{\link{diagnose}}, \code{\link{session}},
 #' \code{\link{built}}, \code{\link{imported}},
-#' \code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
+#' \code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
 #' @export
 #'
-#' @return Statuses of targets
+#' @return The build progress of each target reached by
+#' the current \code{\link{make}()} so far.
 #'
 #' @param ... objects to load from the cache, as names (unquoted)
 #' or character strings (quoted). Similar to \code{...} in
@@ -151,14 +159,19 @@ failed <- function(path = getwd(), search = TRUE,
 #'
 #' @param verbose whether to print console messages
 #'
+#' @param jobs number of jobs/workers for parallel processing
+#'
 #' @examples
 #' \dontrun{
-#' load_basic_example()
-#' make(my_plan)
-#' progress()
-#' progress(small, large)
-#' progress(list = c("small", "large"))
-#' progress(no_imported_objects = TRUE)
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' make(my_plan) # Run the project, build the targets.
+#' # Watch the changing progress() as make() is running.
+#' progress() # List all the targets reached so far.
+#' progress(small, large) # Just see the progress of some targets.
+#' progress(list = c("small", "large")) # Same as above.
+#' progress(no_imported_objects = TRUE) # Ignore imported R objects.
+#' })
 #' }
 progress <- function(
   ...,
@@ -168,7 +181,8 @@ progress <- function(
   path = getwd(),
   search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = TRUE
+  verbose = TRUE,
+  jobs = 1
 ){
   # deprecate imported_files_only
   if (length(imported_files_only)){
@@ -186,22 +200,31 @@ progress <- function(
   dots <- match.call(expand.dots = FALSE)$...
   targets <- targets_from_dots(dots, list)
   if (!length(targets)){
-    return(list_progress(
+    return(
+      list_progress(
         no_imported_objects = no_imported_objects,
-        cache = cache
-        ))
+        cache = cache,
+        jobs = jobs
+      )
+    )
   }
-  return(get_progress(targets, cache))
+  get_progress(targets = targets, cache = cache, jobs = jobs)
 }
 
-list_progress <- function(no_imported_objects, cache){
+list_progress <- function(no_imported_objects, cache, jobs){
   all_marked <- cache$list(namespace = "progress")
-  all_progress <- get_progress(target = all_marked, cache = cache)
-  abridged_marked <- Filter(
+  all_progress <- get_progress(
+    targets = all_marked,
+    cache = cache,
+    jobs = jobs
+  )
+  plan <- read_drake_plan(cache = cache)
+  abridged_marked <- parallel_filter(
     all_marked,
     f = function(target){
-      is_built_or_imported_file(target = target, cache = cache)
-    }
+      is_built_or_imported_file(target = target, plan = plan)
+    },
+    jobs = jobs
   )
   abridged_progress <- all_progress[abridged_marked]
   if (no_imported_objects){
@@ -215,15 +238,36 @@ list_progress <- function(no_imported_objects, cache){
   return(out)
 }
 
-get_progress <- Vectorize(
-  function(target, cache){
-    if (target %in% cache$list("progress")){
-      cache$get(key = target, namespace = "progress")
-    } else{
-      "not built or imported"
-    }
-  },
-  "target",
-  SIMPLIFY = TRUE,
-  USE.NAMES = TRUE
-)
+get_progress <- function(targets, cache, jobs){
+  if (!length(targets)){
+    return(character(0))
+  }
+  out <- lightly_parallelize(
+    X = targets,
+    FUN = get_progress_single,
+    jobs = jobs,
+    cache = cache
+  ) %>%
+    unlist
+  names(out) <- targets
+  out
+}
+
+get_progress_single <- function(target, cache){
+  if (cache$exists(key = target, namespace = "progress")){
+    cache$get(key = target, namespace = "progress")
+  } else{
+    "not built or imported"
+  }
+}
+
+set_progress <- function(target, value, config){
+  if (!config$log_progress){
+    return()
+  }
+  config$cache$set(
+    key = target,
+    value = value,
+    namespace = "progress"
+  )
+}

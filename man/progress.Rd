@@ -2,12 +2,13 @@
 % Please edit documentation in R/progress.R
 \name{progress}
 \alias{progress}
-\title{Function \code{progress}}
+\title{Get the build progress of your targets
+during a \code{\link{make}()}.}
 \usage{
 progress(..., list = character(0), no_imported_objects = FALSE,
   imported_files_only = logical(0), path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = TRUE)
+  verbose = TRUE, jobs = 1)
 }
 \arguments{
 \item{...}{objects to load from the cache, as names (unquoted)
@@ -38,29 +39,33 @@ If \code{cache} is supplied,
 the \code{path} and \code{search} arguments are ignored.}
 
 \item{verbose}{whether to print console messages}
+
+\item{jobs}{number of jobs/workers for parallel processing}
 }
 \value{
-Statuses of targets
+The build progress of each target reached by
+the current \code{\link{make}()} so far.
 }
 \description{
-Get the build progress (overall or individual targets)
-of the last call to \code{\link{make}()}.
 Objects that drake imported, built, or attempted
 to build are listed as \code{"finished"} or \code{"in progress"}.
 Skipped objects are not listed.
 }
 \examples{
 \dontrun{
-load_basic_example()
-make(my_plan)
-progress()
-progress(small, large)
-progress(list = c("small", "large"))
-progress(no_imported_objects = TRUE)
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
+make(my_plan) # Run the project, build the targets.
+# Watch the changing progress() as make() is running.
+progress() # List all the targets reached so far.
+progress(small, large) # Just see the progress of some targets.
+progress(list = c("small", "large")) # Same as above.
+progress(no_imported_objects = TRUE) # Ignore imported R objects.
+})
 }
 }
 \seealso{
 \code{\link{diagnose}}, \code{\link{session}},
 \code{\link{built}}, \code{\link{imported}},
-\code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
+\code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
 }

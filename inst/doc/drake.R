@@ -1,166 +1,83 @@
 ## ---- echo = F-----------------------------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
-clean(destroy = TRUE)
+suppressMessages(suppressWarnings(library(magrittr)))
+unlink(".drake", recursive = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  error = TRUE,
+  warning = TRUE
+)
 
-## ----firstintroindrake---------------------------------------------------
-library(drake)
-load_basic_example() # Also (over)writes report.Rmd.
-my_plan              # Each target is a file (single-quoted) or object.
+## ----precleangetstarteddrake, echo = FALSE-------------------------------
+# Remove any previous work.
+clean(destroy = TRUE)
 
-## ----makedrakenoevalrmd, eval = FALSE------------------------------------
-#  make(my_plan) # Run the commands to build the targets.
+## ----mtcarsdrake1--------------------------------------------------------
+# ?mtcars # more info
+head(mtcars)
 
-## ----diagnose, eval = FALSE----------------------------------------------
-#  failed()                 # Targets that failed in the most recent `make()`
-#  diagnose()               # Targets that failed in any previous `make()`
-#  error <- diagnose(large) # Most recent verbose error log of `large`
-#  str(error)               # Object of class "error"
-#  error$calls              # Call stack / traceback
+## ----drakeimportdrakermd-------------------------------------------------
+load_basic_example(verbose = FALSE) # Get the code with drake_example("basic").
 
-## ----devinstall, eval = FALSE--------------------------------------------
-#  install.packages("drake") # latest CRAN release
-#  devtools::install_github(
-#    "wlandau-lilly/drake@v4.2.0",
-#    build = TRUE
-#  ) # GitHub release
-#  devtools::install_github("wlandau-lilly/drake", build = TRUE) # dev version
+# Drake looks for data objects and functions in your R session environment
+ls()
 
-## ----quickstartdrakermd, eval = FALSE------------------------------------
-#  library(drake)
-#  load_basic_example() # Also (over)writes report.Rmd.
-#  plot_graph(my_plan)  # Hover, click, drag, zoom, pan. See args 'from' and 'to'.
-#  outdated(my_plan)    # Which targets need to be (re)built?
-#  missed(my_plan)      # Are you missing anything from your workspace?
-#  check(my_plan)       # Are you missing files? Is your workflow plan okay?
-#  make(my_plan)        # Run the workflow.
-#  diagnose(large)      # View error info if the target "large" failed to build.
-#  outdated(my_plan)    # Everything is up to date.
-#  plot_graph(my_plan)  # The graph also shows what is up to date.
+# and saved files in your file system.
+list.files()
 
-## ----examplesdrakermd, eval = FALSE--------------------------------------
-#  example_drake("basic") # Write the code files of the canonical tutorial.
-#  examples_drake()       # List the other examples.
-#  vignette("quickstart") # See https://cran.r-project.org/package=drake/vignettes
+## ----myplandrakevig------------------------------------------------------
+my_plan
 
-## ----learndrakermd, eval = FALSE-----------------------------------------
-#  load_basic_example()
-#  drake_tip()
-#  examples_drake()
-#  example_drake()
+## ----drake_plangeneration------------------------------------------------
+library(magrittr)
+dataset_plan <- drake_plan(
+  small = simulate(5),
+  large = simulate(50)
+)
+dataset_plan
 
-## ----plandrakermd, eval = FALSE------------------------------------------
-#  analyses()
-#  summaries()
-#  evaluate()
-#  expand()
-#  gather()
-#  wildcard() # from the wildcard package
+analysis_methods <- drake_plan(
+  regression = regNUMBER(dataset__) # nolint
+) %>%
+  evaluate_plan(wildcard = "NUMBER", values = 1:2)
+analysis_methods
 
-## ----draakedepsdrakermd, eval = FALSE------------------------------------
-#  outdated()
-#  missed()
-#  plot_graph() # Now with subgraphs too.
-#  dataframes_graph()
-#  render_graph()
-#  read_graph()
-#  deps()
-#  knitr_deps
-#  tracked()
+analysis_plan <- plan_analyses(
+  plan = analysis_methods,
+  datasets = dataset_plan
+)
+analysis_plan
 
-## ----cachedrakermd, eval = FALSE-----------------------------------------
-#  clean()
-#  cached()
-#  imported()
-#  built()
-#  readd()
-#  loadd()
-#  find_project()
-#  find_cache()
+whole_plan <- rbind(dataset_plan, analysis_plan)
+whole_plan
 
-## ----timesdrakermd, eval = FALSE-----------------------------------------
-#  build_times()
-#  predict_runtime()
-#  rate_limiting_times()
+## ----drakevisgraph, eval = FALSE-----------------------------------------
+#  vis_drake_graph(my_plan)
 
-## ----speeddrakermd, eval = FALSE-----------------------------------------
-#  make() # with jobs > 2
-#  max_useful_jobs()
-#  parallelism_choices()
-#  shell_file()
+## ----outdateddrake-------------------------------------------------------
+config <- drake_config(my_plan, verbose = FALSE) # Master configuration list
+outdated(config)
 
-## ----hashcachedrakermd, eval = FALSE-------------------------------------
-#  available_hash_algos()
-#  cache_path()
-#  cache_types()
-#  configure_cache()
-#  default_long_hash_algo()
-#  default_short_hash_algo()
-#  long_hash()
-#  short_hash()
-#  new_cache()
-#  recover_cache()
-#  this_cache()
-#  type_of_cache()
+## ----firstmakedrake------------------------------------------------------
+make(my_plan)
 
-## ----debugdrakermd, eval = FALSE-----------------------------------------
-#  diagnose()
-#  check()
-#  session()
-#  in_progress()
-#  progress()
-#  config()
-#  read_config()
+## ----getmtcarsanswer-----------------------------------------------------
+readd(coef_regression2_small)
 
-## ----vignettesdrakermd, eval = FALSE-------------------------------------
-#  vignette(package = "drake")            # List the vignettes.
-#  vignette("drake")                      # High-level intro.
-#  vignette("graph")                      # Visualilze the workflow graph.
-#  vignette("quickstart")                 # Walk through a simple example.
-#  vignette("parallelism") # Lots of parallel computing support.
-#  vignette("storage")                    # Learn how drake stores your stuff.
-#  vignette("timing")                     # Build times, runtime predictions
-#  vignette("caution")                    # Avoid common pitfalls.
+## ----makeuptodatedrake---------------------------------------------------
+make(my_plan)
 
-## ----reproducibilitydrakermd, eval = FALSE-------------------------------
-#  library(drake)
-#  load_basic_example()
-#  outdated(my_plan) # Which targets need to be (re)built?
-#  make(my_plan)     # Build what needs to be built.
-#  outdated(my_plan) # Everything is up to date.
-#  # Change one of your functions.
-#  reg2 <- function(d) {
-#    d$x3 <- d$x ^ 3
-#    lm(y ~ x3, data = d)
-#  }
-#  outdated(my_plan)   # Some targets depend on reg2().
-#  plot_graph(my_plan) # Set targets_only to TRUE for smaller graphs.
-#  make(my_plan)       # Rebuild just the outdated targets.
-#  outdated(my_plan)   # Everything is up to date again.
-#  plot_graph(my_plan) # The colors changed in the graph.
-
-## ----drakermdquickvignette, eval = FALSE---------------------------------
-#  vignette("graph")
-#  vignette("quickstart")
-
-## ----basicgraph----------------------------------------------------------
-library(drake)
-load_basic_example()
-make(my_plan, jobs = 2, verbose = FALSE) # Parallelize with 2 jobs.
-# Change one of your functions.
+## ----reg2makedrake-------------------------------------------------------
 reg2 <- function(d){
   d$x3 <- d$x ^ 3
   lm(y ~ x3, data = d)
 }
 
-## ----fakegraphdrakermd, eval = FALSE-------------------------------------
-#  # Hover, click, drag, zoom, and pan. See args 'from' and 'to'.
-#  plot_graph(my_plan, width = "100%", height = "500px")
+make(my_plan)
 
-## ----drakermdhpcvignette, eval = FALSE-----------------------------------
-#  vignette("parallelism")
-
-## ----rmfiles_main, echo = FALSE------------------------------------------
-clean(destroy = TRUE)
+## ----endofline_drake, echo = F-------------------------------------------
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 

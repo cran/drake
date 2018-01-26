@@ -2,16 +2,19 @@
 % Please edit documentation in R/basic_example.R
 \name{load_basic_example}
 \alias{load_basic_example}
-\title{Function \code{load_basic_example}}
+\title{Load the basic example from \code{drake_example("basic")}}
 \usage{
-load_basic_example(envir = parent.frame(), report_file = "report.Rmd",
-  overwrite = FALSE, to = report_file)
+load_basic_example(envir = parent.frame(), cache = NULL,
+  report_file = "report.Rmd", overwrite = FALSE, to = report_file,
+  verbose = TRUE, force = FALSE)
 }
 \arguments{
 \item{envir}{The environment to load the example into.
 Defaults to your workspace.
 For an insulated workspace,
 set \code{envir = new.env(parent = globalenv())}.}
+
+\item{cache}{Optional \code{storr} cache to use.}
 
 \item{report_file}{where to write the report file \code{report.Rmd}.}
 
@@ -20,25 +23,58 @@ existing file \code{report.Rmd}}
 
 \item{to}{deprecated, where to write the dynamic report source file
 \code{report.Rmd}}
+
+\item{verbose}{logical, whether to print console messages.}
+
+\item{force}{logical, whether to force the loading of a
+non-back-compatible cache from a previous version of drake.}
+}
+\value{
+A \code{\link{drake_config}()} configuration list.
 }
 \description{
-Loads the basic example into your workspace
-(or the environment you specify).
-Also writes/overwrites the file \code{report.Rmd}.
-For a thorough walkthrough of how to set up this example, see the
-quickstart vignette: \code{vignette('quickstart')}. Alternatively,
-call \code{\link{example_drake}('basic')} to generate an R script
-that builds up this example step by step.
+Is there an association between
+the weight and the fuel efficiency of cars?
+To find out, we use the mtcars dataset.
+The mtcars dataset itself only has 32 rows,
+so we generate two larger bootstrapped datasets
+and then analyze them with regression models.
+Finally, we summarize the regression models
+to see if there is an association.
+}
+\details{
+Use \code{\link{drake_example}('basic')} to get the code
+for the basic example. The included R script is a detailed,
+heavily-commented walkthrough. The quickstart vignette at
+\url{https://github.com/ropensci/drake/blob/master/vignettes/quickstart.Rmd} # nolint
+and \url{https://ropensci.github.io/drake/articles/quickstart.html}
+also walks through the basic example.
+This function also writes/overwrites
+the file, \code{report.Rmd}.
 }
 \examples{
 \dontrun{
-load_basic_example()
+test_with_dir("Quarantine side effects.", {
+# Populate your workspace and write 'report.Rmd'.
+load_basic_example() # Get the code: drake_example("basic")
+# Check the dependencies of an imported function.
 deps(reg1)
+# Check the dependencies of commands in the workflow plan.
 deps(my_plan$command[1])
 deps(my_plan$command[4])
-plot_graph(my_plan)
+# Plot the interactive network visualization of the workflow.
+config <- drake_config(my_plan)
+vis_drake_graph(config)
+# Run the workflow to build all the targets in the plan.
 make(my_plan)
+# For the reg2() model on the small dataset,
+# the p-value is so small that there may be an association
+# between weight and fuel efficiency after all.
+readd(coef_regression2_small)
+# Remove the whole cache.
 clean(destroy = TRUE)
+# Clean up the imported file.
 unlink('report.Rmd')
+})
 }
 }

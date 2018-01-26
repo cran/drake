@@ -2,27 +2,43 @@
 % Please edit documentation in R/cache.R
 \name{this_cache}
 \alias{this_cache}
-\title{Function this_cache}
+\title{Get the cache at the exact file path specified.}
 \usage{
-this_cache(path = drake::default_cache_path())
+this_cache(path = drake::default_cache_path(), force = FALSE,
+  verbose = TRUE, fetch_cache = NULL)
 }
 \arguments{
 \item{path}{file path of the cache}
+
+\item{force}{logical, whether to load the cache
+despite any back compatibility issues with the
+running version of drake.}
+
+\item{verbose, }{whether to print the file path of the cache.}
+
+\item{fetch_cache}{character vector containing lines of code.
+The purpose of this code is to fetch the \code{storr} cache
+with a command like \code{storr_rds()} or \code{storr_dbi()},
+but customized. This feature is experimental.}
+}
+\value{
+A drake/storr cache at the specified path, if it exists.
 }
 \description{
-Get a known drake file system cache
-at the exact specified file path
-Do not use for in-memory caches such as
-\code{storr_environment()}.
+This function does not apply to
+in-memory caches such as \code{storr_environment()}.
 }
 \examples{
 \dontrun{
-x <- this_cache() # Does not exist yet
-load_basic_example()
-make(my_plan)
-y <- this_cache()
-z <- this_cache(".drake") # same as above
-manual <- new_cache("manual_cache")
-manual2 <- get_cache("manual_cache") # same as above
+test_with_dir("Quarantine side effects.", {
+clean(destroy = TRUE)
+try(x <- this_cache(), silent = FALSE) # The cache does not exist yet.
+load_basic_example() # Get the code with drake_example("basic").
+make(my_plan) # Run the project, build the targets.
+y <- this_cache() # Now, there is a cache.
+z <- this_cache(".drake") # Same as above.
+manual <- new_cache("manual_cache") # Make a new cache.
+manual2 <- get_cache("manual_cache") # Get the new cache.
+})
 }
 }

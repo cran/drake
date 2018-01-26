@@ -2,7 +2,8 @@
 % Please edit documentation in R/progress.R
 \name{failed}
 \alias{failed}
-\title{Function \code{failed}}
+\title{List the targets that failed in the last call
+to \code{\link{make}()}.}
 \usage{
 failed(path = getwd(), search = TRUE, cache = drake::get_cache(path =
   path, search = search, verbose = verbose), verbose = TRUE)
@@ -23,28 +24,29 @@ the \code{path} and \code{search} arguments are ignored.}
 \item{verbose}{whether to print console messages}
 }
 \value{
-A character vector of target names
+A character vector of target names.
 }
 \description{
-List the targets that failed in the last call
-to \code{\link{make}()}.
 Together, functions \code{failed} and
 \code{\link{diagnose}()} should eliminate the strict need
 for ordinary error messages printed to the console.
 }
 \examples{
 \dontrun{
-load_basic_example()
-make(my_plan)
-failed() # nothing
-bad_plan <- workplan(x = function_doesnt_exist())
-make(bad_plan) # error
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
+make(my_plan) # Run the project, build the targets.
+failed() # Should show that no targets failed.
+# Build a workflow plan doomed to fail:
+bad_plan <- drake_plan(x = function_doesnt_exist())
+try(make(bad_plan), silent = TRUE) # error
 failed() # "x"
-diagnose(x)
+diagnose(x) # Retrieve the cached error log of x.
+})
 }
 }
 \seealso{
 \code{\link{diagnose}}, \code{\link{session}},
 \code{\link{built}}, \code{\link{imported}},
-\code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
+\code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
 }

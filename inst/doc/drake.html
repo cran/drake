@@ -1,322 +1,468 @@
 <!DOCTYPE html>
-
-<html xmlns="http://www.w3.org/1999/xhtml">
-
+<html>
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="pandoc" />
+<title>The motivation of the basic example</title>
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
 
-<meta name="author" content="William Michael Landau" />
-
-<meta name="date" content="2017-11-05" />
-
-<title>drake</title>
-
-
-
-<style type="text/css">code{white-space: pre;}</style>
+<!-- Styles for R syntax highlighter -->
 <style type="text/css">
-div.sourceCode { overflow-x: auto; }
-table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
-  margin: 0; padding: 0; vertical-align: baseline; border: none; }
-table.sourceCode { width: 100%; line-height: 100%; }
-td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
-td.sourceCode { padding-left: 5px; }
-code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code > span.dt { color: #902000; } /* DataType */
-code > span.dv { color: #40a070; } /* DecVal */
-code > span.bn { color: #40a070; } /* BaseN */
-code > span.fl { color: #40a070; } /* Float */
-code > span.ch { color: #4070a0; } /* Char */
-code > span.st { color: #4070a0; } /* String */
-code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code > span.ot { color: #007020; } /* Other */
-code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code > span.fu { color: #06287e; } /* Function */
-code > span.er { color: #ff0000; font-weight: bold; } /* Error */
-code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-code > span.cn { color: #880000; } /* Constant */
-code > span.sc { color: #4070a0; } /* SpecialChar */
-code > span.vs { color: #4070a0; } /* VerbatimString */
-code > span.ss { color: #bb6688; } /* SpecialString */
-code > span.im { } /* Import */
-code > span.va { color: #19177c; } /* Variable */
-code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code > span.op { color: #666666; } /* Operator */
-code > span.bu { } /* BuiltIn */
-code > span.ex { } /* Extension */
-code > span.pp { color: #bc7a00; } /* Preprocessor */
-code > span.at { color: #7d9029; } /* Attribute */
-code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+   pre .operator,
+   pre .paren {
+     color: rgb(104, 118, 135)
+   }
+
+   pre .literal {
+     color: #990073
+   }
+
+   pre .number {
+     color: #099;
+   }
+
+   pre .comment {
+     color: #998;
+     font-style: italic
+   }
+
+   pre .keyword {
+     color: #900;
+     font-weight: bold
+   }
+
+   pre .identifier {
+     color: rgb(0, 0, 0);
+   }
+
+   pre .string {
+     color: #d14;
+   }
+</style>
+
+<!-- R syntax highlighter -->
+<script type="text/javascript">
+var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/</gm,"&lt;")}function f(r,q,p){return RegExp(q,"m"+(r.cI?"i":"")+(p?"g":""))}function b(r){for(var p=0;p<r.childNodes.length;p++){var q=r.childNodes[p];if(q.nodeName=="CODE"){return q}if(!(q.nodeType==3&&q.nodeValue.match(/\s+/))){break}}}function h(t,s){var p="";for(var r=0;r<t.childNodes.length;r++){if(t.childNodes[r].nodeType==3){var q=t.childNodes[r].nodeValue;if(s){q=q.replace(/\n/g,"")}p+=q}else{if(t.childNodes[r].nodeName=="BR"){p+="\n"}else{p+=h(t.childNodes[r])}}}if(/MSIE [678]/.test(navigator.userAgent)){p=p.replace(/\r/g,"\n")}return p}function a(s){var r=s.className.split(/\s+/);r=r.concat(s.parentNode.className.split(/\s+/));for(var q=0;q<r.length;q++){var p=r[q].replace(/^language-/,"");if(e[p]){return p}}}function c(q){var p=[];(function(s,t){for(var r=0;r<s.childNodes.length;r++){if(s.childNodes[r].nodeType==3){t+=s.childNodes[r].nodeValue.length}else{if(s.childNodes[r].nodeName=="BR"){t+=1}else{if(s.childNodes[r].nodeType==1){p.push({event:"start",offset:t,node:s.childNodes[r]});t=arguments.callee(s.childNodes[r],t);p.push({event:"stop",offset:t,node:s.childNodes[r]})}}}}return t})(q,0);return p}function k(y,w,x){var q=0;var z="";var s=[];function u(){if(y.length&&w.length){if(y[0].offset!=w[0].offset){return(y[0].offset<w[0].offset)?y:w}else{return w[0].event=="start"?y:w}}else{return y.length?y:w}}function t(D){var A="<"+D.nodeName.toLowerCase();for(var B=0;B<D.attributes.length;B++){var C=D.attributes[B];A+=" "+C.nodeName.toLowerCase();if(C.value!==undefined&&C.value!==false&&C.value!==null){A+='="'+m(C.value)+'"'}}return A+">"}while(y.length||w.length){var v=u().splice(0,1)[0];z+=m(x.substr(q,v.offset-q));q=v.offset;if(v.event=="start"){z+=t(v.node);s.push(v.node)}else{if(v.event=="stop"){var p,r=s.length;do{r--;p=s[r];z+=("</"+p.nodeName.toLowerCase()+">")}while(p!=v.node);s.splice(r,1);while(r<s.length){z+=t(s[r]);r++}}}}return z+m(x.substr(q))}function j(){function q(x,y,v){if(x.compiled){return}var u;var s=[];if(x.k){x.lR=f(y,x.l||hljs.IR,true);for(var w in x.k){if(!x.k.hasOwnProperty(w)){continue}if(x.k[w] instanceof Object){u=x.k[w]}else{u=x.k;w="keyword"}for(var r in u){if(!u.hasOwnProperty(r)){continue}x.k[r]=[w,u[r]];s.push(r)}}}if(!v){if(x.bWK){x.b="\\b("+s.join("|")+")\\s"}x.bR=f(y,x.b?x.b:"\\B|\\b");if(!x.e&&!x.eW){x.e="\\B|\\b"}if(x.e){x.eR=f(y,x.e)}}if(x.i){x.iR=f(y,x.i)}if(x.r===undefined){x.r=1}if(!x.c){x.c=[]}x.compiled=true;for(var t=0;t<x.c.length;t++){if(x.c[t]=="self"){x.c[t]=x}q(x.c[t],y,false)}if(x.starts){q(x.starts,y,false)}}for(var p in e){if(!e.hasOwnProperty(p)){continue}q(e[p].dM,e[p],true)}}function d(B,C){if(!j.called){j();j.called=true}function q(r,M){for(var L=0;L<M.c.length;L++){if((M.c[L].bR.exec(r)||[null])[0]==r){return M.c[L]}}}function v(L,r){if(D[L].e&&D[L].eR.test(r)){return 1}if(D[L].eW){var M=v(L-1,r);return M?M+1:0}return 0}function w(r,L){return L.i&&L.iR.test(r)}function K(N,O){var M=[];for(var L=0;L<N.c.length;L++){M.push(N.c[L].b)}var r=D.length-1;do{if(D[r].e){M.push(D[r].e)}r--}while(D[r+1].eW);if(N.i){M.push(N.i)}return f(O,M.join("|"),true)}function p(M,L){var N=D[D.length-1];if(!N.t){N.t=K(N,E)}N.t.lastIndex=L;var r=N.t.exec(M);return r?[M.substr(L,r.index-L),r[0],false]:[M.substr(L),"",true]}function z(N,r){var L=E.cI?r[0].toLowerCase():r[0];var M=N.k[L];if(M&&M instanceof Array){return M}return false}function F(L,P){L=m(L);if(!P.k){return L}var r="";var O=0;P.lR.lastIndex=0;var M=P.lR.exec(L);while(M){r+=L.substr(O,M.index-O);var N=z(P,M);if(N){x+=N[1];r+='<span class="'+N[0]+'">'+M[0]+"</span>"}else{r+=M[0]}O=P.lR.lastIndex;M=P.lR.exec(L)}return r+L.substr(O,L.length-O)}function J(L,M){if(M.sL&&e[M.sL]){var r=d(M.sL,L);x+=r.keyword_count;return r.value}else{return F(L,M)}}function I(M,r){var L=M.cN?'<span class="'+M.cN+'">':"";if(M.rB){y+=L;M.buffer=""}else{if(M.eB){y+=m(r)+L;M.buffer=""}else{y+=L;M.buffer=r}}D.push(M);A+=M.r}function G(N,M,Q){var R=D[D.length-1];if(Q){y+=J(R.buffer+N,R);return false}var P=q(M,R);if(P){y+=J(R.buffer+N,R);I(P,M);return P.rB}var L=v(D.length-1,M);if(L){var O=R.cN?"</span>":"";if(R.rE){y+=J(R.buffer+N,R)+O}else{if(R.eE){y+=J(R.buffer+N,R)+O+m(M)}else{y+=J(R.buffer+N+M,R)+O}}while(L>1){O=D[D.length-2].cN?"</span>":"";y+=O;L--;D.length--}var r=D[D.length-1];D.length--;D[D.length-1].buffer="";if(r.starts){I(r.starts,"")}return R.rE}if(w(M,R)){throw"Illegal"}}var E=e[B];var D=[E.dM];var A=0;var x=0;var y="";try{var s,u=0;E.dM.buffer="";do{s=p(C,u);var t=G(s[0],s[1],s[2]);u+=s[0].length;if(!t){u+=s[1].length}}while(!s[2]);if(D.length>1){throw"Illegal"}return{r:A,keyword_count:x,value:y}}catch(H){if(H=="Illegal"){return{r:0,keyword_count:0,value:m(C)}}else{throw H}}}function g(t){var p={keyword_count:0,r:0,value:m(t)};var r=p;for(var q in e){if(!e.hasOwnProperty(q)){continue}var s=d(q,t);s.language=q;if(s.keyword_count+s.r>r.keyword_count+r.r){r=s}if(s.keyword_count+s.r>p.keyword_count+p.r){r=p;p=s}}if(r.language){p.second_best=r}return p}function i(r,q,p){if(q){r=r.replace(/^((<[^>]+>|\t)+)/gm,function(t,w,v,u){return w.replace(/\t/g,q)})}if(p){r=r.replace(/\n/g,"<br>")}return r}function n(t,w,r){var x=h(t,r);var v=a(t);var y,s;if(v){y=d(v,x)}else{return}var q=c(t);if(q.length){s=document.createElement("pre");s.innerHTML=y.value;y.value=k(q,c(s),x)}y.value=i(y.value,w,r);var u=t.className;if(!u.match("(\\s|^)(language-)?"+v+"(\\s|$)")){u=u?(u+" "+v):v}if(/MSIE [678]/.test(navigator.userAgent)&&t.tagName=="CODE"&&t.parentNode.tagName=="PRE"){s=t.parentNode;var p=document.createElement("div");p.innerHTML="<pre><code>"+y.value+"</code></pre>";t=p.firstChild.firstChild;p.firstChild.cN=s.cN;s.parentNode.replaceChild(p.firstChild,s)}else{t.innerHTML=y.value}t.className=u;t.result={language:v,kw:y.keyword_count,re:y.r};if(y.second_best){t.second_best={language:y.second_best.language,kw:y.second_best.keyword_count,re:y.second_best.r}}}function o(){if(o.called){return}o.called=true;var r=document.getElementsByTagName("pre");for(var p=0;p<r.length;p++){var q=b(r[p]);if(q){n(q,hljs.tabReplace)}}}function l(){if(window.addEventListener){window.addEventListener("DOMContentLoaded",o,false);window.addEventListener("load",o,false)}else{if(window.attachEvent){window.attachEvent("onload",o)}else{window.onload=o}}}var e={};this.LANGUAGES=e;this.highlight=d;this.highlightAuto=g;this.fixMarkup=i;this.highlightBlock=n;this.initHighlighting=o;this.initHighlightingOnLoad=l;this.IR="[a-zA-Z][a-zA-Z0-9_]*";this.UIR="[a-zA-Z_][a-zA-Z0-9_]*";this.NR="\\b\\d+(\\.\\d+)?";this.CNR="\\b(0[xX][a-fA-F0-9]+|(\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";this.BNR="\\b(0b[01]+)";this.RSR="!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|\\.|-|-=|/|/=|:|;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";this.ER="(?![\\s\\S])";this.BE={b:"\\\\.",r:0};this.ASM={cN:"string",b:"'",e:"'",i:"\\n",c:[this.BE],r:0};this.QSM={cN:"string",b:'"',e:'"',i:"\\n",c:[this.BE],r:0};this.CLCM={cN:"comment",b:"//",e:"$"};this.CBLCLM={cN:"comment",b:"/\\*",e:"\\*/"};this.HCM={cN:"comment",b:"#",e:"$"};this.NM={cN:"number",b:this.NR,r:0};this.CNM={cN:"number",b:this.CNR,r:0};this.BNM={cN:"number",b:this.BNR,r:0};this.inherit=function(r,s){var p={};for(var q in r){p[q]=r[q]}if(s){for(var q in s){p[q]=s[q]}}return p}}();hljs.LANGUAGES.cpp=function(){var a={keyword:{"false":1,"int":1,"float":1,"while":1,"private":1,"char":1,"catch":1,"export":1,virtual:1,operator:2,sizeof:2,dynamic_cast:2,typedef:2,const_cast:2,"const":1,struct:1,"for":1,static_cast:2,union:1,namespace:1,unsigned:1,"long":1,"throw":1,"volatile":2,"static":1,"protected":1,bool:1,template:1,mutable:1,"if":1,"public":1,friend:2,"do":1,"return":1,"goto":1,auto:1,"void":2,"enum":1,"else":1,"break":1,"new":1,extern:1,using:1,"true":1,"class":1,asm:1,"case":1,typeid:1,"short":1,reinterpret_cast:2,"default":1,"double":1,register:1,explicit:1,signed:1,typename:1,"try":1,"this":1,"switch":1,"continue":1,wchar_t:1,inline:1,"delete":1,alignof:1,char16_t:1,char32_t:1,constexpr:1,decltype:1,noexcept:1,nullptr:1,static_assert:1,thread_local:1,restrict:1,_Bool:1,complex:1},built_in:{std:1,string:1,cin:1,cout:1,cerr:1,clog:1,stringstream:1,istringstream:1,ostringstream:1,auto_ptr:1,deque:1,list:1,queue:1,stack:1,vector:1,map:1,set:1,bitset:1,multiset:1,multimap:1,unordered_set:1,unordered_map:1,unordered_multiset:1,unordered_multimap:1,array:1,shared_ptr:1}};return{dM:{k:a,i:"</",c:[hljs.CLCM,hljs.CBLCLM,hljs.QSM,{cN:"string",b:"'\\\\?.",e:"'",i:"."},{cN:"number",b:"\\b(\\d+(\\.\\d*)?|\\.\\d+)(u|U|l|L|ul|UL|f|F)"},hljs.CNM,{cN:"preprocessor",b:"#",e:"$"},{cN:"stl_container",b:"\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<",e:">",k:a,r:10,c:["self"]}]}}}();hljs.LANGUAGES.r={dM:{c:[hljs.HCM,{cN:"number",b:"\\b0[xX][0-9a-fA-F]+[Li]?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+(?:[eE][+\\-]?\\d*)?L\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+\\.(?!\\d)(?:i\\b)?",e:hljs.IMMEDIATE_RE,r:1},{cN:"number",b:"\\b\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"keyword",b:"(?:tryCatch|library|setGeneric|setGroupGeneric)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\.",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\d+(?![\\w.])",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\b(?:function)",e:hljs.IMMEDIATE_RE,r:2},{cN:"keyword",b:"(?:if|in|break|next|repeat|else|for|return|switch|while|try|stop|warning|require|attach|detach|source|setMethod|setClass)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"literal",b:"(?:NA|NA_integer_|NA_real_|NA_character_|NA_complex_)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"literal",b:"(?:NULL|TRUE|FALSE|T|F|Inf|NaN)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"identifier",b:"[a-zA-Z.][a-zA-Z0-9._]*\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"<\\-(?!\\s*\\d)",e:hljs.IMMEDIATE_RE,r:2},{cN:"operator",b:"\\->|<\\-",e:hljs.IMMEDIATE_RE,r:1},{cN:"operator",b:"%%|~",e:hljs.IMMEDIATE_RE},{cN:"operator",b:">=|<=|==|!=|\\|\\||&&|=|\\+|\\-|\\*|/|\\^|>|<|!|&|\\||\\$|:",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"%",e:"%",i:"\\n",r:1},{cN:"identifier",b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[hljs.BE],r:0},{cN:"string",b:"'",e:"'",c:[hljs.BE],r:0},{cN:"paren",b:"[[({\\])}]",e:hljs.IMMEDIATE_RE,r:0}]}};
+hljs.initHighlightingOnLoad();
+</script>
+
+
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 13px;
+}
+
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 20px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 {
+   font-size:2.2em;
+}
+
+h2 {
+   font-size:1.8em;
+}
+
+h3 {
+   font-size:1.4em;
+}
+
+h4 {
+   font-size:1.0em;
+}
+
+h5 {
+   font-size:0.9em;
+}
+
+h6 {
+   font-size:0.8em;
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre, img {
+  max-width: 100%;
+}
+pre {
+  overflow-x: auto;
+}
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+
+code[class] {
+  background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * {
+      background: transparent !important;
+      color: black !important;
+      filter:none !important;
+      -ms-filter: none !important;
+   }
+
+   body {
+      font-size:12pt;
+      max-width:100%;
+   }
+
+   a, a:visited {
+      text-decoration: underline;
+   }
+
+   hr {
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote {
+      padding-right: 1em;
+      page-break-inside: avoid;
+   }
+
+   tr, img {
+      page-break-inside: avoid;
+   }
+
+   img {
+      max-width: 100% !important;
+   }
+
+   @page :left {
+      margin: 15mm 20mm 15mm 10mm;
+   }
+
+   @page :right {
+      margin: 15mm 10mm 15mm 20mm;
+   }
+
+   p, h2, h3 {
+      orphans: 3; widows: 3;
+   }
+
+   h2, h3 {
+      page-break-after: avoid;
+   }
+}
 </style>
 
 
 
-<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
-
 </head>
 
 <body>
+<p><img src="data:image/png;base64,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" alt=""/></p>
 
+<p>This tutorial is the abridged version of the <a href="https://github.com/ropensci/drake/blob/master/vignettes/quickstart.Rmd">quickstart vignette</a>. For more information, see the <a href="https://ropensci.github.io/drake/">documentation website</a>, which includes the <a href="https://ropensci.github.io/drake/articles/quickstart.html">rendered online version of the quickstart vignette</a>.</p>
 
+<h1>The motivation of the basic example</h1>
 
+<p>Is there an association between the weight and the fuel efficiency of cars? To find out, we use the <code>mtcars</code> dataset from the <code>datasets</code> package. The <code>mtcars</code> dataset originally came from the 1974 Motor Trend US magazine, and it contains design and performance data on 32 models of automobile.</p>
 
-<h1 class="title toc-ignore">drake</h1>
-<h3 class="subtitle"><em>data frames in R for Make</em></h3>
-<h4 class="author"><em>William Michael Landau</em></h4>
-<h4 class="date"><em>2017-11-05</em></h4>
+<pre><code class="r"># ?mtcars # more info
+head(mtcars)
+##                    mpg cyl disp  hp drat    wt  qsec vs am gear carb
+## Mazda RX4         21.0   6  160 110 3.90 2.620 16.46  0  1    4    4
+## Mazda RX4 Wag     21.0   6  160 110 3.90 2.875 17.02  0  1    4    4
+## Datsun 710        22.8   4  108  93 3.85 2.320 18.61  1  1    4    1
+## Hornet 4 Drive    21.4   6  258 110 3.08 3.215 19.44  1  0    3    1
+## Hornet Sportabout 18.7   8  360 175 3.15 3.440 17.02  0  0    3    2
+## Valiant           18.1   6  225 105 2.76 3.460 20.22  1  0    3    1
+</code></pre>
 
+<p>Here, <code>wt</code> is weight in tons, and <code>mpg</code> is fuel efficiency in miles per gallon. We want to figure out if there is an association between <code>wt</code> and <code>mpg</code>. The <code>mtcars</code> dataset itself only has 32 rows, so we generate two larger bootstrapped datasets and then analyze them with regression models. We summarize the regression models to see if there is an association.</p>
 
-<div id="TOC">
-<ul>
-<li><a href="#data-frames-in-r-for-make"><span class="toc-section-number">1</span> Data frames in R for <a href="http://kbroman.org/minimal_make/">Make</a></a></li>
-<li><a href="#installation"><span class="toc-section-number">2</span> Installation</a></li>
-<li><a href="#quickstart"><span class="toc-section-number">3</span> Quickstart</a></li>
-<li><a href="#useful-functions"><span class="toc-section-number">4</span> Useful functions</a></li>
-<li><a href="#documentation"><span class="toc-section-number">5</span> Documentation</a></li>
-<li><a href="#help-and-troubleshooting"><span class="toc-section-number">6</span> Help and troubleshooting</a></li>
-<li><a href="#reproducibility"><span class="toc-section-number">7</span> Reproducibility</a></li>
-<li><a href="#high-performance-computing"><span class="toc-section-number">8</span> High-performance computing</a></li>
-<li><a href="#acknowledgements-and-related-work"><span class="toc-section-number">9</span> Acknowledgements and related work</a></li>
-</ul>
-</div>
+<h1>A taste of <code>drake</code>&#39;s basic example</h1>
 
-<div class="figure">
-<img src="data:image/png;base64,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" />
+<p>Your workspace begins with a bunch of imports: functions, pre-loaded data objects, and saved files available before the real work begins.</p>
 
-</div>
-<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
-<div id="data-frames-in-r-for-make" class="section level1">
-<h1><span class="header-section-number">1</span> Data frames in R for <a href="http://kbroman.org/minimal_make/">Make</a></h1>
-<p>Drake is a workflow manager and build system for</p>
-<ol style="list-style-type: decimal">
-<li><a href="https://CRAN.R-project.org/view=ReproducibleResearch">Reproducibility</a>.</li>
-<li><a href="https://CRAN.R-project.org/view=HighPerformanceComputing">High-performance computing</a>.</li>
-</ol>
-<p>Organize your work in a data frame.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
-<span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd.</span>
-my_plan              <span class="co"># Each target is a file (single-quoted) or object.</span></code></pre></div>
-<pre><code>##                    target                                      command
-## 1             'report.md'             knit('report.Rmd', quiet = TRUE)
-## 2                   small                                  simulate(5)
-## 3                   large                                 simulate(50)
-## 4       regression1_small                                  reg1(small)
-## 5       regression1_large                                  reg1(large)
-## 6       regression2_small                                  reg2(small)
-## 7       regression2_large                                  reg2(large)
-## 8  summ_regression1_small suppressWarnings(summary(regression1_small))
-## 9  summ_regression1_large suppressWarnings(summary(regression1_large))
-## 10 summ_regression2_small suppressWarnings(summary(regression2_small))
-## 11 summ_regression2_large suppressWarnings(summary(regression2_large))
-## 12 coef_regression1_small              coefficients(regression1_small)
-## 13 coef_regression1_large              coefficients(regression1_large)
-## 14 coef_regression2_small              coefficients(regression2_small)
-## 15 coef_regression2_large              coefficients(regression2_large)</code></pre>
-<p>Then <code>make()</code> it to build all your targets.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>(my_plan) <span class="co"># Run the commands to build the targets.</span></code></pre></div>
-<p>If a target fails, diagnose it.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">failed</span>()                 <span class="co"># Targets that failed in the most recent `make()`</span>
-<span class="kw">diagnose</span>()               <span class="co"># Targets that failed in any previous `make()`</span>
-error &lt;-<span class="st"> </span><span class="kw">diagnose</span>(large) <span class="co"># Most recent verbose error log of `large`</span>
-<span class="kw">str</span>(error)               <span class="co"># Object of class &quot;error&quot;</span>
-error<span class="op">$</span>calls              <span class="co"># Call stack / traceback</span></code></pre></div>
-</div>
-<div id="installation" class="section level1">
-<h1><span class="header-section-number">2</span> Installation</h1>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">&quot;drake&quot;</span>) <span class="co"># latest CRAN release</span>
-devtools<span class="op">::</span><span class="kw">install_github</span>(
-  <span class="st">&quot;wlandau-lilly/drake@v4.2.0&quot;</span>,
-  <span class="dt">build =</span> <span class="ot">TRUE</span>
-) <span class="co"># GitHub release</span>
-devtools<span class="op">::</span><span class="kw">install_github</span>(<span class="st">&quot;wlandau-lilly/drake&quot;</span>, <span class="dt">build =</span> <span class="ot">TRUE</span>) <span class="co"># dev version</span></code></pre></div>
-<p>For <code>make(..., parallelism = &quot;Makefile&quot;)</code>, Windows users need to download and install <a href="https://cran.r-project.org/bin/windows/Rtools/"><code>Rtools</code></a>.</p>
-</div>
-<div id="quickstart" class="section level1">
-<h1><span class="header-section-number">3</span> Quickstart</h1>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
-<span class="kw">load_basic_example</span>() <span class="co"># Also (over)writes report.Rmd.</span>
-<span class="kw">plot_graph</span>(my_plan)  <span class="co"># Hover, click, drag, zoom, pan. See args 'from' and 'to'.</span>
-<span class="kw">outdated</span>(my_plan)    <span class="co"># Which targets need to be (re)built?</span>
-<span class="kw">missed</span>(my_plan)      <span class="co"># Are you missing anything from your workspace?</span>
-<span class="kw">check</span>(my_plan)       <span class="co"># Are you missing files? Is your workflow plan okay?</span>
-<span class="kw">make</span>(my_plan)        <span class="co"># Run the workflow.</span>
-<span class="kw">diagnose</span>(large)      <span class="co"># View error info if the target &quot;large&quot; failed to build.</span>
-<span class="kw">outdated</span>(my_plan)    <span class="co"># Everything is up to date.</span>
-<span class="kw">plot_graph</span>(my_plan)  <span class="co"># The graph also shows what is up to date.</span></code></pre></div>
-<p>Dive deeper into the built-in examples.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">example_drake</span>(<span class="st">&quot;basic&quot;</span>) <span class="co"># Write the code files of the canonical tutorial.</span>
-<span class="kw">examples_drake</span>()       <span class="co"># List the other examples.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>) <span class="co"># See https://cran.r-project.org/package=drake/vignettes</span></code></pre></div>
-</div>
-<div id="useful-functions" class="section level1">
-<h1><span class="header-section-number">4</span> Useful functions</h1>
-<p><code>make()</code>, <code>workplan()</code>, <code>failed()</code>, and <code>diagnose()</code> are the most important functions. Beyond that, there are functions to learn about drake,</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">load_basic_example</span>()
-<span class="kw">drake_tip</span>()
-<span class="kw">examples_drake</span>()
-<span class="kw">example_drake</span>()</code></pre></div>
-<p>set up your workflow plan,</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">analyses</span>()
-<span class="kw">summaries</span>()
-<span class="kw">evaluate</span>()
-<span class="kw">expand</span>()
-<span class="kw">gather</span>()
-<span class="kw">wildcard</span>() <span class="co"># from the wildcard package</span></code></pre></div>
-<p>explore the dependency network,</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">outdated</span>()
-<span class="kw">missed</span>()
-<span class="kw">plot_graph</span>() <span class="co"># Now with subgraphs too.</span>
-<span class="kw">dataframes_graph</span>()
-<span class="kw">render_graph</span>()
-<span class="kw">read_graph</span>()
-<span class="kw">deps</span>()
-knitr_deps
-<span class="kw">tracked</span>()</code></pre></div>
-<p>interact with the cache,</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">clean</span>()
-<span class="kw">cached</span>()
-<span class="kw">imported</span>()
-<span class="kw">built</span>()
-<span class="kw">readd</span>()
-<span class="kw">loadd</span>()
-<span class="kw">find_project</span>()
-<span class="kw">find_cache</span>()</code></pre></div>
-<p>make use of recorded build times,</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">build_times</span>()
-<span class="kw">predict_runtime</span>()
-<span class="kw">rate_limiting_times</span>()</code></pre></div>
-<p>speed up your project with parallel computing,</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">make</span>() <span class="co"># with jobs &gt; 2</span>
-<span class="kw">max_useful_jobs</span>()
-<span class="kw">parallelism_choices</span>()
-<span class="kw">shell_file</span>()</code></pre></div>
-<p>finely tune the caching and hashing,</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">available_hash_algos</span>()
-<span class="kw">cache_path</span>()
-<span class="kw">cache_types</span>()
-<span class="kw">configure_cache</span>()
-<span class="kw">default_long_hash_algo</span>()
-<span class="kw">default_short_hash_algo</span>()
-<span class="kw">long_hash</span>()
-<span class="kw">short_hash</span>()
-<span class="kw">new_cache</span>()
-<span class="kw">recover_cache</span>()
-<span class="kw">this_cache</span>()
-<span class="kw">type_of_cache</span>()</code></pre></div>
-<p>and debug your work.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">diagnose</span>()
-<span class="kw">check</span>()
-<span class="kw">session</span>()
-<span class="kw">in_progress</span>()
-<span class="kw">progress</span>()
-<span class="kw">config</span>()
-<span class="kw">read_config</span>()</code></pre></div>
-</div>
-<div id="documentation" class="section level1">
-<h1><span class="header-section-number">5</span> Documentation</h1>
-<p>The <a href="https://CRAN.R-project.org/package=drake">CRAN page</a> links to multiple rendered vignettes.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">vignette</span>(<span class="dt">package =</span> <span class="st">&quot;drake&quot;</span>)            <span class="co"># List the vignettes.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;drake&quot;</span>)                      <span class="co"># High-level intro.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;graph&quot;</span>)                      <span class="co"># Visualilze the workflow graph.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>)                 <span class="co"># Walk through a simple example.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;parallelism&quot;</span>) <span class="co"># Lots of parallel computing support.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;storage&quot;</span>)                    <span class="co"># Learn how drake stores your stuff.</span>
-<span class="kw">vignette</span>(<span class="st">&quot;timing&quot;</span>)                     <span class="co"># Build times, runtime predictions</span>
-<span class="kw">vignette</span>(<span class="st">&quot;caution&quot;</span>)                    <span class="co"># Avoid common pitfalls.</span></code></pre></div>
-</div>
-<div id="help-and-troubleshooting" class="section level1">
-<h1><span class="header-section-number">6</span> Help and troubleshooting</h1>
-<p>Please refer to <a href="https://github.com/wlandau-lilly/drake/blob/master/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> on the <a href="https://github.com/wlandau-lilly/drake">GitHub page</a> for instructions.</p>
-</div>
-<div id="reproducibility" class="section level1">
-<h1><span class="header-section-number">7</span> Reproducibility</h1>
-<p>There is room to improve the conversation and the landscape of reproducibility in the R and Statistics communities. At a more basic level than scientific replicability, literate programming, and version control, reproducibility carries an implicit promise that the alleged results of an analysis really do match the code. Drake helps keep this promise by tracking the relationships among the components of the analysis, a rare and effective approach that also saves time.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
-<span class="kw">load_basic_example</span>()
-<span class="kw">outdated</span>(my_plan) <span class="co"># Which targets need to be (re)built?</span>
-<span class="kw">make</span>(my_plan)     <span class="co"># Build what needs to be built.</span>
-<span class="kw">outdated</span>(my_plan) <span class="co"># Everything is up to date.</span>
-<span class="co"># Change one of your functions.</span>
-reg2 &lt;-<span class="st"> </span><span class="cf">function</span>(d) {
-  d<span class="op">$</span>x3 &lt;-<span class="st"> </span>d<span class="op">$</span>x <span class="op">^</span><span class="st"> </span><span class="dv">3</span>
-  <span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x3, <span class="dt">data =</span> d)
+<pre><code class="r">load_basic_example(verbose = FALSE) # Get the code with drake_example(&quot;basic&quot;).
+
+# Drake looks for data objects and functions in your R session environment
+ls()
+##  [1] &quot;b&quot;          &quot;bad_plan&quot;   &quot;command&quot;    &quot;config&quot;     &quot;datasets&quot;  
+##  [6] &quot;debug_plan&quot; &quot;envir&quot;      &quot;error&quot;      &quot;f&quot;          &quot;files&quot;     
+## [11] &quot;good_plan&quot;  &quot;my_plan&quot;    &quot;myplan&quot;     &quot;reg1&quot;       &quot;reg2&quot;      
+## [16] &quot;rules&quot;      &quot;simulate&quot;   &quot;tmp&quot;        &quot;x&quot;
+
+# and saved files in your file system.
+list.files()
+##  [1] &quot;best-practices.R&quot;     &quot;best-practices.Rmd&quot;   &quot;best-practices.html&quot; 
+##  [4] &quot;best-practices.md&quot;    &quot;caution.R&quot;            &quot;caution.Rmd&quot;         
+##  [7] &quot;caution.html&quot;         &quot;caution.md&quot;           &quot;debug.R&quot;             
+## [10] &quot;debug.Rmd&quot;            &quot;debug.html&quot;           &quot;debug.md&quot;            
+## [13] &quot;drake.R&quot;              &quot;drake.Rmd&quot;            &quot;example-gsp.Rmd&quot;     
+## [16] &quot;example-packages.Rmd&quot; &quot;graph.Rmd&quot;            &quot;logo-vignettes.png&quot;  
+## [19] &quot;parallelism.Rmd&quot;      &quot;quickstart.Rmd&quot;       &quot;report.R&quot;            
+## [22] &quot;report.Rmd&quot;           &quot;storage.Rmd&quot;          &quot;timing.Rmd&quot;
+</code></pre>
+
+<p>Your real work is outlined in a data frame of data analysis steps called &ldquo;targets&rdquo;. The targets depend on the imports, and <code>drake</code> will figure out how they are all connected.</p>
+
+<pre><code class="r">my_plan
+##                    target
+## 1             &#39;report.md&#39;
+## 2                   small
+## 3                   large
+## 4       regression1_small
+## 5       regression1_large
+## 6       regression2_small
+## 7       regression2_large
+## 8  summ_regression1_small
+## 9  summ_regression1_large
+## 10 summ_regression2_small
+## 11 summ_regression2_large
+## 12 coef_regression1_small
+## 13 coef_regression1_large
+## 14 coef_regression2_small
+## 15 coef_regression2_large
+##                                                      command
+## 1                           knit(&#39;report.Rmd&#39;, quiet = TRUE)
+## 2                                               simulate(48)
+## 3                                               simulate(64)
+## 4                                                reg1(small)
+## 5                                                reg1(large)
+## 6                                                reg2(small)
+## 7                                                reg2(large)
+## 8     suppressWarnings(summary(regression1_small$residuals))
+## 9     suppressWarnings(summary(regression1_large$residuals))
+## 10    suppressWarnings(summary(regression2_small$residuals))
+## 11    suppressWarnings(summary(regression2_large$residuals))
+## 12 suppressWarnings(summary(regression1_small))$coefficients
+## 13 suppressWarnings(summary(regression1_large))$coefficients
+## 14 suppressWarnings(summary(regression2_small))$coefficients
+## 15 suppressWarnings(summary(regression2_large))$coefficients
+</code></pre>
+
+<p>Wildcard templating generates these data frames at scale.</p>
+
+<pre><code class="r">library(magrittr)
+dataset_plan &lt;- drake_plan(
+  small = simulate(5),
+  large = simulate(50)
+)
+dataset_plan
+##   target      command
+## 1  small  simulate(5)
+## 2  large simulate(50)
+
+analysis_methods &lt;- drake_plan(
+  regression = regNUMBER(dataset__) # nolint
+) %&gt;%
+  evaluate_plan(wildcard = &quot;NUMBER&quot;, values = 1:2)
+analysis_methods
+##         target         command
+## 1 regression_1 reg1(dataset__)
+## 2 regression_2 reg2(dataset__)
+
+analysis_plan &lt;- plan_analyses(
+  plan = analysis_methods,
+  datasets = dataset_plan
+)
+analysis_plan
+##               target     command
+## 1 regression_1_small reg1(small)
+## 2 regression_1_large reg1(large)
+## 3 regression_2_small reg2(small)
+## 4 regression_2_large reg2(large)
+
+whole_plan &lt;- rbind(dataset_plan, analysis_plan)
+whole_plan
+##               target      command
+## 1              small  simulate(5)
+## 2              large simulate(50)
+## 3 regression_1_small  reg1(small)
+## 4 regression_1_large  reg1(large)
+## 5 regression_2_small  reg2(small)
+## 6 regression_2_large  reg2(large)
+</code></pre>
+
+<p>Using static code analysis, <code>drake</code> detects the dependencies of all your targets. The result is an interactive network diagram.</p>
+
+<pre><code class="r">vis_drake_graph(my_plan)
+</code></pre>
+
+<p><iframe
+src = "https://cdn.rawgit.com/ropensci/drake/0b76e536/images/outdated.html"
+width = "100%" height = "600px" allowtransparency="true"
+style="border: none; box-shadow: none">
+</iframe></p>
+
+<p>At this point, all your targets are out of date because the project is new.</p>
+
+<pre><code class="r">config &lt;- drake_config(my_plan, verbose = FALSE) # Master configuration list
+outdated(config)
+##  [1] &quot;&#39;report.md&#39;&quot;            &quot;coef_regression1_large&quot;
+##  [3] &quot;coef_regression1_small&quot; &quot;coef_regression2_large&quot;
+##  [5] &quot;coef_regression2_small&quot; &quot;large&quot;                 
+##  [7] &quot;regression1_large&quot;      &quot;regression1_small&quot;     
+##  [9] &quot;regression2_large&quot;      &quot;regression2_small&quot;     
+## [11] &quot;small&quot;                  &quot;summ_regression1_large&quot;
+## [13] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
+## [15] &quot;summ_regression2_small&quot;
+</code></pre>
+
+<p>The <code>make()</code> function traverses the network and builds the targets that require updates.</p>
+
+<pre><code class="r">make(my_plan)
+## cache /tmp/Rtmp7EbM7A/Rbuild75ca54d145b9/drake/vignettes/.drake
+## connect 23 imports: reg1, error, reg2, envir, b, rules, files, command, simul...
+## connect 15 targets: &#39;report.md&#39;, small, large, regression1_small, regression1...
+## check 9 items: &#39;report.Rmd&#39;, data.frame, knit, lm, mtcars, nrow, sample.int, ...
+## check 3 items: reg1, reg2, simulate
+## check 2 items: large, small
+## target large
+## target small
+## check 4 items: regression1_large, regression1_small, regression2_large, regre...
+## target regression1_large
+## target regression1_small
+## target regression2_large
+## target regression2_small
+## check 8 items: coef_regression1_large, coef_regression1_small, coef_regressio...
+## target coef_regression1_large
+## target coef_regression1_small
+## target coef_regression2_large
+## target coef_regression2_small
+## target summ_regression1_large
+## target summ_regression1_small
+## target summ_regression2_large
+## target summ_regression2_small
+## check 1 item: &#39;report.md&#39;
+## unload 11 items: regression1_small, regression1_large, regression2_small, reg...
+## target &#39;report.md&#39;
+</code></pre>
+
+<p>For the <code>reg2()</code> model on the small dataset, the p-value on <code>x2</code> is so small that there may be an association between weight and fuel efficiency after all.</p>
+
+<pre><code class="r">readd(coef_regression2_small)
+## cache /tmp/Rtmp7EbM7A/Rbuild75ca54d145b9/drake/vignettes/.drake
+##               Estimate Std. Error  t value     Pr(&gt;|t|)
+## (Intercept) 28.2685834 1.04298306 27.10359 6.285517e-30
+## x2          -0.6517132 0.07053517 -9.23955 4.732794e-12
+</code></pre>
+
+<p>The project is currently up to date, so the next <code>make()</code> does nothing.</p>
+
+<pre><code class="r">make(my_plan)
+## cache /tmp/Rtmp7EbM7A/Rbuild75ca54d145b9/drake/vignettes/.drake
+## Unloading targets from environment:
+##   coef_regression2_small
+##   small
+##   large
+## connect 23 imports: reg1, error, reg2, envir, b, rules, files, command, simul...
+## connect 15 targets: &#39;report.md&#39;, small, large, regression1_small, regression1...
+## check 9 items: &#39;report.Rmd&#39;, data.frame, knit, lm, mtcars, nrow, sample.int, ...
+## check 3 items: reg1, reg2, simulate
+## check 2 items: large, small
+## check 4 items: regression1_large, regression1_small, regression2_large, regre...
+## check 8 items: coef_regression1_large, coef_regression1_small, coef_regressio...
+## check 1 item: &#39;report.md&#39;
+## All targets are already up to date.
+</code></pre>
+
+<p>But a nontrivial change in <code>reg2()</code> triggers updates to all the affected downstream targets.</p>
+
+<pre><code class="r">reg2 &lt;- function(d){
+  d$x3 &lt;- d$x ^ 3
+  lm(y ~ x3, data = d)
 }
-<span class="kw">outdated</span>(my_plan)   <span class="co"># Some targets depend on reg2().</span>
-<span class="kw">plot_graph</span>(my_plan) <span class="co"># Set targets_only to TRUE for smaller graphs.</span>
-<span class="kw">make</span>(my_plan)       <span class="co"># Rebuild just the outdated targets.</span>
-<span class="kw">outdated</span>(my_plan)   <span class="co"># Everything is up to date again.</span>
-<span class="kw">plot_graph</span>(my_plan) <span class="co"># The colors changed in the graph.</span></code></pre></div>
-<p>Similarly to imported functions like <code>reg2()</code>, <code>drake</code> reacts to changes in</p>
-<ol style="list-style-type: decimal">
-<li>Other imported functions, whether user-defined or from packages.</li>
-<li>For imported functions from your environment, any nested functions also in your environment or from packages.</li>
-<li>Commands in your workflow plan data frame.</li>
-<li>Global variables mentioned in the commands or imported functions.</li>
-<li>Upstream targets.</li>
-<li>For <a href="https://yihui.name/knitr/">dynamic knitr reports</a> (with <code>knit('your_report.Rmd')</code> as a command in your workflow plan data frame), targets and imports mentioned in calls to <code>readd()</code> and <code>loadd()</code> in the code chunks to be evaluated. <code>Drake</code> treats these targets and imports as dependencies of the compiled output target (say, <code>report.md</code>).</li>
-</ol>
-<p>See the <code>quickstart</code> vignette for demonstrations of <code>drake</code>’s reproducibility and reactivity. See the <code>graph</code> vignette for a walkthrough of the workflow plan visualizations.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">vignette</span>(<span class="st">&quot;graph&quot;</span>)
-<span class="kw">vignette</span>(<span class="st">&quot;quickstart&quot;</span>)</code></pre></div>
-<p>You can enhance reproducibility beyond the scope of <code>drake</code>. <a href="https://rstudio.github.io/packrat">Packrat</a> creates a tightly-controlled local library of packages to extend the shelf life of your project. And with <a href="https://www.docker.com/">Docker</a>, you can execute your project on a <a href="https://en.wikipedia.org/wiki/Virtual_machine">virtual machine</a> to ensure platform independence. Together, <a href="https://rstudio.github.io/packrat">packrat</a> and <a href="https://www.docker.com/">Docker</a> can help others reproduce your work even if they have different software and hardware.</p>
-</div>
-<div id="high-performance-computing" class="section level1">
-<h1><span class="header-section-number">8</span> High-performance computing</h1>
-<p>Similarly to <a href="https://www.gnu.org/software/make/">Make</a>, drake arranges the intermediate steps of your workflow in a dependency web. This network is the key to drake’s parallel computing. For example, consider the network graph of the basic example.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(drake)
-<span class="kw">load_basic_example</span>()
-<span class="kw">make</span>(my_plan, <span class="dt">jobs =</span> <span class="dv">2</span>, <span class="dt">verbose =</span> <span class="ot">FALSE</span>) <span class="co"># Parallelize with 2 jobs.</span>
-<span class="co"># Change one of your functions.</span>
-reg2 &lt;-<span class="st"> </span><span class="cf">function</span>(d){
-  d<span class="op">$</span>x3 &lt;-<span class="st"> </span>d<span class="op">$</span>x <span class="op">^</span><span class="st"> </span><span class="dv">3</span>
-  <span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x3, <span class="dt">data =</span> d)
-}</code></pre></div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Hover, click, drag, zoom, and pan. See args 'from' and 'to'.</span>
-<span class="kw">plot_graph</span>(my_plan, <span class="dt">width =</span> <span class="st">&quot;100%&quot;</span>, <span class="dt">height =</span> <span class="st">&quot;500px&quot;</span>)</code></pre></div>
-<iframe src="https://cdn.rawgit.com/wlandau-lilly/drake/2211b300/images/reg2.html" width="100%" height="600px" allowtransparency="true" style="border: none; box-shadow: none">
-</iframe>
-<p>When you call <code>make(my_plan, jobs = 4)</code>, the work proceeds in chronological order from left to right. The items are built or imported column by column in sequence, and up-to-date targets are skipped. Within each column, the targets/objects are all independent of each other conditional on the previous steps, so they are distributed over the 4 available parallel jobs/workers. Assuming the targets are rate-limiting (as opposed to imported objects), the next <code>make(..., jobs = 4)</code> should be faster than <code>make(..., jobs = 1)</code>, but it would be superfluous to use more than 4 jobs. See function <code>max_useful_jobs()</code> to suggest the number of jobs, taking into account which targets are already up to date.</p>
-<p>As for the implementation, you can choose from multiple built-in parallel backends, including <code>parLapply()</code>, <code>mclapply()</code>, <a href="https://www.gnu.org/software/make/"><code>Makefiles</code></a>, and the staggering array of backends available through the <a href="https://github.com/HenrikBengtsson/future">future</a> and <a href="https://github.com/HenrikBengtsson/future.batchtools">future.batchtools</a> packages. Please see the <a href="https://github.com/wlandau-lilly/drake/blob/master/vignettes/parallelism.Rmd">parallelism vignette</a> for details.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">vignette</span>(<span class="st">&quot;parallelism&quot;</span>)</code></pre></div>
-</div>
-<div id="acknowledgements-and-related-work" class="section level1">
-<h1><span class="header-section-number">9</span> Acknowledgements and related work</h1>
-<p>Many thanks to these people for contributing amazing ideas and code patches early in the development of <code>drake</code> and its predecessors <a href="https://github.com/wlandau/parallelRemake">parallelRemake</a> and <a href="https://github.com/wlandau/remakeGenerator">remakeGenerator</a>.</p>
+
+make(my_plan)
+## cache /tmp/Rtmp7EbM7A/Rbuild75ca54d145b9/drake/vignettes/.drake
+## connect 23 imports: reg1, error, reg2, envir, b, rules, files, command, simul...
+## connect 15 targets: &#39;report.md&#39;, small, large, regression1_small, regression1...
+## check 9 items: &#39;report.Rmd&#39;, data.frame, knit, lm, mtcars, nrow, sample.int, ...
+## check 3 items: reg1, reg2, simulate
+## check 2 items: large, small
+## check 4 items: regression1_large, regression1_small, regression2_large, regre...
+## check 4 items: coef_regression1_large, coef_regression1_small, summ_regressio...
+## load 2 items: large, small
+## target regression2_large
+## target regression2_small
+## check 4 items: coef_regression2_large, coef_regression2_small, summ_regressio...
+## target coef_regression2_large
+## target coef_regression2_small
+## target summ_regression2_large
+## target summ_regression2_small
+## check 1 item: &#39;report.md&#39;
+## unload 5 items: regression2_small, regression2_large, summ_regression2_small,...
+## target &#39;report.md&#39;
+</code></pre>
+
+<h1>Built-in example projects</h1>
+
+<p><code>Drake</code> has <a href="https://github.com/ropensci/drake/tree/master/inst/examples">built-in example projects</a>. You can generate the code files for an example with <code>drake_example()</code>, and you can list the available examples with <code>drake_examples()</code>. For instance, <code>drake_example(&quot;gsp&quot;)</code> generates the R script and R Markdown report for the built-in econometrics data analysis project. See below for the currently supported examples.</p>
+
+<h2>Learn how to use <code>drake</code>.</h2>
+
 <ul>
-<li><a href="https://github.com/AlexAxthelm">Alex Axthelm</a></li>
-<li><a href="https://github.com/mrchypark">Chan-Yub Park</a></li>
-<li><a href="https://github.com/dfalster">Daniel Falster</a></li>
-<li><a href="https://github.com/HenrikBengtsson">Henrik Bengtsson</a></li>
-<li><a href="http://www.jarad.me/">Jarad Niemi</a></li>
-<li><a href="https://github.com/dapperjapper">Jasper Clarkberg</a></li>
-<li><a href="https://github.com/kendonB">Kendon Bell</a></li>
-<li><a href="https://github.com/krlmlr">Kirill Müller</a></li>
+<li><code>basic</code>: A tiny, minimal example with the <code>mtcars</code> dataset to demonstrate how to use <code>drake</code>. Use <code>load_basic_example()</code> to set up the project in your workspace. The <a href="https://github.com/ropensci/drake/blob/master/vignettes/quickstart.Rmd">quickstart vignette</a> is a parallel walkthrough of the same example. </li>
+<li><code>gsp</code>: A more concrete, practical example using real econometrics data. It explores the relationships between gross state product and other quantities, and it shows off <code>drake</code>&#39;s ability to generate lots of reproducibly-tracked tasks with ease.</li>
+<li><code>packages</code>: A concrete, practical example using data on R package downloads. It demonstrates how <code>drake</code> can refresh a project based on new incoming data without restarting everything from scratch.</li>
 </ul>
-<p>Special thanks to <a href="http://www.jarad.me/">Jarad</a>, my advisor from <a href="http://stat.iastate.edu/">graduate school</a>, for first introducing me to the idea of <a href="https://www.gnu.org/software/make/">Makefiles</a> for research. It took several months to convince me, and I am glad he succeeded.</p>
-<p>The original idea of a time-saving reproducible build system extends back decades to <a href="http://kbroman.org/minimal_make/">GNU Make</a>, which today helps <a href="http://blog.kaggle.com/2012/10/15/make-for-data-scientists/">data scientists</a> as well as the original user base of complied-language programmers. More recently, <a href="http://richfitz.github.io/">Rich FitzJohn</a> created <a href="https://github.com/richfitz/remake">remake</a>, a breakthrough reimagining of <a href="http://kbroman.org/minimal_make/">Make</a> for R and the most important inspiration for drake. Drake is a fresh reinterpretation of some of <a href="https://github.com/richfitz/remake">remake</a>’s pioneering fundamental concepts, scaled up for computationally-demanding workflows. There are <a href="https://github.com/pditommaso/awesome-pipeline">many other pipeline toolkits</a>, but few are R-focused.</p>
-<p>In the sphere of reproducibility, drake and <a href="https://github.com/richfitz/remake">remake</a> are examples of non-literate programming tools (as opposed to literate programming tools such as <a href="https://CRAN.R-project.org/package=knitr">knitr</a>). Counterparts include <a href="https://CRAN.R-project.org/package=R.cache">R.cache</a>, <a href="https://CRAN.R-project.org/package=archivist">archivist</a>, <a href="https://github.com/gmbecker/recordr">trackr</a>, and <a href="https://CRAN.R-project.org/package=memoise">memoise</a>. See the <a href="https://CRAN.R-project.org/view=ReproducibleResearch">reproducible research CRAN task view</a> for a more comprehensive list. Drake differentiates itself from these tools with its ability to track the relationships among cached objects and its extensive high-performance computing functionality.</p>
-<pre><code>## cache C:/Users/c240390/AppData/Local/Temp/RtmpSQkVhU/Rbuild2db86da6234/drake/...</code></pre>
-</div>
 
+<h2>High-performance computing</h2>
 
+<ul>
+<li><code>Docker-psock</code>: demonstrates how to deploy targets to a <a href="https://www.docker.com/what-container">Docker container</a> using a specialized PSOCK cluster.</li>
+<li><code>Makefile-cluster</code>: uses <a href="https://www.gnu.org/software/make/">Makefiles</a> to deploy targets to a generic cluster (configurable).</li>
+<li><code>sge</code>: uses <code>&quot;future_lapply&quot;</code> parallelism to deploy targets to a <a href="https://supcom.hgc.jp/english/utili_info/manual/uge.html">Sun/Univa Grid Engine</a> cluster. Other clusters are similar. See the <a href="https://github.com/mllg/batchtools/tree/master/inst/templates">batchtools/inst/templates</a> and <a href="https://github.com/HenrikBengtsson/future.batchtools/tree/master/inst/templates">future.batchtools/inst/templates</a> for more example <code>*.tmpl</code> template files.</li>
+<li><code>slurm</code>: similar to <code>sge</code>, but for <a href="https://slurm.schedmd.com">SLURM</a>.</li>
+<li><code>torque</code>: similar to <code>sge</code>, but for <a href="http://www.adaptivecomputing.com/products/open-source/torque/">TORQUE</a>.</li>
+</ul>
 
-<!-- dynamically load mathjax for compatibility with self-contained -->
-<script>
-  (function () {
-    var script = document.createElement("script");
-    script.type = "text/javascript";
-    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
-    document.getElementsByTagName("head")[0].appendChild(script);
-  })();
-</script>
+<p>Regarding the high-performance computing examples, there is no one-size-fits-all <code>*.tmpl</code> configuration file for any job scheduler, so we cannot guarantee that the above examples will work for you out of the box. To learn how to configure the files to suit your needs, you should make sure you understand how to use your job scheduler and <a href="https://github.com/mllg/batchtools">batchtools</a>.</p>
 
 </body>
+
 </html>

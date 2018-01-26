@@ -2,26 +2,32 @@
 % Please edit documentation in R/dataframes_graph_utils.R
 \name{legend_nodes}
 \alias{legend_nodes}
-\title{Function legend_nodes}
+\title{Create the nodes data frame used in the legend
+of \code{\link{vis_drake_graph}()}.}
 \usage{
 legend_nodes(font_size = 20)
 }
 \arguments{
 \item{font_size}{font size of the node label text}
 }
+\value{
+A data frame of legend nodes for \code{\link{vis_drake_graph}()}.
+}
 \description{
 Output a \code{visNetwork}-friendly
 data frame of nodes. It tells you what
 the colors and shapes mean
-in \code{\link{plot_graph}()}.
+in \code{\link{vis_drake_graph}()}.
 }
 \examples{
 \dontrun{
+# Show the legend nodes used in vis_drake_graph().
+# For example, you may want to inspect the color palette more closely.
 visNetwork::visNetwork(nodes = legend_nodes())
 }
 }
 \seealso{
 \code{\link{drake_palette}()},
-\code{\link{plot_graph}()},
+\code{\link{vis_drake_graph}()},
 \code{\link{dataframes_graph}()}
 }

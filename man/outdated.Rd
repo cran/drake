@@ -2,62 +2,60 @@
 % Please edit documentation in R/outdated.R
 \name{outdated}
 \alias{outdated}
-\title{Function outdated}
+\title{List the targets that are out of date.}
 \usage{
-outdated(plan = workplan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
-  force(code) }, cache = drake::get_cache(verbose = verbose),
-  parallelism = drake::default_parallelism(), jobs = 1,
-  packages = rev(.packages()), prework = character(0), config = NULL)
+outdated(config, make_imports = TRUE)
 }
 \arguments{
-\item{plan}{same as for \code{\link{make}}}
-
-\item{targets}{same as for \code{\link{make}}}
-
-\item{envir}{same as for \code{\link{make}}. Overrides
-\code{config$envir}.}
-
-\item{verbose}{same as for \code{\link{make}}}
-
-\item{hook}{same as for \code{\link{make}}}
-
-\item{cache}{optional drake cache. See code{\link{new_cache}()}.
-The \code{cache} argument is ignored if a
-non-null \code{config} argument is supplied.}
-
-\item{parallelism}{same as for \code{\link{make}}}
-
-\item{jobs}{same as for \code{\link{make}}}
-
-\item{packages}{same as for \code{\link{make}}}
-
-\item{prework}{same as for \code{\link{make}}}
-
 \item{config}{option internal runtime parameter list of
 \code{\link{make}(...)},
-produced with \code{\link{config}()}.
-\code{config$envir} is ignored.
-Overrides all the other arguments if not \code{NULL}.
-For example,
-\code{plan} is replaced with \code{config$plan}.
-Computing \code{config}
-in advance could save time if you plan multiple calls to
-\code{outdated()}.}
+produced with \code{\link{drake_config}()}.
+You must use a fresh \code{config} argument with an up-to-date
+\code{config$targets} element that was never modified by hand.
+If needed, rerun \code{\link{drake_config}()} early and often.
+See the details in the help file for \code{\link{drake_config}()}.}
+
+\item{make_imports}{logical, whether to make the imports first.
+Set to \code{FALSE} to save some time and risk obsolete output.}
+}
+\value{
+Character vector of the names of outdated targets.
 }
 \description{
-Check which targets are out of date and need to be rebuilt.
-IMPORTANT: you must be in the root directory of your project.
+Outdated targets will be rebuilt in the next
+\code{\link{make}()}.
+}
+\details{
+\code{outdated()} is sensitive to the alternative triggers
+described at
+\url{https://github.com/ropensci/drake/blob/master/vignettes/debug.Rmd#test-with-triggers}. # nolint
+For example, even if \code{outdated(...)} shows everything up to date,
+\code{outdated(..., trigger = "always")} will show
+all targets out of date.
+You must use a fresh \code{config} argument with an up-to-date
+\code{config$targets} element that was never modified by hand.
+If needed, rerun \code{\link{drake_config}()} early and often.
+See the details in the help file for \code{\link{drake_config}()}.
 }
 \examples{
 \dontrun{
-load_basic_example()
-outdated(my_plan)
-make(my_plan)
-outdated(my_plan)
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
+# Recopute the config list early and often to have the
+# most current information. Do not modify the config list by hand.
+config <- drake_config(my_plan)
+outdated(config = config) # Which targets are out of date?
+config <- make(my_plan) # Run the projects, build the targets.
+# Now, everything should be up to date (no targets listed).
+outdated(config = config)
+# outdated() is sensitive to triggers.
+# See the "debug" vignette for more on triggers.
+config$trigger <- "always"
+outdated(config = config)
+})
 }
 }
 \seealso{
-\code{\link{missed}}, \code{\link{workplan}},
-\code{\link{make}}, \code{\link{plot_graph}}
+\code{\link{missed}}, \code{\link{drake_plan}},
+\code{\link{make}}, \code{\link{vis_drake_graph}}
 }

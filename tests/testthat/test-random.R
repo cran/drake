@@ -10,7 +10,7 @@ test_with_dir("Random targets are reproducible", {
   parallelism <- scenario$parallelism
   jobs <- scenario$jobs
 
-  data <- workplan(
+  data <- drake_plan(
     x = runif(20),
     y = runif(20),
     z = rnorm(20),
@@ -23,7 +23,8 @@ test_with_dir("Random targets are reproducible", {
     envir = env,
     parallelism = parallelism,
     jobs = jobs,
-    verbose = FALSE
+    verbose = FALSE,
+    session_info = FALSE
   )
   old_x <- readd(x)
   old_y <- readd(y)
@@ -40,7 +41,8 @@ test_with_dir("Random targets are reproducible", {
     envir = env,
     parallelism = parallelism,
     jobs = jobs,
-    verbose = FALSE
+    verbose = FALSE,
+    session_info = FALSE
   )
 
   expect_identical(con$seed, con2$seed)
@@ -59,7 +61,8 @@ test_with_dir("Random targets are reproducible", {
     envir = env,
     parallelism = parallelism,
     jobs = jobs,
-    verbose = FALSE
+    verbose = FALSE,
+    session_info = FALSE
   )
   expect_false(identical(con$seed, con3$seed))
   expect_false(identical(readd(x), old_x))

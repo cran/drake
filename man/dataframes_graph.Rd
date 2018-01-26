@@ -2,86 +2,17 @@
 % Please edit documentation in R/dataframes_graph.R
 \name{dataframes_graph}
 \alias{dataframes_graph}
-\title{Function \code{dataframes_graph}}
+\title{Create the underlying node and edge data frames
+behind \code{\link{vis_drake_graph}()}.}
 \usage{
-dataframes_graph(plan = workplan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
-  force(code) }, cache = drake::get_cache(verbose = verbose), jobs = 1,
-  parallelism = drake::default_parallelism(), packages = rev(.packages()),
-  prework = character(0), build_times = TRUE, digits = 3,
+dataframes_graph(config, from = NULL, mode = c("out", "in", "all"),
+  order = NULL, subset = NULL, build_times = TRUE, digits = 3,
   targets_only = FALSE, split_columns = FALSE, font_size = 20,
-  config = NULL, from = NULL, mode = c("out", "in", "all"),
-  order = NULL, subset = NULL, from_scratch = FALSE)
+  from_scratch = FALSE, make_imports = TRUE)
 }
 \arguments{
-\item{plan}{workflow plan data frame, same as for function
-\code{\link{make}()}.}
-
-\item{targets}{names of targets to build, same as for function
-\code{\link{make}()}.}
-
-\item{envir}{environment to import from, same as for function
-\code{\link{make}()}. \code{config$envir} is ignored in favor
-of \code{envir}.}
-
-\item{verbose}{logical, whether to output messages to the console.}
-
-\item{hook}{same as for \code{\link{make}}}
-
-\item{cache}{optional drake cache. Only used if the \code{config}
-argument is \code{NULL} (default). See code{\link{new_cache}()}.}
-
-\item{jobs}{The \code{outdated()} function is called internally,
-and it needs to import objects and examine your
-input files to see what has been updated. This could take some time,
-and parallel computing may be needed
-to speed up the process. The \code{jobs} argument is number of parallel jobs
-to use for faster computation.}
-
-\item{parallelism}{Choice of parallel backend to speed up the computation.
-Execution order in \code{\link{make}()} is slightly different when
-\code{parallelism} equals \code{'Makefile'}
-because in that case, all the imports are imported
-before any target is built.
-Thus, the arrangement in the graph is different for Makefile parallelism.
-See \code{?parallelism_choices} for details.}
-
-\item{packages}{same as for \code{\link{make}}}
-
-\item{prework}{same as for \code{\link{make}}}
-
-\item{build_times}{logical, whether to show the \code{\link{build_times}()}
-of the targets and imports, if available.
-These are just elapsed times from \code{system.time()}.}
-
-\item{digits}{number of digits for rounding the build times}
-
-\item{targets_only}{logical,
-whether to skip the imports and only include the
-targets in the workflow plan.}
-
-\item{split_columns}{logical, whether to break up the
-columns of nodes to make the aspect ratio of the rendered
-graph closer to 1:1. This improves the viewing experience,
-but the columns no longer strictly represent parallelizable
-stages of build items. (Although the targets/imports
-in each column are still conditionally independent,
-there may be more conditional independence than the graph
-indicates.)}
-
-\item{font_size}{numeric, font size of the node labels in the graph}
-
-\item{config}{option internal runtime parameter list of
-\code{\link{make}(...)},
-produced with \code{\link{config}()}.
-\code{config$envir} is ignored.
-Otherwise, computing this
-in advance could save time if you plan multiple calls to
-\code{dataframes_graph()}.
-If not \code{NULL},
-\code{config} overrides all arguments except
-\code{build_times}, \code{digits}, \code{targets_only},
-\code{split_columns}, and \code{font_size}.}
+\item{config}{a \code{\link{drake_config}()} configuration list.
+You can get one as a return value from \code{\link{make}()} as well.}
 
 \item{from}{Optional collection of target/import names.
 If \code{from} is nonempty,
@@ -107,42 +38,72 @@ Subset of nodes to display in the graph.
 Applied after \code{from}, \code{mode}, and \code{order}.
 Be advised: edges are only kept for adjacent nodes in \code{subset}.
 If you do not select all the intermediate nodes,
-edges will drop from the graph.}
+edges will drop from the graph.=}
 
-\item{from_scratch}{logical, whether to assume that
-all targets are out of date and the next \code{\link{make}()}
-will happen from scratch. Setting to \code{TRUE} will prevent
-the graph from showing you which targets are up to date,
-but it makes computing the graph much faster.}
+\item{build_times}{logical, whether to show the \code{\link{build_times}()}
+of the targets and imports, if available.
+These are just elapsed times from \code{system.time()}.}
+
+\item{digits}{number of digits for rounding the build times}
+
+\item{targets_only}{logical,
+whether to skip the imports and only include the
+targets in the workflow plan.}
+
+\item{split_columns}{logical, whether to break up the
+columns of nodes to make the aspect ratio of the rendered
+graph closer to 1:1. This improves the viewing experience,
+but the columns no longer strictly represent parallelizable
+stages of build items. (Although the targets/imports
+in each column are still conditionally independent,
+there may be more conditional independence than the graph
+indicates.)}
+
+\item{font_size}{numeric, font size of the node labels in the graph}
+
+\item{from_scratch}{logical, whether to assume all the targets
+will be made from scratch on the next \code{\link{make}()}.
+Makes all targets outdated, but keeps information about
+build progress in previous \code{\link{make}()}s.}
+
+\item{make_imports}{logical, whether to make the imports first.
+Set to \code{FALSE} to increase speed and risk using obsolete information.}
 }
 \value{
-a list of three data frames: one for nodes,
+A list of three data frames: one for nodes,
 one for edges, and one for
-the legend/key nodes. The list also contains the
+the legend nodes. The list also contains the
 default title of the graph.
 }
 \description{
-Get the information about nodes, edges, and the legend/key
-so you can plot your own custom \code{visNetwork}.
+With the returned data frames,
+you can plot your own custom \code{visNetwork} graph.
 }
 \examples{
 \dontrun{
-load_basic_example()
-raw_graph <- dataframes_graph(my_plan)
+test_with_dir("Quarantine side effects.", {
+config <- load_basic_example() # Get the code with drake_example("basic").
+# Get a list of data frames representing the nodes, edges,
+# and legend nodes of the visNetwork graph from vis_drake_graph().
+raw_graph <- dataframes_graph(config = config)
+# Choose a subset of the graph.
 smaller_raw_graph <- dataframes_graph(
-  my_plan,
+  config = config,
   from = c("small", "reg2"),
-  to = "summ_regression2_small"
+  mode = "in"
 )
+# Inspect the raw graph.
 str(raw_graph)
-# Plot your own custom visNetwork graph
+# Use the data frames to plot your own custom visNetwork graph.
+# For example, you can omit the legend nodes
+# and change the direction of the graph.
 library(magrittr)
 library(visNetwork)
 visNetwork(nodes = raw_graph$nodes, edges = raw_graph$edges) \%>\%
-  visLegend(useGroups = FALSE, addNodes = raw_graph$legend_nodes) \%>\%
-  visHierarchicalLayout(direction = 'LR')
+  visHierarchicalLayout(direction = 'UD')
+})
 }
 }
 \seealso{
-\code{\link{plot_graph}}, \code{\link{build_graph}}
+\code{\link{vis_drake_graph}}, \code{\link{build_drake_graph}}
 }

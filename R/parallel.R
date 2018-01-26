@@ -6,48 +6,16 @@ run_parallel_backend <- function(config){
 }
 
 run_parallel <- function(config, worker) {
-  config$graph_remaining_targets <- config$graph
-  while (length(V(config$graph_remaining_targets))){
+  config <- exclude_imports_if(config = config)
+  while (length(V(config$execution_graph))){
     config <- parallel_stage(worker = worker, config = config)
   }
   invisible()
 }
 
-parallel_stage <- function(worker, config) {
-  config <- inventory(config)
-  remaining_targets <- V(config$graph_remaining_targets) %>%
-    names %>% intersect(config$targets)
-  candidates <- next_targets(
-    config$graph_remaining_targets, jobs = config$jobs)
-  hash_list <- hash_list(targets = candidates, config = config)
-  build_these <- Filter(candidates,
-    f = function(target)
-      should_build(target = target, hash_list = hash_list, config = config))
-  target_attempts <- intersect(build_these, config$plan$target)
-  log_target_attempts(targets = target_attempts, config = config)
-  hash_list <- hash_list[build_these]
-  if (length(build_these)){
-    worker(targets = build_these, hash_list = hash_list,
-      config = config)
-  }
-  config$graph_remaining_targets <-
-    delete_vertices(config$graph_remaining_targets, v = candidates)
-  invisible(config)
-}
-
-next_targets <- function(graph_remaining_targets, jobs = 1){
-  number_dependencies <- lightly_parallelize(
-    X = V(graph_remaining_targets),
-    FUN = function(x){
-      adjacent_vertices(graph_remaining_targets, x, mode = "in") %>%
-        unlist() %>%
-        length()
-    },
-    jobs = jobs
-  ) %>%
-    unlist
-  which(!number_dependencies) %>%
-    names()
+parallel_filter <- function(x, f, jobs = 1, ...){
+  index <- lightly_parallelize(X = x, FUN = f, jobs = jobs, ...)
+  x[as.logical(index)]
 }
 
 lightly_parallelize <- function(X, FUN, jobs = 1, ...) {

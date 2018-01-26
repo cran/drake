@@ -1,94 +1,230 @@
-hash_list <- function(targets, config) {
-  console_many_targets(targets = targets,
-    message = "check", config = config)
-  out <- lightly_parallelize(
-    X = targets, FUN = hashes,
-    jobs = config$jobs, config = config
-  )
-  names(out) <- lapply(out, "[[", "target") %>%
-    unlist
+#' @title List the available hash algorithms for drake caches.
+#' @export
+#' @description See the advanced storage tutorial
+#' at \url{https://ropensci.github.io/drake/articles/storage.html}
+#' for details.
+#' @return A character vector of names of available hash algorithms.
+#' @examples
+#' available_hash_algos()
+available_hash_algos <- function(){
+  eval(formals(digest::digest)$algo)
+}
+
+#' @title Get the long hash algorithm of a drake cache.
+#' @export
+#' @seealso \code{\link{default_short_hash_algo}},
+#' \code{\link{default_long_hash_algo}}
+#' @description  See the advanced storage tutorial
+#' at \url{https://ropensci.github.io/drake/articles/storage.html}
+#' for details.
+#' @return A character vector naming a hash algorithm.
+#' @param cache drake cache
+#' @param verbose whether to print console messages
+#' @examples
+#' \dontrun{
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' # Run the project and return the internal master configuration list.
+#' config <- make(my_plan)
+#' # Locate the storr cache.
+#' cache <- config$cache
+#' # Get the long hash algorithm of the cache.
+#' long_hash(cache)
+#' })
+#' }
+long_hash <- function(
+  cache = drake::get_cache(verbose = verbose),
+  verbose = TRUE
+){
+  if (!cache$exists(key = "long_hash_algo", namespace = "config")){
+    return(NULL)
+  }
+  cache$get("long_hash_algo", namespace = "config")
+}
+
+#' @title Get the short hash algorithm of a drake cache.
+#' @export
+#' @seealso \code{\link{default_short_hash_algo}},
+#' \code{\link{default_long_hash_algo}}
+#' @description See the advanced storage tutorial
+#' at \url{https://ropensci.github.io/drake/articles/storage.html}
+#' for details.
+#' @return A character vector naming a hash algorithm.
+#' @param cache drake cache
+#' @param verbose whether to print console messages
+#' @examples
+#' \dontrun{
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' # Run the project and return the internal master configuration list.
+#' config <- make(my_plan)
+#' # Locate the storr cache.
+#' cache <- config$cache
+#' # Get the short hash algorithm of the cache.
+#' short_hash(cache)
+#' })
+#' }
+short_hash <- function(
+  cache = drake::get_cache(verbose = verbose),
+  verbose = verbose
+){
+  if (!cache$exists(key = "short_hash_algo", namespace = "config")){
+    return(NULL)
+  }
+  chosen_algo <- cache$get("short_hash_algo", namespace = "config")
+  check_storr_short_hash(cache = cache, chosen_algo = chosen_algo)
+  cache$get("short_hash_algo", namespace = "config")
+}
+
+#' @title Return the default short hash algorithm for \code{make()}.
+#' @export
+#' @seealso \code{\link{make}}, \code{\link{available_hash_algos}}
+#' @description See the advanced storage tutorial
+#' at \url{https://ropensci.github.io/drake/articles/storage.html}
+#' for details.
+#' @details
+#' The short algorithm must be among \code{\link{available_hash_algos}{}},
+#' which is just the collection of algorithms available to the `algo`
+#' argument in \code{digest::digest()}. \cr \cr
+#'
+#' If you express no preference for a hash, drake will use
+#' the short hash for the existing project, or
+#' \code{\link{default_short_hash_algo}()} for a new project.
+#' If you do supply a hash algorithm, it will only apply to
+#' fresh projects (see \code{\link{clean}(destroy = TRUE)}).
+#' For a project that already exists, if you supply a hash algorithm,
+#' drake will warn you and then ignore your choice, opting instead for
+#' the hash algorithm already chosen for the project
+#' in a previous \code{make()}. \cr \cr
+#'
+#' Drake uses both a short hash algorithm
+#' and a long hash algorithm. The shorter hash has fewer characters,
+#' and it is used to generate the names of internal cache files
+#' and auxiliary files. The decision for short names is important
+#' because Windows places restrictions on the length of file paths.
+#' On the other hand, some internal hashes in drake are
+#' never used as file names, and those hashes can use a longer hash
+#' to avoid collisions.
+#'
+#' @return A character vector naming a hash algorithm.
+#'
+#' @param cache optional drake cache.
+#' When you \code{\link{configure_cache}(cache)} without
+#' supplying a short hash algorithm,
+#' \code{default_short_hash_algo(cache)} is the short
+#' hash algorithm that drake picks for you.
+#'
+#' @examples
+#' default_short_hash_algo()
+#' \dontrun{
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' # Run the project and return the internal master configuration list.
+#' config <- make(my_plan)
+#' # Locate the storr cache.
+#' cache <- config$cache
+#' # Get the default short hash algorithm of an existing cache.
+#' default_short_hash_algo(cache)
+#' })
+#' }
+default_short_hash_algo <- function(cache = NULL) {
+  out <- "xxhash64"
+  if (is.null(cache)){
+    return(out)
+  }
+  if (cache$exists(key = "short_hash_algo", namespace = "config")){
+    out <- cache$get(
+      key = "short_hash_algo",
+      namespace = "config"
+    )
+  }
+  if ("storr" %in% class(cache)){
+    out <- cache$driver$hash_algorithm
+  }
   out
 }
 
-hashes <- function(target, config) {
-  list(
-    target = target,
-    depends = dependency_hash(target = target, config = config),
-    file = file_hash(target = target, config = config)
-  )
-}
-
-dependency_hash <- function(target, config) {
-  command <- get_command(target = target, config = config)
-  stopifnot(length(command) == 1)
-  dependencies(target, config) %>%
-    self_hash(config = config) %>%
-    c(command) %>%
-    digest::digest(algo = config$long_hash_algo)
-}
-
-self_hash <- Vectorize(function(target, config) {
-  if (target %in% config$inventory) {
-    config$cache$get_hash(target)
-  } else {
-    as.character(NA)
+#' @title Return the default long hash algorithm for \code{make()}.
+#' @export
+#' @seealso \code{\link{make}}, \code{\link{available_hash_algos}}
+#' @description See the advanced storage tutorial
+#' at \url{https://ropensci.github.io/drake/articles/storage.html}
+#' for details.
+#' @details
+#' The long algorithm must be among \code{\link{available_hash_algos}{}},
+#' which is just the collection of algorithms available to the `algo`
+#' argument in \code{digest::digest()}. \cr \cr
+#'
+#' If you express no preference for a hash, drake will use
+#' the long hash for the existing project, or
+#' \code{\link{default_long_hash_algo}()} for a new project.
+#' If you do supply a hash algorithm, it will only apply to
+#' fresh projects (see \code{\link{clean}(destroy = TRUE)}).
+#' For a project that already exists, if you supply a hash algorithm,
+#' drake will warn you and then ignore your choice, opting instead for
+#' the hash algorithm already chosen for the project
+#' in a previous \code{make()}. \cr \cr
+#'
+#' Drake uses both a short hash algorithm
+#' and a long hash algorithm. The shorter hash has fewer characters,
+#' and it is used to generate the names of internal cache files
+#' and auxiliary files. The decision for short names is important
+#' because Windows places restrictions on the length of file paths.
+#' On the other hand, some internal hashes in drake are
+#' never used as file names, and those hashes can use a longer hash
+#' to avoid collisions.
+#'
+#' @return A character vector naming a hash algorithm.
+#'
+#' @param cache optional drake cache.
+#' When you \code{\link{configure_cache}(cache)} without
+#' supplying a long hash algorithm,
+#' \code{default_long_hash_algo(cache)} is the long
+#' hash algorithm that drake picks for you.
+#'
+#' @examples
+#' default_long_hash_algo()
+#' \dontrun{
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' # Run the project and return the internal master configuration list.
+#' config <- make(my_plan)
+#' # Locate the storr cache.
+#' cache <- config$cache
+#' # Get the default long hash algorithm of an existing cache.
+#' default_long_hash_algo(cache)
+#' })
+#' }
+default_long_hash_algo <- function(cache = NULL) {
+  out <- "sha256"
+  if (is.null(cache)){
+    return(out)
   }
-},
-"target", USE.NAMES = FALSE)
-
-should_rehash_file <- function(filename, new_mtime, old_mtime,
-  size_cutoff){
-  do_rehash <- file.size(filename) < size_cutoff | new_mtime > old_mtime
-  if (is.na(do_rehash)){
-    do_rehash <- TRUE
+  if (cache$exists(key = "long_hash_algo", namespace = "config")){
+    out <- cache$get(
+      key = "long_hash_algo",
+      namespace = "config"
+    )
   }
-  do_rehash
+  out
 }
 
-file_hash <- function(target, config, size_cutoff = 1e5) {
-  if (is_file(target)) {
-    filename <- eply::unquote(target)
-  } else {
-    return(as.character(NA))
+check_storr_short_hash <- function(cache, chosen_algo){
+  if (!inherits(cache, "storr")){
+    return()
   }
-  if (!file.exists(filename))
-    return(as.character(NA))
-  old_mtime <- ifelse(target %in% config$inventory_filemtime,
-    config$cache$get(key = target, namespace = "filemtime"),
-    -Inf)
-  new_mtime <- file.mtime(filename)
-  do_rehash <- should_rehash_file(
-    filename = filename,
-    new_mtime = new_mtime,
-    old_mtime = old_mtime,
-    size_cutoff = size_cutoff)
-  if (do_rehash){
-    rehash_file(target = target, config = config)
-  } else {
-    config$cache$get(target)$value
+  true_algo <- cache$driver$hash_algorithm
+  if (!identical(true_algo, chosen_algo)){
+    warning(
+      "The storr-based cache actually uses ", true_algo,
+      " for the short hash algorithm, but ", chosen_algo,
+      " was also supplied. Reverting to ", true_algo, ".",
+      call. = FALSE
+    )
+    cache$set(
+      key = "short_hash_algo",
+      value = true_algo,
+      namespace = "config"
+    )
   }
-}
-
-rehash_file <- function(target, config) {
-  digest::digest(
-    object = eply::unquote(target),
-    algo = config$long_hash_algo,
-    file = TRUE,
-    serialize = FALSE
-  )
-}
-
-tidy <- function(x) {
-  parse(text = x) %>%
-    as.character %>%
-    paste(collapse = "\n") %>%
-    braces
-}
-
-braces <- function(x) {
-  paste("{\n", x, "\n}")
-}
-
-get_command <- function(target, config) {
-  config$plan$command[config$plan$target == target] %>% tidy
 }

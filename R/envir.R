@@ -1,23 +1,31 @@
-assign_to_envir <- Vectorize(
-  function(target, value, config){
-    if (is_file(target) | !(target %in% config$plan$target)){
-      return()
-    }
-    assign(x = target, value = value, envir = config$envir)
-  },
-  c("target", "value")
+assign_to_envir <- function(targets, values, config){
+  if (config$lazy_load){
+    return()
+  }
+  lightly_parallelize(
+    X = seq_along(targets),
+    FUN = assign_to_envir_single,
+    jobs = config$jobs,
+    targets = targets,
+    values = values,
+    config = config
   )
+  invisible()
+}
+
+assign_to_envir_single <- function(index, targets, values, config){
+  target <- targets[index]
+  value <- values[[index]]
+  if (is_file(target) | !(target %in% config$plan$target)){
+    return()
+  }
+  assign(x = target, value = value, envir = config$envir)
+  invisible()
+}
 
 prune_envir <- function(targets, config){
-  downstream <- lightly_parallelize(
-    targets,
-    function(vertex){
-      subcomponent(config$graph, v = vertex, mode = "out")$name
-    },
-    jobs = config$jobs
-  ) %>%
-    unlist() %>%
-    unique()
+  downstream <- downstream_nodes(
+    from = targets, graph = config$graph, jobs = config$jobs)
   already_loaded <- ls(envir = config$envir, all.names = TRUE) %>%
     intersect(y = config$plan$target)
   load_these <- nonfile_target_dependencies(
@@ -30,30 +38,32 @@ prune_envir <- function(targets, config){
     config = config
   )
   discard_these <- setdiff(x = config$plan$target, y = keep_these) %>%
-    Filter(f = is_not_file) %>%
+    parallel_filter(f = is_not_file, jobs = config$jobs) %>%
     intersect(y = already_loaded)
   if (length(discard_these)){
     console_many_targets(
       discard_these,
-      message = "unload",
+      pattern = "unload",
       config = config
     )
     rm(list = discard_these, envir = config$envir)
   }
   if (length(load_these)){
-    console_many_targets(
-      load_these,
-      message = "load",
-      config = config
-    )
+    if (!config$lazy_load){
+      console_many_targets(
+        load_these,
+        pattern = "load",
+        config = config
+      )
+    }
     loadd(list = load_these, envir = config$envir, cache = config$cache,
-          verbose = FALSE)
+      verbose = FALSE, lazy = config$lazy_load)
   }
   invisible()
 }
 
 nonfile_target_dependencies <- function(targets, config){
-  dependencies(targets = targets, config = config) %>%
-    Filter(f = is_not_file) %>%
-    intersect(y = config$plan$target)
+  deps <- dependencies(targets = targets, config = config)
+  out <- parallel_filter(x = deps, f = is_not_file, jobs = config$jobs)
+  intersect(out, config$plan$target)
 }

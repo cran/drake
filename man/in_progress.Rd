@@ -2,7 +2,9 @@
 % Please edit documentation in R/progress.R
 \name{in_progress}
 \alias{in_progress}
-\title{Function \code{in_progress}}
+\title{List the targets that either
+(1) are currently being built during a \code{\link{make}()}, or
+(2) were being built if the last \code{\link{make}()} quit unexpectedly.}
 \usage{
 in_progress(path = getwd(), search = TRUE, cache = drake::get_cache(path =
   path, search = search, verbose = verbose), verbose = TRUE)
@@ -23,23 +25,23 @@ the \code{path} and \code{search} arguments are ignored.}
 \item{verbose}{whether to print console messages}
 }
 \value{
-A character vector of target names
+A character vector of target names.
 }
 \description{
-List the targets that either
-(1) are currently being built if \code{\link{make}()} is running, or
-(2) were in the process of being built if the previous call to
-\code{\link{make}()} quit unexpectedly.
+Similar to \code{\link{progress}()}.
 }
 \examples{
 \dontrun{
-load_basic_example()
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
 make(my_plan) # Kill before targets finish.
+# If you interrupted make(), some targets will probably be listed:
 in_progress()
+})
 }
 }
 \seealso{
 \code{\link{diagnose}}, \code{\link{session}},
 \code{\link{built}}, \code{\link{imported}},
-\code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
+\code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
 }

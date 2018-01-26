@@ -1,17 +1,15 @@
-#' @title Function \code{dataframes_graph}
-#' @description Get the information about nodes, edges, and the legend/key
-#' so you can plot your own custom \code{visNetwork}.
+#' @title Create the underlying node and edge data frames
+#' behind \code{\link{vis_drake_graph}()}.
+#' @description With the returned data frames,
+#' you can plot your own custom \code{visNetwork} graph.
 #' @export
-#' @return a list of three data frames: one for nodes,
+#' @return A list of three data frames: one for nodes,
 #' one for edges, and one for
-#' the legend/key nodes. The list also contains the
+#' the legend nodes. The list also contains the
 #' default title of the graph.
-#' @seealso \code{\link{plot_graph}}, \code{\link{build_graph}}
-#' @param plan workflow plan data frame, same as for function
-#' \code{\link{make}()}.
-#'
-#' @param targets names of targets to build, same as for function
-#' \code{\link{make}()}.
+#' @seealso \code{\link{vis_drake_graph}}, \code{\link{build_drake_graph}}
+#' @param config a \code{\link{drake_config}()} configuration list.
+#' You can get one as a return value from \code{\link{make}()} as well.
 #'
 #' @param from Optional collection of target/import names.
 #' If \code{from} is nonempty,
@@ -37,45 +35,7 @@
 #' Applied after \code{from}, \code{mode}, and \code{order}.
 #' Be advised: edges are only kept for adjacent nodes in \code{subset}.
 #' If you do not select all the intermediate nodes,
-#' edges will drop from the graph.
-#'
-#' @param envir environment to import from, same as for function
-#' \code{\link{make}()}. \code{config$envir} is ignored in favor
-#' of \code{envir}.
-#'
-#' @param verbose logical, whether to output messages to the console.
-#'
-#' @param hook same as for \code{\link{make}}
-#'
-#' @param cache optional drake cache. Only used if the \code{config}
-#' argument is \code{NULL} (default). See code{\link{new_cache}()}.
-#'
-#' @param jobs The \code{outdated()} function is called internally,
-#' and it needs to import objects and examine your
-#' input files to see what has been updated. This could take some time,
-#' and parallel computing may be needed
-#' to speed up the process. The \code{jobs} argument is number of parallel jobs
-#' to use for faster computation.
-#'
-#' @param parallelism Choice of parallel backend to speed up the computation.
-#' Execution order in \code{\link{make}()} is slightly different when
-#' \code{parallelism} equals \code{'Makefile'}
-#' because in that case, all the imports are imported
-#' before any target is built.
-#' Thus, the arrangement in the graph is different for Makefile parallelism.
-#' See \code{?parallelism_choices} for details.
-#'
-#' @param font_size numeric, font size of the node labels in the graph
-#'
-#' @param packages same as for \code{\link{make}}
-#'
-#' @param prework same as for \code{\link{make}}
-#'
-#' @param build_times logical, whether to show the \code{\link{build_times}()}
-#' of the targets and imports, if available.
-#' These are just elapsed times from \code{system.time()}.
-#'
-#' @param digits number of digits for rounding the build times
+#' edges will drop from the graph.=
 #'
 #' @param targets_only logical,
 #' whether to skip the imports and only include the
@@ -90,126 +50,97 @@
 #' there may be more conditional independence than the graph
 #' indicates.)
 #'
-#' @param config option internal runtime parameter list of
-#' \code{\link{make}(...)},
-#' produced with \code{\link{config}()}.
-#' \code{config$envir} is ignored.
-#' Otherwise, computing this
-#' in advance could save time if you plan multiple calls to
-#' \code{dataframes_graph()}.
-#' If not \code{NULL},
-#' \code{config} overrides all arguments except
-#' \code{build_times}, \code{digits}, \code{targets_only},
-#' \code{split_columns}, and \code{font_size}.
+#' @param font_size numeric, font size of the node labels in the graph
 #'
-#' @param from_scratch logical, whether to assume that
-#' all targets are out of date and the next \code{\link{make}()}
-#' will happen from scratch. Setting to \code{TRUE} will prevent
-#' the graph from showing you which targets are up to date,
-#' but it makes computing the graph much faster.
+#' @param build_times logical, whether to show the \code{\link{build_times}()}
+#' of the targets and imports, if available.
+#' These are just elapsed times from \code{system.time()}.
+#'
+#' @param digits number of digits for rounding the build times
+#'
+#' @param from_scratch logical, whether to assume all the targets
+#' will be made from scratch on the next \code{\link{make}()}.
+#' Makes all targets outdated, but keeps information about
+#' build progress in previous \code{\link{make}()}s.
+#'
+#' @param make_imports logical, whether to make the imports first.
+#' Set to \code{FALSE} to increase speed and risk using obsolete information.
 #'
 #' @examples
 #' \dontrun{
-#' load_basic_example()
-#' raw_graph <- dataframes_graph(my_plan)
+#' test_with_dir("Quarantine side effects.", {
+#' config <- load_basic_example() # Get the code with drake_example("basic").
+#' # Get a list of data frames representing the nodes, edges,
+#' # and legend nodes of the visNetwork graph from vis_drake_graph().
+#' raw_graph <- dataframes_graph(config = config)
+#' # Choose a subset of the graph.
 #' smaller_raw_graph <- dataframes_graph(
-#'   my_plan,
+#'   config = config,
 #'   from = c("small", "reg2"),
-#'   to = "summ_regression2_small"
+#'   mode = "in"
 #' )
+#' # Inspect the raw graph.
 #' str(raw_graph)
-#' # Plot your own custom visNetwork graph
+#' # Use the data frames to plot your own custom visNetwork graph.
+#' # For example, you can omit the legend nodes
+#' # and change the direction of the graph.
 #' library(magrittr)
 #' library(visNetwork)
 #' visNetwork(nodes = raw_graph$nodes, edges = raw_graph$edges) %>%
-#'   visLegend(useGroups = FALSE, addNodes = raw_graph$legend_nodes) %>%
-#'   visHierarchicalLayout(direction = 'LR')
+#'   visHierarchicalLayout(direction = 'UD')
+#' })
 #' }
 dataframes_graph <- function(
-  plan = workplan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE,
-  hook = function(code){
-    force(code)
-  },
-  cache = drake::get_cache(verbose = verbose), jobs = 1,
-  parallelism = drake::default_parallelism(), packages = rev(.packages()),
-  prework = character(0), build_times = TRUE, digits = 3,
+  config,
+  from = NULL,
+  mode = c("out", "in", "all"),
+  order = NULL,
+  subset = NULL,
+  build_times = TRUE,
+  digits = 3,
   targets_only = FALSE,
-  split_columns = FALSE, font_size = 20, config = NULL,
-  from = NULL, mode = c("out", "in", "all"), order = NULL, subset = NULL,
-  from_scratch = FALSE
+  split_columns = FALSE,
+  font_size = 20,
+  from_scratch = FALSE,
+  make_imports = TRUE
 ) {
-  force(envir)
-  if (is.null(config)){
-    config <- config(plan = plan, targets = targets,
-      envir = envir, verbose = verbose,
-      hook = hook, cache = cache,
-      parallelism = parallelism, jobs = jobs,
-      packages = packages, prework = prework)
-  }
   if (!length(V(config$graph)$name)){
     return(null_graph())
   }
+  config$build_times <- build_times
+  config$digits <- digits
+  config$font_size <- font_size
+  config$from_scratch <- from_scratch
+  config$make_imports <- make_imports
+  config$split_columns <- split_columns
+  config <- get_raw_node_category_data(config)
+  config$stages <- graphing_parallel_stages(config)
 
-  config$plan <- sanitize_plan(plan = plan)
-  config$targets <- sanitize_targets(plan = plan, targets = targets)
-
-  if (from_scratch){
-    config$outdated <- plan$target
-  } else {
-    config$outdated <- outdated(config = config)
+  config$graph <- get_neighborhood(
+    graph = config$graph,
+    from = from,
+    mode = match.arg(mode),
+    order = order
+  )
+  config$graph <- subset_graph(graph = config$graph, subset = subset)
+  if (targets_only){
+    config$graph <- subset_graph(
+      graph = config$graph,
+      subset = config$plan$target
+    )
   }
 
   network_data <- visNetwork::toVisNetworkData(config$graph)
   config$nodes <- network_data$nodes
-  rownames(config$nodes) <- config$nodes$label
+  config <- trim_node_categories(config)
+  config$nodes <- configure_nodes(config = config)
 
   config$edges <- network_data$edges
   if (nrow(config$edges)){
     config$edges$arrows <- "to"
   }
 
-  config$imports <- setdiff(config$nodes$id, config$plan$target)
-  config$in_progress <- in_progress(cache = config$cache)
-  config$failed <- failed(cache = config$cache)
-  config$files <- Filter(x = config$nodes$id, f = is_file)
-  config$functions <- Filter(x = config$imports,
-    f = function(x) can_get_function(x, envir = config$envir))
-  config$missing <- Filter(x = config$imports,
-    f = function(x) missing_import(x, envir = config$envir))
-  config$font_size <- font_size
-  config$build_times <- build_times
-  config$digits <- digits
-
-  config$nodes <- configure_nodes(config = config)
-  config$from <- from
-  config$mode <- match.arg(mode)
-  config$order <- order
-  config <- trim_graph(config)
-  config <- subset_nodes_edges(
-    config = config,
-    keep = V(config$graph)$name
-  )
-
-  if (targets_only) {
-    config <- subset_nodes_edges(
-      config = config,
-      keep = intersect(targets, config$nodes$id)
-    )
-  }
-  if (split_columns){
-    config$nodes <- split_node_columns(nodes = config$nodes)
-  }
-  if (length(subset)){
-    config <- subset_nodes_edges(
-      config = config,
-      keep = subset
-    )
-  }
-  config$nodes <- shrink_levels(config$nodes)
-
   list(nodes = config$nodes, edges = config$edges,
     legend_nodes = legend_nodes(font_size = font_size),
-    default_title = default_graph_title(
-      parallelism = config$parallelism, split_columns = split_columns))
+    default_title = default_graph_title(split_columns = split_columns))
 }

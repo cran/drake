@@ -2,7 +2,8 @@
 % Please edit documentation in R/Makefile.R
 \name{default_Makefile_args}
 \alias{default_Makefile_args}
-\title{Function \code{default_Makefile_args}}
+\title{Return the default value of the
+\code{args} argument to \code{\link{make}()}.}
 \usage{
 default_Makefile_args(jobs, verbose)
 }
@@ -15,8 +16,11 @@ default_Makefile_args(jobs, verbose)
 \code{args} for \code{\link{system2}(command, args)}
 }
 \description{
-Configures default
-arguments to \code{\link{system2}()} to run Makefiles.
+For \code{make(..., parallelism = "Makefile")},
+this function configures the default
+arguments to \code{\link{system2}()}.
+It is an internal function, and most users do not need to
+worry about it.
 }
 \examples{
 default_Makefile_args(jobs = 2, verbose = FALSE)

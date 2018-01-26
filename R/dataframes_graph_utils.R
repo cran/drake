@@ -1,6 +1,3 @@
-# For hover text
-hover_text_length <- 250
-
 append_build_times <- function(config) {
   with(config, {
     time_data <- build_times(digits = digits, cache = config$cache)
@@ -14,19 +11,6 @@ append_build_times <- function(config) {
       paste(nodes[timed, "label"], time_labels, sep = "\n")
     nodes
   })
-}
-
-arrange_nodes <- function(config){
-  if (config$parallelism %in% parallelism_choices(distributed_only = TRUE))
-    resolve_levels_distributed(config = config)
-  else
-    resolve_levels(config = config)
-}
-
-shrink_levels <- function(nodes){
-  nodes <- nodes[order(nodes$level), ]
-  nodes$level <- c(0, cumsum(diff(nodes$level) > 0))
-  nodes
 }
 
 can_get_function <- function(x, envir) {
@@ -52,38 +36,35 @@ categorize_nodes <- function(config) {
 }
 
 configure_nodes <- function(config){
-  elts <- c(
-    "failed", "functions", "in_progress", "missing",
-    "outdated", "targets"
-  )
-  for (elt in elts){
-    config[[elt]] <- intersect(config[[elt]], config$nodes$id)
-  }
+  rownames(config$nodes) <- config$nodes$label
   config$nodes <- categorize_nodes(config = config)
-  config$nodes <- arrange_nodes(config = config)
+  config$nodes <- resolve_levels(config = config)
   config$nodes <- style_nodes(config = config)
   if (config$build_times){
     config$nodes <- append_build_times(config = config)
   }
+  if (config$split_columns){
+    config$nodes <- split_node_columns(nodes = config$nodes)
+  }
+  config$nodes <- shrink_levels(config$nodes)
   hover_text(config = config)
 }
 
-#' @title Function default_graph_title
-#' @description Default title of the graph from
-#' \code{\link{plot_graph}()}.
+#' @title Return the default title of the graph for
+#' \code{\link{vis_drake_graph}()}.
+#' @description For internal use only.
 #' @export
-#' @seealso \code{\link{dataframes_graph}}, \code{\link{plot_graph}}
-#' @param parallelism Mode of parallelism intended for the workplan.
-#' See \code{\link{parallelism_choices}()}.
+#' @keywords internal
+#' @seealso \code{\link{dataframes_graph}}, \code{\link{vis_drake_graph}}
+#' @return a character scalar with the default graph title for
+#' \code{\link{vis_drake_graph}()}.
 #' @param split_columns logical, whether the columns were split
-#' in \code{\link{dataframes_graph}()} or \code{\link{plot_graph}()}
+#' in \code{\link{dataframes_graph}()} or \code{\link{vis_drake_graph}()}
 #' with the \code{split_columns} argument.
-default_graph_title <- function(
-  parallelism = drake::parallelism_choices(distributed_only = FALSE),
-  split_columns = FALSE
-){
-  parallelism <- match.arg(parallelism)
-  out <- paste("Workflow graph:", parallelism, "parallelism")
+#' @examples
+#' default_graph_title()
+default_graph_title <- function(split_columns = FALSE){
+  out <- "Workflow graph"
   if (split_columns){
     out <- paste(out, "with split columns")
   }
@@ -91,7 +72,7 @@ default_graph_title <- function(
 }
 
 file_hover_text <- Vectorize(function(quoted_file, targets){
-  unquoted_file <- unquote(quoted_file)
+  unquoted_file <- drake_unquote(quoted_file)
   if (quoted_file %in% targets | !file.exists(unquoted_file))
     return(quoted_file)
   tryCatch({
@@ -116,9 +97,31 @@ function_hover_text <- Vectorize(function(function_name, envir){
 },
 "function_name")
 
-target_hover_text <- function(targets, plan) {
-  plan[plan$target %in% targets, "command"] %>%
-    wrap_text %>% crop_text(length = hover_text_length)
+get_raw_node_category_data <- function(config){
+  all_labels <- V(config$graph)$name
+  config$outdated <- resolve_graph_outdated(config = config)
+  config$imports <- setdiff(all_labels, config$plan$target)
+  config$in_progress <- in_progress(cache = config$cache)
+  config$failed <- failed(cache = config$cache)
+  config$files <- parallel_filter(
+    x = all_labels, f = is_file, jobs = config$jobs)
+  config$functions <- parallel_filter(
+    x = config$imports,
+    f = function(x) can_get_function(x, envir = config$envir),
+    jobs = config$jobs
+  )
+  config$missing <- parallel_filter(
+    x = config$imports,
+    f = function(x) missing_import(x, envir = config$envir),
+    jobs = config$jobs
+  )
+  config
+}
+
+graphing_parallel_stages <- function(config){
+  stages <- parallel_stages(config, from_scratch = TRUE)
+  rownames(stages) <- stages$item
+  stages
 }
 
 hover_text <- function(config) {
@@ -135,10 +138,58 @@ hover_text <- function(config) {
   })
 }
 
-null_graph <- function() {
-  nodes <- data.frame(id = 1, label = "Nothing to plot.")
-  visNetwork::visNetwork(
-    nodes = nodes, edges = data.frame(from = NA, to = NA))
+hover_text_length <- 250
+
+#' @title Create the nodes data frame used in the legend
+#' of \code{\link{vis_drake_graph}()}.
+#' @export
+#' @seealso \code{\link{drake_palette}()},
+#' \code{\link{vis_drake_graph}()},
+#' \code{\link{dataframes_graph}()}
+#' @description Output a \code{visNetwork}-friendly
+#' data frame of nodes. It tells you what
+#' the colors and shapes mean
+#' in \code{\link{vis_drake_graph}()}.
+#' @param font_size font size of the node label text
+#' @return A data frame of legend nodes for \code{\link{vis_drake_graph}()}.
+#' @examples
+#' \dontrun{
+#' # Show the legend nodes used in vis_drake_graph().
+#' # For example, you may want to inspect the color palette more closely.
+#' visNetwork::visNetwork(nodes = legend_nodes())
+#' }
+legend_nodes <- function(font_size = 20) {
+  out <- data.frame(
+    label = c(
+      "Up to date",
+      "Outdated",
+      "In progress",
+      "Failed",
+      "Imported",
+      "Missing",
+      "Object",
+      "Function",
+      "File"
+    ),
+    color = color_of(c(
+      "up_to_date",
+      "outdated",
+      "in_progress",
+      "failed",
+      "import_node",
+      "missing_node",
+      rep("generic", 3)
+    )),
+    shape = shape_of(c(
+      rep("object", 7),
+      "funct",
+      "file"
+    )),
+    font.color = "black",
+    font.size = font_size
+  )
+  out$id <- seq_len(nrow(out))
+  out
 }
 
 missing_import <- function(x, envir) {
@@ -147,58 +198,42 @@ missing_import <- function(x, envir) {
     FALSE
   },
   error = function(e) TRUE)
-  missing_file <- is_file(x) & !file.exists(unquote(x))
+  missing_file <- is_file(x) & !file.exists(drake_unquote(x))
   missing_object | missing_file
 }
 
-resolve_levels <- function(config) {
+null_graph <- function() {
+  nodes <- data.frame(id = 1, label = "Nothing to plot.")
+  visNetwork::visNetwork(
+    nodes = nodes,
+    edges = data.frame(from = NA, to = NA),
+    main = "Nothing to plot."
+  )
+}
+
+resolve_graph_outdated <- function(config){
+  if (config$from_scratch){
+    config$outdated <- config$plan$target
+  } else {
+    config$outdated <- outdated(
+      config = config,
+      make_imports = config$make_imports
+    )
+  }
+}
+
+resolve_levels <- function(config) { # nolint
   with(config, {
-    stopifnot(is_dag(graph))
-    level <- 1
-    nodes$level <- NA
-    keep_these <- setdiff(V(graph)$name, rownames(nodes))
-    graph_remaining_targets <- delete_vertices(graph, v = keep_these)
-    while (length(V(graph_remaining_targets))) {
-      candidates <- next_targets(graph_remaining_targets, jobs = jobs)
-      if (length(candidates)){
-        nodes[candidates, "level"] <- level
-        level <- level + 1
-      }
-      graph_remaining_targets <-
-        delete_vertices(graph_remaining_targets, v = candidates)
-    }
+    stages <- stages[nodes$id, ]
+    nodes$level <- stages[rownames(nodes), "stage"]
     nodes
   })
 }
 
-resolve_levels_distributed <- function(config) { # nolint
-  with(config, {
-    targets <- intersect(plan$target, nodes$id)
-    imports <- setdiff(nodes$id, targets)
-    if (!length(targets) | !length(imports)){
-      return(resolve_levels(config))
-    }
-    graph_imports <- delete_vertices(graph, v = targets)
-    graph_targets <- delete_vertices(graph, v = imports)
-    nodes_imports <- nodes[nodes$id %in% imports, ]
-    nodes_targets <- nodes[nodes$id %in% targets, ]
-    nodes_imports <- resolve_levels(
-      config = list(
-        nodes = nodes_imports,
-        graph = graph_imports,
-        jobs = config$jobs
-      )
-    )
-    nodes_targets <- resolve_levels(
-      config = list(
-        nodes = nodes_targets,
-        graph = graph_targets,
-        jobs = config$jobs
-      )
-    )
-    nodes_imports$level <- nodes_imports$level - max(nodes_imports$level)
-    rbind(nodes_imports, nodes_targets)
-  })
+shrink_levels <- function(nodes){
+  nodes <- nodes[order(nodes$level), ]
+  nodes$level <- c(0, cumsum(diff(nodes$level) > 0))
+  nodes
 }
 
 # https://stackoverflow.com/questions/3318333/split-a-vector-into-chunks-in-r
@@ -246,60 +281,18 @@ style_nodes <- function(config) {
   })
 }
 
-subset_nodes_edges <- function(config, keep, choices = V(config$graph)$name){
-  keep <- sanitize_nodes(nodes = keep, choices = choices)
-  config$nodes <- config$nodes[keep, ]
-  config$edges <-
-    config$edges[
-      config$edges$from %in% keep &
-      config$edges$to %in% keep, ]
-  config
+target_hover_text <- function(targets, plan) {
+  plan[plan$target %in% targets, "command"] %>%
+    wrap_text %>% crop_text(length = hover_text_length)
 }
 
-#' @title Function legend_nodes
-#' @export
-#' @seealso \code{\link{drake_palette}()},
-#' \code{\link{plot_graph}()},
-#' \code{\link{dataframes_graph}()}
-#' @description Output a \code{visNetwork}-friendly
-#' data frame of nodes. It tells you what
-#' the colors and shapes mean
-#' in \code{\link{plot_graph}()}.
-#' @param font_size font size of the node label text
-#' @examples
-#' \dontrun{
-#' visNetwork::visNetwork(nodes = legend_nodes())
-#' }
-legend_nodes <- function(font_size = 20) {
-  out <- data.frame(
-    label = c(
-      "Up to date",
-      "Outdated",
-      "In progress",
-      "Failed",
-      "Imported",
-      "Missing",
-      "Object",
-      "Function",
-      "File"
-    ),
-    color = color_of(c(
-      "up_to_date",
-      "outdated",
-      "in_progress",
-      "failed",
-      "import_node",
-      "missing_node",
-      rep("generic", 3)
-    )),
-    shape = shape_of(c(
-      rep("object", 7),
-      "funct",
-      "file"
-    )),
-    font.color = "black",
-    font.size = font_size
+trim_node_categories <- function(config){
+  elts <- c(
+    "failed", "files", "functions", "in_progress", "missing",
+    "outdated", "targets"
   )
-  out$id <- seq_len(nrow(out))
-  out
+  for (elt in elts){
+    config[[elt]] <- intersect(config[[elt]], config$nodes$id)
+  }
+  config
 }

@@ -2,27 +2,32 @@
 % Please edit documentation in R/config.R
 \name{possible_targets}
 \alias{possible_targets}
-\title{Function \code{possible_targets}}
+\title{List the possible targets for the \code{targets}
+argument to \code{\link{make}()}, given a workflow plan
+data frame.}
 \usage{
-possible_targets(plan = workplan())
+possible_targets(plan = drake_plan())
 }
 \arguments{
 \item{plan}{workflow plan data frame}
 }
 \value{
-character vector of possible targets
+Character vector of possible targets given the workflow plan.
 }
 \description{
-internal function, returns the list of
-possible targets that you can select with the \code{targets}
-argument to \code{\link{make}()}.
+Intended for internal use only.
 }
 \examples{
 \dontrun{
-load_basic_example()
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
+# List the possible targets you could choose for the
+# `targets` argument to make(). You may choose any subset.
 possible_targets(my_plan)
+})
 }
 }
 \seealso{
 \code{\link{make}}
 }
+\keyword{internal}

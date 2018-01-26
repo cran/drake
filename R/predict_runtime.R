@@ -1,7 +1,9 @@
-#' @title Function predict_runtime
-#' @description Predict the elapsed runtime of the next call to `make()`.
-#' This function simply sums the elapsed build times.
-#' from \code{\link{rate_limiting_times}()}.
+#' @title Predict the elapsed runtime of the next call to `make()`.
+#' @description This function simply sums the elapsed build times
+#' from \code{\link{rate_limiting_times}()}, and this
+#' feature is experimental.
+#' To date, the accuracy/precision of the results
+#' has not yet been confirmed by performance studies.
 #' @details For the results to make sense, the previous build times
 #' of all targets need to be available (automatically cached
 #' by \code{\link{make}()}). Otherwise, \code{predict_runtime()}
@@ -12,20 +14,33 @@
 #' \code{\link{make}}
 #' @examples
 #' \dontrun{
-#' load_basic_example()
-#' make(my_plan)
-#' predict_runtime(my_plan, digits = 4) # everything is up to date
-#' predict_runtime(my_plan, digits = 4, from_scratch = TRUE) # 1 job
-#' predict_runtime(my_plan, future_jobs = 2, digits = 4, from_scratch = TRUE)
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' config <- make(my_plan) # Run the project, build the targets.
+#' predict_runtime(config, digits = 4) # Everything is up to date.
+#' predict_runtime(config, digits = 4, from_scratch = TRUE) # 1 job
+#' # Assumes you clean() out your project and start from scratch with 2 jobs.
+#' predict_runtime(config, future_jobs = 2, digits = 4, from_scratch = TRUE)
+#' # Predict the runtime of just building targets
+#' # "small" and "large".
 #' predict_runtime(
-#'   my_plan,
+#'   config,
 #'   targets = c("small", "large"),
-#'   future_jobs = 2,
-#'   digits = 4,
-#'   from_scratch = TRUE
+#'   from_scratch = TRUE,
+#'   digits = 4
 #' )
+#' })
 #' }
-#' @param plan same as for \code{\link{make}}
+#' @return A \code{lubridate} \code{Duration} object
+#' with the predicted runtime of the next \code{\link{make}()}.
+#' @param config option internal runtime parameter list of
+#' \code{\link{make}(...)},
+#' produced by both \code{\link{make}()} and
+#' \code{\link{drake_config}()}.
+#' @param targets Character vector, names of targets.
+#' Predict the runtime of building these targets
+#' plus dependencies.
+#' Defaults to all targets.
 #' @param from_scratch logical, whether to predict a
 #' \code{\link{make}()} build from scratch or to
 #' take into account the fact that some targets may be
@@ -33,88 +48,43 @@
 #' @param targets_only logical, whether to factor in
 #' just the targets into the calculations or use the
 #' build times for everything, including the imports
-#' @param targets Targets to build in the workplan.
-#' Timing information is
-#' limited to these targets and their dependencies.
-#' @param envir same as for \code{\link{make}}
-#' @param verbose same as for \code{\link{make}}
-#' @param hook same as for \code{\link{make}}
-#' @param cache optional drake cache. See code{\link{new_cache}()}.
-#' The \code{cache} argument is ignored if a
-#' non-null \code{config} argument is supplied.
-#' @param parallelism same as for \code{\link{make}}. Used
-#' to parallelize import objects.
-#' @param jobs same as for \code{\link{make}}, just used to
-#' process imports
 #' @param future_jobs hypothetical number of jobs
 #' assumed for the predicted runtime.
 #' assuming this number of jobs.
-#' @param packages same as for \code{\link{make}}
-#' @param prework same as for \code{\link{make}}
-#' @param config option internal runtime parameter list of
-#' \code{\link{make}(...)},
-#' produced with \code{\link{config}()}.
-#' Overrides all arguments except \code{from_scratch},
-#' \code{targets_only}, and \code{digits}.
-#' Computing \code{config}
-#' in advance could save time if you plan multiple calls to
-#' this function.
-#' @param digits number of digits for rounding the times.
-#' @param path file path to the folder containing the cache.
-#' Yes, this is the parent directory containing the cache,
-#' not the cache itself.
-#' @param search logical, whether to search back in the file system
-#' for the cache.
+#' @param digits number of digits for rounding the time
 predict_runtime <- function(
-  plan = workplan(),
+  config,
+  targets = NULL,
+  future_jobs = 1,
   from_scratch = FALSE,
   targets_only = FALSE,
-  targets = drake::possible_targets(plan),
-  envir = parent.frame(),
-  verbose = TRUE,
-  hook = function(code){
-    force(code)
-  },
-  cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  parallelism = drake::default_parallelism(),
-  jobs = 1,
-  future_jobs = jobs,
-  packages = rev(.packages()),
-  prework = character(0),
-  config = NULL,
-  digits = 3,
-  path = getwd(),
-  search = TRUE
+  digits = 3
 ){
-  force(envir)
   eval(parse(text = "require(methods, quietly = TRUE)")) # needed for lubridate
   times <- rate_limiting_times(
-    plan = plan,
+    config = config,
+    targets = targets,
     from_scratch = from_scratch,
     targets_only = targets_only,
-    targets = targets,
-    envir = envir,
-    verbose = verbose,
-    hook = hook,
-    cache = cache,
-    parallelism = parallelism,
-    jobs = jobs,
     future_jobs = future_jobs,
-    packages = packages,
-    prework = prework,
-    config = config,
-    digits = Inf,
-    path = path,
-    search = search
+    digits = Inf
   )
   sum(times$elapsed) %>%
     round(digits = digits) %>%
     to_build_duration
 }
 
-#' @title Function rate_limiting_times
-#' @description Return a data frame of elapsed build times of
-#' the rate-limiting targets of a \code{\link{make}()} workplan.
+#' @title Return a data frame of elapsed build times of
+#' the rate-limiting targets of a drake project.
+#'
+#' @description This function produces a conservative
+#' estimate for \code{\link{predict_runtime}()}
+#' for when parallel computing is used in \code{\link{make}()}.
+#' This feature is experimental.
+#' The accuracy, precision, and utility of these supposedly
+#' rate-limiting times has not been confirmed by rigorous
+#' performance studies.
+#'
 #' @export
 #'
 #' @details The \code{stage} column of the returned data frame
@@ -143,26 +113,42 @@ predict_runtime <- function(
 #'
 #' @examples
 #' \dontrun{
-#' load_basic_example()
-#' make(my_plan)
-#' rate_limiting_times(my_plan) # everything is up to date
-#' rate_limiting_times(my_plan, from_scratch  = TRUE, digits = 4) # 1 job
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' config <- make(my_plan) # Run the project, build the targets.
+#' rate_limiting_times(config) # Everything is up to date.
+#' # Assume everything runs from scratch with 1 job.
+#' rate_limiting_times(config, from_scratch  = TRUE, digits = 4)
+#' # With 2 jobs, some of the targets are not rate-limiting.
 #' rate_limiting_times(
-#'   my_plan,
+#'   config,
 #'   future_jobs = 2,
 #'   from_scratch = TRUE,
 #'   digits = 4
 #' )
+#' # Find the rate-limiting times of just building targets
+#' # "small" and "large".
 #' rate_limiting_times(
-#'   my_plan,
+#'   config,
 #'   targets = c("small", "large"),
-#'   future_jobs = 2,
 #'   from_scratch = TRUE,
 #'   digits = 4
 #' )
+#' })
 #' }
 #'
-#' @param plan same as for \code{\link{make}}
+#' @return A data frame of times of the worst-case scenario
+#' rate-limiting targets in each parallelizable stage.
+#'
+#' @param config option internal runtime parameter list of
+#' \code{\link{make}(...)},
+#' produced by both \code{\link{make}()} and
+#' \code{\link{drake_config}()}.
+#'
+#' @param targets Character vector, names of targets.
+#' Find the rate-limiting times for building these targets
+#' plus dependencies.
+#' Defaults to all targets.
 #'
 #' @param from_scratch logical, whether to assume
 #' next hypothetical call to \code{\link{make}()}
@@ -171,100 +157,36 @@ predict_runtime <- function(
 #' @param targets_only logical, whether to factor in just the
 #' targets or use times from everything, including the imports.
 #'
-#' @param targets Targets to build in the workplan.
-#' Timing information is
-#' limited to these targets and their dependencies.
-#'
-#' @param envir same as for \code{\link{make}}. Supersedes
-#' \code{config$envir}.
-#'
-#' @param verbose same as for \code{\link{make}}
-#'
-#' @param hook same as for \code{\link{make}}
-#'
-#' @param cache optional drake cache. See code{\link{new_cache}()}.
-#' The \code{cache} argument is ignored if a
-#' non-null \code{config} argument is supplied.
-#'
-#' @param parallelism same as for \code{\link{make}}, and
-#' also used to process imported objects/files.
-#'
-#' @param jobs same as for \code{\link{make}}, just used to
-#' process imports.
-#'
 #' @param future_jobs hypothetical number of jobs
 #' assumed for the predicted runtime.
 #' assuming this number of jobs.
 #'
-#' @param packages same as for \code{\link{make}}
-#'
-#' @param prework same as for \code{\link{make}}
-#'
-#' @param config option internal runtime parameter list of
-#' \code{\link{make}(...)},
-#' produced with \code{\link{config}()}.
-#' Overrides all arguments except \code{from_scratch},
-#' \code{targets_only}, and \code{digits}.
-#' Computing \code{config}
-#' in advance could save time if you plan multiple calls to
-#' this function.
-#'
 #' @param digits number of digits for rounding the times.
-#'
-#' @param path file path to the folder containing the cache.
-#' Yes, this is the parent directory containing the cache,
-#' not the cache itself.
-#'
-#' @param search logical, whether to search back in the file system
-#' for the cache.
 rate_limiting_times <- function(
-  plan = workplan(),
+  config,
+  targets = NULL,
   from_scratch = FALSE,
   targets_only = FALSE,
-  targets = drake::possible_targets(plan),
-  envir = parent.frame(),
-  verbose = TRUE,
-  hook = function(code){
-    force(code)
-  },
-  cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  parallelism = drake::default_parallelism(),
-  jobs = 1,
-  future_jobs = jobs,
-  packages = rev(.packages()),
-  prework = character(0),
-  config = NULL,
-  digits = 3,
-  path = getwd(),
-  search = TRUE
+  future_jobs = 1,
+  digits = 3
 ){
-  force(envir)
-  if (is.null(config)){
-    config <- config(
-      plan = plan,
-      targets = targets,
-      envir = envir,
-      verbose = verbose,
-      hook = hook,
-      cache = cache,
-      parallelism = parallelism,
-      jobs = jobs,
-      packages = packages,
-      prework = prework
+  if (!is.null(targets)){
+    config$targets <- targets
+    config$graph <- get_neighborhood(
+      graph = config$graph,
+      from = config$targets,
+      mode = "in",
+      order = numeric(0)
     )
   }
-  if (!is.null(cache)){
-    config$cache <- configure_cache(cache)
-  }
   times <- build_times(
-    targets_only = FALSE,
-    path = path,
-    search = search,
+    cache = config$cache,
     digits = Inf,
-    cache = config$cache
+    targets_only = FALSE,
+    verbose = TRUE
   )
   keys <- V(config$graph)$name
-  import_keys <- setdiff(keys, plan$target)
+  import_keys <- setdiff(keys, config$plan$target)
   items <- intersect(keys, times$item)
   not_timed <- setdiff(keys, items)
   warn_not_timed(not_timed)
@@ -273,35 +195,35 @@ rate_limiting_times <- function(
   }
   rownames(times) <- times$item
   times <- times[intersect(items, keys), ]
-  if (!from_scratch){
-    outdated <- outdated(
-      plan = plan,
-      envir = envir,
-      config = config
-    ) %>%
-      intersect(y = plan$target) %>%
-      c(import_keys) %>%
-      intersect(y = rownames(times)) %>%
-      unique
-    times <- times[outdated, ]
-  }
-  if (!nrow(times)){
-    return(cbind(times, stage = numeric(0)))
-  }
   if (targets_only){
     times <- times[times$type == "target", ]
   }
   if (!nrow(times)){
     return(cbind(times, stage = numeric(0)))
   }
-  keep_these <- setdiff(keys, rownames(times))
-  graph <- delete_vertices(config$graph, v = keep_these)
-  times <- resolve_levels(
-    config = list(nodes = times, graph = graph, jobs = config$jobs))
-  colnames(times) <- gsub("^level$", "stage", colnames(times))
-  ddply(times, "stage", rate_limiting_at_stage, future_jobs = future_jobs) %>%
+  if (from_scratch){
+    config$trigger <- "always"
+  }
+  times <- append_stages_to_times(x = times, config = config)
+  out <- ddply(
+    times,
+    "stage",
+    rate_limiting_at_stage,
+    future_jobs = future_jobs
+  ) %>%
     round_times(digits = digits) %>%
     unname_rows
+  out[!is.na(out$item), ]
+}
+
+append_stages_to_times <- function(x, config){
+  nodes <- parallel_stages(config = config)
+  rownames(nodes) <- nodes$item
+  items <- intersect(nodes$item, x$item)
+  nodes <- nodes[items, ]
+  x <- x[items, ]
+  x$stage <- nodes$stage
+  x
 }
 
 rate_limiting_at_stage <- function(stage, future_jobs){

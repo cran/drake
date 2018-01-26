@@ -1,26 +1,39 @@
 sanitize_plan <- function(plan){
-  for (field in c("code", "command", "output", "target")){
+  for (field in drake_plan_character_columns()){
     if (!is.null(plan[[field]])){
       plan[[field]] <- str_trim(plan[[field]], side = "both")
     }
   }
-  as.data.frame(plan, stringsAsFactors = FALSE) %>%
-    fix_deprecated_plan_names()
+  if (!is.null(plan[["trigger"]])){
+    assert_legal_triggers(plan[["trigger"]])
+  }
+  plan$target <- repair_target_names(plan$target)
+  plan[nchar(plan$target) > 0, ]
+}
+
+drake_plan_character_columns <- function(){
+  c(
+    "command",
+    "target",
+    "trigger"
+  )
+}
+
+drake_plan_columns <- function(){
+  c(
+    drake_plan_character_columns(),
+    "cpu",
+    "elapsed",
+    "evaluator",
+    "retries",
+    "timeout"
+  )
 }
 
 sanitize_targets <- function(plan, targets){
   plan <- sanitize_plan(plan)
-  targets <- str_trim(targets, side = "both")
+  targets <- repair_target_names(targets)
   sanitize_nodes(nodes = targets, choices = plan$target)
-}
-
-sanitize_from <- function(config){
-  choices <- V(config$graph)$name
-  if (length(config$from)){
-    config$from <-
-      sanitize_nodes(nodes = config$from, choices = choices)
-  }
-  config
 }
 
 sanitize_nodes <- function(nodes, choices){
@@ -28,7 +41,7 @@ sanitize_nodes <- function(nodes, choices){
     stop(
       "All import/target names are invalid ",
       "in argument 'targets', 'from', or 'subset' ",
-      "for make(), plot_graph(), or similar.",
+      "for make(), vis_drake_graph(), or similar.",
       call. = FALSE
     )
   }
@@ -42,4 +55,23 @@ sanitize_nodes <- function(nodes, choices){
   }
   intersect(nodes, choices) %>%
     unique
+}
+
+repair_target_names <- function(x){
+  illegals <- c(
+    ":", "\\+", "\\-", "\\*", "\\^",
+    "\\(", "\\)", "\\[", "\\]", "^_"
+  ) %>%
+    paste(collapse = "|")
+  non_files <- x[is_not_file(x)]
+  if (any(grepl(illegals, non_files))){
+    warning("replacing illegal symbols in target names with '_'.")
+  } else {
+    return(x)
+  }
+  x <- str_trim(x, side = "both")
+  x[is_not_file(x)] <- gsub(illegals, "_", x[is_not_file(x)])
+  x <- gsub("^_", "", x)
+  x[!nchar(x)] <- "X"
+  make.unique(x, sep = "_")
 }

@@ -2,18 +2,22 @@
 % Please edit documentation in R/predict_runtime.R
 \name{rate_limiting_times}
 \alias{rate_limiting_times}
-\title{Function rate_limiting_times}
+\title{Return a data frame of elapsed build times of
+the rate-limiting targets of a drake project.}
 \usage{
-rate_limiting_times(plan = workplan(), from_scratch = FALSE,
-  targets_only = FALSE, targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = TRUE, hook = function(code) {    
-  force(code) }, cache = drake::get_cache(path = path, search = search,
-  verbose = verbose), parallelism = drake::default_parallelism(), jobs = 1,
-  future_jobs = jobs, packages = rev(.packages()), prework = character(0),
-  config = NULL, digits = 3, path = getwd(), search = TRUE)
+rate_limiting_times(config, targets = NULL, from_scratch = FALSE,
+  targets_only = FALSE, future_jobs = 1, digits = 3)
 }
 \arguments{
-\item{plan}{same as for \code{\link{make}}}
+\item{config}{option internal runtime parameter list of
+\code{\link{make}(...)},
+produced by both \code{\link{make}()} and
+\code{\link{drake_config}()}.}
+
+\item{targets}{Character vector, names of targets.
+Find the rate-limiting times for building these targets
+plus dependencies.
+Defaults to all targets.}
 
 \item{from_scratch}{logical, whether to assume
 next hypothetical call to \code{\link{make}()}
@@ -22,56 +26,24 @@ is a build from scratch (after \code{\link{clean}()}).}
 \item{targets_only}{logical, whether to factor in just the
 targets or use times from everything, including the imports.}
 
-\item{targets}{Targets to build in the workplan.
-Timing information is
-limited to these targets and their dependencies.}
-
-\item{envir}{same as for \code{\link{make}}. Supersedes
-\code{config$envir}.}
-
-\item{verbose}{same as for \code{\link{make}}}
-
-\item{hook}{same as for \code{\link{make}}}
-
-\item{cache}{optional drake cache. See code{\link{new_cache}()}.
-The \code{cache} argument is ignored if a
-non-null \code{config} argument is supplied.}
-
-\item{parallelism}{same as for \code{\link{make}}, and
-also used to process imported objects/files.}
-
-\item{jobs}{same as for \code{\link{make}}, just used to
-process imports.}
-
 \item{future_jobs}{hypothetical number of jobs
 assumed for the predicted runtime.
 assuming this number of jobs.}
 
-\item{packages}{same as for \code{\link{make}}}
-
-\item{prework}{same as for \code{\link{make}}}
-
-\item{config}{option internal runtime parameter list of
-\code{\link{make}(...)},
-produced with \code{\link{config}()}.
-Overrides all arguments except \code{from_scratch},
-\code{targets_only}, and \code{digits}.
-Computing \code{config}
-in advance could save time if you plan multiple calls to
-this function.}
-
 \item{digits}{number of digits for rounding the times.}
-
-\item{path}{file path to the folder containing the cache.
-Yes, this is the parent directory containing the cache,
-not the cache itself.}
-
-\item{search}{logical, whether to search back in the file system
-for the cache.}
+}
+\value{
+A data frame of times of the worst-case scenario
+rate-limiting targets in each parallelizable stage.
 }
 \description{
-Return a data frame of elapsed build times of
-the rate-limiting targets of a \code{\link{make}()} workplan.
+This function produces a conservative
+estimate for \code{\link{predict_runtime}()}
+for when parallel computing is used in \code{\link{make}()}.
+This feature is experimental.
+The accuracy, precision, and utility of these supposedly
+rate-limiting times has not been confirmed by rigorous
+performance studies.
 }
 \details{
 The \code{stage} column of the returned data frame
@@ -96,23 +68,28 @@ will warn you and tell you which targets have missing times.
 }
 \examples{
 \dontrun{
-load_basic_example()
-make(my_plan)
-rate_limiting_times(my_plan) # everything is up to date
-rate_limiting_times(my_plan, from_scratch  = TRUE, digits = 4) # 1 job
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
+config <- make(my_plan) # Run the project, build the targets.
+rate_limiting_times(config) # Everything is up to date.
+# Assume everything runs from scratch with 1 job.
+rate_limiting_times(config, from_scratch  = TRUE, digits = 4)
+# With 2 jobs, some of the targets are not rate-limiting.
 rate_limiting_times(
-  my_plan,
+  config,
   future_jobs = 2,
   from_scratch = TRUE,
   digits = 4
 )
+# Find the rate-limiting times of just building targets
+# "small" and "large".
 rate_limiting_times(
-  my_plan,
+  config,
   targets = c("small", "large"),
-  future_jobs = 2,
   from_scratch = TRUE,
   digits = 4
 )
+})
 }
 
 }

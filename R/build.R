@@ -1,53 +1,81 @@
-#' @title Internal function build
+#' @title Build/process a single target or import.
 #' @export
-#' @description Function to build a target.
-#' For internal use only.
+#' @keywords internal
+#' @description For internal use only.
 #' the only reason this function is exported
-#' is to set up PSOCK clusters efficiently.
+#' is to set up parallel socket (PSOCK) clusters
+#' without much of a fuss.
+#' @return The value of the target right after it is built.
 #' @param target name of the target
-#' @param hash_list list of hashes that tell which
-#' targets are up to date
+#' @param meta list of metadata that tell which
+#' targets are up to date (from \code{drake_meta()}).
 #' @param config internal configuration list
-build <- function(target, hash_list, config){
+#' @examples
+#' \dontrun{
+#' test_with_dir("Quarantine side effects.", {
+#' # This example is not really a user-side demonstration.
+#' # It just walks through a dive into the internals.
+#' # Populate your workspace and write 'report.Rmd'.
+#' load_basic_example() # Get the code with drake_example("basic").
+#' # Create the master internal configuration list.
+#' config <- drake_config(my_plan)
+#' # Optionally, compute metadata on 'small',
+#' # including a hash/fingerprint
+#' # of the dependencies. If meta is not supplied,
+#' # drake_build() computes it automatically.
+#' meta <- drake_meta(target = "small", config = config)
+#' # Should not yet include 'small'.
+#' cached()
+#' # Build 'small'.
+#' # Equivalent to just drake_build(target = "small", config = config).
+#' drake_build(target = "small", config = config, meta = meta)
+#' # Should now include 'small'
+#' cached()
+#' readd(small)
+#' })
+#' }
+drake_build <- function(target, config, meta = NULL){
+  if (is.null(meta)){
+    meta <- drake_meta(target = target, config = config)
+  }
   config$hook(
     build_in_hook(
       target = target,
-      hash_list = hash_list,
+      meta = meta,
       config = config
     )
   )
 }
 
-build_in_hook <- function(target, hash_list, config) {
+drake_build_worker <- function(target, meta_list, config){
+  drake_build(
+    target = target,
+    meta = meta_list[[target]],
+    config = config
+  )
+}
+
+build_in_hook <- function(target, meta, config) {
   start <- proc.time()
-  hashes <- hash_list[[target]]
-  config$cache$set(key = target, value = "in progress",
-    namespace = "progress")
-  imported <- !(target %in% config$plan$target)
-  console(imported = imported, target = target, config = config)
-  if (imported) {
-    value <- imported_target(target = target, hashes = hashes,
+  set_progress(
+    target = target,
+    value = "in progress",
+    config = config
+  )
+  console(imported = meta$imported, target = target, config = config)
+  if (meta$imported) {
+    value <- imported_target(target = target,
       config = config)
   } else {
     value <- build_target(target = target,
-      hashes = hashes, config = config)
+      config = config)
   }
-
-  config$cache$set(key = target, value = hashes$depends,
-    namespace = "depends")
-  config$cache$set(key = target, value = imported, namespace = "imported")
-  runtime <- (proc.time() - start) %>%
-    runtime_entry(target = target, imported = imported)
-  config$cache$set(key = target, value = runtime,
-    namespace = "build_times")
-  store_target(target = target, value = value, hashes = hashes,
-    imported = imported, config = config)
-  config$cache$set(key = target, value = "finished",
-    namespace = "progress")
-  value
+  store_target(target = target, value = value, meta = meta,
+    start = start, config = config)
+  invisible(value)
 }
 
-build_target <- function(target, hashes, config) {
+build_target <- function(target, config) {
   command <- get_command(target = target, config = config) %>%
     functionize
   seed <- list(seed = config$seed, target = target) %>%
@@ -63,7 +91,7 @@ check_built_file <- function(target){
   if (!is_file(target)){
     return()
   }
-  if (!file.exists(eply::unquote(target))){
+  if (!file.exists(drake::drake_unquote(target))){
     warning(
       "File target ", target, " was built,\n",
       "but the file itself does not exist.",
@@ -72,9 +100,9 @@ check_built_file <- function(target){
   }
 }
 
-imported_target <- function(target, hashes, config) {
+imported_target <- function(target, config) {
   if (is_file(target)) {
-    return(hashes$file)
+    return(NA)
   } else if (target %in% ls(config$envir, all.names = TRUE)) {
     value <- config$envir[[target]]
   } else {
@@ -101,51 +129,9 @@ flexible_get <- function(target) {
   get(fun, envir = getNamespace(pkg))
 }
 
-store_target <- function(target, value, hashes, imported, config) {
-  if (is_file(target)) {
-    store_file(target = target, hashes = hashes, imported = imported,
-      config = config)
-  } else if (is.function(value)) {
-    store_function(target = target, value = value,
-      imported = imported, hashes = hashes, config = config)
-  } else {
-    store_object(target = target, value = value,
-      imported = imported, config = config)
-  }
-  config$cache$set(key = target, value = hashes$depends,
-    namespace = "depends")
-}
-
-store_object <- function(target, value, imported, config) {
-  config$cache$set(key = target, value = list(type = "object",
-    value = value, imported = imported))
-}
-
-store_file <- function(target, hashes, imported, config) {
-  hash <- ifelse(
-    imported,
-    hashes$file,
-    rehash_file(target = target, config = config)
-  )
-  config$cache$set(key = target, value = file.mtime(eply::unquote(target)),
-    namespace = "filemtime")
-  config$cache$set(key = target, value = list(type = "file",
-    value = hash, imported = imported))
-}
-
-store_function <- function(target, value, hashes, imported,
-  config) {
-  config$cache$set(key = target, value = value, namespace = "functions")
-  # Unfortunately, vectorization is removed, but this is for the best.
-  string <- deparse(unwrap_function(value))
-  config$cache$set(key = target, value = list(type = "function",
-    value = string, imported = imported,
-    depends = hashes$depends)) # for nested functions
-}
-
 # Turn a command into an anonymous function
-# call to avoid side effects that can interfere
-# with parallelism
+# call to avoid side effects that could interfere
+# with parallelism.
 functionize <- function(command) {
   paste0("(function(){\n", command, "\n})()")
 }

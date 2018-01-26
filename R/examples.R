@@ -1,44 +1,71 @@
-#' @title Function \code{example_drake}
+#' @title Save the source code files of a drake example.
 #' @description Copy a folder of code files for a
 #' drake example to the current working directory.
-#' Call \code{example_drake('basic')} to generate the code files from the
+#' Call \code{drake_example('basic')} to generate the code files from the
 #' quickstart vignette: \code{vignette('quickstart')}.
-#' To see the names of all the examples, run \code{\link{examples_drake}}.
-#' @seealso \code{\link{examples_drake}}, \code{\link{make}}
+#' To see the names of all the examples, run \code{\link{drake_examples}}.
+#' @seealso \code{\link{drake_examples}}, \code{\link{make}},
+#' \code{\link{shell_file}}, \code{\link{drake_batchtools_tmpl_file}}
 #' @export
+#' @return \code{NULL}
 #' @param example name of the example.
 #' To see all the available example names,
-#' run \code{\link{examples_drake}}.
-#' @param destination character scalar, file path, where
+#' run \code{\link{drake_examples}}.
+#' @param to Character scalar, file path, where
 #' to write the folder containing the code files for the example.
+#' @param destination Deprecated, use \code{to} instead.
+#' @param overwrite Logical, whether to overwrite an existing folder
+#' with the same name as the drake example.
 #' @examples
 #' \dontrun{
-#' example_drake('basic') # Same as the quickstart vignette
+#' test_with_dir("Quarantine side effects.", {
+#' drake_examples() # List all the drake examples.
+#' # Sets up the same example as the quickstart vignette.
+#' drake_example("basic")
+#' # Sets up the SLURM example.
+#' drake_example("slurm")
+#' })
 #' }
-example_drake <- function(
-  example = drake::examples_drake(),
-  destination = getwd()
+drake_example <- function(
+  example = drake::drake_examples(),
+  to = getwd(),
+  destination = NULL,
+  overwrite = FALSE
 ){
+  if (!is.null(destination)){
+    warning(
+      "The 'destination' argument of drake_example() is deprecated. ",
+      "Use 'to' instead."
+    )
+    to <- destination
+  }
   example <- match.arg(example)
   dir <- system.file(file.path("examples", example), package = "drake",
     mustWork = TRUE)
-  if (file.exists(example))
-    stop("There is already a file or folder named ", example,
-      ".", sep = "")
-  file.copy(from = dir, to = destination, recursive = TRUE)
+  file.copy(from = dir, to = to,
+    overwrite = overwrite, recursive = TRUE)
   invisible()
 }
 
-#' @title Function \code{examples_drake}
-#' @description List the names of all the drake examples.
-#' The \code{'basic'} example is the one from the
+#' @title List the names of all the drake examples.
+#' @description The \code{'basic'} example is the one from the
 #' quickstart vignette: \code{vignette('quickstart')}.
+#' All are in the \code{inst/examples/} folder
+#' of the package source code.
 #' @export
-#' @seealso \code{\link{example_drake}}, \code{\link{make}}
-#' @return names of all the drake examples.
+#' @seealso \code{\link{drake_example}}, \code{\link{make}}
+#' @return Names of all the drake examples.
 #' @examples
-#' examples_drake()
-examples_drake <- function() {
+#' \dontrun{
+#' test_with_dir("Quarantine side effects.", {
+#' drake_examples() # List all the drake examples.
+#' # Sets up the same example as the quickstart vignette.
+#' drake_example("basic")
+#' # Sets up the SLURM example.
+#' drake_example("slurm")
+#' })
+#' }
+drake_examples <- function() {
   list.dirs(system.file("examples", package = "drake", mustWork = TRUE),
     full.names = FALSE, recursive = FALSE)
 }

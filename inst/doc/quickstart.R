@@ -1,14 +1,20 @@
 ## ----suppression, echo = F-----------------------------------------------
 suppressMessages(suppressWarnings(library(drake)))
-clean(destroy = TRUE)
+clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  error = TRUE,
+  warning = TRUE
+)
 
 ## ----quickstartquickstart, eval = FALSE----------------------------------
 #  library(drake)
-#  load_basic_example() # Also (over)writes report.Rmd.
-#  plot_graph(my_plan) # Hover, click, drag, zoom, pan. See args 'from' and 'to'.
-#  make(my_plan) # Run the workflow.
-#  outdated(my_plan) # Check that everything is already up to date.
+#  load_basic_example()            # Get the code with drake_example("basic").
+#  config <- drake_config(my_plan) # Master configuration list
+#  vis_drake_graph(config)         # Hover, click, drag, zoom, pan.
+#  make(my_plan)                   # Run the workflow.
+#  outdated(config)                # Everything is up to date.
 
 ## ----quickdebug, eval = FALSE--------------------------------------------
 #  failed()                 # Targets that failed in the most recent `make()`
@@ -18,108 +24,113 @@ unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 #  error$calls              # Call stack / traceback
 
 ## ----noeval2, eval = FALSE-----------------------------------------------
-#  example_drake("basic") # Write the code files.
-#  examples_drake() # List the other examples.
+#  drake_example("basic") # Write the code files.
+#  drake_examples()       # List the other examples.
 #  vignette("quickstart") # This vignette
 
+## ----mtcarsquickstart----------------------------------------------------
+# ?mtcars # more info
+head(mtcars)
+
 ## ----libs----------------------------------------------------------------
-library(knitr)
+library(knitr) # Drake knows which packages you load.
 library(drake)
 
 ## ----sim-----------------------------------------------------------------
 simulate <- function(n){
+  # Pick a random set of cars to bootstrap from the mtcars data.
+  index <- sample.int(n = nrow(mtcars), size = n, replace = TRUE)
+  data <- mtcars[index, ]
+
+  # x is the car's weight, and y is the fuel efficiency.
   data.frame(
-    x = stats::rnorm(n),
-    y = rpois(n, 1)
+    x = data$wt,
+    y = data$mpg
   )
 }
 
 ## ----reg-----------------------------------------------------------------
+# Is fuel efficiency linearly related to weight?
 reg1 <- function(d){
   lm(y ~ + x, data = d)
 }
 
+# Is fuel efficiency related to the SQUARE of the weight?
 reg2 <- function(d){
   d$x2 <- d$x ^ 2
   lm(y ~ x2, data = d)
 }
 
 ## ----file----------------------------------------------------------------
-lines <- c(
-  "---",
-  "title: Example Report",
-  "author: You",
-  "output: html_document",
-  "---",
-  "",
-  "Look how I read outputs from the drake cache.",
-  "Drake notices that `small`, `coef_regression2_small`,",
-  "and `large` are dependencies of the",
-  "future compiled output report file target, `report.md`.",
-  "Just be sure that the workflow plan command for the target `'report.md'`",
-  "has an explicit call to `knit()`, something like `knit('report.Rmd')` or",
-  "`knitr::knit(input = 'report.Rmd', quiet = TRUE)`.",
-  "",
-  "```{r example_chunk}",
-  "library(drake)",
-  "readd(small)",
-  "readd(coef_regression2_small)",
-  "loadd(large)",
-  "head(large)",
-  "```")
-writeLines(lines, "report.Rmd")
+path <- file.path("examples", "basic", "report.Rmd")
+report_file <- system.file(path, package = "drake", mustWork = TRUE)
+file.copy(from = report_file, to = getwd(), overwrite = TRUE)
+
+## ----readlinesofreport---------------------------------------------------
+cat(readLines("report.Rmd"), sep = "\n")
+
+## ----robjimportsquickstart-----------------------------------------------
+ls()
+
+## ----filesystemimportsquickstart-----------------------------------------
+list.files()
 
 ## ----previewmyplan-------------------------------------------------------
-load_basic_example()
+load_basic_example() # Get the code with drake_example("basic").
 my_plan
 
 ## ----graph1quick, eval = FALSE-------------------------------------------
 #  # Hover, click, drag, zoom, and pan.
-#  plot_graph(my_plan, width = "100%", height = "500px")
+#  config <- drake_config(my_plan)
+#  vis_drake_graph(config, width = "100%", height = "500px") # Also drake_graph()
 
 ## ----checkdeps-----------------------------------------------------------
 deps(reg2)
+
 deps(my_plan$command[1]) # Files like report.Rmd are single-quoted.
+
 deps(my_plan$command[nrow(my_plan)])
 
 ## ----tracked-------------------------------------------------------------
 tracked(my_plan, targets = "small")
+
 tracked(my_plan)
 
 ## ----check---------------------------------------------------------------
-check(my_plan)
+check_plan(my_plan)
 
 ## ----datasets------------------------------------------------------------
-my_datasets <- workplan(
-  small = simulate(5),
-  large = simulate(50))
+my_datasets <- drake_plan(
+  small = simulate(48),
+  large = simulate(64))
 my_datasets
 
 ## ----expand--------------------------------------------------------------
-expand(my_datasets, values = c("rep1", "rep2"))
+expand_plan(my_datasets, values = c("rep1", "rep2"))
 
 ## ----methods-------------------------------------------------------------
-methods <- workplan(
-  regression1 = reg1(..dataset..), # nolint
-  regression2 = reg2(..dataset..)) # nolint
+methods <- drake_plan(
+  regression1 = reg1(dataset__),
+  regression2 = reg2(dataset__))
 methods
 
 ## ----analyses------------------------------------------------------------
-my_analyses <- analyses(methods, data = my_datasets)
+my_analyses <- plan_analyses(methods, data = my_datasets)
 my_analyses
 
 ## ----summaries-----------------------------------------------------------
-summary_types <- workplan(
-  summ = suppressWarnings(summary(..analysis..)), # nolint
-  coef = coefficients(..analysis..)) # nolint
+summary_types <- drake_plan(
+  summ = suppressWarnings(summary(analysis__$residuals)),
+  coef = suppressWarnings(summary(analysis__))$coefficients
+)
 summary_types
 
-results <- summaries(summary_types, analyses = my_analyses,
+results <- plan_summaries(summary_types, analyses = my_analyses,
   datasets = my_datasets, gather = NULL)
 results
 
 ## ----reportplan----------------------------------------------------------
-report <- workplan(
+report <- drake_plan(
   report.md = knit('report.Rmd', quiet = TRUE), # nolint
   file_targets = TRUE, strings_in_dots = "filenames")
 report
@@ -129,54 +140,77 @@ my_plan <- rbind(report, my_datasets, my_analyses, results)
 my_plan
 
 ## ----more_expansions_and_plans-------------------------------------------
-df <- workplan(data = simulate(center = MU, scale = SIGMA))
+df <- drake_plan(data = simulate(center = MU, scale = SIGMA))
 df
-df <- expand(df, values = c("rep1", "rep2"))
+
+df <- expand_plan(df, values = c("rep1", "rep2"))
 df
-evaluate(df, wildcard = "MU", values = 1:2)
-evaluate(df, wildcard = "MU", values = 1:2, expand = FALSE)
-evaluate(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1)), expand = FALSE)
-evaluate(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1, 10)))
-gather(df)
-gather(df, target = "my_summaries", gather = "rbind")
+
+evaluate_plan(df, wildcard = "MU", values = 1:2)
+
+evaluate_plan(df, wildcard = "MU", values = 1:2, expand = FALSE)
+
+evaluate_plan(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1)), expand = FALSE)
+
+evaluate_plan(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1, 10)))
+
+gather_plan(df)
+
+gather_plan(df, target = "my_summaries", gather = "rbind")
 
 ## ----firstmake-----------------------------------------------------------
-outdated(my_plan, verbose = FALSE) # Targets that need to be (re)built.
-missed(my_plan, verbose = FALSE) # Checks your workspace.
+config <- drake_config(my_plan, verbose = FALSE)
+outdated(config) # Targets that need to be (re)built.
+
+missed(config) # Checks your workspace.
 
 ## ----firstmakeforreal----------------------------------------------------
 make(my_plan)
+
+## ----getmtcarsanswer-----------------------------------------------------
+readd(coef_regression2_small)
 
 ## ----autoload------------------------------------------------------------
 ls()
 
 ## ----plotgraphfirstmake--------------------------------------------------
-outdated(my_plan, verbose = FALSE) # Everything is up to date.
+outdated(config) # Everything is up to date.
+
 build_times(digits = 4) # How long did it take to make each target?
 
 ## ----graph2quick, eval = FALSE-------------------------------------------
 #  # Hover, click, drag, zoom, and pan.
-#  plot_graph(my_plan, width = "100%", height = "500px")
+#  vis_drake_graph(config, width = "100%", height = "500px")
 
 ## ----dfgraph2quick, eval = FALSE-----------------------------------------
-#  dataframes_graph(my_plan)
+#  dataframes_graph(config)
 
 ## ----cache---------------------------------------------------------------
 readd(coef_regression2_large)
+
 loadd(small)
+
 head(small)
+
 rm(small)
 cached(small, large)
+
 cached()
+
 built()
+
 imported()
-head(read_plan())
+
+head(read_drake_plan())
+
 head(progress()) # See also in_progress()
+
 progress(large)
-session() # of the last call to make()
+
+# drake_session() # sessionInfo() of the last make() # nolint
 
 ## ----uptodateinvig-------------------------------------------------------
-make(my_plan)
+config <- make(my_plan) # Will use config later. See also drake_config().
 
 ## ----changereg2invignette------------------------------------------------
 reg2 <- function(d) {
@@ -185,11 +219,19 @@ reg2 <- function(d) {
 }
 
 ## ----plotwithreg2--------------------------------------------------------
-outdated(my_plan, verbose = FALSE)
+outdated(config)
+
+## ----depprofile----------------------------------------------------------
+dependency_profile(target = "regression2_small", config = config)
+
+config$cache$get_hash(key = "small") # same
+
+config$cache$get_hash(key = "reg2") # different
 
 ## ----graph3quick, eval = FALSE-------------------------------------------
 #  # Hover, click, drag, zoom, and pan.
-#  plot_graph(my_plan, width = "100%", height = "500px")
+#  # Same as drake_graph():
+#  vis_drake_graph(config, width = "100%", height = "500px")
 
 ## ----remakewithreg2------------------------------------------------------
 make(my_plan)
@@ -199,14 +241,14 @@ reg2 <- function(d) {
   d$x3 <- d$x ^ 3
     lm(y ~ x3, data = d) # I indented here.
 }
-outdated(my_plan, verbose = FALSE) # Everything is up to date.
+outdated(config) # Everything is up to date.
 
 ## ----newstuff------------------------------------------------------------
 new_simulation <- function(n){
   data.frame(x = rnorm(n), y = rnorm(n))
 }
 
-additions <- workplan(
+additions <- drake_plan(
   new_data = new_simulation(36) + sqrt(10))
 additions
 
@@ -216,9 +258,11 @@ my_plan
 make(my_plan)
 
 ## ----cleanup-------------------------------------------------------------
-clean(small, reg1) # uncaches individual targets and imported objects
-clean() # cleans all targets out of the cache
-clean(destroy = TRUE) # removes the cache entirely
+# Uncaches individual targets and imported objects.
+clean(small, reg1, verbose = FALSE)
+clean(verbose = FALSE) # Cleans all targets out of the cache.
+drake_gc(verbose = FALSE) # Just garbage collection.
+clean(destroy = TRUE, verbose = FALSE) # removes the cache entirely
 
 ## ----endofline_quickstart, echo = F--------------------------------------
 clean(destroy = TRUE, verbose = FALSE)

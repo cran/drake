@@ -1,9 +1,7 @@
-#' @title Function \code{find_cache}
-#' @description Return the file path of the nearest drake
-#' cache (searching upwards for directories containing a drake cache).
-#' Only works if the cache is a file system in a
-#' hidden folder named \code{.drake}.
-#' @seealso \code{\link{workplan}}, \code{\link{make}},
+#' @title Search up the file system for the nearest drake cache.
+#' @description Only works if the cache is a file system in a
+#' hidden folder named \code{.drake} (default).
+#' @seealso \code{\link{drake_plan}}, \code{\link{make}},
 #' @export
 #' @return File path of the nearest drake cache or \code{NULL}
 #' if no cache is found.
@@ -12,9 +10,13 @@
 #' @param directory Name of the folder containing the cache.
 #' @examples
 #' \dontrun{
-#' load_basic_example()
-#' make(my_plan)
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' make(my_plan) # Run the project, build the target.
+#' # Find the file path of the project's cache.
+#' # Search up through parent directories if necessary.
 #' find_cache()
+#' })
 #' }
 find_cache <- function(
   path = getwd(),
@@ -30,22 +32,25 @@ find_cache <- function(
   file.path(path, directory)
 }
 
-#' @title Function \code{find_project}
-#' @description Return the file path of the nearest drake
-#' project (searching upwards for directories
-#' containing a drake cache).
-#' Only works if the cache is a file system in a folder named \code{.drake}.
+#' @title Search up the file system
+#' for the nearest root path of a drake project.
+#' @description Only works if the cache is a file system
+#' in a folder named \code{.drake} (default).
 #' @export
-#' @seealso \code{\link{workplan}}, \code{\link{make}}
+#' @seealso \code{\link{drake_plan}}, \code{\link{make}}
 #' @return File path of the nearest drake project or \code{NULL}
 #' if no drake project is found.
 #' @param path starting path for search back for the project.
 #' Should be a subdirectory of the drake project.
 #' @examples
 #' \dontrun{
-#' load_basic_example()
-#' make(my_plan)
-#' find_project()
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' make(my_plan) # Run the project, build the target.
+#' # Find the root directory of the current drake project.
+#' # Search up through parent directories if necessary.
+#' find_cache()
+#' })
 #' }
 find_project <- function(path = getwd()){
   cache <- find_cache(path = path)

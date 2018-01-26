@@ -1,0 +1,160 @@
+drake_context("graph")
+
+test_with_dir("drake searches past outdated targets for parallel stages", {
+  plan <- drake_plan(
+    a = 1,
+    b = a,
+    d = b,
+    e = d,
+    c = a,
+    f = c
+  )
+  config <- make(plan, targets = c("a", "b", "c", "d"), session_info = FALSE)
+  config <- drake_config(plan)
+  stages <- parallel_stages(config)
+  expect_equal(sort(stages$item), c("e", "f"))
+  expect_equal(length(unique(stages$stage)), 1)
+  expect_equal(sort(next_stage(config)), sort(c("e", "f")))
+})
+
+test_with_dir("Supplied graph is not an igraph.", {
+  expect_error(prune_drake_graph(12345, to = "node"))
+})
+
+test_with_dir("graph does not fail if input file is binary", {
+  x <- drake_plan(y = readRDS("input.rds"))
+  saveRDS(as.list(mtcars), "input.rds")
+  con <- drake_config(x, verbose = FALSE)
+  expect_silent(out <- vis_drake_graph(con))
+  unlink("input.rds", force = TRUE)
+})
+
+test_with_dir("null graph", {
+  x <- dataframes_graph(config = list(graph = igraph::make_empty_graph()))
+  expect_equal(x, null_graph())
+})
+
+test_with_dir("circular non-DAG drake_plans quit in error", {
+  p <- drake_plan(a = b, b = c, c = a)
+  expect_error(tmp <- capture.output(check_plan(p)))
+  expect_error(make(p, verbose = FALSE, session_info = FALSE))
+})
+
+test_with_dir("Supplied graph disagrees with the workflow plan", {
+  con <- dbug()
+  con2 <- drake_config(drake_plan(a = 1), verbose = FALSE)
+  expect_warning(
+    make(
+      plan = con$plan,
+      envir = con$envir,
+      graph = con2$graph,
+      verbose = FALSE,
+      session_info = FALSE
+    )
+  )
+})
+
+test_with_dir("graph functions work", {
+  config <- dbug()
+  expect_equal(
+    class(build_drake_graph(config$plan, verbose = FALSE)), "igraph")
+  pdf(NULL)
+  tmp <- vis_drake_graph(config)
+  dev.off()
+  unlink("Rplots.pdf", force = TRUE)
+  expect_true(is.character(default_graph_title(
+    split_columns = FALSE)))
+  expect_true(is.character(default_graph_title(
+    split_columns = TRUE)))
+})
+
+test_with_dir("Supplied graph is pruned.", {
+  load_basic_example()
+  graph <- build_drake_graph(my_plan)
+  con <- drake_config(my_plan, targets = c("small", "large"), graph = graph)
+  vertices <- V(con$graph)$name
+  include <- c("small", "simulate", "data.frame", "sample.int", "large")
+  exclude <- setdiff(my_plan$target, include)
+  expect_true(all(include %in% vertices))
+  expect_false(any(exclude %in% vertices))
+})
+
+test_with_dir("same graphical arrangements for distributed parallelism", {
+  e <- new.env()
+  x <- drake_plan(a = 1, b = f(2))
+  e$f <- function(x) x
+  con <- drake_config(x, envir = e, verbose = FALSE)
+  expect_equal(2, max_useful_jobs(config = con))
+  expect_equal(2, max_useful_jobs(config = con))
+  con$parallelism <- "Makefile"
+  expect_equal(2, max_useful_jobs(config = con))
+  expect_equal(2, max_useful_jobs(config = con))
+  y <- drake_plan(a = 1, b = 2)
+  tmp <- dataframes_graph(config = con)
+  expect_true(is.list(tmp))
+})
+
+test_with_dir("graphing args are not ignored (basic example)", {
+  scenario <- get_testing_scenario()
+  e <- eval(parse(text = scenario$envir))
+  jobs <- scenario$jobs
+  parallelism <- scenario$parallelism
+
+  load_basic_example(envir = e)
+  my_plan <- e$my_plan
+  config <- drake_config(my_plan, envir = e,
+                         jobs = jobs, parallelism = parallelism,
+                         verbose = FALSE)
+
+  tmp <- vis_drake_graph(config = config)
+  expect_false(file.exists("Makefile"))
+
+  # Different graph configurations should be checked manually.
+  tmp <- dataframes_graph(config = config, build_times = FALSE)
+  tmpcopy <- dataframes_graph(config = config,
+    make_imports = FALSE, build_times = FALSE)
+  tmp0 <- dataframes_graph(config = config, build_times = FALSE,
+    subset = c("small", "regression2_large"))
+  tmp1 <- dataframes_graph(config = config, build_times = FALSE,
+    from = "small")
+  tmp2 <- dataframes_graph(config = config, build_times = FALSE,
+    from = "small", targets_only = TRUE)
+  tmp3 <- dataframes_graph(config = config, build_times = FALSE,
+    targets_only = TRUE)
+  tmp4 <- dataframes_graph(config = config, build_times = FALSE,
+    split_columns = TRUE)
+  tmp5 <- dataframes_graph(config = config, build_times = FALSE,
+    targets_only = TRUE, split_columns = TRUE)
+  tmp6 <- dataframes_graph(config = config, build_times = TRUE,
+    targets_only = TRUE, split_columns = TRUE)
+  tmp7 <- dataframes_graph(config = config, build_times = TRUE,
+    targets_only = TRUE, split_columns = TRUE, from_scratch = TRUE)
+  expect_warning(
+    tmp8 <- dataframes_graph(config = config, build_times = FALSE,
+                             from = c("small", "not_found"))
+  )
+  expect_error(
+    tmp9 <- dataframes_graph(config = config, build_times = FALSE,
+                             from = "not_found")
+  )
+  expect_equal(nrow(tmp0$nodes), 2)
+  expect_true(identical(tmp$nodes, tmpcopy$nodes))
+  expect_false(identical(tmp$nodes, tmp0$nodes))
+  expect_false(identical(tmp$nodes, tmp1$nodes))
+  expect_false(identical(tmp$nodes, tmp2$nodes))
+  expect_false(identical(tmp$nodes, tmp3$nodes))
+  expect_false(identical(tmp$nodes, tmp4$nodes))
+  expect_false(identical(tmp$nodes, tmp5$nodes))
+  expect_false(identical(tmp$nodes, tmp6$nodes))
+
+  expect_false(file.exists("Makefile"))
+  expect_true(is.data.frame(tmp$nodes))
+  expect_equal(sort(outdated(config = config)),
+               sort(c(my_plan$target)))
+  expect_false(file.exists("Makefile"))
+
+  file <- "graph.html"
+  expect_false(file.exists(file))
+  vis_drake_graph(config = config, file = file)
+  expect_true(file.exists(file))
+})

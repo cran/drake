@@ -2,12 +2,15 @@
 % Please edit documentation in R/cache.R
 \name{default_cache_path}
 \alias{default_cache_path}
-\title{Function default_cache_path}
+\title{Return the default file path of the drake/storr cache.}
 \usage{
 default_cache_path()
 }
+\value{
+Default file path of the drake/storr cache.
+}
 \description{
-default drake cache path
+Applies to file system caches only.
 }
 \examples{
 default_cache_path()

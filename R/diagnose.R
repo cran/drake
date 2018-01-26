@@ -1,6 +1,6 @@
-#' @title Function \code{diagnose}
-#' @description Get the last stored error of a target
-#' that failed to build. This target could be a
+#' @title Get the last stored error log of a target
+#' that failed to build, or list the targets with error logs.
+#' @description The specified target could be a
 #' completely failed target or a target
 #' that failed initially, retried, then succeeded.
 #' If no target is given, then \code{diagnose()} simply
@@ -10,8 +10,10 @@
 #' for ordinary error messages printed to the console.
 #' @seealso
 #' \code{\link{failed}}, \code{\link{progress}},
-#' \code{\link{readd}}, \code{\link{workplan}}, \code{\link{make}}
+#' \code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
 #' @export
+#' @return Either a character vector of target names or an object
+#' of class \code{"error"}.
 #'
 #' @param target name of the target of the error to get.
 #' Can be a symbol if \code{character_only} is \code{FALSE},
@@ -37,17 +39,27 @@
 #'
 #' @examples
 #' \dontrun{
-#' diagnose()
+#' test_with_dir("Quarantine side effects.", {
+#' diagnose() # List all the targets with recorded error logs.
+#' # Define a function doomed to failure.
 #' f <- function(){
 #'   stop("unusual error")
 #' }
-#' bad_plan <- workplan(my_target = f())
-#' make(bad_plan)
-#' failed() # from the last make() only
-#' diagnose() # from all previous make()'s
+#' # Create a workflow plan doomed to failure.
+#' bad_plan <- drake_plan(my_target = f())
+#' # Running the project should generate an error
+#' # when trying to build 'my_target'.
+#' try(make(bad_plan), silent = FALSE)
+#' failed() # List the failed targets from the last make() (my_target).
+#' # List targets that failed at one point or another
+#' # over the course of the project (my_target).
+#' # Drake keeps all the error logs.
+#' diagnose()
+#' # Get the error log, an object of class "error".
 #' error <- diagnose(my_target)
-#' str(error)
-#' error$calls # View the traceback.
+#' str(error) # See what's inside the error log.
+#' error$calls # View the traceback. (See the traceback() function).
+#' })
 #' }
 diagnose <- function(
   target = NULL,
@@ -63,15 +75,10 @@ diagnose <- function(
   if (!character_only){
     target <- as.character(substitute(target))
   }
-  targets <- cache$list(namespace = "errors") %>%
-    sort
-  if (!length(targets)){
-    return(character(0))
-  }
   if (!length(target)){
-    return(targets)
+    return(cache$list(namespace = "errors"))
   }
-  if (!(target %in% targets)){
+  if (!cache$exists(key = target, namespace = "errors")){
     stop("No diagnostic information for target ", target, ".")
   }
   cache$get(key = target, namespace = "errors")

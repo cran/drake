@@ -2,11 +2,36 @@
 ### PURPOSE ###
 ###############
 #
-# Show how to use drake to reproducibly manage
-# and accelerate a data analysis workflow.
+# The purpose of this example is to walk through
+# drake's main functionality using a simple example
+# data analysis workflow.
 #
-# Enter vignette("quickstart") for a walkthrough
-# of this code.
+############
+# QUESTION #
+############
+#
+# Is there an association between the weight and the fuel efficiency of cars?
+#
+####################
+# GENERAL APPROACH #
+####################
+#
+# To answer the question, we use the `mtcars` dataset
+# from the `datasets` package.
+# The `mtcars` data originally came from the 1974 Motor Trend US magazine,
+# and it contains design and performance data on 32 models of automobile.
+# Type `?mtcars` for more information.
+#
+# `mtcars$mpg` is the fuel efficiency in miles per gallon,
+# and `mtcars$wt` is the weight in tons. `mpg` and `wt`
+# will become `x` and `y`, respectively.
+#
+# Since we only have 32 rows in the mtcars dataset,
+# we will create bigger datasets by resampling
+# the rows with replacement (bootstrapping).
+# Then, we will apply a couple of regression models
+# and ask how well we can use a car's weight
+# to model its fuel efficiency.
 #
 ###################################
 ### LOAD PACKAGES AND FUNCTIONS ###
@@ -20,19 +45,27 @@ library(drake)
 
 clean() # remove any previous drake output
 
-# User-defined functions
+# The simulate() function bootstraps cars from the mtcars dataset.
 simulate <- function(n){
+  # Pick a random set of cars to bootstrap from the mtcars data.
+  index <- sample.int(n = nrow(mtcars), size = n, replace = TRUE)
+  data <- mtcars[index, ]
+
+  # x is the car's weight, and y is the fuel efficiency.
   data.frame(
-    # Drake tracks calls like `pkg::fn()` (namespaced functions).
-    x = stats::rnorm(n),
-    y = rpois(n, 1)
+    x = data$wt,
+    y = data$mpg
   )
 }
 
+# Try a couple different regression models.
+
+# Is fuel efficiency linearly related to weight?
 reg1 <- function(d){
   lm(y ~ + x, data = d)
 }
 
+# Is fuel efficiency related to the SQUARE of the weight?
 reg2 <- function(d){
   d$x2 <- d$x ^ 2
   lm(y ~ x2, data = d)
@@ -48,32 +81,46 @@ reg2 <- function(d){
 # To skip to the "CHECK AND DEBUG WORKFLOW PLAN" section, just
 # call load_basic_example().
 
-my_datasets <- workplan(
-  small = simulate(5),
-  large = simulate(50)
+# We write drake commands to generate our two bootstrapped datasets.
+my_datasets <- drake_plan(
+  small = simulate(48),
+  large = simulate(64)
 )
 
 # Optionally, get replicates with expand(my_datasets,
 #   values = c("rep1", "rep2")).
+# Bootstrapping involves randomness, so this is good practice
+# in real life. But this is a miniaturized workflow,
+# so we will not use replicates here.
 
-methods <- workplan(
-  regression1 = reg1(..dataset..), ## nolint
-  regression2 = reg2(..dataset..) ## nolint
+# This is a wildcard template for generating more commands.
+# These new commands will apply our regression models
+# to each of the datasets in turn.
+methods <- drake_plan(
+  regression1 = reg1(dataset__),
+  regression2 = reg2(dataset__)
 )
 
-# same as evaluate(methods, wildcard = "..dataset..",
+# Here, we use the template to expand the `methods` template
+# over the datasets we will analyze.
+# Same as evaluate(methods, wildcard = "..dataset..",
 #   values = my_datasets$target)
-my_analyses <- analyses(methods, datasets = my_datasets)
+my_analyses <- plan_analyses(methods, datasets = my_datasets)
 
-summary_types <- workplan(
-  # Perfect regression fits can happen.
-  summ = suppressWarnings(summary(..analysis..)), ## nolint
-  coef = coefficients(..analysis..) ## nolint
+# Now, we summarize each regression fit of each bootstrapped dataset.
+# We will look at these summaries to figure out if fuel efficiency
+# and weight are related somehow.
+# Again, this is a template. Later we will expand it over the
+# available regression models.
+summary_types <- drake_plan(
+  summ = suppressWarnings(summary(analysis__$residuals)), # Summarize the RESIDUALS of the model fit. # nolint
+  coef = suppressWarnings(summary(analysis__))$coefficients # Coefficinents with p-values # nolint
 )
 
+# Here, we expand the commands to summarize each analysis in turn.
 # summaries() also uses evaluate(): once with expand = TRUE,
 #   once with expand = FALSE
-results <- summaries(
+results <- plan_summaries(
   summary_types,
   my_analyses,
   my_datasets,
@@ -85,8 +132,9 @@ results <- summaries(
 # Single quotes inside imported functions are ignored, so this mechanism
 # only works inside the workflow my_plan data frame.
 # WARNING: drake cannot track entire directories (folders).
-report <- workplan(
-  # As long as `knit()` is visible in your workflow plan command,
+report <- drake_plan(
+  # As long as `knit()`, `knitr::knit()`, `render()`, or `rmarkdown::render()`
+  # is visible in your workflow plan command,
   # drake will dig into the active code chunks of your `report.Rmd`
   # and find the dependencies of `report.md` in the arguments of
   # calls to loadd() and readd().
@@ -107,11 +155,12 @@ my_plan <- rbind(report, my_datasets, my_analyses, results)
 #####################################
 
 # Graph the dependency structure of your workflow
-# plot_graph(my_plan) # plots an interactive web app via visNetwork. #nolint optional
-workflow_graph <- build_graph(my_plan) # igraph object
+# config <- drake_config(my_plan) # nolint
+# vis_drake_graph(config) # plots an interactive web app via visNetwork. #nolint optional
+workflow_graph <- build_drake_graph(my_plan) # igraph object
 
 # Check for circularities, missing input files, etc.
-check(my_plan)
+check_plan(my_plan)
 
 # Check the dependencies of individual functions and commands.
 deps(reg1)
@@ -133,12 +182,17 @@ tracked(my_plan)
 # Start off with a clean workspace (optional).
 clean() # Cleans out the hidden cache in the .drake/ folder if it exists.
 
-# All the targets in the plan are "outdated" because we have not made them yet.
-outdated(my_plan, verbose = FALSE)
-# plot_graph(my_plan) # Show how the pieces of your workflow are connected #nolint: optional
-missed(my_plan) # Nothing should be missing from your workspace.
+# Get a drake config list so you can use
+# other utility functions
+config <- drake_config(my_plan, verbose = FALSE)
 
-make(my_plan) # Run your project.
+# All the targets in the plan are "outdated" because we have not made them yet.
+outdated(config)
+# vis_drake_graph(my_plan) # Show how the pieces of your workflow are connected #nolint: optional
+missed(config) # Nothing should be missing from your workspace.
+
+# Run your project.
+config <- make(my_plan) # Return an updated config list
 # The non-file dependencies of your last target are already loaded
 # in your workspace.
 
@@ -147,23 +201,25 @@ build_times()
 
 ls() # Should contain the non-file dependencies of the last target(s).
 progress() # See also in_progress()
-outdated(my_plan, verbose = FALSE) # Everything is up to date
-# plot_graph(my_plan) # The red nodes from before turned green. #nolint: optional
+outdated(config) # Everything is up to date
+# vis_drake_graph(my_plan) # The red nodes from before turned green. #nolint: optional
 # session() # get the sessionInfo() of the last call to make() #nolint: optional
 
-# see also: loadd(), cached(), imported(), and built()
-readd(coef_regression2_large) # Read target from the cache.
+# Since the p-value on x2 is so low,
+# we can say that 
+readd(coef_regression2_large) # see also: loadd(), cached(), imported(), and built() # nolint
 
 # Everything is up to date.
-make(my_plan)
+config <- make(my_plan)
 
-# Change to a cubic term and rerun.
+# What if we want to explore a cubic term?
+# What if we want to know if fuel efficiency is associated with weight cubed?
 reg2 <- function(d){
   d$x3 <- d$x ^ 3
   lm(y ~ x3, data = d)
 }
-outdated(my_plan) # The targets depending on reg2() are now out of date...
-# plot_graph(my_plan) # ...which is indicated in the graph. #nolint: optional
+outdated(config) # The targets depending on reg2() are now out of date...
+# vis_drake_graph(config) # ...which is indicated in the graph. #nolint: optional
 
 make(my_plan) # Drake only runs targets that depend on reg2().
 
@@ -173,31 +229,38 @@ reg2 <- function(d){
   d$x3 <- d$x ^ 3
     lm(y ~ x3, data = d) # I indented here.
 }
-outdated(my_plan) # Everything is still up to date.
+outdated(config) # Everything is still up to date.
 
 #########################################
 ### NEED TO ADD MORE WORK ON THE FLY? ###
 #########################################
 
 # Just write more functions and add rows to your workflow plan.
+# This function represents a null case.
+# In other words, what would our methods discover if
+# there were really no true relationship between weight and fuel efficiency?
+# Our methods should detect no relationship.
 new_simulation <- function(n){
   data.frame(x = rnorm(n), y = rnorm(n))
 }
 
 # Any R expression can be a command
 # except for formulas and function definitions.
-additions <- workplan(
+additions <- drake_plan(
   new_data = new_simulation(36) + sqrt(10)
-  )
+)
 
 # Add the new work
 my_plan <- rbind(my_plan, additions)
-make(my_plan) # Only the new work is run.
+config <- make(my_plan) # Only the new work is run.
 
 # Clean up and start over next time.
 # Use clean(small), clean(list = "large"), etc.
 # to remove individual targets.
 clean() # report.html and report.md are removed, but report.Rmd stays.
+
+# Garbage collection
+drake_gc() # Also consider clean(garbage_collection = TRUE)
 
 ###############################################
 ### ONE R SESSION WITH 2 PARALLEL PROCESSES ###
@@ -205,9 +268,10 @@ clean() # report.html and report.md are removed, but report.Rmd stays.
 
 # How many parallel jobs might be useful?
 # At what point would it be ridiculous to add more jobs?
-max_useful_jobs(my_plan)
+max_useful_jobs(config)
+clean()
 
-make(my_plan, jobs = 2) # parallelism == "parLapply" for Windows
+config <- make(my_plan, jobs = 2) # parallelism == "parLapply" for Windows
 # make(my_plan, parallelism = "mclapply", jobs = 2) # Not for Windows #nolint: optional
 readd(coef_regression2_large) # see also: loadd(), cached()
 
@@ -229,22 +293,22 @@ clean() # Start over next time.
 # to cap the number of simultaneous jobs.
 options(mc.cores = 2)
 library(future)
-backend(multicore) # Same as future::plan(multicore)
+future::plan(multicore) # Avoid drake::plan().
 make(my_plan, parallelism = "future_lapply")
 clean() # Erase the targets to start from scratch.
 
-backend(multisession) # Use separate background R sessions.
+future::plan(multisession) # Use separate background R sessions.
 make(my_plan, parallelism = "future_lapply")
 clean()
 
 if (require(future.batchtools)){ # More heavy-duty future-style parallel backends # nolint
-  backend(batchtools_local)
+  future::plan(batchtools_local)
   make(my_plan, parallelism = "future_lapply")
   clean()
 
   # Deploy targets with batchtools_local and use `future`-style
   # multicore parallism each individual target's command.
-  backend(list(batchtools_local, multicore))
+  future::plan(list(batchtools_local, multicore))
   make(my_plan, parallelism = "future_lapply")
   clean()
 }
@@ -307,8 +371,7 @@ if (FALSE){
     parallelism = "Makefile",
     jobs = 4,
     prepend = "SHELL=./shell.sh"
-    )
-
+  )
 } # if(FALSE)
 
 ###########################

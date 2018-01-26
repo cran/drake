@@ -1,11 +1,32 @@
+#' @title Write dummy timestamp files for
+#' \code{\link{make}(..., parallelism = "Makefile")}.
+#' @description For \code{"Makefile"} parallelism,
+#' dummy timestamp files tell the Makefile
+#' which targets need to be built and which can be skipped.
+#' This function is for internal use only. It is only exported
+#' to flesh out some of the examples in the help files.
+#' @export
+#' @keywords internal
+#' @return nothing
+#' @param config Internal master configuration list
+#' produced by \code{\link{drake_config}}.
+#' @examples
+#' \dontrun{
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' config <- drake_config(my_plan) # Master internal configuration list
+#' time_stamps(config)
+#' # Now look in '.drake/ts' for dummy timestamp files.
+#' })
+#' }
 time_stamps <- function(config){
-  cache_path <- cache_path(config$cache)
+  cache_path <- config$cache_path
   stamp_dir <- time_stamp_dir(cache_path)
   dir_empty(stamp_dir)
   write_time_stamp_template(cache_path)
-  targets <- intersect(V(config$graph)$name, config$plan$target)
-  target_attempts <- config$cache$list(namespace = "target_attempts")
-  stamp_these <- setdiff(targets, target_attempts)
+  build_these <- next_stage(config = config)
+  set_attempt_flag(flag = length(build_these), config = config)
+  stamp_these <- setdiff(config$plan$target, build_these)
   lightly_parallelize(
     stamp_these, write_time_stamp, jobs = config$jobs, config = config)
   return(invisible())

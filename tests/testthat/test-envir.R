@@ -1,25 +1,25 @@
 drake_context("envir")
 
 test_with_dir("prune_envir in full build", {
-  # workplan with lots of nested deps This will fail if
+  # drake_plan with lots of nested deps This will fail if
   # prune_envir() doesn't work.
-  datasets <- workplan(x = 1, y = 2, z = 3)
-  methods <- workplan(
-    a = ..dataset.., # nolint
-    b = ..dataset.., # nolint
-    c = ..dataset.. # nolint
+  datasets <- drake_plan(x = 1, y = 2, z = 3)
+  methods <- drake_plan(
+    a = dataset__,
+    b = dataset__,
+    c = dataset__
   )
-  analyses <- analyses(methods, datasets)
-  heuristics <- workplan(
-    s = c(..dataset.., ..analysis..), # nolint
-    t = ..analysis..) # nolint
-  summaries <- summaries(
+  analyses <- plan_analyses(methods, datasets)
+  heuristics <- drake_plan(
+    s = c(dataset__, analysis__),
+    t = analysis__)
+  summaries <- plan_summaries(
     heuristics,
     datasets = datasets,
     analyses = analyses,
     gather = c("rbind", "rbind")
   )
-  output <- workplan(
+  output <- drake_plan(
     final1 = mean(s) + mean(t),
     final2 = mean(s) - mean(t),
     waitforme = c(a_x, c_y, s_b_x, t_a_z),
@@ -29,11 +29,11 @@ test_with_dir("prune_envir in full build", {
 
   # set up a workspace to test prune_envir()
   # set verbose to TRUE to see log of loading
-  config <- config(
+  config <- drake_config(
     plan,
     targets = plan$target,
     envir = new.env(parent = globalenv()),
-    verbose = FALSE,
+    verbose = FALSE
   )
 
   # actually run

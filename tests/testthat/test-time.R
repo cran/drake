@@ -1,12 +1,33 @@
 drake_context("time")
 
+test_with_dir("can ignore a bad time", {
+  x <- drake_plan(a = 1, b = 2)
+  make(x, verbose = FALSE)
+  cache <- get_cache()
+  expect_equal(nrow(build_times()), 2)
+  set_in_subspace(
+    key = "a",
+    subspace = "build_times",
+    namespace = "meta",
+    value = NA,
+    cache = cache
+  )
+  expect_equal(nrow(build_times()), 1)
+})
+
 test_with_dir("proc_time runtimes can be fetched", {
   cache <- storr::storr_rds("cache")
   key <- "x"
   t <- system.time({
     z <- 1
   })
-  cache$set(key = key, value = t, namespace = "build_times")
+  set_in_subspace(
+    key = key,
+    value = t,
+    subspace = "build_times",
+    namespace = "meta",
+    cache = cache
+  )
   y <- fetch_runtime(key = key, cache = cache)
   expect_true(nrow(y) > 0)
 })
@@ -14,20 +35,20 @@ test_with_dir("proc_time runtimes can be fetched", {
 test_with_dir("build times works if no targets are built", {
   expect_equal(cached(), character(0))
   expect_equal(nrow(build_times(search = FALSE)), 0)
-  my_plan <- workplan(x = 1)
-  con <- config(my_plan, verbose = FALSE)
+  my_plan <- drake_plan(x = 1)
+  con <- drake_config(my_plan, verbose = FALSE)
   make_imports(con)
   expect_equal(nrow(build_times(search = FALSE)), 0)
 })
 
 test_with_dir("build time the same after superfluous make", {
-  x <- workplan(y = Sys.sleep(0.25))
-  c1 <- make(x, verbose = FALSE)
+  x <- drake_plan(y = Sys.sleep(0.25))
+  c1 <- make(x, verbose = FALSE, session_info = FALSE)
   expect_equal(justbuilt(c1), "y")
   b1 <- build_times(search = FALSE)
   expect_true(all(complete.cases(b1)))
 
-  c2 <- make(x, verbose = FALSE)
+  c2 <- make(x, verbose = FALSE, session_info = FALSE)
   expect_equal(justbuilt(c2), character(0))
   b2 <- build_times(search = FALSE)
   expect_true(all(complete.cases(b2)))
@@ -41,26 +62,27 @@ test_with_dir("empty time predictions", {
     df
   }
 
-  my_plan <- workplan(y = 1)
+  my_plan <- drake_plan(y = 1)
+  config <- drake_config(my_plan)
   expect_warning(
-    x <- rate_limiting_times(plan = my_plan, verbose = FALSE) %>%
+    x <- rate_limiting_times(config) %>%
       min_df
   )
   expect_equal(nrow(x), 0)
-  make(my_plan, verbose = FALSE)
-  x <- rate_limiting_times(plan = my_plan, verbose = FALSE) %>%
+  config <- make(my_plan, verbose = FALSE, session_info = FALSE)
+  x <- rate_limiting_times(config) %>%
     min_df
   expect_equal(nrow(x), 0)
-  x <- rate_limiting_times(plan = my_plan, verbose = FALSE,
+  x <- rate_limiting_times(config,
     targets_only = TRUE) %>%
     min_df
   expect_equal(nrow(x), 0)
-  x <- rate_limiting_times(plan = my_plan, verbose = FALSE,
+  x <- rate_limiting_times(config,
     from_scratch = TRUE) %>%
     min_df
   expect_equal(nrow(x), 1)
   expect_true(all(complete.cases(x)))
-  x <- rate_limiting_times(plan = my_plan, verbose = FALSE,
+  x <- rate_limiting_times(config,
     targets_only = TRUE, from_scratch = TRUE) %>%
     min_df
   expect_equal(nrow(x), 1)
@@ -81,57 +103,45 @@ test_with_dir("time predictions: incomplete targets", {
 
   load_basic_example(envir = e)
   my_plan <- e$my_plan
-  config <- config(my_plan, envir = e,
+  config <- drake_config(my_plan, envir = e,
     jobs = 1, verbose = FALSE)
-  make_imports(config)
+  config <- make_imports(config)
 
   dats <- c("small", "large")
   expect_warning(
     x <- rate_limiting_times(
-      plan = config$plan,
-      targets = dats,
-      envir = config$envir,
-      verbose = FALSE
+      config,
+      targets = dats
     ) %>%
     min_df
   )
-  expect_equal(nrow(x), 4)
+  expect_equal(nrow(x), 5)
   expect_warning(
     x <- rate_limiting_times(
-      plan = config$plan,
+      config,
       targets = dats,
-      envir = config$envir,
-      verbose = FALSE,
       targets_only = TRUE
     ) %>%
     min_df
   )
   expect_equal(nrow(x), 0)
   expect_warning(
-    x <- rate_limiting_times(
-      plan = config$plan,
-      envir = config$envir,
-      verbose = FALSE
-    ) %>%
+    x <- rate_limiting_times(config) %>%
     min_df
   )
   expect_equal(nrow(x), 12)
   expect_warning(
     y <- predict_runtime(
-      plan = config$plan,
+      config,
       targets = dats,
-      envir = config$envir,
-      verbose = FALSE,
       digits = Inf
     )
   )
   expect_equal(length(y), 1)
   expect_warning(
     y <- predict_runtime(
-      plan = config$plan,
+      config,
       targets = dats,
-      envir = config$envir,
-      verbose = FALSE,
       digits = Inf,
       targets_only = TRUE
     )
@@ -143,40 +153,36 @@ test_with_dir("time predictions: incomplete targets", {
 
   expect_silent(
     x <- rate_limiting_times(
-      plan = config$plan,
+      con,
       targets = dats,
-      envir = config$envir,
-      verbose = FALSE,
       from_scratch = TRUE
     ) %>%
     min_df
   )
-  expect_equal(nrow(x), 6)
-  expect_warning(
+  expect_equal(nrow(x), 7)
+
+  config <- drake_config(plan = con$plan, envir = con$envir, verbose = FALSE)
+  testrun(config)
+  expect_silent(
     x <- rate_limiting_times(
-      plan = config$plan,
-      envir = config$envir,
-      verbose = FALSE
+      config,
+      from_scratch = TRUE,
+      future_jobs = 2
     ) %>%
     min_df
   )
-  expect_equal(nrow(x), 12)
-  expect_warning(
+  expect_true(nrow(x) >= 14 & nrow(x) < 27)
+  expect_silent(
     x <- rate_limiting_times(
-      plan = config$plan,
-      envir = config$envir,
-      verbose = FALSE,
+      config,
       from_scratch = TRUE
     ) %>%
     min_df
   )
-  expect_equal(nrow(x), 14)
+  expect_equal(nrow(x), 27)
   expect_silent(
     y <- predict_runtime(
-      plan = config$plan,
-      targets = dats,
-      envir = config$envir,
-      verbose = FALSE,
+      config,
       from_scratch = TRUE,
       digits = Inf
     )
@@ -199,7 +205,7 @@ test_with_dir("timing predictions with realistic build", {
   load_basic_example(envir = e)
   my_plan <- e$my_plan
   my_plan$command <- paste("Sys.sleep(0.001);", my_plan$command)
-  config <- config(my_plan, envir = e, parallelism = "mclapply",
+  config <- drake_config(my_plan, envir = e, parallelism = "mclapply",
     jobs = 1, verbose = FALSE)
   config <- testrun(config)
   config$envir$reg2 <- function(d){
@@ -209,115 +215,41 @@ test_with_dir("timing predictions with realistic build", {
 
   # should not really use config after
   # manually setting things out of date
-  config_df <- rate_limiting_times(
-    plan = config$plan,
-    envir = config$envir,
-    from_scratch = TRUE,
-    config = config,
-    digits = 4,
-    verbose = FALSE
-  ) %>%
-  min_df
   scratch_df <- rate_limiting_times(
-    plan = config$plan,
-    envir = config$envir,
+    config,
     from_scratch = TRUE,
-    digits = Inf,
-    verbose = FALSE
+    digits = Inf
   ) %>%
-  min_df
+    min_df
   resume_df <- rate_limiting_times(
-    plan = config$plan,
-    envir = config$envir,
-    verbose = FALSE,
+    config,
     digits = Inf
   ) %>%
   min_df
   resume_df_targets <- rate_limiting_times(
-    plan = config$plan,
-    envir = config$envir,
-    verbose = FALSE,
+    config,
     digits = Inf,
     targets_only = TRUE
   ) %>%
-  min_df
+    min_df
   jobs_4_df <- rate_limiting_times(
-    plan = config$plan,
-    envir = config$envir,
-    from_scratch = TRUE,
-    future_jobs = 4,
-    jobs = 1,
-    verbose = FALSE
+    config,
+    future_jobs = 4
   ) %>%
-  min_df
+    min_df
   jobs_4_df_targets <- rate_limiting_times(
-    plan = config$plan,
-    envir = config$envir,
+    config,
     from_scratch = TRUE,
     future_jobs = 4,
-    jobs = 1,
-    verbose = FALSE,
     targets_only = TRUE
   ) %>%
-  min_df
+    min_df
   jobs_2_df <- rate_limiting_times(
-    plan = config$plan,
-    envir = config$envir,
+    config,
     from_scratch = TRUE,
-    future_jobs = 2,
-    jobs = 1,
-    verbose = FALSE
+    future_jobs = 2
   ) %>%
-  min_df
-
-  scratch_time <- predict_runtime(
-    plan = config$plan,
-    config = config,
-    envir = config$envir,
-    from_scratch = TRUE,
-    digits = Inf
-  )
-  resume_time <- predict_runtime(
-    plan = config$plan,
-    envir = config$envir,
-    config = config,
-    digits = Inf
-  )
-  resume_time_targets <- predict_runtime(
-    plan = config$plan,
-    envir = config$envir,
-    config = config,
-    digits = Inf,
-    targets_only = TRUE
-  )
-  jobs_2_time <- predict_runtime(
-    plan = config$plan,
-    envir = config$envir,
-    config = config,
-    from_scratch = TRUE,
-    future_jobs = 2,
-    jobs = 1,
-    digits = Inf
-  )
-  jobs_4_time <- predict_runtime(
-    plan = config$plan,
-    envir = config$envir,
-    config = config,
-    from_scratch = TRUE,
-    future_jobs = 4,
-    jobs = 1,
-    digits = Inf
-  )
-  jobs_4_time_targets <- predict_runtime(
-    plan = config$plan,
-    envir = config$envir,
-    config = config,
-    from_scratch = TRUE,
-    future_jobs = 4,
-    jobs = 1,
-    digits = Inf,
-    targets_only = TRUE
-  )
+    min_df
 
   expect_true(all(complete.cases(scratch_df)))
   expect_true(all(complete.cases(resume_df)))
@@ -332,9 +264,4 @@ test_with_dir("timing predictions with realistic build", {
   expect_true(nrow(jobs_2_df) < nrow(scratch_df))
   expect_true(nrow(jobs_4_df) < nrow(jobs_2_df))
   expect_true(nrow(jobs_4_df_targets) < nrow(jobs_4_df))
-  expect_true(resume_time <= scratch_time)
-  expect_true(resume_time_targets <= resume_time)
-  expect_true(jobs_2_time <= scratch_time)
-  expect_true(jobs_4_time <= jobs_2_time)
-  expect_true(jobs_4_time_targets <= jobs_4_time)
 })

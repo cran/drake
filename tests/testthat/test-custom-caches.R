@@ -9,10 +9,8 @@ test_with_dir("cache_path finding", {
 
 test_with_dir("fancy cache features, bad paths", {
   saveRDS(1, file = "exists")
-  expect_error(x <- new_cache("exists"))
-  expect_equal(type_of_cache("not_found"), NULL)
+  suppressWarnings(expect_error(x <- new_cache("exists")))
   expect_silent(tmp <- uncache(target = "targ", cache = NULL))
-  expect_equal(get_storr_rds_cache("not_found"), NULL)
 })
 
 test_with_dir("null hashes", {
@@ -69,8 +67,15 @@ test_with_dir("Pick the hashes", {
     long_hash_algo = "crc32"
   )
   expect_true(file.exists("new"))
+  y <- this_cache(path = "new")
+  expect_true(file.exists("new"))
   expect_equal(short_hash(x), "murmur32")
   expect_equal(long_hash(x), "crc32")
+  expect_equal(short_hash(y), "murmur32")
+  expect_equal(long_hash(y), "crc32")
+  expect_equal(x$driver$hash_algorithm, "murmur32")
+  expect_equal(y$driver$hash_algorithm, "murmur32")
+
   x$del("long_hash_algo", namespace = "config")
   x <- configure_cache(x, long_hash_algo = "sha1")
   expect_equal(long_hash(x), "sha1")
@@ -100,7 +105,8 @@ test_with_dir("totally off the default cache", {
     cache = con$cache,
     verbose = FALSE,
     parallelism = get_testing_scenario()$parallelism,
-    jobs = get_testing_scenario()$jobs
+    jobs = get_testing_scenario()$jobs,
+    session_info = FALSE
   )
   expect_false(file.exists(default_cache_path()))
 })
@@ -127,15 +133,11 @@ test_with_dir("use two differnt file system caches", {
     envir = envir,
     verbose = FALSE,
     parallelism = parallelism,
-    jobs = jobs
+    jobs = jobs,
+    session_info = FALSE
   )
 
-  o1 <- outdated(
-    my_plan,
-    envir = envir,
-    verbose = FALSE,
-    cache = cache
-  )
+  o1 <- outdated(con)
 
   expect_equal(o1, character(0))
   expect_equal(
@@ -161,26 +163,19 @@ test_with_dir("use two differnt file system caches", {
     short_hash_algo = "murmur32",
     long_hash_algo = "crc32"
   )
-  o2 <- outdated(
-    my_plan,
-    envir = envir,
-    verbose = FALSE,
-    cache = cache2
-  )
+  con2 <- con
+  con2$cache <- cache2
+  o2 <- outdated(con2)
   con2 <- make(
     my_plan,
     cache = cache2,
     envir = envir,
     verbose = FALSE,
     parallelism = parallelism,
-    jobs = jobs
+    jobs = jobs,
+    session_info = FALSE
   )
-  o3 <- outdated(
-    my_plan,
-    envir = envir,
-    verbose = FALSE,
-    cache = cache2
-  )
+  o3 <- outdated(con2)
   expect_equal(o2, targ)
   expect_equal(o3, character(0))
   expect_equal(

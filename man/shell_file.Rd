@@ -2,7 +2,8 @@
 % Please edit documentation in R/parallel_ui.R
 \name{shell_file}
 \alias{shell_file}
-\title{Function shell_file}
+\title{Write an example \code{shell.sh} file required by
+\code{make(..., parallelism = 'Makefile', prepend = 'SHELL=./shell.sh')}.}
 \usage{
 shell_file(path = "shell.sh", overwrite = FALSE)
 }
@@ -12,14 +13,26 @@ shell_file(path = "shell.sh", overwrite = FALSE)
 \item{overwrite}{logical, whether to overwrite a possible
 destination file with the same name}
 }
+\value{
+The return value of the call to \code{file.copy()} that
+wrote the shell file.
+}
 \description{
-Write an example \code{shell.sh} file required by
-\code{make(..., parallelism = 'Makefile', prepend = 'SHELL=./shell.sh')}
-and do a `chmod +x` to enable execution.
-Use this option to run your project in parallel on a computing cluster
-or supercomputer.
+This function also does a `chmod +x`
+to enable execute permissions.
+}
+\examples{
+\dontrun{
+test_with_dir("Quarantine side effects.", {
+# Write shell.sh to your working directory.
+# Read the parallelism vignette to learn how it is used
+# in Makefile parallelism.
+shell_file()
+})
+}
 }
 \seealso{
 \code{\link{make}}, \code{\link{max_useful_jobs}},
-\code{\link{parallelism_choices}}
+\code{\link{parallelism_choices}}, \code{\link{drake_batchtools_tmpl_file}},
+\code{\link{drake_example}}, \code{\link{drake_examples}}
 }

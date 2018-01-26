@@ -1,6 +1,12 @@
 run_command <- function(target, command, seed, config){
   retries <- 0
-  while (retries <= config$retries){
+  max_retries <- drake_plan_override(
+    target = target,
+    field = "retries",
+    config = config
+  ) %>%
+    as.numeric
+  while (retries <= max_retries){
     value <- one_try(
       target = target,
       command = command,
@@ -38,22 +44,48 @@ one_try <- function(target, command, seed, config){
 with_timeout <- function(target, command, config){
   env <- environment()
   command <- wrap_in_try_statement(target = target, command = command)
+  timeouts <- resolve_timeouts(target = target, config = config)
   R.utils::withTimeout({
       value <- eval(parse(text = command), envir = env)
     },
-    timeout = config$timeout,
-    cpu = config$cpu,
-    elapsed = config$elapsed,
+    timeout = timeouts["timeout"],
+    cpu = timeouts["cpu"],
+    elapsed = timeouts["elapsed"],
     onTimeout = "error"
   )
 }
 
+resolve_timeouts <- function(target, config){
+  keys <- c("timeout", "cpu", "elapsed")
+  timeouts <- lapply(
+    X = keys,
+    FUN = function(field){
+      drake_plan_override(
+        target = target,
+        field = field,
+        config = config
+      ) %>%
+        as.numeric
+    }
+  )
+  names(timeouts) <- keys
+  for (field in c("cpu", "elapsed")){
+    if (!length(timeouts[[field]])){
+      timeouts[[field]] <- timeouts$timeout
+    }
+  }
+  timeouts
+}
+
 give_up <- function(target, config){
-  config$cache$set(key = target, value = "failed",
-    namespace = "progress")
+  set_progress(
+    target = target,
+    value = "failed",
+    config = config
+  )
   text <- paste("fail", target)
   if (config$verbose){
-    finish_console(text = text, message = "fail")
+    finish_console(text = text, pattern = "fail", verbose = config$verbose)
   }
   stop(
     "Target '", target, "' failed to build. ",

@@ -2,11 +2,11 @@
 % Please edit documentation in R/read.R
 \name{readd}
 \alias{readd}
-\title{Function \code{readd}}
+\title{Read and return a drake target or import from the cache.}
 \usage{
 readd(target, character_only = FALSE, path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = TRUE)
+  namespace = NULL, verbose = TRUE)
 }
 \arguments{
 \item{target}{If \code{character_only} is \code{TRUE},
@@ -30,27 +30,32 @@ current working directory only.}
 If \code{cache} is supplied,
 the \code{path} and \code{search} arguments are ignored.}
 
+\item{namespace}{character scalar,
+name of an optional storr namespace to read from.}
+
 \item{verbose}{whether to print console messages}
 }
 \value{
-drake target item from the cache
+The cached value of the \code{target}.
 }
 \description{
-Read a drake target object from the cache.
 Does not delete the item from the cache.
 }
 \examples{
 \dontrun{
-load_basic_example()
-make(my_plan)
-readd(reg1)
-readd(small)
-readd("large", character_only = TRUE)
-readd("'report.md'") # just a fingerprint of the file (md5 sum)
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
+make(my_plan) # Run the project, build the targets.
+readd(reg1) # Return imported object 'reg1' from the cache.
+readd(small) # Return targets 'small' from the cache.
+readd("large", character_only = TRUE) # Return 'large' from the cache.
+# For external files, only the fingerprint/hash is stored.
+readd("'report.md'")
+})
 }
 }
 \seealso{
 \code{\link{loadd}}, \code{\link{cached}},
-\code{\link{built}}, \code{link{imported}}, \code{\link{workplan}},
+\code{\link{built}}, \code{link{imported}}, \code{\link{drake_plan}},
 \code{\link{make}}
 }

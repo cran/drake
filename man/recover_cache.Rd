@@ -2,19 +2,16 @@
 % Please edit documentation in R/cache.R
 \name{recover_cache}
 \alias{recover_cache}
-\title{Function recover_cache}
+\title{Load an existing drake files system cache if it exists
+or create a new one otherwise.}
 \usage{
 recover_cache(path = drake::default_cache_path(),
-  type = drake::default_cache_type(),
   short_hash_algo = drake::default_short_hash_algo(),
-  long_hash_algo = drake::default_long_hash_algo())
+  long_hash_algo = drake::default_long_hash_algo(), force = FALSE,
+  verbose = TRUE, fetch_cache = NULL)
 }
 \arguments{
 \item{path}{file path of the cache}
-
-\item{type}{character scalar, type of the drake cache.
-Must be among the list of supported caches
-in \code{\link{cache_types}()}.}
 
 \item{short_hash_algo}{short hash algorithm for the cache.
 See \code{\link{default_short_hash_algo}()} and
@@ -23,18 +20,33 @@ See \code{\link{default_short_hash_algo}()} and
 \item{long_hash_algo}{long hash algorithm for the cache.
 See \code{\link{default_long_hash_algo}()} and
 \code{\link{make}()}}
+
+\item{force}{logical, whether to load the cache
+despite any back compatibility issues with the
+running version of drake.}
+
+\item{verbose}{logical, whether to print the file path of the cache.}
+
+\item{fetch_cache}{character vector containing lines of code.
+The purpose of this code is to fetch the \code{storr} cache
+with a command like \code{storr_rds()} or \code{storr_dbi()},
+but customized.}
+}
+\value{
+A drake/storr cache.
 }
 \description{
-Load an existing drake files system cache if it exists
-and create a new one otherwise.
-Do not use for in-memory caches such as
-\code{storr_environment()}.
+Does not work with
+in-memory caches such as \code{storr_environment()}.
 }
 \examples{
 \dontrun{
-load_basic_example()
-make(my_plan)
-x <- recover_cache(".drake")
+test_with_dir("Quarantine side effects.", {
+clean(destroy = TRUE)
+load_basic_example() # Get the code with drake_example("basic").
+make(my_plan) # Run the project, build all the targets.
+x <- recover_cache(".drake") # Recover the project's storr cache.
+})
 }
 }
 \seealso{

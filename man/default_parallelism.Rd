@@ -2,17 +2,17 @@
 % Please edit documentation in R/parallel_ui.R
 \name{default_parallelism}
 \alias{default_parallelism}
-\title{Function \code{default_parallelism}}
+\title{Show the default \code{parallelism} argument
+to \code{\link{make}()} for your system.}
 \usage{
 default_parallelism()
 }
 \value{
-default parallelism option for the current platform
+The default parallelism option for your system.
 }
 \description{
-Default parallelism for \code{\link{make}()}:
-\code{'parLapply'} for Windows machines and \code{'mclapply'}
-for other platforms.
+Returns \code{'parLapply'} for Windows machines
+and \code{'mclapply'} for other platforms.
 }
 \examples{
 default_parallelism()

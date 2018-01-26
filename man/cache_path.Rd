@@ -2,7 +2,8 @@
 % Please edit documentation in R/cache.R
 \name{cache_path}
 \alias{cache_path}
-\title{Function cache_path}
+\title{Return the file path where the cache is stored,
+if applicable.}
 \usage{
 cache_path(cache = NULL)
 }
@@ -10,9 +11,24 @@ cache_path(cache = NULL)
 \item{cache}{the cache whose file path
 you want to know}
 }
+\value{
+File path where the cache is stored.
+}
 \description{
-Returns the file path
-where the cache is stored. Currently
-only works with \code{storr} file system
-caches.
+Currently only works with
+\code{storr::storr_rds} file system caches.
+}
+\examples{
+\dontrun{
+test_with_dir("Quarantine side effects.", {
+clean(destroy = TRUE)
+# Get/create a new drake/storr cache.
+cache <- recover_cache()
+# Show the file path of the cache.
+cache_path(cache = cache)
+# In-memory caches do not have file paths.
+mem <- storr_environment()
+cache_path(cache = mem)
+})
+}
 }

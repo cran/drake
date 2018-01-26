@@ -18,23 +18,38 @@ test_with_dir("retries", {
       stop("this error is deliberate and expected.")
     }
   }
-  pl <- workplan(x = f())
+  pl <- drake_plan(x = f())
   expect_equal(diagnose(), character(0))
 
+  debrief_retries <- function(){
+    expect_true(cached(x))
+    expect_equal(diagnose(), "x")
+    expect_error(diagnose("notfound"))
+    expect_true(inherits(diagnose(x), "error"))
+    y <- "x"
+    expect_true(inherits(diagnose(y, character_only = TRUE), "error"))
+  }
   make(
     pl, parallelism = parallelism, jobs = jobs,
-    envir = e, verbose = FALSE, retries = 10,
-    hook = silencer_hook
+    envir = e, retries = 10, verbose = FALSE,
+    hook = silencer_hook, session_info = FALSE
   )
-  expect_true(cached(x))
-  expect_equal(diagnose(), "x")
-  expect_error(diagnose("notfound"))
-  expect_true(inherits(diagnose(x), "error"))
-  y <- "x"
-  expect_true(inherits(diagnose(y, character_only = TRUE), "error"))
+  debrief_retries()
+
+  # The 'retries' in the workflow plan should override
+  # the 'retries' argument to make().
+  clean(destroy = TRUE)
+  unlink("file.rds")
+  pl$retries <- 10
+  make(
+    pl, parallelism = parallelism, jobs = jobs,
+    envir = e, retries = 0, verbose = FALSE,
+    hook = silencer_hook, session_info = FALSE
+  )
+  debrief_retries()
 })
 
-test_with_dir("timouts", {
+test_with_dir("timeouts", {
   scenario <- get_testing_scenario()
   e <- eval(parse(text = scenario$envir))
 
@@ -50,7 +65,8 @@ test_with_dir("timouts", {
       pl,
       envir = e,
       verbose = TRUE,
-      hook = silencer_hook
+      hook = silencer_hook,
+      session_info = FALSE
     )
   )
   expect_true(cached(x))
@@ -65,9 +81,33 @@ test_with_dir("timouts", {
         verbose = TRUE,
         hook = silencer_hook,
         timeout = 1e-3,
-        retries = 2
+        retries = 2,
+        session_info = FALSE
       )
     )
   )
   expect_false(cached(x))
+
+  # Should time out too. The workflow plan should override
+  # the arguments to make().
+  # CPU time should be similar, but testing it is elusive.
+  for (field in c("timeout", "elapsed")){
+    clean()
+    pl2 <- pl
+    pl2[[field]] <- 1e-3
+    args <- list(
+      plan = pl2,
+      envir = e,
+      verbose = TRUE,
+      hook = silencer_hook,
+      retries = 2
+    )
+    args[[field]] <- Inf
+    expect_error(
+      tmp <- capture.output(
+        do.call(what = make, args = args)
+      )
+    )
+    expect_false(cached(x))
+  }
 })

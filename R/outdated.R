@@ -1,180 +1,96 @@
-#' @title Function outdated
-#' @description Check which targets are out of date and need to be rebuilt.
-#' IMPORTANT: you must be in the root directory of your project.
+#' @title List the targets that are out of date.
+#' @description Outdated targets will be rebuilt in the next
+#' \code{\link{make}()}.
+#' @details \code{outdated()} is sensitive to the alternative triggers
+#' described at
+#' \url{https://github.com/ropensci/drake/blob/master/vignettes/debug.Rmd#test-with-triggers}. # nolint
+#' For example, even if \code{outdated(...)} shows everything up to date,
+#' \code{outdated(..., trigger = "always")} will show
+#' all targets out of date.
+#' You must use a fresh \code{config} argument with an up-to-date
+#' \code{config$targets} element that was never modified by hand.
+#' If needed, rerun \code{\link{drake_config}()} early and often.
+#' See the details in the help file for \code{\link{drake_config}()}.
 #' @export
-#' @seealso \code{\link{missed}}, \code{\link{workplan}},
-#' \code{\link{make}}, \code{\link{plot_graph}}
-#' @examples
-#' \dontrun{
-#' load_basic_example()
-#' outdated(my_plan)
-#' make(my_plan)
-#' outdated(my_plan)
-#' }
-#' @param plan same as for \code{\link{make}}
-#' @param targets same as for \code{\link{make}}
-#' @param envir same as for \code{\link{make}}. Overrides
-#' \code{config$envir}.
-#' @param verbose same as for \code{\link{make}}
-#' @param hook same as for \code{\link{make}}
-#' @param cache optional drake cache. See code{\link{new_cache}()}.
-#' The \code{cache} argument is ignored if a
-#' non-null \code{config} argument is supplied.
-#' @param parallelism same as for \code{\link{make}}
-#' @param jobs same as for \code{\link{make}}
-#' @param packages same as for \code{\link{make}}
-#' @param prework same as for \code{\link{make}}
+#' @seealso \code{\link{missed}}, \code{\link{drake_plan}},
+#' \code{\link{make}}, \code{\link{vis_drake_graph}}
+#' @return Character vector of the names of outdated targets.
 #' @param config option internal runtime parameter list of
 #' \code{\link{make}(...)},
-#' produced with \code{\link{config}()}.
-#' \code{config$envir} is ignored.
-#' Overrides all the other arguments if not \code{NULL}.
-#' For example,
-#' \code{plan} is replaced with \code{config$plan}.
-#' Computing \code{config}
-#' in advance could save time if you plan multiple calls to
-#' \code{outdated()}.
-outdated <-  function(
-  plan = workplan(),
-  targets = drake::possible_targets(plan),
-  envir = parent.frame(),
-  verbose = TRUE,
-  hook = function(code){
-    force(code)
-  },
-  cache = drake::get_cache(verbose = verbose),
-  parallelism = drake::default_parallelism(),
-  jobs = 1,
-  packages = rev(.packages()),
-  prework = character(0),
-  config = NULL
-){
-  force(envir)
-  if (is.null(config)){
-    config <- config(
-      plan = plan,
-      targets = targets,
-      envir = envir,
-      verbose = verbose,
-      hook = hook,
-      cache = cache,
-      parallelism = parallelism,
-      jobs = jobs,
-      packages = packages,
-      prework = prework
-    )
+#' produced with \code{\link{drake_config}()}.
+#' You must use a fresh \code{config} argument with an up-to-date
+#' \code{config$targets} element that was never modified by hand.
+#' If needed, rerun \code{\link{drake_config}()} early and often.
+#' See the details in the help file for \code{\link{drake_config}()}.
+#' @param make_imports logical, whether to make the imports first.
+#' Set to \code{FALSE} to save some time and risk obsolete output.
+#' @examples
+#' \dontrun{
+#' test_with_dir("Quarantine side effects.", {
+#' load_basic_example() # Get the code with drake_example("basic").
+#' # Recopute the config list early and often to have the
+#' # most current information. Do not modify the config list by hand.
+#' config <- drake_config(my_plan)
+#' outdated(config = config) # Which targets are out of date?
+#' config <- make(my_plan) # Run the projects, build the targets.
+#' # Now, everything should be up to date (no targets listed).
+#' outdated(config = config)
+#' # outdated() is sensitive to triggers.
+#' # See the "debug" vignette for more on triggers.
+#' config$trigger <- "always"
+#' outdated(config = config)
+#' })
+#' }
+outdated <-  function(config, make_imports = TRUE){
+  do_prework(config = config, verbose_packages = config$verbose)
+  if (make_imports){
+    make_imports(config = config)
   }
-  make_imports(config = config)
-  config <- inventory(config)
-  all_targets <- intersect(V(config$graph)$name, config$plan$target)
-  hash_list <- hash_list(targets = all_targets, config = config)
-  rebuild <- Filter(
-    x = all_targets,
-    f = function(target){
-      hashes <- hash_list[[target]]
-      !target_current(target = target, hashes = hashes, config = config)
-    }
+  first_targets <- next_stage(config = config)
+  later_targets <- downstream_nodes(
+    from = first_targets,
+    graph = config$graph,
+    jobs = config$jobs
   )
-  if (!length(rebuild)){
-    return(character(0))
-  } else{
-    lightly_parallelize(
-      rebuild,
-      function(vertex){
-        subcomponent(config$graph, v = vertex, mode = "out")$name
-      },
-      jobs = jobs
-    ) %>%
-    unlist() %>%
-    unique() %>%
-    sort()
-  }
+  c(first_targets, later_targets) %>%
+    as.character %>%
+    unique %>%
+    sort
 }
 
-#' @title Function \code{missed}
-#' @description Report any import objects required by your workplan
+#' @title Report any import objects required by your drake_plan
 #' plan but missing from your workspace.
-#' IMPORTANT: you must be in the root directory of your project.
+#' @description Checks your workspace/environment and
+#' file system.
 #' @export
 #' @seealso \code{\link{outdated}}
+#' @return Character vector of names of missing objects and files.
 #'
-#' @param plan workflow plan data frame, same as for function
-#' \code{\link{make}()}.
-#'
-#' @param targets names of targets to build, same as for function
-#' \code{\link{make}()}.
-#'
-#' @param envir environment to import from, same as for function
-#' \code{\link{make}()}.
-#'
-#' @param verbose logical, whether to output messages to the console.
-#'
-#' @param jobs The \code{outdated()} function is called internally,
-#' and it needs to import objects and examine your
-#' input files to see what has been updated. This could take some time,
-#' and parallel computing may be needed
-#' to speed up the process. The \code{jobs} argument is number of parallel jobs
-#' to use for faster computation.
-#'
-#' @param parallelism Choice of parallel backend to speed up the computation.
-#' See \code{?parallelism_choices} for details. The Makefile option is not
-#' available here. Drake will try to pick the best option for your system by
-#' default.
-#'
-#' @param packages same as for \code{\link{make}}
-#'
-#' @param prework same as for \code{\link{make}}
-#'
-#' @param config option internal runtime parameter list of
+#' @param config internal runtime parameter list of
 #' \code{\link{make}(...)},
-#' produced with \code{\link{config}()}.
-#' Overrides all other arguments except if not \code{NULL}.
-#' For example, \code{config$plan} overrides \code{plan}.
-#' Computing this
-#' in advance could save time if you plan multiple calls to
-#' \code{missed()}.
+#' produced by both \code{\link{drake_config}()} and \code{\link{make}()}.
 #'
 #' @examples
 #' \dontrun{
-#' load_basic_example()
-#' missed(my_plan)
-#' rm(reg1)
-#' missed(my_plan)
+#' test_with_dir("Quarantine side effects.", {
+#' config <- load_basic_example() # Get the code with drake_example("basic").
+#' missed(config) # All the imported files and objects should be present.
+#' rm(reg1) # Remove an import dependency from you workspace.
+#' missed(config) # Should report that reg1 is missing.
+#' })
 #' }
-missed <- function(
-  plan = workplan(),
-  targets = drake::possible_targets(plan),
-  envir = parent.frame(),
-  verbose = TRUE,
-  jobs = 1,
-  parallelism = drake::default_parallelism(),
-  packages = rev(.packages()),
-  prework = character(0),
-  config = NULL
-){
-  force(envir)
-  if (is.null(config)){
-    config <- config(
-      plan = plan,
-      targets = targets,
-      envir = envir,
-      verbose = verbose,
-      parallelism = parallelism,
-      jobs = jobs,
-      packages = packages,
-      prework = prework
-    )
-  }
-  graph <- config$graph
-  imports <- setdiff(V(graph)$name, plan$target)
-  missing <- Filter(
-    x = imports,
-    f = function(x){
-      missing_import(x, envir = envir)
-    }
-  )
-  if (!length(missing)){
+missed <- function(config){
+  imports <- setdiff(V(config$graph)$name, config$plan$target)
+  is_missing <- lightly_parallelize(
+    X = imports,
+    FUN = function(x){
+      missing_import(x, envir = config$envir)
+    },
+    jobs = config$jobs
+  ) %>%
+    as.logical
+  if (!any(is_missing)){
     return(character(0))
   }
-  return(missing)
+  imports[is_missing]
 }

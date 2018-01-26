@@ -2,17 +2,20 @@
 % Please edit documentation in R/recipe.R
 \name{default_recipe_command}
 \alias{default_recipe_command}
-\title{default_recipe_command}
+\title{Show the default
+recipe command for \code{\link{make}(..., parallelism = "Makefile")}.}
 \usage{
 default_recipe_command()
 }
-\description{
-Function to give the default
-recipe command for Makefile parallelism.
+\value{
+A character scalar with the default recipe command.
 }
-\details{
+\description{
 See the help file of \code{\link{Makefile_recipe}}
 for details and examples.
+}
+\examples{
+default_recipe_command()
 }
 \seealso{
 \code{\link{Makefile_recipe}}

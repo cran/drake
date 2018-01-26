@@ -2,11 +2,12 @@
 % Please edit documentation in R/read.R
 \name{loadd}
 \alias{loadd}
-\title{Function \code{loadd}}
+\title{Load multiple targets or imports from the drake cache.}
 \usage{
 loadd(..., list = character(0), imported_only = FALSE, path = getwd(),
   search = TRUE, cache = drake::get_cache(path = path, search = search,
-  verbose = verbose), envir = parent.frame(), jobs = 1, verbose = TRUE)
+  verbose = verbose), namespace = NULL, envir = parent.frame(), jobs = 1,
+  verbose = 1, deps = FALSE, lazy = FALSE)
 }
 \arguments{
 \item{...}{targets to load from the cache, as names (unquoted)
@@ -31,6 +32,9 @@ current working directory only.}
 If \code{cache} is supplied,
 the \code{path} and \code{search} arguments are ignored.}
 
+\item{namespace}{character scalar,
+name of an optional storr namespace to load from.}
+
 \item{envir}{environment to load objects into. Defaults to the
 calling environment (current workspace).}
 
@@ -40,10 +44,30 @@ can be lightly parallelized via \code{parallel::mclapply()}.
 just set jobs to be an integer greater than 1. On Windows,
 \code{jobs} is automatically demoted to 1.}
 
-\item{verbose}{whether to print console messages}
+\item{verbose}{logical, whether to print console messages}
+
+\item{deps}{logical, whether to load any cached
+dependencies of the targets
+instead of the targets themselves.
+This is useful if you know your
+target failed and you want to debug the command in an interactive
+session with the dependencies in your workspace.
+One caveat: to find the dependencies,
+\code{\link{loadd}()} uses information that was stored
+in a \code{\link{drake_config}()} list and cached
+during the last \code{\link{make}()}.
+That means you need to have already called \code{\link{make}()}
+if you set \code{deps} to \code{TRUE}.}
+
+\item{lazy}{logical, whether to lazy load with
+\code{delayedAssign()} rather than the more eager
+\code{assign()}.}
+}
+\value{
+\code{NULL}
 }
 \description{
-Load object(s) from the drake cache into the
+Loads the object(s) into the
 current workspace (or \code{envir} if given). Defaults
 to loading the whole cache if arguments \code{...}
 and \code{list} are not set
@@ -52,18 +76,25 @@ imported_only is \code{TRUE}).
 }
 \examples{
 \dontrun{
-load_basic_example()
-make(my_plan)
-loadd(reg1) # now check ls()
-reg1
-loadd(small)
+test_with_dir("Quarantine side effects.", {
+load_basic_example() # Get the code with drake_example("basic").
+make(my_plan) # Run the projects, build the targets.
+loadd(small) # Load target 'small' into your workspace.
 small
+# For many targets, you can parallelize loadd()
+# using the 'jobs' argument.
 loadd(list = c("small", "large"), jobs = 2)
-loadd(imported_only = TRUE) # load all imported objects and functions
-loadd() # load everything, including built targets
+# Load the dependencies of the target, coef_regression2_small
+loadd(coef_regression2_small, deps = TRUE)
+# Load all the imported objects/functions.
+loadd(imported_only = TRUE)
+# Load everything, including built targets.
+# Be sure your computer has enough memory.
+loadd()
+})
 }
 }
 \seealso{
 \code{\link{cached}}, \code{\link{built}},
-\code{\link{imported}}, \code{\link{workplan}}, \code{\link{make}},
+\code{\link{imported}}, \code{\link{drake_plan}}, \code{\link{make}},
 }

@@ -20,7 +20,7 @@ testing_scenarios <- function(){
 backend_code <- function(x){
   ifelse(
     nchar(x),
-    paste0("drake::backend(", x, ")"),
+    paste0("future::plan(", x, ")"),
     x
   )
 }
@@ -95,7 +95,7 @@ test_scenarios <- function(
   for (scenario_name in scenario_names){
     skip <- skip_criterion(scenario_name)
     msg <- ifelse(skip, "skip", "run")
-    cat(scenario_name, ": ", msg, "\n", sep = "")
+    message(scenario_name, ": ", msg, sep = "")
     new <- list()
     new[[test_option_name]] <- scenario_name
     if (!skip) {

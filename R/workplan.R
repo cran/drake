@@ -1,7 +1,10 @@
-#' @title Function \code{workplan}
-#' @description Turns a named collection of command/target pairs into
-#' a workflow plan data frame for \code{\link{make}} and
-#' \code{\link{check}}.
+#' @title Create a workflow plan data frame
+#' for the \code{plan} argument of \code{\link{make}}.
+#' @description Turns a named collection of target/command pairs into
+#' a workflow plan data frame for \code{\link{make}()} and
+#' \code{\link{check}()}. You can give the commands
+#' as named expressions, or you can use the \code{list}
+#' argument to supply them as character strings.
 #' @details A workflow plan data frame is a data frame
 #' with a \code{target} column and a \code{command} column.
 #' Targets are the objects and files that drake generates,
@@ -16,18 +19,52 @@
 #' arguments in \code{...}, so use the \code{strings_in_dots}
 #' argument to control the quoting in \code{...}.
 #' @export
-#' @return data frame of targets and command
-#' @param ... same as for \code{drake::\link{workplan}()}
-#' @param list same as for \code{drake::\link{workplan}()}
-#' @param file_targets same as for \code{drake::\link{workplan}()}
-#' @param strings_in_dots same as for \code{drake::\link{workplan}()}
+#' @return A data frame of targets and commands.
+#' @param ... A collection of symbols/targets
+#' with commands assigned to them. See the examples for details.
+#' @param list A named list of targets, where the values
+#' are commands.
+#' @param file_targets logical, whether the targets should be
+#' (single-quoted) external file targets.
+#' @param strings_in_dots Character scalar,
+#' how to treat quoted character strings in the commands
+#' specified through \code{...}.
+#' Set to \code{"filenames"} to treat all these strings as
+#' external file targets/imports (single-quoted),
+#' or to \code{"literals"} to treat them all as literal
+#' strings (double-quoted).
+#' Unfortunately, because of how R deparses code,
+#' you cannot simply leave literal quotes alone in the
+#' \code{...} argument. R will either convert all these quotes
+#' to single quotes or double quotes. Literal quotes in the
+#' \code{list} argument are left alone.
 #' @examples
-#' workplan(small = simulate(5), large = simulate(50))
-#' workplan(list = c(x = "1 + 1", y = "sqrt(x)"))
-#' workplan(data = readRDS("my_data.rds"))
-#' workplan(my_file.rds = saveRDS(1+1, "my_file.rds"), file_targets = TRUE,
+#' # Create example workflow plan data frames for make()
+#' drake_plan(small = simulate(5), large = simulate(50))
+#' # Commands can be multi-line code chunks.
+#' small_plan <- drake_plan(
+#'   small_target = {
+#'     local_object <- 1 + 1
+#'     2 + sqrt(local_object)
+#'   }
+#' )
+#' small_plan
+#' \dontrun{
+#' make(small_plan)
+#' cached()
+#' readd(small_target)
+#' # local_object only applies to the code chunk.
+#' ls() # your environment is protected (local_object not found)
+#' }
+#' # For tighter control over commands, use the `list` argument.
+#' drake_plan(list = c(x = "1 + 1", y = "sqrt(x)"))
+#' # This becomes important for file targets,
+#' # which you must put in single quotes.
+#' # (Double quotes are for string literals.)
+#' drake_plan(data = readRDS("my_data.rds"))
+#' drake_plan(my_file.rds = saveRDS(1+1, "my_file.rds"), file_targets = TRUE,
 #'   strings_in_dots = "literals")
-workplan <- function(
+drake_plan <- function(
   ...,
   list = character(0),
   file_targets = FALSE,
@@ -55,7 +92,7 @@ workplan <- function(
   )
   from_dots <- plan$target %in% names(commands_dots)
   if (file_targets){
-    plan$target <- eply::quotes(plan$target, single = T)
+    plan$target <- drake::drake_quotes(plan$target, single = TRUE)
   }
   if (strings_in_dots == "filenames"){
     plan$command[from_dots] <- gsub("\"", "'", plan$command[from_dots])
@@ -63,22 +100,11 @@ workplan <- function(
   sanitize_plan(plan)
 }
 
-#' @title Function \code{as_file}
-#' @description Converts an ordinary character string
-#' into a filename understandable by drake. In other words,
-#' \code{as_file(x)} just wraps single quotes around \code{x}.
-#' @export
-#' @return a single-quoted character string: i.e., a filename
-#' understandable by drake.
-#' @param x character string to be turned into a filename
-#' understandable by drake (i.e., a string with literal
-#' single quotes on both ends).
-#' @examples
-#' as_file("my_file.rds")
-as_file <- function(x){
-  eply::quotes(x, single = TRUE)
-}
-
-wide_deparse <- function(x){
-  paste(deparse(x), collapse = "")
+drake_plan_override <- function(target, field, config){
+  in_plan <- config$plan[[field]]
+  if (is.null(in_plan)){
+    return(config[[field]])
+  } else {
+    return(in_plan[config$plan$target == target])
+  }
 }

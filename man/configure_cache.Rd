@@ -2,12 +2,13 @@
 % Please edit documentation in R/cache.R
 \name{configure_cache}
 \alias{configure_cache}
-\title{Function configure_cache}
+\title{Configure the hash algorithms, etc. of a drake cache.}
 \usage{
 configure_cache(cache = drake::get_cache(verbose = verbose),
   short_hash_algo = drake::default_short_hash_algo(cache = cache),
   long_hash_algo = drake::default_long_hash_algo(cache = cache),
-  clear_progress = FALSE, overwrite_hash_algos = FALSE, verbose = TRUE)
+  log_progress = FALSE, overwrite_hash_algos = FALSE, verbose = TRUE,
+  jobs = 1)
 }
 \arguments{
 \item{cache}{cache to configure}
@@ -25,7 +26,7 @@ which is just the collection of algorithms available to the `algo`
 argument in \code{digest::digest()}.
 See \code{?\link{default_long_hash_algo}} for more.}
 
-\item{clear_progress}{logical, whether to clear the recorded
+\item{log_progress}{logical, whether to clear the recorded
 build progress if this cache was used for previous calls to
 \code{\link{make}()}}
 
@@ -33,24 +34,35 @@ build progress if this cache was used for previous calls to
 the hash algorithms in the cache with any user-specified ones.}
 
 \item{verbose}{whether to print console messages}
+
+\item{jobs}{number of jobs for parallel processing}
+}
+\value{
+A drake/storr cache.
 }
 \description{
-configure a cache for drake. This is
+The purpose of this function is
 to prepare the cache to be called from \code{\link{make}()}.
 }
 \examples{
 \dontrun{
-load_basic_example()
-config <- make(my_plan)
+test_with_dir("Quarantine side effects.", {
+clean(destroy = TRUE)
+load_basic_example() # Get the code with drake_example("basic").
+config <- make(my_plan) # Run the project, build all the targets.
+# Locate the drake/storr cache of the project
+# inside the master internal configuration list.
 cache <- config$cache
-long_hash(cache)
+long_hash(cache) # Return the long hash algorithm used.
+# Change the long hash algorithm of the cache.
 cache <- configure_cache(
   cache = cache,
   long_hash_algo = "murmur32",
   overwrite_hash_algos = TRUE
 )
-long_hash(cache) # long hash algorithm. See ?default_long_hash_algorithm.
-make(my_plan) # Changing the long hash puts targets out of date.
+long_hash(cache) # Show the new long hash algorithm.
+make(my_plan) # Changing the long hash puts the targets out of date.
+})
 }
 }
 \seealso{

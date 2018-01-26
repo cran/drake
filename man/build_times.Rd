@@ -2,11 +2,11 @@
 % Please edit documentation in R/build_times.R
 \name{build_times}
 \alias{build_times}
-\title{Function \code{build_times}}
+\title{List the time it took to build each target/import.}
 \usage{
 build_times(path = getwd(), search = TRUE, digits = 3,
   cache = get_cache(path = path, search = search, verbose = verbose),
-  targets_only = FALSE, verbose = TRUE)
+  targets_only = FALSE, verbose = TRUE, jobs = 1)
 }
 \arguments{
 \item{path}{Root directory of the drake project,
@@ -26,20 +26,24 @@ the \code{path} and \code{search} arguments are ignored.}
 build times of the targets (exclude the imports).}
 
 \item{verbose}{whether to print console messages}
+
+\item{jobs}{number of parallel jobs/workers for light parallelism.}
 }
 \value{
-data.frame of times from \code{\link{system.time}}
+A data frame of times, each from \code{\link{system.time}()}.
 }
 \description{
-List all the build times.
-This does not include the amount of time
+Listed times do not include the amount of time
 spent loading and saving objects!
 }
 \examples{
 \dontrun{
-load_basic_example()
-make(my_plan)
-build_times()
+test_with_dir("Quarantine side effects.", {
+# Show the build times for the basic example.
+load_basic_example() # Get the code with drake_example("basic").
+make(my_plan) # Build all the targets.
+build_times() # Show how long it took to build each target.
+})
 }
 }
 \seealso{

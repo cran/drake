@@ -46,7 +46,7 @@ test_with_dir("function_dependencies() works on :: and :::", {
   )
 })
 
-test_with_dir("namespaced workplan works", {
+test_with_dir("namespaced drake_plan works", {
   scenarios <- get_testing_scenario()
   envir <- dbug()$envir
   rm(list = ls(envir), envir = envir)
@@ -54,13 +54,14 @@ test_with_dir("namespaced workplan works", {
     x <- nchar(digest::digest(sqrt(x)))
     base:::c(x, 1)
   }
-  x <- workplan(a = base::list(f(1)))
-  make(
+  x <- drake_plan(a = base::list(f(1)))
+  config <- make(
     x,
     envir = envir,
     jobs = scenarios$jobs,
     parallelism = scenarios$parallelism,
-    verbose = FALSE
+    verbose = FALSE,
+    session_info = FALSE
   )
   fromcache <- readd("base::list", character_only = TRUE)
   expect_equal(fromcache(1, "a"), list(1, "a"))
@@ -70,7 +71,7 @@ test_with_dir("namespaced workplan works", {
   expect_true(all(cached(list = ns)))
   expect_true(all(ns %in% imported()))
   expect_equal(
-    outdated(x, envir = envir, verbose = FALSE),
+    outdated(config),
     character(0)
   )
 })

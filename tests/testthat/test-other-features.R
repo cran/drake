@@ -1,23 +1,29 @@
 drake_context("other features")
 
-test_with_dir("lightly_parallelize_atomic() is correct", {
-  withr::with_seed(seed = 2017, code = {
-    x <- sample(LETTERS[1:3], size = 1e3, replace = TRUE)
-    append <- function(x){
-      paste0(x, "_text")
-    }
-    out0 <- lightly_parallelize(X = x, FUN = append, jobs = 2)
-    out1 <- lightly_parallelize_atomic(X = x, FUN = append, jobs = 2)
-    out2 <- lapply(X = x, FUN = append)
-    expect_identical(out0, out1)
-    expect_identical(out0, out2)
-    y <- gsub("_text", "", unlist(out1))
-    expect_identical(x, y)
-  })
+test_with_dir("cache log files and make()", {
+  x <- drake_plan(a = 1)
+  make(x, session_info = FALSE)
+  expect_false(file.exists("drake_cache.log"))
+  make(x, session_info = FALSE)
+  expect_false(file.exists("drake_cache.log"))
+  make(x, session_info = FALSE, cache_log_file = TRUE)
+  expect_true(file.exists("drake_cache.log"))
+  make(x, session_info = FALSE, cache_log_file = "my.log")
+  expect_true(file.exists("my.log"))
+})
+
+test_with_dir("drake_build can build a target by itself w/o input metadata", {
+  pl <- drake_plan(a = 1, b = 2)
+  con <- drake_config(plan = pl, session_info = FALSE)
+  o <- drake_build(target = "b", config = con)
+  x <- cached()
+  expect_equal(x, "b")
+  o <- make(pl)
+  expect_equal(justbuilt(o), "a")
 })
 
 test_with_dir("colors and shapes", {
-  expect_output(drake_palette())
+  expect_message(drake_palette())
   expect_is(color_of("target"), "character")
   expect_is(color_of("import"), "character")
   expect_is(color_of("not found"), "character")
@@ -39,28 +45,17 @@ test_with_dir("shapes", {
   expect_equal(color_of("bluhlaksjdf"), color_of("other"))
 })
 
-test_with_dir("parallelism warnings", {
-  config <- dbug()
-  suppressWarnings(parallelism_warnings(config))
-  expect_silent(
-    warn_mclapply_windows(parallelism = "mclapply", jobs = 1)
-  )
-  expect_warning(
-    warn_mclapply_windows(parallelism = "mclapply", jobs = 2, os = "windows")
-  )
-})
-
-test_with_dir("available hash algos", {
-  x <- available_hash_algos()
-  expect_true(length(x) > 0)
-  expect_true(is.character(x))
+test_with_dir("make() with imports_only", {
+  expect_silent(make(drake_plan(x = 1), imports_only = TRUE,
+    verbose = FALSE, session_info = FALSE))
+  expect_false(cached(x))
 })
 
 test_with_dir("in_progress() works", {
   expect_equal(in_progress(), character(0))
-  bad_plan <- workplan(x = function_doesnt_exist())
+  bad_plan <- drake_plan(x = function_doesnt_exist())
   expect_error(tmp <- capture.output({
-      make(bad_plan, verbose = FALSE)
+      make(bad_plan, verbose = FALSE, session_info = FALSE)
     },
     type = "message")
   )
@@ -73,11 +68,9 @@ test_with_dir("missed() works", {
   remove_these <- intersect(ls(envir = globalenv()), c("f", "g"))
   rm(list = remove_these, envir = globalenv())
   o <- dbug()
-  expect_equal(character(0), missed(o$plan, envir = o$envir,
-    verbose = F))
+  expect_equal(character(0), missed(o))
   rm(list = c("f", "g"), envir = o$envir)
-  expect_equal(sort(c("f", "g")), sort(missed(o$plan, envir = o$envir,
-    verbose = F)))
+  expect_equal(sort(c("f", "g")), sort(missed(o)))
 })
 
 test_with_dir(".onLoad() warns correctly and .onAttach() works", {
@@ -93,32 +86,27 @@ test_with_dir(".onLoad() warns correctly and .onAttach() works", {
   expect_silent(suppressPackageStartupMessages(drake:::.onAttach()))
 })
 
-test_with_dir("graph functions work", {
-  config <- dbug()
-  expect_equal(class(build_graph(config$plan, verbose = FALSE)), "igraph")
-  pdf(NULL)
-  tmp <- plot_graph(plan = config$plan, envir = config$envir,
-    verbose = FALSE)
-  dev.off()
-  unlink("Rplots.pdf", force = TRUE)
-  expect_true(is.character(default_graph_title(
-    parallelism = parallelism_choices()[1], split_columns = FALSE)))
-  expect_true(is.character(default_graph_title(
-    parallelism = parallelism_choices()[1], split_columns = TRUE)))
-})
-
-test_with_dir("check_config() via check() and make()", {
+test_with_dir("check_drake_config() via check_plan() and make()", {
   config <- dbug()
   y <- data.frame(x = 1, y = 2)
-  expect_error(check(y, envir = config$envir))
-  expect_error(make(y, envir = config$envir))
+  expect_error(check_plan(y, envir = config$envir))
+  expect_error(make(y, envir = config$envir, session_info = FALSE))
   y <- data.frame(target = character(0), command = character(0))
-  expect_error(check(y, envir = config$envir))
-  expect_error(make(y, envir = config$envir))
+  expect_error(check_plan(y, envir = config$envir))
+  expect_error(make(y, envir = config$envir, session_info = FALSE))
   expect_error(
-    check(config$plan, targets = character(0), envir = config$envir))
+    check_plan(config$plan, targets = character(0), envir = config$envir))
   expect_error(
-    make(config$plan, targets = character(0), envir = config$envir))
+    make(
+      config$plan,
+      targets = character(0),
+      envir = config$envir,
+      session_info = FALSE
+    )
+  )
+  y <- drake_plan(x = 1, y = 2)
+  y$bla <- "bluh"
+  expect_warning(make(y, session_info = FALSE))
 })
 
 test_with_dir("targets can be partially specified", {
@@ -130,29 +118,24 @@ test_with_dir("targets can be partially specified", {
   config$targets <- "final"
   testrun(config)
   expect_true(is.numeric(readd(final, search = FALSE)))
-  pl <- workplan(x = 1, y = 2)
-  expect_error(check(pl, "lskjdf", verbose = FALSE))
-  expect_warning(check(pl, c("lskdjf", "x"), verbose = FALSE))
-  expect_silent(check(pl, verbose = FALSE))
+  pl <- drake_plan(x = 1, y = 2)
+  expect_error(check_plan(pl, "lskjdf", verbose = FALSE))
+  expect_warning(check_plan(pl, c("lskdjf", "x"), verbose = FALSE))
+  expect_silent(check_plan(pl, verbose = FALSE))
 })
 
-test_with_dir("misc stuff", {
-  expect_equal(as_file("x"), "'x'")
+test_with_dir("as_drake_filename quotes properly", {
+  expect_equal(as_drake_filename("x"), "'x'")
 })
 
-test_with_dir("misc empty/NULL cases", {
-  clean(list = "no_cache")
-  expect_false(file.exists(default_cache_path()))
-})
-
-test_with_dir("unique_random_string", {
+test_with_dir("unique_random_string() works", {
   set.seed(2017)
   x <- unique_random_string(n = 15)
   y <- unique_random_string(exclude = "a", n = 10)
   expect_equal(nchar(x), 15)
   expect_equal(nchar(y), 10)
   exclude <- c(letters, LETTERS, 1:9)
-  for (i in 1:100){
+  for (i in 1:10){
     expect_equal(
       unique_random_string(exclude = exclude, n = 1),
       "0"
