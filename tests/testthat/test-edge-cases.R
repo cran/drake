@@ -1,7 +1,82 @@
 drake_context("edge cases")
 
+test_with_dir("can keep going", {
+  scenario <- get_testing_scenario()
+  e <- eval(parse(text = scenario$envir))
+  parallelism <- scenario$parallelism
+  e$fail <- function(...) {
+    stop("oops")
+  }
+  e$succeed <- function(...) {
+    invisible()
+  }
+  plan <- drake_plan(
+    a1 = fail(),
+    a2 = succeed(),
+    a3 = succeed(),
+    a4 = fail(),
+    b1 = fail(a1),
+    b2 = succeed(a2),
+    b3 = succeed(a3),
+    b4 = succeed(a4)
+  )
+  # warnings depend on the parallelism
+  suppressWarnings(
+    make(
+      plan,
+      keep_going = TRUE,
+      parallelism = parallelism,
+      verbose = FALSE,
+      jobs = 2,
+      envir = e,
+      hook = suppressWarnings
+    )
+  )
+  expect_equal(length(built()), 5)
+  expect_equal(length(failed()), 3)
+  expect_equal(length(intersect(built(), failed())), 0)
+})
+
+test_with_dir("failed targets do not become up to date", {
+  fail <- FALSE
+  plan <- drake_plan(
+    d = 3,
+    a = {
+      if (fail){
+        stop("my failure message")
+      } else {
+        d
+      }
+    },
+    b = 5,
+    c = list(a, b),
+    strings_in_dots = "literals"
+  )
+  con <- make(plan)
+  expect_equal(sort(justbuilt(con)), sort(letters[1:4]))
+  fail <- TRUE
+  expect_error(make(plan))
+  expect_error(make(plan))
+  meta <- diagnose(a)
+  expect_true(grepl("my failure message", meta$error$message))
+  con <- drake_config(plan)
+  expect_equal(sort(outdated(con)), sort(c("a", "c")))
+})
+
+test_with_dir("drake_plan_override() quits correctly in error", {
+  con <- dbug()
+  con$plan$missing <- "nope"
+  expect_error(
+    drake_plan_override(target = "missing", field = "missing", config = con),
+    regexp = "not in the workflow plan"
+  )
+})
+
 test_with_dir("config and make without safety checks", {
-  x <- drake_plan(file = readRDS("my_file.rds"))
+  x <- drake_plan(
+    file = readRDS(file_in("my_file.rds")),
+    strings_in_dots = "literals"
+  )
   expect_warning(tmp <- config(x, verbose = FALSE))
   expect_silent(
     tmp <- drake_config(x, skip_safety_checks = TRUE, verbose = FALSE))
@@ -9,7 +84,7 @@ test_with_dir("config and make without safety checks", {
 })
 
 test_with_dir("Strings stay strings, not symbols", {
-  x <- drake_plan(a = "A", strings_in_dots = "literals")
+  expect_silent(x <- drake_plan(a = "A", strings_in_dots = "literals"))
   expect_silent(make(x, verbose = FALSE, session_info = FALSE))
 })
 
@@ -18,10 +93,11 @@ test_with_dir("error handlers", {
   expect_false(error_false(1))
   expect_equal(error_character0(1), character(0))
   expect_null(error_null(1))
+  expect_error(error_tibble_times(123))
 })
 
 test_with_dir("error when file target names do not match actual filenames", {
-  x <- drake_plan(y = 1, file_targets = TRUE)
+  expect_warning(x <- drake_plan(y = 1, file_targets = TRUE))
   expect_warning(expect_error(make(x, verbose = FALSE, session_info = FALSE)))
 })
 
@@ -62,7 +138,7 @@ test_with_dir("target conflicts with previous import", {
     command = "1+1"))
   config$targets <- config$plan$target
   testrun(config)
-  expect_equal(justbuilt(config), sort(c("'intermediatefile.rds'",
+  expect_equal(justbuilt(config), sort(c("\"intermediatefile.rds\"",
     "combined", "f", "final", "yourinput")))
 })
 

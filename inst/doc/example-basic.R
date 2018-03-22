@@ -8,6 +8,9 @@ knitr::opts_chunk$set(
   warning = TRUE
 )
 
+## ----getthequickstartcode, eval = FALSE----------------------------------
+#  drake_example("basic")
+
 ## ----quickstartquickstart, eval = FALSE----------------------------------
 #  library(drake)
 #  load_basic_example()            # Get the code with drake_example("basic").
@@ -17,11 +20,13 @@ knitr::opts_chunk$set(
 #  outdated(config)                # Everything is up to date.
 
 ## ----quickdebug, eval = FALSE--------------------------------------------
-#  failed()                 # Targets that failed in the most recent `make()`
-#  diagnose()               # Targets that failed in any previous `make()`
-#  error <- diagnose(large) # Most recent verbose error log of `large`
-#  str(error)               # Object of class "error"
-#  error$calls              # Call stack / traceback
+#  failed()                   # Targets that failed in the most recent `make()`
+#  context <- diagnose(large) # Diagnostic metadata: errors, warnings, etc.
+#  error <- context$error
+#  str(error)                 # Object of class "error"
+#  error$message
+#  error$call
+#  error$calls                # Full traceback of nested calls leading up to the error. # nolint
 
 ## ----noeval2, eval = FALSE-----------------------------------------------
 #  drake_example("basic") # Write the code files.
@@ -37,10 +42,15 @@ library(knitr) # Drake knows which packages you load.
 library(drake)
 
 ## ----sim-----------------------------------------------------------------
+# Pick a random subset of n rows from a dataset
+random_rows <- function(data, n){
+  data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
+}
+
+# Bootstrapped datasets from mtcars.
 simulate <- function(n){
   # Pick a random set of cars to bootstrap from the mtcars data.
-  index <- sample.int(n = nrow(mtcars), size = n, replace = TRUE)
-  data <- mtcars[index, ]
+  data <- random_rows(data = mtcars, n = n)
 
   # x is the car's weight, and y is the fuel efficiency.
   data.frame(
@@ -131,8 +141,8 @@ results
 
 ## ----reportplan----------------------------------------------------------
 report <- drake_plan(
-  report.md = knit('report.Rmd', quiet = TRUE), # nolint
-  file_targets = TRUE, strings_in_dots = "filenames")
+  knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)
+)
 report
 
 ## ----wholeplan-----------------------------------------------------------
@@ -157,6 +167,19 @@ evaluate_plan(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1, 10)))
 gather_plan(df)
 
 gather_plan(df, target = "my_summaries", gather = "rbind")
+
+x_plan <- evaluate_plan(
+  drake_plan(x = VALUE),
+  wildcard = "VALUE",
+  values = 1:8
+)
+x_plan
+
+x_plan
+reduce_plan(
+  x_plan, target = "x_sum", pairwise = TRUE,
+  begin = "fun(", op = ", ", end = ")"
+)
 
 ## ----firstmake-----------------------------------------------------------
 config <- drake_config(my_plan, verbose = FALSE)
@@ -243,6 +266,16 @@ reg2 <- function(d) {
 }
 outdated(config) # Everything is up to date.
 
+## ---- changerandomrows---------------------------------------------------
+random_rows <- function(data, n){
+  n <- n + 1
+  data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
+}
+
+outdated(config)
+
+make(my_plan)
+
 ## ----newstuff------------------------------------------------------------
 new_simulation <- function(n){
   data.frame(x = rnorm(n), y = rnorm(n))
@@ -263,6 +296,32 @@ clean(small, reg1, verbose = FALSE)
 clean(verbose = FALSE) # Cleans all targets out of the cache.
 drake_gc(verbose = FALSE) # Just garbage collection.
 clean(destroy = TRUE, verbose = FALSE) # removes the cache entirely
+
+## ----demotidyeval--------------------------------------------------------
+# This workflow plan uses rlang's quasiquotation operator `!!`.
+my_plan <- drake_plan(list = c(
+  little_b = "\"b\"",
+  letter = "!!little_b"
+))
+my_plan
+make(my_plan)
+readd(letter)
+
+## ----testquasiquoplan----------------------------------------------------
+my_variable <- 5
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable")
+)
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable"),
+  tidy_evaluation = FALSE
+)
 
 ## ----endofline_quickstart, echo = F--------------------------------------
 clean(destroy = TRUE, verbose = FALSE)

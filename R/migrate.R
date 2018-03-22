@@ -1,31 +1,31 @@
 #' @title Reconfigure an old project (built with drake <= 4.4.0)
-#' to be compatible with later versions of drake.
+#'   to be compatible with later versions of drake.
 #' @export
-#' @seealso \code{\link{rescue_cache}}, \code{\link{make}}
+#' @seealso [rescue_cache()], [make()]
 #' @param path Full path to the cache
 #' @param jobs number of jobs for light parallelism.
-#' (Disabled on Windows.)
-#' @return \code{TRUE} if the migration was successful, \code{FALSE} otherwise.
-#' A migration is successful if the transition preserves target status:
-#' that is, outdated targets remain outdated and up to date targets
-#' remain up to date.
+#'   (Disabled on Windows.)
+#' @return `TRUE` if the migration was successful, `FALSE` otherwise.
+#'   A migration is successful if the transition preserves target status:
+#'   that is, outdated targets remain outdated and up to date targets
+#'   remain up to date.
 #' @description Migrate a project/cache from drake 4.4.0 or earlier
 #' to be compatible with the version of drake on your system.
 #' @details Drake versions after 4.4.0
 #' have a different internal structure for the cache.
 #' This means projects built with drake 4.4.0 or before are not compatible
 #' with projects built with a later version of drake.
-#' The \code{migrate_drake_project()} function converts
+#' The `migrate_drake_project()` function converts
 #' an old cache to a format compatible with the version of drake
 #' installed on your system.
 #' Important note: build times and other non-essential metadata
 #' are lost during migration.
 #' A migration is successful if the transition preserves target status:
 #' that is, outdated targets remain outdated and up to date targets
-#' remain up to date. At the end, \code{migrate_drake_project()}
+#' remain up to date. At the end, `migrate_drake_project()`
 #' tells you whether the migration
 #' is successful. If it is not successful,
-#' \code{migrate_drake_project()} tells you where
+#' `migrate_drake_project()` tells you where
 #' it backed up your old project.
 #' @examples
 #' \dontrun{
@@ -61,7 +61,7 @@ migrate_drake_project <- function(
   config <- read_drake_config(cache = cache)
   config$cache <- cache
   config$parallelism <- "mclapply"
-  config$jobs <- safe_jobs(jobs)
+  config$jobs <- safe_jobs_imports(jobs)
   config$hook <- migrate_hook
   config$envir <- new.env(parent = globalenv())
   config$verbose <- TRUE
@@ -112,7 +112,7 @@ assert_compatible_cache <- function(cache){
     return()
   }
   err <- try(
-    old <- drake_session(cache = cache)$otherPkgs$drake$Version, # nolint
+    old <- drake_version(session_info = drake_session(cache = cache)), # nolint
     silent = TRUE
   )
   if (inherits(err, "try-error")){
@@ -129,7 +129,7 @@ assert_compatible_cache <- function(cache){
     "The project at '", path, "' was previously built by drake ", old, ". ",
     "You are running drake ", current, ", which is not back-compatible. ",
     "To format your cache for the newer drake, ",
-    "try migrate_drake_project('", path, "'). ",
+    "try migrate_drake_project(\"", path, "\"). ",
     "migrate_drake_project() restructures the cache in a way that ",
     "preserves the statuses of your targets (up to date vs outdated). ",
     "But in case of errors, ",
@@ -160,7 +160,7 @@ migrate_hook <- function(code){
     return()
   }
   store_target(target = target, value = value, meta = meta,
-    start = NA, config = config)
+    config = config)
 }
 
 error_na <- function(e){
@@ -172,9 +172,10 @@ null_proc_time <- function(e){
 }
 
 legacy_readd <- function(target, cache){
-  store <- cache$get(target)
+  store <- cache$get(target, use_cache = FALSE)
   if (store$type == "function"){
-    value <- cache$get(key = target, namespace = "functions")
+    value <- cache$get(
+      key = target, namespace = "functions", use_cache = FALSE)
   } else{
     value <- store$value
   }
@@ -253,7 +254,7 @@ hashes <- function(target, config) {
 }
 
 legacy_dependency_hash <- function(target, config) {
-  command <- legacy_get_command(target = target, config = config)
+  command <- legacy_get_tidy_command(target = target, config = config)
   stopifnot(length(command) == 1)
   dependencies(target, config) %>%
     legacy_self_hash(config = config) %>%
@@ -261,7 +262,7 @@ legacy_dependency_hash <- function(target, config) {
     digest::digest(algo = config$long_hash_algo)
 }
 
-legacy_get_command <- function(target, config){
+legacy_get_tidy_command <- function(target, config){
   config$plan$command[config$plan$target == target] %>% legacy_tidy
 }
 
@@ -291,7 +292,8 @@ legacy_file_hash <- function(target, config, size_cutoff = 1e5) {
     return(as.character(NA))
   old_mtime <- ifelse(
     target %in% config$cache$list(namespace = "filemtime"),
-    config$cache$get(key = target, namespace = "filemtime"),
+    config$cache$get(
+      key = target, namespace = "filemtime", use_cache = FALSE),
     -Inf
   )
   new_mtime <- file.mtime(filename)
@@ -303,7 +305,7 @@ legacy_file_hash <- function(target, config, size_cutoff = 1e5) {
   if (do_rehash){
     rehash_file(target = target, config = config)
   } else {
-    out <- config$cache$get(target)
+    out <- config$cache$get(target, use_cache = FALSE)
     ifelse(is.character(out), out, out$value)
   }
 }
@@ -314,10 +316,11 @@ legacy_target_current <- function(target, hashes, config){
   }
   if (!legacy_file_current(
     target = target, hashes = hashes, config = config)){
-    return(FALSE)
+    # won't spend time covering every inch of legacy functions
+    return(FALSE) # nocov
   }
   identical(
-    config$cache$get(target, namespace = "depends"),
+    config$cache$get(target, namespace = "depends", use_cache = FALSE),
     hashes$depends
   )
 }
@@ -327,9 +330,10 @@ legacy_file_current <- function(target, hashes, config){
     return(TRUE)
   }
   if (!file.exists(drake_unquote(target))){
-    return(FALSE)
+    # won't spend time covering every inch of legacy functions
+    return(FALSE) # nocov
   }
-  out <- config$cache$get(target)
+  out <- config$cache$get(target, use_cache = FALSE)
   out <- ifelse(is.character(out), out, out$value)
   identical(out, hashes$file)
 }

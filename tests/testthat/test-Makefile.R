@@ -43,13 +43,10 @@ test_with_dir("prepend arg works", {
 })
 
 test_with_dir("files inside directories can be timestamped", {
-  plan <- drake_plan(
-    list = c(
-      `'t1/t2'` = "dir.create(\"t1\"); saveRDS(1, file.path(\"t1\", \"t2\"))"
-    )
-  )
-  plan$target[1] <- file <- drake::drake_quotes(file.path("t1",
-    "t2"), single = TRUE)
+  plan <- drake_plan({
+    dir.create("t1"); saveRDS(1, file_out("t1/t2"))
+  })
+  file <- plan$target[1]
   config <- drake_config(plan = plan, targets = plan$target[1],
     parallelism = "parLapply", verbose = FALSE,
     envir = new.env(), cache = NULL)
@@ -76,8 +73,7 @@ test_with_dir("basic Makefile stuff works", {
   config$verbose <- FALSE
   cache_path <- cache_path(config$cache)
   initialize_session(config = config)
-  increment_attempt_flag(
-    targets = outdated(config = config), config = config)
+  set_attempt_flag(config = config)
   config$recipe_command <- "Rscript -e"
   store_drake_config(config = config)
   run_Makefile(config, run = FALSE, debug = TRUE)
@@ -104,7 +100,7 @@ test_with_dir("basic Makefile stuff works", {
   ))
   expect_equal(stamps, stamps2)
 
-  targ <- "'intermediatefile.rds'"
+  targ <- "\"intermediatefile.rds\""
   expect_false(file.exists(drake::drake_unquote(targ)))
   config$cache$del(key = targ, namespace = "progress")
   mk(targ, cache_path = cache_path)
@@ -174,7 +170,7 @@ test_with_dir("packages are loaded in prework", {
   config$prework <- "options(test_drake_option_12345 = 'set')"
   config$plan <- drake_plan(
     x = getOption("test_drake_option_12345"),
-    y = c(abind("option"), deparse(body(lda)), x),
+    y = c(deparse(body(abind)), deparse(body(lda)), x),
     strings_in_dots = "literals"
   )
   config$targets <- config$plan$target

@@ -23,13 +23,16 @@ cpu
 cranlogs
 customizable
 dereferenced
+deterministically
 devtools
 dplyr
 Ecdat
 Econometrics
 econometrics
+ETag
 Factual's
 Falster
+faq
 FitzJohn
 flowlines
 ggplot
@@ -82,6 +85,7 @@ prework
 programmatically
 Programmatically
 PSOCK
+quasiquotation
 quickstart
 Quickstart
 RDS
@@ -95,6 +99,7 @@ RL
 rmarkdown
 Rmd
 RMSPE
+ropensci
 rOpenSci
 RStudio
 Rtools

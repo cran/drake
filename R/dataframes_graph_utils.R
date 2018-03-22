@@ -1,6 +1,7 @@
 append_build_times <- function(config) {
   with(config, {
-    time_data <- build_times(digits = digits, cache = config$cache)
+    time_data <- build_times(
+      digits = digits, cache = cache, type = build_times)
     timed <- intersect(time_data$item, nodes$id)
     if (!length(timed))
       return(nodes)
@@ -40,7 +41,7 @@ configure_nodes <- function(config){
   config$nodes <- categorize_nodes(config = config)
   config$nodes <- resolve_levels(config = config)
   config$nodes <- style_nodes(config = config)
-  if (config$build_times){
+  if (config$build_times != "none"){
     config$nodes <- append_build_times(config = config)
   }
   if (config$split_columns){
@@ -51,20 +52,20 @@ configure_nodes <- function(config){
 }
 
 #' @title Return the default title of the graph for
-#' \code{\link{vis_drake_graph}()}.
+#'   [vis_drake_graph()].
 #' @description For internal use only.
 #' @export
 #' @keywords internal
-#' @seealso \code{\link{dataframes_graph}}, \code{\link{vis_drake_graph}}
+#' @seealso [dataframes_graph()], [vis_drake_graph()]
 #' @return a character scalar with the default graph title for
-#' \code{\link{vis_drake_graph}()}.
+#'   [vis_drake_graph()].
 #' @param split_columns logical, whether the columns were split
-#' in \code{\link{dataframes_graph}()} or \code{\link{vis_drake_graph}()}
-#' with the \code{split_columns} argument.
+#'   in [dataframes_graph()] or [vis_drake_graph()]
+#'   with the `split_columns` argument.
 #' @examples
 #' default_graph_title()
 default_graph_title <- function(split_columns = FALSE){
-  out <- "Workflow graph"
+  out <- "Dependency graph"
   if (split_columns){
     out <- paste(out, "with split columns")
   }
@@ -78,13 +79,29 @@ file_hover_text <- Vectorize(function(quoted_file, targets){
   tryCatch({
     readLines(unquoted_file, n = 10, warn = FALSE) %>%
       paste(collapse = "\n") %>%
-      crop_text(length = hover_text_length)
+      crop_text(width = hover_text_width)
   },
   error = function(e) quoted_file,
   warning = function(w) quoted_file
   )
 },
 "quoted_file")
+
+filter_legend_nodes <- function(legend_nodes, all_nodes){
+  colors <- c(unique(all_nodes$color), color_of("object"))
+  shapes <- unique(all_nodes$shape)
+  ln <- legend_nodes
+  ln[ln$color %in% colors & ln$shape %in% shapes, , drop = FALSE] # nolint
+}
+
+filtered_legend_nodes <- function(all_nodes, full_legend, font_size){
+  legend_nodes <- legend_nodes(font_size = font_size)
+  if (full_legend){
+    legend_nodes
+  } else {
+    filter_legend_nodes(legend_nodes = legend_nodes, all_nodes = all_nodes)
+  }
+}
 
 function_hover_text <- Vectorize(function(function_name, envir){
   tryCatch(
@@ -93,7 +110,7 @@ function_hover_text <- Vectorize(function(function_name, envir){
     unwrap_function %>%
     deparse %>%
     paste(collapse = "\n") %>%
-    crop_text(length = hover_text_length)
+    crop_text(width = hover_text_width)
 },
 "function_name")
 
@@ -138,20 +155,20 @@ hover_text <- function(config) {
   })
 }
 
-hover_text_length <- 250
+hover_text_width <- 250
 
 #' @title Create the nodes data frame used in the legend
-#' of \code{\link{vis_drake_graph}()}.
+#'   of [vis_drake_graph()].
 #' @export
-#' @seealso \code{\link{drake_palette}()},
-#' \code{\link{vis_drake_graph}()},
-#' \code{\link{dataframes_graph}()}
-#' @description Output a \code{visNetwork}-friendly
+#' @seealso [drake_palette()],
+#'   [vis_drake_graph()],
+#'   [dataframes_graph()]
+#' @description Output a `visNetwork`-friendly
 #' data frame of nodes. It tells you what
 #' the colors and shapes mean
-#' in \code{\link{vis_drake_graph}()}.
+#' in [vis_drake_graph()].
 #' @param font_size font size of the node label text
-#' @return A data frame of legend nodes for \code{\link{vis_drake_graph}()}.
+#' @return A data frame of legend nodes for [vis_drake_graph()].
 #' @examples
 #' \dontrun{
 #' # Show the legend nodes used in vis_drake_graph().
@@ -159,7 +176,7 @@ hover_text_length <- 250
 #' visNetwork::visNetwork(nodes = legend_nodes())
 #' }
 legend_nodes <- function(font_size = 20) {
-  out <- data.frame(
+  out <- tibble(
     label = c(
       "Up to date",
       "Outdated",
@@ -194,7 +211,7 @@ legend_nodes <- function(font_size = 20) {
 
 missing_import <- function(x, envir) {
   missing_object <- !is_file(x) & is.null(envir[[x]]) & tryCatch({
-    flexible_get(x)
+    flexible_get(x, envir = envir)
     FALSE
   },
   error = function(e) TRUE)
@@ -222,6 +239,23 @@ resolve_graph_outdated <- function(config){
   }
 }
 
+resolve_build_times <- function(build_times){
+  if (is.logical(build_times)){
+    warning(
+      "The build_times argument to the visualization functions ",
+      "should be a character string: \"build\", \"command\", or \"none\". ",
+      "The change will be forced in a later version of `drake`. ",
+      "see the `build_times()` function for details."
+    )
+    if (build_times){
+      build_times <- "build"
+    } else {
+      build_times <- "none"
+    }
+  }
+  build_times
+}
+
 resolve_levels <- function(config) { # nolint
   with(config, {
     stages <- stages[nodes$id, ]
@@ -240,7 +274,7 @@ shrink_levels <- function(nodes){
 split_levels <- function(old_levels, max_reps){
   n_nodes <- length(old_levels)
   n_levels <- floor(n_nodes / max_reps) + (n_nodes %% max_reps > 0)
-  index <- seq_along(old_levels)
+  index <- seq_along(along.with = old_levels)
   new_levels <- split(index, sort(index %% n_levels)) %>%
     lapply(FUN = function(substage){
       rep(max(substage), length(substage))
@@ -282,8 +316,14 @@ style_nodes <- function(config) {
 }
 
 target_hover_text <- function(targets, plan) {
-  plan[plan$target %in% targets, "command"] %>%
-    wrap_text %>% crop_text(length = hover_text_length)
+  vapply(
+    X = plan$command[plan$target %in% targets],
+    FUN = function(text){
+      crop_text(wrap_text(text), width = hover_text_width)
+    },
+    FUN.VALUE = character(1),
+    USE.NAMES = FALSE
+  )
 }
 
 trim_node_categories <- function(config){

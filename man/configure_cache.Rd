@@ -7,33 +7,43 @@
 configure_cache(cache = drake::get_cache(verbose = verbose),
   short_hash_algo = drake::default_short_hash_algo(cache = cache),
   long_hash_algo = drake::default_long_hash_algo(cache = cache),
-  log_progress = FALSE, overwrite_hash_algos = FALSE, verbose = TRUE,
-  jobs = 1)
+  log_progress = FALSE, overwrite_hash_algos = FALSE,
+  verbose = drake::default_verbose(), jobs = 1)
 }
 \arguments{
 \item{cache}{cache to configure}
 
 \item{short_hash_algo}{short hash algorithm for drake.
+The short algorithm must be among \code{\link[=available_hash_algos]{available_hash_algos()}},
+which is just the collection of algorithms available to the \code{algo}
+argument in \code{\link[digest:digest]{digest::digest()}}.
+See \code{\link[=default_short_hash_algo]{default_short_hash_algo()}} for more.}
 
-The short algorithm must be among \code{\link{available_hash_algos}{}},
-which is just the collection of algorithms available to the `algo`
-argument in \code{digest::digest()}.
-See \code{?\link{default_short_hash_algo}} for more.}
-
-\item{long_hash_algo}{short hash algorithm for drake.
+\item{long_hash_algo}{long hash algorithm for drake.
 The long algorithm must be among \code{\link{available_hash_algos}{}},
-which is just the collection of algorithms available to the `algo`
+which is just the collection of algorithms available to the \code{algo}
 argument in \code{digest::digest()}.
-See \code{?\link{default_long_hash_algo}} for more.}
+See \code{\link[=default_long_hash_algo]{default_long_hash_algo()}} for more.}
 
-\item{log_progress}{logical, whether to clear the recorded
+\item{log_progress}{deprecated logical.
+Previously toggled whether to clear the recorded
 build progress if this cache was used for previous calls to
-\code{\link{make}()}}
+\code{\link[=make]{make()}}.}
 
 \item{overwrite_hash_algos}{logical, whether to try to overwrite
 the hash algorithms in the cache with any user-specified ones.}
 
-\item{verbose}{whether to print console messages}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 
 \item{jobs}{number of jobs for parallel processing}
 }
@@ -42,7 +52,7 @@ A drake/storr cache.
 }
 \description{
 The purpose of this function is
-to prepare the cache to be called from \code{\link{make}()}.
+to prepare the cache to be called from \code{\link[=make]{make()}}.
 }
 \examples{
 \dontrun{
@@ -66,6 +76,6 @@ make(my_plan) # Changing the long hash puts the targets out of date.
 }
 }
 \seealso{
-\code{\link{default_short_hash_algo}},
-\code{\link{default_long_hash_algo}}
+\code{\link[=default_short_hash_algo]{default_short_hash_algo()}},
+\code{\link[=default_long_hash_algo]{default_long_hash_algo()}}
 }

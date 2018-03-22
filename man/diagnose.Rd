@@ -2,12 +2,11 @@
 % Please edit documentation in R/diagnose.R
 \name{diagnose}
 \alias{diagnose}
-\title{Get the last stored error log of a target
-that failed to build, or list the targets with error logs.}
+\title{Get diagnostic metadata on a target.}
 \usage{
 diagnose(target = NULL, character_only = FALSE, path = getwd(),
   search = TRUE, cache = drake::get_cache(path = path, search = search,
-  verbose = verbose), verbose = TRUE)
+  verbose = verbose), verbose = drake::default_verbose())
 }
 \arguments{
 \item{target}{name of the target of the error to get.
@@ -16,35 +15,50 @@ must be a character if \code{character_only} is \code{TRUE}.}
 
 \item{character_only}{logical, whether \code{target} should be treated
 as a character or a symbol.
-Just like \code{character.only} in \code{library()}.}
+Just like \code{character.only} in \code{\link[=library]{library()}}.}
 
 \item{path}{Root directory of the drake project,
 or if \code{search} is \code{TRUE}, either the
-project root or a subdirectory of the project.}
+project root or a subdirectory of the project.
+Ignored if a \code{cache} is supplied.}
 
-\item{search}{If \code{TRUE}, search parent directories
+\item{search}{logical. If \code{TRUE}, search parent directories
 to find the nearest drake cache. Otherwise, look in the
-current working directory only.}
+current working directory only.
+Ignored if a \code{cache} is supplied.}
 
-\item{cache}{optional drake cache. See code{\link{new_cache}()}.
-If \code{cache} is supplied,
-the \code{path} and \code{search} arguments are ignored.}
+\item{cache}{drake cache. See \code{\link[=new_cache]{new_cache()}}.
+If supplied, \code{path} and \code{search} are ignored.}
 
-\item{verbose}{whether to print console messages}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 }
 \value{
 Either a character vector of target names or an object
 of class \code{"error"}.
 }
 \description{
-The specified target could be a
-completely failed target or a target
-that failed initially, retried, then succeeded.
-If no target is given, then \code{diagnose()} simply
-lists the targets for which a error is retrievable.
-Together, functions \code{\link{failed}()} and
-\code{diagnose()} should eliminate the strict need
-for ordinary error messages printed to the console.
+Diagnostics include errors, warnings,
+messages, runtimes, and other context/metadata from when a
+target was built or an import was processed.
+If your target's last build succeeded,
+then \code{diagnose(your_target)} has the most current information
+from that build.
+But if your target failed, then only
+\code{diagnose(your_target)$error},
+\code{diagnose(your_target)$warnings},
+and \code{diagnose(your_target)$messages} correspond to the failure,
+and all the other metadata correspond to the last build that completed
+without an error.
 }
 \examples{
 \dontrun{
@@ -65,13 +79,30 @@ failed() # List the failed targets from the last make() (my_target).
 # Drake keeps all the error logs.
 diagnose()
 # Get the error log, an object of class "error".
-error <- diagnose(my_target)
+error <- diagnose(my_target)$error # See also warnings and messages.
 str(error) # See what's inside the error log.
 error$calls # View the traceback. (See the traceback() function).
+# Use purrr to recover all the warnings.
+suppressWarnings(
+  make(
+    drake_plan(
+      x = 1,
+      y = warning(123),
+      z = warning(456)
+    ),
+    verbose = FALSE
+  )
+)
+targets <- built(verbose = FALSE)
+lapply(targets, diagnose, character_only = TRUE, verbose = FALSE) \%>\%
+  setNames(targets) \%>\%
+  purrr::map("warnings") \%>\%
+  purrr::compact() \%>\%
+  unlist
 })
 }
 }
 \seealso{
-\code{\link{failed}}, \code{\link{progress}},
-\code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
+\code{\link[=failed]{failed()}}, \code{\link[=progress]{progress()}},
+\code{\link[=readd]{readd()}}, \code{\link[=drake_plan]{drake_plan()}}, \code{\link[=make]{make()}}
 }

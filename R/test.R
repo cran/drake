@@ -13,7 +13,8 @@ testrun <- function(config) {
       prepend = config$prepend, command = config$command,
       cache = config$cache, lazy_load = config$lazy_load,
       session_info = config$session_info,
-      fetch_cache = config$fetch_cache
+      fetch_cache = config$fetch_cache,
+      caching = config$caching
     )
   )
 }
@@ -23,7 +24,8 @@ justbuilt <- function(config) {
   all <- lightly_parallelize(
     X = recorded,
     FUN = function(target){
-      config$cache$get(key = target, namespace = "progress")
+      config$cache$get(
+        key = target, namespace = "progress", use_cache = FALSE)
     },
     jobs = config$jobs
   )
@@ -40,7 +42,7 @@ nobuild <- function(config) {
 }
 
 #' @title Run a unit test in a way that quarantines
-#' the side effects from your workspace and file system.
+#'   the side effects from your workspace and file system.
 #' @description Typical users of drake should not need this function.
 #' It is exported so it can be used to quarantine the side effects
 #' of the examples in the help files.

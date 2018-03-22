@@ -1,5 +1,18 @@
 drake_context("graph")
 
+test_with_dir("Recursive functions are okay", {
+  factorial <- function(n){
+    if (n == 0){
+      1
+    } else {
+      n * factorial(n - 1)
+    }
+  }
+  x <- drake_plan(output = factorial(10))
+  cache <- storr::storr_environment()
+  make(x, cache = cache, session_info = FALSE)
+})
+
 test_with_dir("drake searches past outdated targets for parallel stages", {
   plan <- drake_plan(
     a = 1,
@@ -22,7 +35,10 @@ test_with_dir("Supplied graph is not an igraph.", {
 })
 
 test_with_dir("graph does not fail if input file is binary", {
-  x <- drake_plan(y = readRDS("input.rds"))
+  x <- drake_plan(
+    y = readRDS(file_in("input.rds")),
+    strings_in_dots = "literals"
+  )
   saveRDS(as.list(mtcars), "input.rds")
   con <- drake_config(x, verbose = FALSE)
   expect_silent(out <- vis_drake_graph(con))
@@ -35,9 +51,21 @@ test_with_dir("null graph", {
 })
 
 test_with_dir("circular non-DAG drake_plans quit in error", {
-  p <- drake_plan(a = b, b = c, c = a)
-  expect_error(tmp <- capture.output(check_plan(p)))
-  expect_error(make(p, verbose = FALSE, session_info = FALSE))
+  x <- drake_plan(a = b, b = c, c = a)
+  expect_error(tmp <- capture.output(check_plan(x)))
+  expect_error(
+    make(x, verbose = FALSE, session_info = FALSE),
+    regexp = "[Cc]ircular workflow"
+  )
+  x <- drake_plan(
+    a = b, b = c, c = a, d = 4, e = d,
+    A = B, B = C, C = A, mytarget = e
+  )
+  expect_error(tmp <- capture.output(check_plan(x)))
+  expect_error(
+    make(x, verbose = FALSE, session_info = FALSE),
+    regexp = "[Cc]ircular workflow"
+  )
 })
 
 test_with_dir("Supplied graph disagrees with the workflow plan", {
@@ -60,6 +88,9 @@ test_with_dir("graph functions work", {
     class(build_drake_graph(config$plan, verbose = FALSE)), "igraph")
   pdf(NULL)
   tmp <- vis_drake_graph(config)
+  dev.off()
+  pdf(NULL)
+  tmp <- vis_drake_graph(config, full_legend = FALSE)
   dev.off()
   unlink("Rplots.pdf", force = TRUE)
   expect_true(is.character(default_graph_title(
@@ -110,31 +141,35 @@ test_with_dir("graphing args are not ignored (basic example)", {
   expect_false(file.exists("Makefile"))
 
   # Different graph configurations should be checked manually.
-  tmp <- dataframes_graph(config = config, build_times = FALSE)
-  tmpcopy <- dataframes_graph(config = config,
-    make_imports = FALSE, build_times = FALSE)
-  tmp0 <- dataframes_graph(config = config, build_times = FALSE,
-    subset = c("small", "regression2_large"))
-  tmp1 <- dataframes_graph(config = config, build_times = FALSE,
-    from = "small")
-  tmp2 <- dataframes_graph(config = config, build_times = FALSE,
-    from = "small", targets_only = TRUE)
-  tmp3 <- dataframes_graph(config = config, build_times = FALSE,
-    targets_only = TRUE)
-  tmp4 <- dataframes_graph(config = config, build_times = FALSE,
-    split_columns = TRUE)
-  tmp5 <- dataframes_graph(config = config, build_times = FALSE,
-    targets_only = TRUE, split_columns = TRUE)
-  tmp6 <- dataframes_graph(config = config, build_times = TRUE,
-    targets_only = TRUE, split_columns = TRUE)
-  tmp7 <- dataframes_graph(config = config, build_times = TRUE,
-    targets_only = TRUE, split_columns = TRUE, from_scratch = TRUE)
   expect_warning(
-    tmp8 <- dataframes_graph(config = config, build_times = FALSE,
+    tmp <- dataframes_graph(
+      config = config, build_times = FALSE, from_scratch = TRUE))
+  expect_warning(
+    tmp <- dataframes_graph(config = config, build_times = FALSE))
+  tmpcopy <- dataframes_graph(config = config,
+    make_imports = FALSE, build_times = "none")
+  tmp0 <- dataframes_graph(config = config, build_times = "none",
+    subset = c("small", "regression2_large"))
+  tmp1 <- dataframes_graph(config = config, build_times = "none",
+    from = "small")
+  tmp2 <- dataframes_graph(config = config, build_times = "none",
+    from = "small", targets_only = TRUE)
+  tmp3 <- dataframes_graph(config = config, build_times = "none",
+    targets_only = TRUE)
+  tmp4 <- dataframes_graph(config = config, build_times = "none",
+    split_columns = TRUE)
+  tmp5 <- dataframes_graph(config = config, build_times = "none",
+    targets_only = TRUE, split_columns = TRUE)
+  tmp6 <- dataframes_graph(config = config, build_times = "build",
+    targets_only = TRUE, split_columns = TRUE)
+  tmp7 <- dataframes_graph(config = config, build_times = "build",
+    targets_only = TRUE, split_columns = TRUE, from_scratch = FALSE)
+  expect_warning(
+    tmp8 <- dataframes_graph(config = config, build_times = "none",
                              from = c("small", "not_found"))
   )
   expect_error(
-    tmp9 <- dataframes_graph(config = config, build_times = FALSE,
+    tmp9 <- dataframes_graph(config = config, build_times = "none",
                              from = "not_found")
   )
   expect_equal(nrow(tmp0$nodes), 2)
@@ -150,7 +185,7 @@ test_with_dir("graphing args are not ignored (basic example)", {
   expect_false(file.exists("Makefile"))
   expect_true(is.data.frame(tmp$nodes))
   expect_equal(sort(outdated(config = config)),
-               sort(c(my_plan$target)))
+               sort(c(config$plan$target)))
   expect_false(file.exists("Makefile"))
 
   file <- "graph.html"

@@ -1,22 +1,22 @@
 #' @title List the time it took to build each target/import.
 #' @description Listed times do not include the amount of time
-#' spent loading and saving objects!
-#' @seealso \code{\link{built}}
+#'  spent loading and saving objects! See the `type`
+#'  argument for different versions of the build time.
+#'  (You can choose whether to take storage time into account.)
+#' @seealso [built()]
 #' @export
-#' @return A data frame of times, each from \code{\link{system.time}()}.
+#' @return A data frame of times, each from [system.time()].
+#' @inheritParams cached
+#' @param ... targets to load from the cache: as names (symbols),
+#'   character strings, or `dplyr`-style `tidyselect`
+#'   commands such as `starts_with()`.
 #' @param targets_only logical, whether to only return the
-#' build times of the targets (exclude the imports).
-#' @param path Root directory of the drake project,
-#' or if \code{search} is \code{TRUE}, either the
-#' project root or a subdirectory of the project.
-#' @param search logical. If \code{TRUE}, search parent directories
-#' to find the nearest drake cache. Otherwise, look in the
-#' current working directory only.
+#'   build times of the targets (exclude the imports).
 #' @param digits How many digits to round the times to.
-#' @param cache optional drake cache. If supplied,
-#' the \code{path} and \code{search} arguments are ignored.
-#' @param verbose whether to print console messages
-#' @param jobs number of parallel jobs/workers for light parallelism.
+#' @param type Type of time you want: either `"build"`
+#'   for the full build time including the time it took to
+#'   store the target, or `"command"` for the time it took
+#'   just to run the command.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -24,25 +24,34 @@
 #' load_basic_example() # Get the code with drake_example("basic").
 #' make(my_plan) # Build all the targets.
 #' build_times() # Show how long it took to build each target.
+#' build_times(starts_with("coef")) # `dplyr`-style `tidyselect`
 #' })
 #' }
 build_times <- function(
+  ...,
   path = getwd(),
   search = TRUE,
   digits = 3,
   cache = get_cache(path = path, search = search, verbose = verbose),
   targets_only = FALSE,
-  verbose = TRUE,
-  jobs = 1
+  verbose = drake::default_verbose(),
+  jobs = 1,
+  type = c("build", "command")
 ){
   if (is.null(cache)){
     return(empty_times())
   }
+  targets <- drake_select(cache = cache, ..., namespace = "meta")
+  if (!length(targets)){
+    targets <- cache$list(namespace = "meta")
+  }
+  type <- match.arg(type)
   out <- lightly_parallelize(
-    X = cache$list(namespace = "meta"),
+    X = targets,
     FUN = fetch_runtime,
     jobs = 1,
-    cache = cache
+    cache = cache,
+    type = type
   ) %>%
     parallel_filter(f = is.data.frame, jobs = jobs) %>%
     do.call(what = rbind) %>%
@@ -54,20 +63,23 @@ build_times <- function(
   if (targets_only){
     out <- out[out$type == "target", ]
   }
-  out
+  tryCatch(
+    as_tibble(out),
+    error = error_tibble_times
+  )
 }
 
-fetch_runtime <- function(key, cache){
+fetch_runtime <- function(key, cache, type){
   x <- get_from_subspace(
     key = key,
-    subspace = "build_times",
+    subspace = paste0("time_", type),
     namespace = "meta",
     cache = cache
   )
   if (is_bad_time(x)){
     return(empty_times())
   }
-  if (class(x) == "proc_time"){
+  if (inherits(x, "proc_time")){
     x <- runtime_entry(runtime = x, target = key, imported = NA)
   }
   x
@@ -122,13 +134,21 @@ to_build_duration <- function(x){
 
 time_columns <- c("elapsed", "user", "system")
 
-append_times_to_meta <- function(target, start, meta, config){
-  if (is_bad_time(start)){
-    return(meta)
+finalize_times <- function(target, meta, config){
+  if (!is_bad_time(meta$time_command)){
+    meta$time_command <- runtime_entry(
+      runtime = meta$time_command,
+      target = target,
+      imported = meta$imported
+    )
   }
-  build_times <- (proc.time() - start) %>%
-    runtime_entry(target = target, imported = meta$imported)
-  meta$build_times <- build_times
+  if (!is_bad_time(meta$start)){
+    meta$time_build <- runtime_entry(
+      runtime = proc.time() - meta$start,
+      target = target,
+      imported = meta$imported
+    )
+  }
   meta
 }
 

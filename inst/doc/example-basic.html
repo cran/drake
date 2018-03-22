@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>Get the code.</title>
+
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
+<!-- Styles for R syntax highlighter -->
+<style type="text/css">
+   pre .operator,
+   pre .paren {
+     color: rgb(104, 118, 135)
+   }
+
+   pre .literal {
+     color: #990073
+   }
+
+   pre .number {
+     color: #099;
+   }
+
+   pre .comment {
+     color: #998;
+     font-style: italic
+   }
+
+   pre .keyword {
+     color: #900;
+     font-weight: bold
+   }
+
+   pre .identifier {
+     color: rgb(0, 0, 0);
+   }
+
+   pre .string {
+     color: #d14;
+   }
+</style>
+
+<!-- R syntax highlighter -->
+<script type="text/javascript">
+var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/</gm,"&lt;")}function f(r,q,p){return RegExp(q,"m"+(r.cI?"i":"")+(p?"g":""))}function b(r){for(var p=0;p<r.childNodes.length;p++){var q=r.childNodes[p];if(q.nodeName=="CODE"){return q}if(!(q.nodeType==3&&q.nodeValue.match(/\s+/))){break}}}function h(t,s){var p="";for(var r=0;r<t.childNodes.length;r++){if(t.childNodes[r].nodeType==3){var q=t.childNodes[r].nodeValue;if(s){q=q.replace(/\n/g,"")}p+=q}else{if(t.childNodes[r].nodeName=="BR"){p+="\n"}else{p+=h(t.childNodes[r])}}}if(/MSIE [678]/.test(navigator.userAgent)){p=p.replace(/\r/g,"\n")}return p}function a(s){var r=s.className.split(/\s+/);r=r.concat(s.parentNode.className.split(/\s+/));for(var q=0;q<r.length;q++){var p=r[q].replace(/^language-/,"");if(e[p]){return p}}}function c(q){var p=[];(function(s,t){for(var r=0;r<s.childNodes.length;r++){if(s.childNodes[r].nodeType==3){t+=s.childNodes[r].nodeValue.length}else{if(s.childNodes[r].nodeName=="BR"){t+=1}else{if(s.childNodes[r].nodeType==1){p.push({event:"start",offset:t,node:s.childNodes[r]});t=arguments.callee(s.childNodes[r],t);p.push({event:"stop",offset:t,node:s.childNodes[r]})}}}}return t})(q,0);return p}function k(y,w,x){var q=0;var z="";var s=[];function u(){if(y.length&&w.length){if(y[0].offset!=w[0].offset){return(y[0].offset<w[0].offset)?y:w}else{return w[0].event=="start"?y:w}}else{return y.length?y:w}}function t(D){var A="<"+D.nodeName.toLowerCase();for(var B=0;B<D.attributes.length;B++){var C=D.attributes[B];A+=" "+C.nodeName.toLowerCase();if(C.value!==undefined&&C.value!==false&&C.value!==null){A+='="'+m(C.value)+'"'}}return A+">"}while(y.length||w.length){var v=u().splice(0,1)[0];z+=m(x.substr(q,v.offset-q));q=v.offset;if(v.event=="start"){z+=t(v.node);s.push(v.node)}else{if(v.event=="stop"){var p,r=s.length;do{r--;p=s[r];z+=("</"+p.nodeName.toLowerCase()+">")}while(p!=v.node);s.splice(r,1);while(r<s.length){z+=t(s[r]);r++}}}}return z+m(x.substr(q))}function j(){function q(x,y,v){if(x.compiled){return}var u;var s=[];if(x.k){x.lR=f(y,x.l||hljs.IR,true);for(var w in x.k){if(!x.k.hasOwnProperty(w)){continue}if(x.k[w] instanceof Object){u=x.k[w]}else{u=x.k;w="keyword"}for(var r in u){if(!u.hasOwnProperty(r)){continue}x.k[r]=[w,u[r]];s.push(r)}}}if(!v){if(x.bWK){x.b="\\b("+s.join("|")+")\\s"}x.bR=f(y,x.b?x.b:"\\B|\\b");if(!x.e&&!x.eW){x.e="\\B|\\b"}if(x.e){x.eR=f(y,x.e)}}if(x.i){x.iR=f(y,x.i)}if(x.r===undefined){x.r=1}if(!x.c){x.c=[]}x.compiled=true;for(var t=0;t<x.c.length;t++){if(x.c[t]=="self"){x.c[t]=x}q(x.c[t],y,false)}if(x.starts){q(x.starts,y,false)}}for(var p in e){if(!e.hasOwnProperty(p)){continue}q(e[p].dM,e[p],true)}}function d(B,C){if(!j.called){j();j.called=true}function q(r,M){for(var L=0;L<M.c.length;L++){if((M.c[L].bR.exec(r)||[null])[0]==r){return M.c[L]}}}function v(L,r){if(D[L].e&&D[L].eR.test(r)){return 1}if(D[L].eW){var M=v(L-1,r);return M?M+1:0}return 0}function w(r,L){return L.i&&L.iR.test(r)}function K(N,O){var M=[];for(var L=0;L<N.c.length;L++){M.push(N.c[L].b)}var r=D.length-1;do{if(D[r].e){M.push(D[r].e)}r--}while(D[r+1].eW);if(N.i){M.push(N.i)}return f(O,M.join("|"),true)}function p(M,L){var N=D[D.length-1];if(!N.t){N.t=K(N,E)}N.t.lastIndex=L;var r=N.t.exec(M);return r?[M.substr(L,r.index-L),r[0],false]:[M.substr(L),"",true]}function z(N,r){var L=E.cI?r[0].toLowerCase():r[0];var M=N.k[L];if(M&&M instanceof Array){return M}return false}function F(L,P){L=m(L);if(!P.k){return L}var r="";var O=0;P.lR.lastIndex=0;var M=P.lR.exec(L);while(M){r+=L.substr(O,M.index-O);var N=z(P,M);if(N){x+=N[1];r+='<span class="'+N[0]+'">'+M[0]+"</span>"}else{r+=M[0]}O=P.lR.lastIndex;M=P.lR.exec(L)}return r+L.substr(O,L.length-O)}function J(L,M){if(M.sL&&e[M.sL]){var r=d(M.sL,L);x+=r.keyword_count;return r.value}else{return F(L,M)}}function I(M,r){var L=M.cN?'<span class="'+M.cN+'">':"";if(M.rB){y+=L;M.buffer=""}else{if(M.eB){y+=m(r)+L;M.buffer=""}else{y+=L;M.buffer=r}}D.push(M);A+=M.r}function G(N,M,Q){var R=D[D.length-1];if(Q){y+=J(R.buffer+N,R);return false}var P=q(M,R);if(P){y+=J(R.buffer+N,R);I(P,M);return P.rB}var L=v(D.length-1,M);if(L){var O=R.cN?"</span>":"";if(R.rE){y+=J(R.buffer+N,R)+O}else{if(R.eE){y+=J(R.buffer+N,R)+O+m(M)}else{y+=J(R.buffer+N+M,R)+O}}while(L>1){O=D[D.length-2].cN?"</span>":"";y+=O;L--;D.length--}var r=D[D.length-1];D.length--;D[D.length-1].buffer="";if(r.starts){I(r.starts,"")}return R.rE}if(w(M,R)){throw"Illegal"}}var E=e[B];var D=[E.dM];var A=0;var x=0;var y="";try{var s,u=0;E.dM.buffer="";do{s=p(C,u);var t=G(s[0],s[1],s[2]);u+=s[0].length;if(!t){u+=s[1].length}}while(!s[2]);if(D.length>1){throw"Illegal"}return{r:A,keyword_count:x,value:y}}catch(H){if(H=="Illegal"){return{r:0,keyword_count:0,value:m(C)}}else{throw H}}}function g(t){var p={keyword_count:0,r:0,value:m(t)};var r=p;for(var q in e){if(!e.hasOwnProperty(q)){continue}var s=d(q,t);s.language=q;if(s.keyword_count+s.r>r.keyword_count+r.r){r=s}if(s.keyword_count+s.r>p.keyword_count+p.r){r=p;p=s}}if(r.language){p.second_best=r}return p}function i(r,q,p){if(q){r=r.replace(/^((<[^>]+>|\t)+)/gm,function(t,w,v,u){return w.replace(/\t/g,q)})}if(p){r=r.replace(/\n/g,"<br>")}return r}function n(t,w,r){var x=h(t,r);var v=a(t);var y,s;if(v){y=d(v,x)}else{return}var q=c(t);if(q.length){s=document.createElement("pre");s.innerHTML=y.value;y.value=k(q,c(s),x)}y.value=i(y.value,w,r);var u=t.className;if(!u.match("(\\s|^)(language-)?"+v+"(\\s|$)")){u=u?(u+" "+v):v}if(/MSIE [678]/.test(navigator.userAgent)&&t.tagName=="CODE"&&t.parentNode.tagName=="PRE"){s=t.parentNode;var p=document.createElement("div");p.innerHTML="<pre><code>"+y.value+"</code></pre>";t=p.firstChild.firstChild;p.firstChild.cN=s.cN;s.parentNode.replaceChild(p.firstChild,s)}else{t.innerHTML=y.value}t.className=u;t.result={language:v,kw:y.keyword_count,re:y.r};if(y.second_best){t.second_best={language:y.second_best.language,kw:y.second_best.keyword_count,re:y.second_best.r}}}function o(){if(o.called){return}o.called=true;var r=document.getElementsByTagName("pre");for(var p=0;p<r.length;p++){var q=b(r[p]);if(q){n(q,hljs.tabReplace)}}}function l(){if(window.addEventListener){window.addEventListener("DOMContentLoaded",o,false);window.addEventListener("load",o,false)}else{if(window.attachEvent){window.attachEvent("onload",o)}else{window.onload=o}}}var e={};this.LANGUAGES=e;this.highlight=d;this.highlightAuto=g;this.fixMarkup=i;this.highlightBlock=n;this.initHighlighting=o;this.initHighlightingOnLoad=l;this.IR="[a-zA-Z][a-zA-Z0-9_]*";this.UIR="[a-zA-Z_][a-zA-Z0-9_]*";this.NR="\\b\\d+(\\.\\d+)?";this.CNR="\\b(0[xX][a-fA-F0-9]+|(\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";this.BNR="\\b(0b[01]+)";this.RSR="!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|\\.|-|-=|/|/=|:|;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";this.ER="(?![\\s\\S])";this.BE={b:"\\\\.",r:0};this.ASM={cN:"string",b:"'",e:"'",i:"\\n",c:[this.BE],r:0};this.QSM={cN:"string",b:'"',e:'"',i:"\\n",c:[this.BE],r:0};this.CLCM={cN:"comment",b:"//",e:"$"};this.CBLCLM={cN:"comment",b:"/\\*",e:"\\*/"};this.HCM={cN:"comment",b:"#",e:"$"};this.NM={cN:"number",b:this.NR,r:0};this.CNM={cN:"number",b:this.CNR,r:0};this.BNM={cN:"number",b:this.BNR,r:0};this.inherit=function(r,s){var p={};for(var q in r){p[q]=r[q]}if(s){for(var q in s){p[q]=s[q]}}return p}}();hljs.LANGUAGES.cpp=function(){var a={keyword:{"false":1,"int":1,"float":1,"while":1,"private":1,"char":1,"catch":1,"export":1,virtual:1,operator:2,sizeof:2,dynamic_cast:2,typedef:2,const_cast:2,"const":1,struct:1,"for":1,static_cast:2,union:1,namespace:1,unsigned:1,"long":1,"throw":1,"volatile":2,"static":1,"protected":1,bool:1,template:1,mutable:1,"if":1,"public":1,friend:2,"do":1,"return":1,"goto":1,auto:1,"void":2,"enum":1,"else":1,"break":1,"new":1,extern:1,using:1,"true":1,"class":1,asm:1,"case":1,typeid:1,"short":1,reinterpret_cast:2,"default":1,"double":1,register:1,explicit:1,signed:1,typename:1,"try":1,"this":1,"switch":1,"continue":1,wchar_t:1,inline:1,"delete":1,alignof:1,char16_t:1,char32_t:1,constexpr:1,decltype:1,noexcept:1,nullptr:1,static_assert:1,thread_local:1,restrict:1,_Bool:1,complex:1},built_in:{std:1,string:1,cin:1,cout:1,cerr:1,clog:1,stringstream:1,istringstream:1,ostringstream:1,auto_ptr:1,deque:1,list:1,queue:1,stack:1,vector:1,map:1,set:1,bitset:1,multiset:1,multimap:1,unordered_set:1,unordered_map:1,unordered_multiset:1,unordered_multimap:1,array:1,shared_ptr:1}};return{dM:{k:a,i:"</",c:[hljs.CLCM,hljs.CBLCLM,hljs.QSM,{cN:"string",b:"'\\\\?.",e:"'",i:"."},{cN:"number",b:"\\b(\\d+(\\.\\d*)?|\\.\\d+)(u|U|l|L|ul|UL|f|F)"},hljs.CNM,{cN:"preprocessor",b:"#",e:"$"},{cN:"stl_container",b:"\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<",e:">",k:a,r:10,c:["self"]}]}}}();hljs.LANGUAGES.r={dM:{c:[hljs.HCM,{cN:"number",b:"\\b0[xX][0-9a-fA-F]+[Li]?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+(?:[eE][+\\-]?\\d*)?L\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+\\.(?!\\d)(?:i\\b)?",e:hljs.IMMEDIATE_RE,r:1},{cN:"number",b:"\\b\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"keyword",b:"(?:tryCatch|library|setGeneric|setGroupGeneric)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\.",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\d+(?![\\w.])",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\b(?:function)",e:hljs.IMMEDIATE_RE,r:2},{cN:"keyword",b:"(?:if|in|break|next|repeat|else|for|return|switch|while|try|stop|warning|require|attach|detach|source|setMethod|setClass)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"literal",b:"(?:NA|NA_integer_|NA_real_|NA_character_|NA_complex_)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"literal",b:"(?:NULL|TRUE|FALSE|T|F|Inf|NaN)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"identifier",b:"[a-zA-Z.][a-zA-Z0-9._]*\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"<\\-(?!\\s*\\d)",e:hljs.IMMEDIATE_RE,r:2},{cN:"operator",b:"\\->|<\\-",e:hljs.IMMEDIATE_RE,r:1},{cN:"operator",b:"%%|~",e:hljs.IMMEDIATE_RE},{cN:"operator",b:">=|<=|==|!=|\\|\\||&&|=|\\+|\\-|\\*|/|\\^|>|<|!|&|\\||\\$|:",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"%",e:"%",i:"\\n",r:1},{cN:"identifier",b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[hljs.BE],r:0},{cN:"string",b:"'",e:"'",c:[hljs.BE],r:0},{cN:"paren",b:"[[({\\])}]",e:hljs.IMMEDIATE_RE,r:0}]}};
+hljs.initHighlightingOnLoad();
+</script>
+
+
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 13px;
+}
+
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 20px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 {
+   font-size:2.2em;
+}
+
+h2 {
+   font-size:1.8em;
+}
+
+h3 {
+   font-size:1.4em;
+}
+
+h4 {
+   font-size:1.0em;
+}
+
+h5 {
+   font-size:0.9em;
+}
+
+h6 {
+   font-size:0.8em;
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre, img {
+  max-width: 100%;
+}
+pre {
+  overflow-x: auto;
+}
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+
+code[class] {
+  background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * {
+      background: transparent !important;
+      color: black !important;
+      filter:none !important;
+      -ms-filter: none !important;
+   }
+
+   body {
+      font-size:12pt;
+      max-width:100%;
+   }
+
+   a, a:visited {
+      text-decoration: underline;
+   }
+
+   hr {
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote {
+      padding-right: 1em;
+      page-break-inside: avoid;
+   }
+
+   tr, img {
+      page-break-inside: avoid;
+   }
+
+   img {
+      max-width: 100% !important;
+   }
+
+   @page :left {
+      margin: 15mm 20mm 15mm 10mm;
+   }
+
+   @page :right {
+      margin: 15mm 10mm 15mm 20mm;
+   }
+
+   p, h2, h3 {
+      orphans: 3; widows: 3;
+   }
+
+   h2, h3 {
+      page-break-after: avoid;
+   }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<p>This vignette is a walkthrough of <code>drake</code>&#39;s main functionality based on the basic example. It sets up the project and runs it repeatedly to demonstrate <code>drake</code>&#39;s most important functionality.</p>
+
+<h1>Get the code.</h1>
+
+<p>Write the code files to your workspace.</p>
+
+<pre><code class="r">drake_example(&quot;basic&quot;)
+</code></pre>
+
+<p>The new <code>basic</code> folder now includes a file structure of a serious <code>drake</code> project, plus an <code>interactive-tutorial.R</code> to narrate the example. The code is also <a href="https://github.com/ropensci/drake/tree/master/inst/examples/basic">online here</a>.</p>
+
+<h1>Quick examples</h1>
+
+<p>Inspect and run your project.</p>
+
+<pre><code class="r">library(drake)
+load_basic_example()            # Get the code with drake_example(&quot;basic&quot;).
+config &lt;- drake_config(my_plan) # Master configuration list
+vis_drake_graph(config)         # Hover, click, drag, zoom, pan.
+make(my_plan)                   # Run the workflow.
+outdated(config)                # Everything is up to date.
+</code></pre>
+
+<p>Debug errors.</p>
+
+<pre><code class="r">failed()                   # Targets that failed in the most recent `make()`
+context &lt;- diagnose(large) # Diagnostic metadata: errors, warnings, etc.
+error &lt;- context$error
+str(error)                 # Object of class &quot;error&quot;
+error$message
+error$call
+error$calls                # Full traceback of nested calls leading up to the error. # nolint
+</code></pre>
+
+<p>Dive deeper into the built-in examples.</p>
+
+<pre><code class="r">drake_example(&quot;basic&quot;) # Write the code files.
+drake_examples()       # List the other examples.
+vignette(&quot;quickstart&quot;) # This vignette
+</code></pre>
+
+<h1>The motivation of the basic example</h1>
+
+<p>Is there an association between the weight and the fuel efficiency of cars? To find out, we use the <code>mtcars</code> dataset from the <code>datasets</code> package. The <code>mtcars</code> dataset originally came from the 1974 Motor Trend US magazine, and it contains design and performance data on 32 models of automobile.</p>
+
+<pre><code class="r"># ?mtcars # more info
+head(mtcars)
+##                    mpg cyl disp  hp drat    wt  qsec vs am gear carb
+## Mazda RX4         21.0   6  160 110 3.90 2.620 16.46  0  1    4    4
+## Mazda RX4 Wag     21.0   6  160 110 3.90 2.875 17.02  0  1    4    4
+## Datsun 710        22.8   4  108  93 3.85 2.320 18.61  1  1    4    1
+## Hornet 4 Drive    21.4   6  258 110 3.08 3.215 19.44  1  0    3    1
+## Hornet Sportabout 18.7   8  360 175 3.15 3.440 17.02  0  0    3    2
+## Valiant           18.1   6  225 105 2.76 3.460 20.22  1  0    3    1
+</code></pre>
+
+<p>Here, <code>wt</code> is weight in tons, and <code>mpg</code> is fuel efficiency in miles per gallon. We want to figure out if there is an association between <code>wt</code> and <code>mpg</code>. The <code>mtcars</code> dataset itself only has 32 rows, so we generate two larger bootstrapped datasets and then analyze them with regression models. We summarize the regression models to see if there is an association.</p>
+
+<h1>Set up the basic example</h1>
+
+<p>Before you run your project, you need to set up the workspace. In other words, you need to gather the &ldquo;imports&rdquo;: functions, pre-loaded data objects, and saved files that you want to be available before the real work begins.</p>
+
+<pre><code class="r">library(knitr) # Drake knows which packages you load.
+library(drake)
+</code></pre>
+
+<p>We need a function to bootstrap larger datasets from <code>mtcars</code>.</p>
+
+<pre><code class="r"># Pick a random subset of n rows from a dataset
+random_rows &lt;- function(data, n){
+  data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
+}
+
+# Bootstrapped datasets from mtcars.
+simulate &lt;- function(n){
+  # Pick a random set of cars to bootstrap from the mtcars data.
+  data &lt;- random_rows(data = mtcars, n = n)
+
+  # x is the car&#39;s weight, and y is the fuel efficiency.
+  data.frame(
+    x = data$wt,
+    y = data$mpg
+  )
+}
+</code></pre>
+
+<p>We also need functions to apply the regression models we need for detecting associations.</p>
+
+<pre><code class="r"># Is fuel efficiency linearly related to weight?
+reg1 &lt;- function(d){
+  lm(y ~ + x, data = d)
+}
+
+# Is fuel efficiency related to the SQUARE of the weight?
+reg2 &lt;- function(d){
+  d$x2 &lt;- d$x ^ 2
+  lm(y ~ x2, data = d)
+}
+</code></pre>
+
+<p>We want to summarize the final results in an R Markdown report, so we need the following <code>report.Rmd</code> source file.</p>
+
+<pre><code class="r">path &lt;- file.path(&quot;examples&quot;, &quot;basic&quot;, &quot;report.Rmd&quot;)
+report_file &lt;- system.file(path, package = &quot;drake&quot;, mustWork = TRUE)
+file.copy(from = report_file, to = getwd(), overwrite = TRUE)
+## [1] TRUE
+</code></pre>
+
+<p>Here are the contents of the report. It will serve as a final summary of our work, and we will process it at the very end. Admittedly, some of the text spoils the punch line.</p>
+
+<pre><code class="r">cat(readLines(&quot;report.Rmd&quot;), sep = &quot;\n&quot;)
+## ---
+## title: &quot;Final results report for the basic example&quot;
+## author: You
+## output: html_document
+## ---
+## 
+## # The weight and fuel efficiency of cars
+## 
+## Is there an association between the weight and the fuel efficiency of cars? To find out, we use the `mtcars` dataset from the `datasets` package. The `mtcars` data originally came from the 1974 Motor Trend US magazine, and it contains design and performance data on 32 models of automobile.
+## 
+## ```{r showmtcars}
+## # ?mtcars # more info
+## head(mtcars)
+## ```
+## 
+## Here, `wt` is weight in tons, and `mpg` is fuel efficiency in miles per gallon. We want to figure out if there is an association between `wt` and `mpg`. The `mtcars` dataset itself only has 32 rows, so we generated two larger bootstrapped datasets. We called them `small` and `large`.
+## 
+## ```{r example_chunk}
+## library(drake)
+## head(readd(small)) # 48 rows
+## loadd(large)       # 64 rows
+## head(large)
+## ```
+## 
+## Then, we fit a couple regression models to the `small` and `large` to try to detect an association between `wt` and `mpg`. Here are the coefficients and p-values from one of the model fits.
+## 
+## ```{r second_example_chunk}
+## readd(coef_regression2_small)
+## ```
+## 
+## Since the p-value on `x2` is so small, there may be an association between weight and fuel efficiency after all.
+## 
+## # A note on knitr reports in drake projects.
+## 
+## Because of the calls to `readd()` and `loadd()`, `drake` knows that `small`, `large`, and `coef_regression2_small` are dependencies of this R Markdown report. This dependency relationship is what causes the report to be processed at the very end.
+</code></pre>
+
+<p>Now, all our imports are set up. When the real work begins, <code>drake</code> will import functions and data objects from your R session environment</p>
+
+<pre><code class="r">ls()
+##  [1] &quot;AES&quot;                    &quot;AESdecryptECB&quot;         
+##  [3] &quot;AESencryptECB&quot;          &quot;AESinit&quot;               
+##  [5] &quot;analysis_methods&quot;       &quot;analysis_plan&quot;         
+##  [7] &quot;attr_sha1&quot;              &quot;avoid_this&quot;            
+##  [9] &quot;b&quot;                      &quot;bad_plan&quot;              
+## [11] &quot;cache&quot;                  &quot;coef_regression2_small&quot;
+## [13] &quot;command&quot;                &quot;config&quot;                
+## [15] &quot;cranlogs_plan&quot;          &quot;dataset_plan&quot;          
+## [17] &quot;debug_plan&quot;             &quot;digest&quot;                
+## [19] &quot;digest_impl&quot;            &quot;envir&quot;                 
+## [21] &quot;error&quot;                  &quot;f&quot;                     
+## [23] &quot;g&quot;                      &quot;get_logs&quot;              
+## [25] &quot;good_plan&quot;              &quot;hard_plan&quot;             
+## [27] &quot;hmac&quot;                   &quot;large&quot;                 
+## [29] &quot;little_b&quot;               &quot;logs&quot;                  
+## [31] &quot;makeRaw&quot;                &quot;makeRaw.character&quot;     
+## [33] &quot;makeRaw.default&quot;        &quot;makeRaw.digest&quot;        
+## [35] &quot;makeRaw.raw&quot;            &quot;modes&quot;                 
+## [37] &quot;my_plan&quot;                &quot;my_variable&quot;           
+## [39] &quot;myplan&quot;                 &quot;new_objects&quot;           
+## [41] &quot;num2hex&quot;                &quot;padWithZeros&quot;          
+## [43] &quot;path&quot;                   &quot;plan&quot;                  
+## [45] &quot;print.AES&quot;              &quot;query&quot;                 
+## [47] &quot;random_rows&quot;            &quot;reg1&quot;                  
+## [49] &quot;reg2&quot;                   &quot;report_file&quot;           
+## [51] &quot;rules_grid&quot;             &quot;sha1&quot;                  
+## [53] &quot;sha1.Date&quot;              &quot;sha1.NULL&quot;             
+## [55] &quot;sha1.POSIXct&quot;           &quot;sha1.POSIXlt&quot;          
+## [57] &quot;sha1.anova&quot;             &quot;sha1.array&quot;            
+## [59] &quot;sha1.call&quot;              &quot;sha1.character&quot;        
+## [61] &quot;sha1.complex&quot;           &quot;sha1.data.frame&quot;       
+## [63] &quot;sha1.default&quot;           &quot;sha1.factor&quot;           
+## [65] &quot;sha1.function&quot;          &quot;sha1.integer&quot;          
+## [67] &quot;sha1.list&quot;              &quot;sha1.logical&quot;          
+## [69] &quot;sha1.matrix&quot;            &quot;sha1.name&quot;             
+## [71] &quot;sha1.numeric&quot;           &quot;sha1.pairlist&quot;         
+## [73] &quot;sha1.raw&quot;               &quot;simulate&quot;              
+## [75] &quot;small&quot;                  &quot;timestamp&quot;             
+## [77] &quot;tmp&quot;                    &quot;totally_okay&quot;          
+## [79] &quot;url&quot;                    &quot;whole_plan&quot;            
+## [81] &quot;x&quot;
+</code></pre>
+
+<p>and saved files from your file system.</p>
+
+<pre><code class="r">list.files()
+##  [1] &quot;best-practices.R&quot;     &quot;best-practices.Rmd&quot;   &quot;best-practices.html&quot; 
+##  [4] &quot;best-practices.md&quot;    &quot;caution.R&quot;            &quot;caution.Rmd&quot;         
+##  [7] &quot;caution.html&quot;         &quot;caution.md&quot;           &quot;debug.R&quot;             
+## [10] &quot;debug.Rmd&quot;            &quot;debug.html&quot;           &quot;debug.md&quot;            
+## [13] &quot;drake.R&quot;              &quot;drake.Rmd&quot;            &quot;drake.html&quot;          
+## [16] &quot;drake.md&quot;             &quot;example-basic.R&quot;      &quot;example-basic.Rmd&quot;   
+## [19] &quot;example-gsp.Rmd&quot;      &quot;example-packages.Rmd&quot; &quot;faq.Rmd&quot;             
+## [22] &quot;figure&quot;               &quot;graph.Rmd&quot;            &quot;parallelism.Rmd&quot;     
+## [25] &quot;report.R&quot;             &quot;report.Rmd&quot;           &quot;storage.Rmd&quot;         
+## [28] &quot;timing.Rmd&quot;
+</code></pre>
+
+<h1>The workflow plan data frame</h1>
+
+<p>Now that your workspace of imports is prepared, we can outline the real work step by step in a workflow plan data frame.</p>
+
+<pre><code class="r">load_basic_example() # Get the code with drake_example(&quot;basic&quot;).
+## Unloading targets from environment:
+##   coef_regression2_small
+##   large
+##   small
+my_plan
+## # A tibble: 15 x 2
+##    target                 command                                         
+##    &lt;chr&gt;                  &lt;chr&gt;                                           
+##  1 &quot;&quot;                     &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;repo~
+##  2 small                  simulate(48)                                    
+##  3 large                  simulate(64)                                    
+##  4 regression1_small      reg1(small)                                     
+##  5 regression1_large      reg1(large)                                     
+##  6 regression2_small      reg2(small)                                     
+##  7 regression2_large      reg2(large)                                     
+##  8 summ_regression1_small suppressWarnings(summary(regression1_small$resi~
+##  9 summ_regression1_large suppressWarnings(summary(regression1_large$resi~
+## 10 summ_regression2_small suppressWarnings(summary(regression2_small$resi~
+## 11 summ_regression2_large suppressWarnings(summary(regression2_large$resi~
+## 12 coef_regression1_small suppressWarnings(summary(regression1_small))$co~
+## 13 coef_regression1_large suppressWarnings(summary(regression1_large))$co~
+## 14 coef_regression2_small suppressWarnings(summary(regression2_small))$co~
+## 15 coef_regression2_large suppressWarnings(summary(regression2_large))$co~
+</code></pre>
+
+<p>Each row is an intermediate step, and each <strong>command</strong> generates a single <strong>target</strong>. A target is an output R object (cached when generated) or an output file (specified with single quotes), and a command just an ordinary piece of R code (not necessarily a single function call). Commands make use of R objects imported from your workspace, targets generated by other commands, and initial input files. These dependencies give your project an underlying network representation.</p>
+
+<pre><code class="r"># Hover, click, drag, zoom, and pan.
+config &lt;- drake_config(my_plan)
+vis_drake_graph(config, width = &quot;100%&quot;, height = &quot;500px&quot;) # Also drake_graph()
+</code></pre>
+
+<p><iframe
+src = "https://ropensci.github.io/drake/images/outdated.html"
+width = "100%" height = "600px" allowtransparency="true"
+style="border: none; box-shadow: none">
+</iframe></p>
+
+<p>You can also check the dependencies of individual targets and imported functions.</p>
+
+<pre><code class="r">deps(reg2)
+## [1] &quot;lm&quot;
+
+deps(my_plan$command[1]) # Files like report.Rmd are single-quoted.
+## [1] &quot;\&quot;report.Rmd\&quot;&quot;         &quot;\&quot;report.md\&quot;&quot;         
+## [3] &quot;coef_regression2_small&quot; &quot;knit&quot;                  
+## [5] &quot;large&quot;                  &quot;small&quot;
+
+deps(my_plan$command[nrow(my_plan)])
+## [1] &quot;regression2_large&quot; &quot;summary&quot;           &quot;suppressWarnings&quot;
+</code></pre>
+
+<p>List all the reproducibly-tracked objects and files.</p>
+
+<pre><code class="r">tracked(my_plan, targets = &quot;small&quot;)
+## [1] &quot;data.frame&quot;  &quot;mtcars&quot;      &quot;random_rows&quot; &quot;nrow&quot;        &quot;sample.int&quot; 
+## [6] &quot;small&quot;       &quot;simulate&quot;
+
+tracked(my_plan)
+##  [1] &quot;data.frame&quot;             &quot;mtcars&quot;                
+##  [3] &quot;random_rows&quot;            &quot;\&quot;report.Rmd\&quot;&quot;        
+##  [5] &quot;nrow&quot;                   &quot;sample.int&quot;            
+##  [7] &quot;lm&quot;                     &quot;coef_regression2_small&quot;
+##  [9] &quot;knit&quot;                   &quot;large&quot;                 
+## [11] &quot;small&quot;                  &quot;simulate&quot;              
+## [13] &quot;reg1&quot;                   &quot;reg2&quot;                  
+## [15] &quot;regression1_small&quot;      &quot;summary&quot;               
+## [17] &quot;suppressWarnings&quot;       &quot;regression1_large&quot;     
+## [19] &quot;regression2_small&quot;      &quot;regression2_large&quot;     
+## [21] &quot;\&quot;report.md\&quot;&quot;          &quot;summ_regression1_small&quot;
+## [23] &quot;summ_regression1_large&quot; &quot;summ_regression2_small&quot;
+## [25] &quot;summ_regression2_large&quot; &quot;coef_regression1_small&quot;
+## [27] &quot;coef_regression1_large&quot; &quot;coef_regression2_large&quot;
+</code></pre>
+
+<p>Check for circular reasoning, missing input files, and other pitfalls.</p>
+
+<pre><code class="r">check_plan(my_plan)
+</code></pre>
+
+<h1>Generate the workflow plan</h1>
+
+<p>The workflow plan data frame <code>my_plan</code> would be a pain to write by hand, so <code>drake</code> has functions to help you. Here are the commands to generate the bootstrapped datasets.</p>
+
+<pre><code class="r">my_datasets &lt;- drake_plan(
+  small = simulate(48),
+  large = simulate(64))
+my_datasets
+## # A tibble: 2 x 2
+##   target command     
+##   &lt;chr&gt;  &lt;chr&gt;       
+## 1 small  simulate(48)
+## 2 large  simulate(64)
+</code></pre>
+
+<p>For multiple replicates:</p>
+
+<pre><code class="r">expand_plan(my_datasets, values = c(&quot;rep1&quot;, &quot;rep2&quot;))
+## # A tibble: 4 x 2
+##   target     command     
+##   &lt;chr&gt;      &lt;chr&gt;       
+## 1 small_rep1 simulate(48)
+## 2 small_rep2 simulate(48)
+## 3 large_rep1 simulate(64)
+## 4 large_rep2 simulate(64)
+</code></pre>
+
+<p>Here is a template for applying our regression models to our bootstrapped datasets.</p>
+
+<pre><code class="r">methods &lt;- drake_plan(
+  regression1 = reg1(dataset__),
+  regression2 = reg2(dataset__))
+methods
+## # A tibble: 2 x 2
+##   target      command        
+##   &lt;chr&gt;       &lt;chr&gt;          
+## 1 regression1 reg1(dataset__)
+## 2 regression2 reg2(dataset__)
+</code></pre>
+
+<p>We evaluate the <code>dataset__</code> wildcard to generate all the regression commands we need.</p>
+
+<pre><code class="r">my_analyses &lt;- plan_analyses(methods, data = my_datasets)
+my_analyses
+## # A tibble: 4 x 2
+##   target            command    
+##   &lt;chr&gt;             &lt;chr&gt;      
+## 1 regression1_small reg1(small)
+## 2 regression1_large reg1(large)
+## 3 regression2_small reg2(small)
+## 4 regression2_large reg2(large)
+</code></pre>
+
+<p>Next, we summarize each analysis of each dataset. We calculate descriptive statistics on the residuals, and we collect the regression coefficients and their p-values.</p>
+
+<pre><code class="r">summary_types &lt;- drake_plan(
+  summ = suppressWarnings(summary(analysis__$residuals)),
+  coef = suppressWarnings(summary(analysis__))$coefficients
+)
+summary_types
+## # A tibble: 2 x 2
+##   target command                                           
+##   &lt;chr&gt;  &lt;chr&gt;                                             
+## 1 summ   suppressWarnings(summary(analysis__$residuals))   
+## 2 coef   suppressWarnings(summary(analysis__))$coefficients
+
+results &lt;- plan_summaries(summary_types, analyses = my_analyses,
+  datasets = my_datasets, gather = NULL)
+results
+## # A tibble: 8 x 2
+##   target                 command                                          
+##   &lt;chr&gt;                  &lt;chr&gt;                                            
+## 1 summ_regression1_small suppressWarnings(summary(regression1_small$resid~
+## 2 summ_regression1_large suppressWarnings(summary(regression1_large$resid~
+## 3 summ_regression2_small suppressWarnings(summary(regression2_small$resid~
+## 4 summ_regression2_large suppressWarnings(summary(regression2_large$resid~
+## 5 coef_regression1_small suppressWarnings(summary(regression1_small))$coe~
+## 6 coef_regression1_large suppressWarnings(summary(regression1_large))$coe~
+## 7 coef_regression2_small suppressWarnings(summary(regression2_small))$coe~
+## 8 coef_regression2_large suppressWarnings(summary(regression2_large))$coe~
+</code></pre>
+
+<p>The <code>gather</code> feature reduces a collection of targets to a single target. The resulting commands are long, so gathering is deactivated for the sake of readability.</p>
+
+<p>For your <code>knitr</code> reports, use <code>knitr_in()</code> in your commands so that <code>report.Rmd</code> is a dependency and targets loaded with <code>loadd()</code> and <code>readd()</code> in active code chunks are also dependencies. Use <code>file_out()</code> to tell <code>drake</code> that the target is a file output. If the file is an output, you do not need to name the target. The target name will be the name of the output file in quotes.</p>
+
+<pre><code class="r">report &lt;- drake_plan(
+  knit(knitr_in(&quot;report.Rmd&quot;), file_out(&quot;report.md&quot;), quiet = TRUE)
+)
+report
+## # A tibble: 1 x 2
+##   target          command                                                 
+##   &lt;chr&gt;           &lt;chr&gt;                                                   
+## 1 &quot;\&quot;report.md\&quot;&quot; &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;report.md\&quot;)~
+</code></pre>
+
+<p>Finally, consolidate your workflow using <code>rbind()</code>. Row order does not matter.</p>
+
+<pre><code class="r">my_plan &lt;- rbind(report, my_datasets, my_analyses, results)
+my_plan
+## # A tibble: 15 x 2
+##    target                 command                                         
+##    &lt;chr&gt;                  &lt;chr&gt;                                           
+##  1 &quot;\&quot;report.md\&quot;&quot;        &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;repo~
+##  2 small                  simulate(48)                                    
+##  3 large                  simulate(64)                                    
+##  4 regression1_small      reg1(small)                                     
+##  5 regression1_large      reg1(large)                                     
+##  6 regression2_small      reg2(small)                                     
+##  7 regression2_large      reg2(large)                                     
+##  8 summ_regression1_small suppressWarnings(summary(regression1_small$resi~
+##  9 summ_regression1_large suppressWarnings(summary(regression1_large$resi~
+## 10 summ_regression2_small suppressWarnings(summary(regression2_small$resi~
+## 11 summ_regression2_large suppressWarnings(summary(regression2_large$resi~
+## 12 coef_regression1_small suppressWarnings(summary(regression1_small))$co~
+## 13 coef_regression1_large suppressWarnings(summary(regression1_large))$co~
+## 14 coef_regression2_small suppressWarnings(summary(regression2_small))$co~
+## 15 coef_regression2_large suppressWarnings(summary(regression2_large))$co~
+</code></pre>
+
+<h1>Flexible workflow plan generation</h1>
+
+<p>If your workflow does not fit the rigid datasets/analyses/summaries framework, consider using functions <code>expand_plan()</code>, <code>evaluate_plan()</code>, <code>gather_plan()</code>, and <code>reduce_plan()</code>.</p>
+
+<pre><code class="r">df &lt;- drake_plan(data = simulate(center = MU, scale = SIGMA))
+df
+## # A tibble: 1 x 2
+##   target command                             
+##   &lt;chr&gt;  &lt;chr&gt;                               
+## 1 data   simulate(center = MU, scale = SIGMA)
+
+df &lt;- expand_plan(df, values = c(&quot;rep1&quot;, &quot;rep2&quot;))
+df
+## # A tibble: 2 x 2
+##   target    command                             
+##   &lt;chr&gt;     &lt;chr&gt;                               
+## 1 data_rep1 simulate(center = MU, scale = SIGMA)
+## 2 data_rep2 simulate(center = MU, scale = SIGMA)
+
+evaluate_plan(df, wildcard = &quot;MU&quot;, values = 1:2)
+## # A tibble: 4 x 2
+##   target      command                            
+##   &lt;chr&gt;       &lt;chr&gt;                              
+## 1 data_rep1_1 simulate(center = 1, scale = SIGMA)
+## 2 data_rep1_2 simulate(center = 2, scale = SIGMA)
+## 3 data_rep2_1 simulate(center = 1, scale = SIGMA)
+## 4 data_rep2_2 simulate(center = 2, scale = SIGMA)
+
+evaluate_plan(df, wildcard = &quot;MU&quot;, values = 1:2, expand = FALSE)
+## # A tibble: 2 x 2
+##   target    command                            
+##   &lt;chr&gt;     &lt;chr&gt;                              
+## 1 data_rep1 simulate(center = 1, scale = SIGMA)
+## 2 data_rep2 simulate(center = 2, scale = SIGMA)
+
+evaluate_plan(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1)), expand = FALSE)
+## # A tibble: 2 x 2
+##   target    command                          
+##   &lt;chr&gt;     &lt;chr&gt;                            
+## 1 data_rep1 simulate(center = 1, scale = 0.1)
+## 2 data_rep2 simulate(center = 2, scale = 1)
+
+evaluate_plan(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1, 10)))
+## # A tibble: 12 x 2
+##    target          command                          
+##    &lt;chr&gt;           &lt;chr&gt;                            
+##  1 data_rep1_1_0.1 simulate(center = 1, scale = 0.1)
+##  2 data_rep1_1_1   simulate(center = 1, scale = 1)  
+##  3 data_rep1_1_10  simulate(center = 1, scale = 10) 
+##  4 data_rep1_2_0.1 simulate(center = 2, scale = 0.1)
+##  5 data_rep1_2_1   simulate(center = 2, scale = 1)  
+##  6 data_rep1_2_10  simulate(center = 2, scale = 10) 
+##  7 data_rep2_1_0.1 simulate(center = 1, scale = 0.1)
+##  8 data_rep2_1_1   simulate(center = 1, scale = 1)  
+##  9 data_rep2_1_10  simulate(center = 1, scale = 10) 
+## 10 data_rep2_2_0.1 simulate(center = 2, scale = 0.1)
+## 11 data_rep2_2_1   simulate(center = 2, scale = 1)  
+## 12 data_rep2_2_10  simulate(center = 2, scale = 10)
+
+gather_plan(df)
+## # A tibble: 1 x 2
+##   target command                                           
+##   &lt;chr&gt;  &lt;chr&gt;                                             
+## 1 target list(data_rep1 = data_rep1, data_rep2 = data_rep2)
+
+gather_plan(df, target = &quot;my_summaries&quot;, gather = &quot;rbind&quot;)
+## # A tibble: 1 x 2
+##   target       command                                            
+##   &lt;chr&gt;        &lt;chr&gt;                                              
+## 1 my_summaries rbind(data_rep1 = data_rep1, data_rep2 = data_rep2)
+
+x_plan &lt;- evaluate_plan(
+  drake_plan(x = VALUE),
+  wildcard = &quot;VALUE&quot;,
+  values = 1:8
+)
+x_plan
+## # A tibble: 8 x 2
+##   target command
+##   &lt;chr&gt;  &lt;chr&gt;  
+## 1 x_1    1      
+## 2 x_2    2      
+## 3 x_3    3      
+## 4 x_4    4      
+## 5 x_5    5      
+## 6 x_6    6      
+## 7 x_7    7      
+## 8 x_8    8
+
+x_plan
+## # A tibble: 8 x 2
+##   target command
+##   &lt;chr&gt;  &lt;chr&gt;  
+## 1 x_1    1      
+## 2 x_2    2      
+## 3 x_3    3      
+## 4 x_4    4      
+## 5 x_5    5      
+## 6 x_6    6      
+## 7 x_7    7      
+## 8 x_8    8
+reduce_plan(
+  x_plan, target = &quot;x_sum&quot;, pairwise = TRUE,
+  begin = &quot;fun(&quot;, op = &quot;, &quot;, end = &quot;)&quot;
+)
+## # A tibble: 7 x 2
+##   target  command              
+##   &lt;chr&gt;   &lt;chr&gt;                
+## 1 x_sum_1 fun(x_1, x_2)        
+## 2 x_sum_2 fun(x_3, x_4)        
+## 3 x_sum_3 fun(x_5, x_6)        
+## 4 x_sum_4 fun(x_7, x_8)        
+## 5 x_sum_5 fun(x_sum_1, x_sum_2)
+## 6 x_sum_6 fun(x_sum_3, x_sum_4)
+## 7 x_sum   fun(x_sum_5, x_sum_6)
+</code></pre>
+
+<h1>Run the workflow</h1>
+
+<p>You may want to check for outdated or missing targets/imports first.</p>
+
+<pre><code class="r">config &lt;- drake_config(my_plan, verbose = FALSE)
+outdated(config) # Targets that need to be (re)built.
+##  [1] &quot;\&quot;report.md\&quot;&quot;          &quot;coef_regression1_large&quot;
+##  [3] &quot;coef_regression1_small&quot; &quot;coef_regression2_large&quot;
+##  [5] &quot;coef_regression2_small&quot; &quot;large&quot;                 
+##  [7] &quot;regression1_large&quot;      &quot;regression1_small&quot;     
+##  [9] &quot;regression2_large&quot;      &quot;regression2_small&quot;     
+## [11] &quot;small&quot;                  &quot;summ_regression1_large&quot;
+## [13] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
+## [15] &quot;summ_regression2_small&quot;
+
+missed(config) # Checks your workspace.
+## character(0)
+</code></pre>
+
+<p>Then just <code>make(my_plan)</code>.</p>
+
+<pre><code class="r">make(my_plan)
+## target large
+## target small
+## target regression1_large
+## target regression1_small
+## target regression2_large
+## target regression2_small
+## target coef_regression1_large
+## target coef_regression1_small
+## target coef_regression2_large
+## target coef_regression2_small
+## target summ_regression1_large
+## target summ_regression1_small
+## target summ_regression2_large
+## target summ_regression2_small
+## target file &quot;report.md&quot;
+</code></pre>
+
+<p>For the <code>reg2()</code> model on the small dataset, the p-value on <code>x2</code> is so small that there may be an association between weight and fuel efficiency after all.</p>
+
+<pre><code class="r">readd(coef_regression2_small)
+##              Estimate Std. Error   t value     Pr(&gt;|t|)
+## (Intercept) 27.504915 1.02496426 26.835000 9.676340e-30
+## x2          -0.708536 0.08285938 -8.551066 4.617125e-11
+</code></pre>
+
+<p>The non-file dependencies of your last target are already loaded in your workspace.</p>
+
+<pre><code class="r">ls()
+##  [1] &quot;AES&quot;                    &quot;AESdecryptECB&quot;         
+##  [3] &quot;AESencryptECB&quot;          &quot;AESinit&quot;               
+##  [5] &quot;analysis_methods&quot;       &quot;analysis_plan&quot;         
+##  [7] &quot;attr_sha1&quot;              &quot;avoid_this&quot;            
+##  [9] &quot;b&quot;                      &quot;bad_plan&quot;              
+## [11] &quot;cache&quot;                  &quot;coef_regression2_small&quot;
+## [13] &quot;command&quot;                &quot;config&quot;                
+## [15] &quot;cranlogs_plan&quot;          &quot;dataset_plan&quot;          
+## [17] &quot;debug_plan&quot;             &quot;df&quot;                    
+## [19] &quot;digest&quot;                 &quot;digest_impl&quot;           
+## [21] &quot;envir&quot;                  &quot;error&quot;                 
+## [23] &quot;f&quot;                      &quot;g&quot;                     
+## [25] &quot;get_logs&quot;               &quot;good_plan&quot;             
+## [27] &quot;hard_plan&quot;              &quot;hmac&quot;                  
+## [29] &quot;large&quot;                  &quot;little_b&quot;              
+## [31] &quot;logs&quot;                   &quot;makeRaw&quot;               
+## [33] &quot;makeRaw.character&quot;      &quot;makeRaw.default&quot;       
+## [35] &quot;makeRaw.digest&quot;         &quot;makeRaw.raw&quot;           
+## [37] &quot;methods&quot;                &quot;modes&quot;                 
+## [39] &quot;my_analyses&quot;            &quot;my_datasets&quot;           
+## [41] &quot;my_plan&quot;                &quot;my_variable&quot;           
+## [43] &quot;myplan&quot;                 &quot;new_objects&quot;           
+## [45] &quot;num2hex&quot;                &quot;padWithZeros&quot;          
+## [47] &quot;path&quot;                   &quot;plan&quot;                  
+## [49] &quot;print.AES&quot;              &quot;query&quot;                 
+## [51] &quot;random_rows&quot;            &quot;reg1&quot;                  
+## [53] &quot;reg2&quot;                   &quot;report&quot;                
+## [55] &quot;report_file&quot;            &quot;results&quot;               
+## [57] &quot;rules_grid&quot;             &quot;sha1&quot;                  
+## [59] &quot;sha1.Date&quot;              &quot;sha1.NULL&quot;             
+## [61] &quot;sha1.POSIXct&quot;           &quot;sha1.POSIXlt&quot;          
+## [63] &quot;sha1.anova&quot;             &quot;sha1.array&quot;            
+## [65] &quot;sha1.call&quot;              &quot;sha1.character&quot;        
+## [67] &quot;sha1.complex&quot;           &quot;sha1.data.frame&quot;       
+## [69] &quot;sha1.default&quot;           &quot;sha1.factor&quot;           
+## [71] &quot;sha1.function&quot;          &quot;sha1.integer&quot;          
+## [73] &quot;sha1.list&quot;              &quot;sha1.logical&quot;          
+## [75] &quot;sha1.matrix&quot;            &quot;sha1.name&quot;             
+## [77] &quot;sha1.numeric&quot;           &quot;sha1.pairlist&quot;         
+## [79] &quot;sha1.raw&quot;               &quot;simulate&quot;              
+## [81] &quot;small&quot;                  &quot;summary_types&quot;         
+## [83] &quot;timestamp&quot;              &quot;tmp&quot;                   
+## [85] &quot;totally_okay&quot;           &quot;url&quot;                   
+## [87] &quot;whole_plan&quot;             &quot;x&quot;                     
+## [89] &quot;x_plan&quot;
+</code></pre>
+
+<pre><code class="r">outdated(config) # Everything is up to date.
+## character(0)
+
+build_times(digits = 4) # How long did it take to make each target?
+## # A tibble: 28 x 5
+##    item                   type   elapsed        user           system     
+##  * &lt;chr&gt;                  &lt;chr&gt;  &lt;S4: Duration&gt; &lt;S4: Duration&gt; &lt;S4: Durat&gt;
+##  1 &quot;\&quot;report.Rmd\&quot;&quot;       import 0.001s         0.001s         0s         
+##  2 &quot;\&quot;report.md\&quot;&quot;        target 0.061s         0.058s         0.004s     
+##  3 coef_regression1_large target 0.005s         0.006s         0s         
+##  4 coef_regression1_small target 0.005s         0.006s         0s         
+##  5 coef_regression2_large target 0.006s         0.005s         0s         
+##  6 coef_regression2_small target 0.006s         0.004s         0.001s     
+##  7 data.frame             import 0.036s         0.036s         0.001s     
+##  8 knit                   import 0.037s         0.036s         0s         
+##  9 large                  target 0.006s         0.007s         0s         
+## 10 lm                     import 0.013s         0.013s         0s         
+## # ... with 18 more rows
+</code></pre>
+
+<p>See also <code>predict_runtime()</code> and <code>rate_limiting_times()</code>.</p>
+
+<p>In the new graph, the black nodes from before are now green.</p>
+
+<pre><code class="r"># Hover, click, drag, zoom, and pan.
+vis_drake_graph(config, width = &quot;100%&quot;, height = &quot;500px&quot;)
+</code></pre>
+
+<p><iframe
+src = "https://ropensci.github.io/drake/images/built.html"
+width = "100%" height = "600px" allowtransparency="true"
+style="border: none; box-shadow: none">
+</iframe></p>
+
+<p>Optionally, get <a href="http://datastorm-open.github.io/visNetwork/">visNetwork</a> nodes and edges so you can make your own plot with <code>visNetwork()</code> or <code>render_drake_graph()</code>.</p>
+
+<pre><code class="r">dataframes_graph(config)
+</code></pre>
+
+<p>Use <code>readd()</code> and <code>loadd()</code> to load targets into your workspace. (They are cached in the hidden <code>.drake/</code> folder using <a href="https://CRAN.R-project.org/package=storr">storr</a>). There are many more functions for interacting with the cache.</p>
+
+<pre><code class="r">readd(coef_regression2_large)
+##               Estimate Std. Error   t value     Pr(&gt;|t|)
+## (Intercept) 26.8613175 0.82963761  32.37717 1.485222e-40
+## x2          -0.6299583 0.05501956 -11.44972 6.167412e-17
+
+loadd(small)
+
+head(small)
+##       x    y
+## 1 3.730 17.3
+## 2 5.250 10.4
+## 3 3.730 17.3
+## 4 5.345 14.7
+## 5 3.190 24.4
+## 6 3.440 17.8
+
+rm(small)
+cached(small, large)
+## small large 
+##  TRUE  TRUE
+
+cached()
+##  [1] &quot;\&quot;report.Rmd\&quot;&quot;         &quot;\&quot;report.md\&quot;&quot;         
+##  [3] &quot;coef_regression1_large&quot; &quot;coef_regression1_small&quot;
+##  [5] &quot;coef_regression2_large&quot; &quot;coef_regression2_small&quot;
+##  [7] &quot;data.frame&quot;             &quot;knit&quot;                  
+##  [9] &quot;large&quot;                  &quot;lm&quot;                    
+## [11] &quot;mtcars&quot;                 &quot;nrow&quot;                  
+## [13] &quot;random_rows&quot;            &quot;reg1&quot;                  
+## [15] &quot;reg2&quot;                   &quot;regression1_large&quot;     
+## [17] &quot;regression1_small&quot;      &quot;regression2_large&quot;     
+## [19] &quot;regression2_small&quot;      &quot;sample.int&quot;            
+## [21] &quot;simulate&quot;               &quot;small&quot;                 
+## [23] &quot;summ_regression1_large&quot; &quot;summ_regression1_small&quot;
+## [25] &quot;summ_regression2_large&quot; &quot;summ_regression2_small&quot;
+## [27] &quot;summary&quot;                &quot;suppressWarnings&quot;
+
+built()
+##  [1] &quot;\&quot;report.md\&quot;&quot;          &quot;coef_regression1_large&quot;
+##  [3] &quot;coef_regression1_small&quot; &quot;coef_regression2_large&quot;
+##  [5] &quot;coef_regression2_small&quot; &quot;large&quot;                 
+##  [7] &quot;regression1_large&quot;      &quot;regression1_small&quot;     
+##  [9] &quot;regression2_large&quot;      &quot;regression2_small&quot;     
+## [11] &quot;small&quot;                  &quot;summ_regression1_large&quot;
+## [13] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
+## [15] &quot;summ_regression2_small&quot;
+
+imported()
+##  [1] &quot;\&quot;report.Rmd\&quot;&quot;   &quot;data.frame&quot;       &quot;knit&quot;            
+##  [4] &quot;lm&quot;               &quot;mtcars&quot;           &quot;nrow&quot;            
+##  [7] &quot;random_rows&quot;      &quot;reg1&quot;             &quot;reg2&quot;            
+## [10] &quot;sample.int&quot;       &quot;simulate&quot;         &quot;summary&quot;         
+## [13] &quot;suppressWarnings&quot;
+
+head(read_drake_plan())
+## # A tibble: 6 x 2
+##   target            command                                               
+##   &lt;chr&gt;             &lt;chr&gt;                                                 
+## 1 &quot;\&quot;report.md\&quot;&quot;   &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;report.md\~
+## 2 small             simulate(48)                                          
+## 3 large             simulate(64)                                          
+## 4 regression1_small reg1(small)                                           
+## 5 regression1_large reg1(large)                                           
+## 6 regression2_small reg2(small)
+
+head(progress()) # See also in_progress()
+## $method
+## NULL
+## 
+## $url
+## NULL
+## 
+## $headers
+## NULL
+## 
+## $fields
+## NULL
+## 
+## $options
+## $options$noprogress
+## [1] FALSE
+## 
+## $options$progressfunction
+## function (down, up) 
+## {
+##     if (type == &quot;down&quot;) {
+##         total &lt;- down[[1]]
+##         now &lt;- down[[2]]
+##     }
+##     else {
+##         total &lt;- up[[1]]
+##         now &lt;- up[[2]]
+##     }
+##     if (total == 0 &amp;&amp; now == 0) {
+##         bar &lt;&lt;- NULL
+##     }
+##     else if (total == 0) {
+##         cat(&quot;\rDownloading: &quot;, bytes(now, digits = 2), &quot;     &quot;, 
+##             sep = &quot;&quot;, file = con)
+##         utils::flush.console()
+##     }
+##     else {
+##         if (is.null(bar)) {
+##             bar &lt;&lt;- utils::txtProgressBar(max = total, style = 3, 
+##                 file = con)
+##         }
+##         utils::setTxtProgressBar(bar, now)
+##         if (now == total) 
+##             close(bar)
+##     }
+##     TRUE
+## }
+## &lt;environment: 0x6513db0&gt;
+## 
+## 
+## $auth_token
+## NULL
+
+progress(large)
+## Error in match.arg(type): &#39;arg&#39; must be NULL or a character vector
+
+# drake_session() # sessionInfo() of the last make() # nolint
+</code></pre>
+
+<p>The next time you run <code>make(my_plan)</code>, nothing will build because <code>drake</code> knows everything is already up to date.</p>
+
+<pre><code class="r">config &lt;- make(my_plan) # Will use config later. See also drake_config().
+## Unloading targets from environment:
+##   coef_regression2_small
+##   large
+## All targets are already up to date.
+</code></pre>
+
+<p>But if you change one of your functions, commands, or other dependencies, drake will update the affected targets. Suppose we change the quadratic term to a cubic term in <code>reg2()</code>. We might want to do this if we suspect a cubic relationship between tons and miles per gallon.</p>
+
+<pre><code class="r">reg2 &lt;- function(d) {
+  d$x3 &lt;- d$x ^ 3
+  lm(y ~ x3, data = d)
+}
+</code></pre>
+
+<p>The targets that depend on <code>reg2()</code> need to be rebuilt.</p>
+
+<pre><code class="r">outdated(config)
+## [1] &quot;\&quot;report.md\&quot;&quot;          &quot;coef_regression2_large&quot;
+## [3] &quot;coef_regression2_small&quot; &quot;regression2_large&quot;     
+## [5] &quot;regression2_small&quot;      &quot;summ_regression2_large&quot;
+## [7] &quot;summ_regression2_small&quot;
+</code></pre>
+
+<p><strong>Advanced</strong>: To find out why a target is out of date, you can load the <a href="https://github.com/richfitz/storr">storr</a> cache and compare the appropriate hash keys to the output of <code>dependency_profile()</code>.</p>
+
+<pre><code class="r">dependency_profile(target = &quot;regression2_small&quot;, config = config)
+## $cached_command
+## [1] &quot;{\n reg2(small) \n}&quot;
+## 
+## $current_command
+## [1] &quot;{\n reg2(small) \n}&quot;
+## 
+## $cached_file_modification_time
+## NULL
+## 
+## $cached_dependency_hash
+## [1] &quot;bff91683ab896912a57d3010b489e68a50294f7c46dc5c8bc80797a3a616194b&quot;
+## 
+## $current_dependency_hash
+## [1] &quot;8685dbd7c688d9ceca90b9c7cdde2e151e39a4882af35b18c9697a04c24e9d63&quot;
+## 
+## $hashes_of_dependencies
+##               reg2              small 
+## &quot;d47109544c89ca7a&quot; &quot;40fb781de184c741&quot;
+
+config$cache$get_hash(key = &quot;small&quot;) # same
+## [1] &quot;40fb781de184c741&quot;
+
+config$cache$get_hash(key = &quot;reg2&quot;) # different
+## [1] &quot;f6d379ea917232fb&quot;
+</code></pre>
+
+<pre><code class="r"># Hover, click, drag, zoom, and pan.
+# Same as drake_graph():
+vis_drake_graph(config, width = &quot;100%&quot;, height = &quot;500px&quot;)
+</code></pre>
+
+<p><iframe
+src = "https://ropensci.github.io/drake/images/reg2.html"
+width = "100%" height = "600px" allowtransparency="true"
+style="border: none; box-shadow: none">
+</iframe></p>
+
+<p>The next <code>make()</code> will rebuild the targets depending on <code>reg2()</code> and leave everything else alone.</p>
+
+<pre><code class="r">make(my_plan)
+## target regression2_large
+## target regression2_small
+## target coef_regression2_large
+## target coef_regression2_small
+## target summ_regression2_large
+## target summ_regression2_small
+## target file &quot;report.md&quot;
+</code></pre>
+
+<p>Trivial changes to whitespace and comments are totally ignored.</p>
+
+<pre><code class="r">reg2 &lt;- function(d) {
+  d$x3 &lt;- d$x ^ 3
+    lm(y ~ x3, data = d) # I indented here.
+}
+outdated(config) # Everything is up to date.
+## character(0)
+</code></pre>
+
+<p>Drake cares about nested functions too: nontrivial changes to <code>random_rows()</code> will propagate to <code>simulate()</code>  and all the downstream targets.</p>
+
+<pre><code class="r">random_rows &lt;- function(data, n){
+  n &lt;- n + 1
+  data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
+}
+
+outdated(config)
+##  [1] &quot;\&quot;report.md\&quot;&quot;          &quot;coef_regression1_large&quot;
+##  [3] &quot;coef_regression1_small&quot; &quot;coef_regression2_large&quot;
+##  [5] &quot;coef_regression2_small&quot; &quot;large&quot;                 
+##  [7] &quot;regression1_large&quot;      &quot;regression1_small&quot;     
+##  [9] &quot;regression2_large&quot;      &quot;regression2_small&quot;     
+## [11] &quot;small&quot;                  &quot;summ_regression1_large&quot;
+## [13] &quot;summ_regression1_small&quot; &quot;summ_regression2_large&quot;
+## [15] &quot;summ_regression2_small&quot;
+
+make(my_plan)
+## Unloading targets from environment:
+##   coef_regression2_small
+##   large
+##   small
+## target large
+## target small
+## target regression1_large
+## target regression1_small
+## target regression2_large
+## target regression2_small
+## target coef_regression1_large
+## target coef_regression1_small
+## target coef_regression2_large
+## target coef_regression2_small
+## target summ_regression1_large
+## target summ_regression1_small
+## target summ_regression2_large
+## target summ_regression2_small
+## target file &quot;report.md&quot;
+</code></pre>
+
+<p>Need to add new work on the fly? Just append rows to the workflow plan. If the rest of your workflow is up to date, only the new work is run.</p>
+
+<pre><code class="r">new_simulation &lt;- function(n){
+  data.frame(x = rnorm(n), y = rnorm(n))
+}
+
+additions &lt;- drake_plan(
+  new_data = new_simulation(36) + sqrt(10))
+additions
+## # A tibble: 1 x 2
+##   target   command                      
+##   &lt;chr&gt;    &lt;chr&gt;                        
+## 1 new_data new_simulation(36) + sqrt(10)
+
+my_plan &lt;- rbind(my_plan, additions)
+my_plan
+## # A tibble: 16 x 2
+##    target                 command                                         
+##    &lt;chr&gt;                  &lt;chr&gt;                                           
+##  1 &quot;\&quot;report.md\&quot;&quot;        &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;repo~
+##  2 small                  simulate(48)                                    
+##  3 large                  simulate(64)                                    
+##  4 regression1_small      reg1(small)                                     
+##  5 regression1_large      reg1(large)                                     
+##  6 regression2_small      reg2(small)                                     
+##  7 regression2_large      reg2(large)                                     
+##  8 summ_regression1_small suppressWarnings(summary(regression1_small$resi~
+##  9 summ_regression1_large suppressWarnings(summary(regression1_large$resi~
+## 10 summ_regression2_small suppressWarnings(summary(regression2_small$resi~
+## 11 summ_regression2_large suppressWarnings(summary(regression2_large$resi~
+## 12 coef_regression1_small suppressWarnings(summary(regression1_small))$co~
+## 13 coef_regression1_large suppressWarnings(summary(regression1_large))$co~
+## 14 coef_regression2_small suppressWarnings(summary(regression2_small))$co~
+## 15 coef_regression2_large suppressWarnings(summary(regression2_large))$co~
+## 16 new_data               new_simulation(36) + sqrt(10)
+
+make(my_plan)
+## Unloading targets from environment:
+##   small
+##   coef_regression2_small
+##   large
+## target new_data
+</code></pre>
+
+<p>If you ever need to erase your work, use <code>clean()</code>. The next <code>make()</code> will rebuild any cleaned targets, so be careful. You may notice that by default, the size of the cache does not go down very much. To purge old data, you could use <code>clean(garbage_collection = TRUE, purge = TRUE)</code>. To do garbage collection without removing any important targets, use <code>drake_gc()</code>.</p>
+
+<pre><code class="r"># Uncaches individual targets and imported objects.
+clean(small, reg1, verbose = FALSE)
+clean(verbose = FALSE) # Cleans all targets out of the cache.
+drake_gc(verbose = FALSE) # Just garbage collection.
+clean(destroy = TRUE, verbose = FALSE) # removes the cache entirely
+</code></pre>
+
+<h1>Automatic watching for changed dependencies</h1>
+
+<p>As you have seen with <code>reg2()</code>, <code>drake</code> reacts to changes in dependencies. In other words, <code>make()</code> notices when your dependencies are different from last time, rebuilds any affected targets, and continues downstream. In particular, <code>drake</code> watches for nontrivial changes to the following items as long as they are connected to your workflow.</p>
+
+<ol>
+<li>The output values of targets in your workflow plan.</li>
+<li>The commands themselves.</li>
+<li>External files, if their names are enclosed in single quotes in commands.</li>
+<li>R objects mentioned in the commands, including but not limited to user-defined functions and functions from packages.</li>
+<li>R objects (but not files) nested inside user-defined functions.</li>
+<li>For packages exposed with <code>expose_imports()</code>, R objects (but not files) nested inside package functions.</li>
+<li>Files declared with <code>file_in()</code> inside your commands or custom functions.</li>
+<li><code>knitr</code> reports declared with <code>knitr_in()</code> in your commands, along with any targets explicitly loaded in active code chunks with <code>loadd()</code> or <code>readd()</code>. Do not use <code>knitr_in()</code> inside your imported functions.</li>
+<li>Files declared with <code>file_out()</code> in your commands. Do not use <code>file_out()</code> inside your imported functions.</li>
+</ol>
+
+<p>To enhance reproducibility beyond the scope of drake, you might consider <a href="https://rstudio.github.io/packrat">packrat</a> and a container tool (such as <a href="http://singularity.lbl.gov/">Singularity</a> or <a href="https://www.docker.com/">Docker</a>. <a href="https://rstudio.github.io/packrat">Packrat</a> creates a tightly-controlled local library of packages to extend the shelf life of your project. And with containerization, you can execute your project on a <a href="https://en.wikipedia.org/wiki/Virtual_machine">virtual machine</a> to ensure platform independence. Together, <a href="https://rstudio.github.io/packrat">packrat</a> and containers can help others reproduce your work even if they have different software and hardware.</p>
+
+<h1>A note on tidy evaluation</h1>
+
+<p>Running commands in your R console is not always exactly like running them with <code>make()</code>. That&#39;s because <code>make()</code> uses tidy evaluation as implemented in the <a href="https://github.com/tidyverse/rlang"><code>rlang</code> package</a>.</p>
+
+<pre><code class="r"># This workflow plan uses rlang&#39;s quasiquotation operator `!!`.
+my_plan &lt;- drake_plan(list = c(
+  little_b = &quot;\&quot;b\&quot;&quot;,
+  letter = &quot;!!little_b&quot;
+))
+my_plan
+## # A tibble: 2 x 2
+##   target   command   
+##   &lt;chr&gt;    &lt;chr&gt;     
+## 1 little_b &quot;\&quot;b\&quot;&quot;   
+## 2 letter   !!little_b
+make(my_plan)
+## Unloading targets from environment:
+##   little_b
+## target little_b
+## target letter
+readd(letter)
+## [1] &quot;b&quot;
+</code></pre>
+
+<p>For the commands you specify the free-form <code>...</code> argument, <code>drake_plan()</code> also supports tidy evaluation. For example, it supports quasiquotation with the <code>!!</code> argument. Use <code>tidy_evaluation = FALSE</code> or the <code>list</code> argument to suppress this behavior.</p>
+
+<pre><code class="r">my_variable &lt;- 5
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = &quot;!!my_variable&quot;)
+)
+## # A tibble: 3 x 2
+##   target command      
+##   &lt;chr&gt;  &lt;chr&gt;        
+## 1 a      5            
+## 2 b      5 + 1        
+## 3 d      !!my_variable
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = &quot;!!my_variable&quot;),
+  tidy_evaluation = FALSE
+)
+## # A tibble: 3 x 2
+##   target command            
+##   &lt;chr&gt;  &lt;chr&gt;              
+## 1 a      !(!my_variable)    
+## 2 b      !(!my_variable + 1)
+## 3 d      !!my_variable
+</code></pre>
+
+<p>For instances of <code>!!</code> that remain in the workflow plan, <code>make()</code> will run these commands in tidy fashion, evaluating the <code>!!</code> operator using the environment you provided.</p>
+
+<h1>Need more speed?</h1>
+
+<p><code>Drake</code> has extensive high-performance computing support, from local multicore processing to serious distributed computing across multiple nodes of a cluster. See the <a href="https://github.com/ropensci/drake/blob/master/vignettes/parallelism.Rmd">parallelism vignette</a> for detailed instructions.</p>
+
+</body>
+
+</html>

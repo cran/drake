@@ -16,6 +16,9 @@ reportfile <- file.path("examples", "packages", "report.Rmd") %>%
   system.file(package = "drake", mustWork = TRUE)
 file.copy(reportfile, getwd())
 
+## ----getthequickstartcode, eval = FALSE----------------------------------
+#  drake_example("packages")
+
 ## ----cranlogsintroreport-------------------------------------------------
 library(cranlogs)
 cran_downloads(packages = "dplyr", when = "last-week")
@@ -77,8 +80,7 @@ output_plan
 
 ## ----reportplanpackages--------------------------------------------------
 report_plan <- drake_plan(
-  report.md = knit("report.Rmd", quiet = TRUE),
-  file_targets = TRUE
+  knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)
 )
 
 report_plan

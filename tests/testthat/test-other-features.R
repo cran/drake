@@ -1,5 +1,29 @@
 drake_context("other features")
 
+test_with_dir("Can standardize commands from expr or lang", {
+  x <- parse(text = c("f(x +2) + 2", "!!y"))
+  y <- standardize_command(x[[1]])
+  x <- parse(text = "f(x +2) + 2")
+  z <- standardize_command(x)
+  w <- standardize_command(x[[1]])
+  s <- "{\n f(x + 2) + 2 \n}"
+  expect_equal(y, s)
+  expect_equal(z, s)
+  expect_equal(w, s)
+})
+
+test_with_dir("build_target() does not need to access cache", {
+  config <- drake_config(drake_plan(x = 1))
+  meta <- drake_meta(target = "x", config = config)
+  config$cache <- NULL
+  build <- build_target(target = "x", meta = meta, config = config)
+  expect_equal(1, build$value)
+  expect_error(
+    drake_build(target = "x", config = config),
+    regexp = "cannot find drake cache"
+  )
+})
+
 test_with_dir("cache log files and make()", {
   x <- drake_plan(a = 1)
   make(x, session_info = FALSE)
@@ -12,14 +36,52 @@ test_with_dir("cache log files and make()", {
   expect_true(file.exists("my.log"))
 })
 
-test_with_dir("drake_build can build a target by itself w/o input metadata", {
-  pl <- drake_plan(a = 1, b = 2)
-  con <- drake_config(plan = pl, session_info = FALSE)
-  o <- drake_build(target = "b", config = con)
+test_with_dir("drake_build works as expected", {
+  scenario <- get_testing_scenario()
+  e <- eval(parse(text = scenario$envir))
+  pl <- drake_plan(a = 1, b = a)
+  con <- drake_config(plan = pl, session_info = FALSE, envir = e)
+
+  # can run before any make()
+  o <- drake_build(
+    target = "a", character_only = TRUE, config = con, envir = e)
   x <- cached()
-  expect_equal(x, "b")
-  o <- make(pl)
-  expect_equal(justbuilt(o), "a")
+  expect_equal(x, "a")
+  o <- make(pl, envir = e)
+  expect_true("a" %in% ls(envir = e))
+  expect_equal(justbuilt(o), "b")
+  remove(list = "a", envir = e)
+  expect_false("a" %in% ls(envir = e))
+
+  # Can run without config
+  o <- drake_build(b, envir = e)
+  expect_equal(o, e$b)
+  expect_equal(o, readd(b))
+  expect_true("a" %in% ls(envir = e))
+
+  # Replacing deps in environment
+  expect_equal(e$a, 1)
+  e$a <- 2
+  o <- drake_build(b, envir = e)
+  expect_equal(e$a, 2)
+  expect_equal(readd(a), 1)
+  o <- drake_build(b, envir = e, replace = FALSE)
+  expect_equal(e$a, 2)
+  expect_equal(readd(a), 1)
+  e$a <- 3
+  o <- drake_build(b, envir = e, replace = TRUE)
+  expect_equal(e$a, 1)
+
+  # `replace` in loadd()
+  expect_equal(e$b, 1)
+  e$b <- 5
+  loadd(b, envir = e, replace = FALSE)
+  expect_equal(e$b, 5)
+  loadd(b, envir = e, replace = TRUE)
+  expect_equal(e$b, 1)
+  e$b <- 5
+  loadd(b, envir = e)
+  expect_equal(e$b, 1)
 })
 
 test_with_dir("colors and shapes", {
@@ -51,16 +113,37 @@ test_with_dir("make() with imports_only", {
   expect_false(cached(x))
 })
 
-test_with_dir("in_progress() works", {
+test_with_dir("in_progress() works and errors are handled correctly", {
   expect_equal(in_progress(), character(0))
   bad_plan <- drake_plan(x = function_doesnt_exist())
-  expect_error(tmp <- capture.output({
-      make(bad_plan, verbose = FALSE, session_info = FALSE)
-    },
-    type = "message")
-  )
+  expect_error(
+    make(bad_plan, verbose = TRUE, session_info = FALSE), hook = silencer_hook)
   expect_equal(failed(), "x")
   expect_equal(in_progress(), character(0))
+  expect_is(e <- diagnose(x)$error, "error")
+  expect_true(grepl(pattern = "function_doesnt_exist", x = e$message))
+  expect_error(diagnose("notfound"))
+  expect_true(inherits(diagnose(x)$error, "error"))
+  y <- "x"
+  expect_true(inherits(diagnose(y, character_only = TRUE)$error, "error"))
+})
+
+test_with_dir("warnings and messages are caught", {
+  expect_equal(in_progress(), character(0))
+  f <- function(x){
+    warning("my first warn")
+    message("my first mess")
+    warning("my second warn")
+    message("my second mess")
+    123
+  }
+  bad_plan <- drake_plan(x = f(), y = x)
+  expect_warning(make(bad_plan, verbose = TRUE, session_info = FALSE))
+  x <- diagnose(x)
+  expect_true(grepl("my first warn", x$warnings[1]))
+  expect_true(grepl("my second warn", x$warnings[2]))
+  expect_true(grepl("my first mess", x$messages[1]))
+  expect_true(grepl("my second mess", x$messages[2]))
 })
 
 test_with_dir("missed() works", {
@@ -89,29 +172,36 @@ test_with_dir(".onLoad() warns correctly and .onAttach() works", {
 test_with_dir("check_drake_config() via check_plan() and make()", {
   config <- dbug()
   y <- data.frame(x = 1, y = 2)
-  expect_error(check_plan(y, envir = config$envir))
-  expect_error(make(y, envir = config$envir, session_info = FALSE))
+  suppressWarnings(expect_error(check_plan(y, envir = config$envir)))
+  suppressWarnings(
+    expect_error(
+      make(y, envir = config$envir, session_info = FALSE, verbose = FALSE)))
   y <- data.frame(target = character(0), command = character(0))
   expect_error(check_plan(y, envir = config$envir))
-  expect_error(make(y, envir = config$envir, session_info = FALSE))
-  expect_error(
-    check_plan(config$plan, targets = character(0), envir = config$envir))
-  expect_error(
+  suppressWarnings(
+    expect_error(
+      make(y, envir = config$envir, hook = silencer_hook,
+           session_info = FALSE, verbose = FALSE)))
+  suppressWarnings(expect_error(
+    check_plan(config$plan, targets = character(0), envir = config$envir)))
+  suppressWarnings(expect_error(
     make(
       config$plan,
       targets = character(0),
       envir = config$envir,
-      session_info = FALSE
+      session_info = FALSE,
+      verbose = FALSE,
+      hook = silencer_hook
     )
-  )
+  ))
   y <- drake_plan(x = 1, y = 2)
   y$bla <- "bluh"
-  expect_warning(make(y, session_info = FALSE))
+  expect_warning(make(y, session_info = FALSE, verbose = FALSE))
 })
 
 test_with_dir("targets can be partially specified", {
   config <- dbug()
-  config$targets <- "'intermediatefile.rds'"
+  config$targets <- "\"intermediatefile.rds\""
   testrun(config)
   expect_true(file.exists("intermediatefile.rds"))
   expect_error(readd(final, search = FALSE))
@@ -124,8 +214,8 @@ test_with_dir("targets can be partially specified", {
   expect_silent(check_plan(pl, verbose = FALSE))
 })
 
-test_with_dir("as_drake_filename quotes properly", {
-  expect_equal(as_drake_filename("x"), "'x'")
+test_with_dir("file_store quotes properly", {
+  expect_equal(file_store("x"), "\"x\"")
 })
 
 test_with_dir("unique_random_string() works", {
@@ -138,7 +228,7 @@ test_with_dir("unique_random_string() works", {
   for (i in 1:10){
     expect_equal(
       unique_random_string(exclude = exclude, n = 1),
-      "0"
+      "X0"
     )
   }
 })

@@ -25,7 +25,10 @@ knitr::opts_chunk$set(
 #  vis_drake_graph(config)
 
 ## ----subsetgraph---------------------------------------------------------
-#  vis_drake_graph(config, subset = c("regression2_small", "'report.md'"))
+#  vis_drake_graph(
+#    config,
+#    subset = c("regression2_small", file_store("report.md"))
+#  )
 
 ## ----targetsonly---------------------------------------------------------
 #  vis_drake_graph(config, targets_only = TRUE)
@@ -38,4 +41,10 @@ knitr::opts_chunk$set(
 
 ## ----fromall-------------------------------------------------------------
 #  vis_drake_graph(config, from = "small", mode = "all", order = 1)
+
+## ----smalllegend, eval = FALSE-------------------------------------------
+#  vis_drake_graph(config, full_legend = FALSE)
+
+## ----nolegend, eval = FALSE----------------------------------------------
+#  vis_drake_graph(config, ncol_legend = 0)
 

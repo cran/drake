@@ -1,41 +1,32 @@
-#' @title Get the last stored error log of a target
-#' that failed to build, or list the targets with error logs.
-#' @description The specified target could be a
-#' completely failed target or a target
-#' that failed initially, retried, then succeeded.
-#' If no target is given, then \code{diagnose()} simply
-#' lists the targets for which a error is retrievable.
-#' Together, functions \code{\link{failed}()} and
-#' \code{diagnose()} should eliminate the strict need
-#' for ordinary error messages printed to the console.
+#' @title Get diagnostic metadata on a target.
+#' @description Diagnostics include errors, warnings,
+#'   messages, runtimes, and other context/metadata from when a
+#'   target was built or an import was processed.
+#'   If your target's last build succeeded,
+#'   then `diagnose(your_target)` has the most current information
+#'   from that build.
+#'   But if your target failed, then only
+#'   `diagnose(your_target)$error`,
+#'   `diagnose(your_target)$warnings`,
+#'   and `diagnose(your_target)$messages` correspond to the failure,
+#'   and all the other metadata correspond to the last build that completed
+#'   without an error.
 #' @seealso
-#' \code{\link{failed}}, \code{\link{progress}},
-#' \code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
+#'   [failed()], [progress()],
+#'   [readd()], [drake_plan()], [make()]
 #' @export
 #' @return Either a character vector of target names or an object
-#' of class \code{"error"}.
+#'   of class `"error"`.
+#'
+#' @inheritParams cached
 #'
 #' @param target name of the target of the error to get.
-#' Can be a symbol if \code{character_only} is \code{FALSE},
-#' must be a character if \code{character_only} is \code{TRUE}.
+#'   Can be a symbol if `character_only` is `FALSE`,
+#'   must be a character if `character_only` is `TRUE`.
 #'
-#' @param character_only logical, whether \code{target} should be treated
-#' as a character or a symbol.
-#' Just like \code{character.only} in \code{library()}.
-#'
-#' @param cache optional drake cache. See code{\link{new_cache}()}.
-#' If \code{cache} is supplied,
-#' the \code{path} and \code{search} arguments are ignored.
-#'
-#' @param path Root directory of the drake project,
-#' or if \code{search} is \code{TRUE}, either the
-#' project root or a subdirectory of the project.
-#'
-#' @param search If \code{TRUE}, search parent directories
-#' to find the nearest drake cache. Otherwise, look in the
-#' current working directory only.
-#'
-#' @param verbose whether to print console messages
+#' @param character_only logical, whether `target` should be treated
+#'   as a character or a symbol.
+#'   Just like `character.only` in [library()].
 #'
 #' @examples
 #' \dontrun{
@@ -56,9 +47,26 @@
 #' # Drake keeps all the error logs.
 #' diagnose()
 #' # Get the error log, an object of class "error".
-#' error <- diagnose(my_target)
+#' error <- diagnose(my_target)$error # See also warnings and messages.
 #' str(error) # See what's inside the error log.
 #' error$calls # View the traceback. (See the traceback() function).
+#' # Use purrr to recover all the warnings.
+#' suppressWarnings(
+#'   make(
+#'     drake_plan(
+#'       x = 1,
+#'       y = warning(123),
+#'       z = warning(456)
+#'     ),
+#'     verbose = FALSE
+#'   )
+#' )
+#' targets <- built(verbose = FALSE)
+#' lapply(targets, diagnose, character_only = TRUE, verbose = FALSE) %>%
+#'   setNames(targets) %>%
+#'   purrr::map("warnings") %>%
+#'   purrr::compact() %>%
+#'   unlist
 #' })
 #' }
 diagnose <- function(
@@ -67,7 +75,7 @@ diagnose <- function(
   path = getwd(),
   search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = TRUE
+  verbose = drake::default_verbose()
 ){
   if (is.null(cache)){
     return(character(0))
@@ -76,10 +84,13 @@ diagnose <- function(
     target <- as.character(substitute(target))
   }
   if (!length(target)){
-    return(cache$list(namespace = "errors"))
+    return(cache$list(namespace = "meta"))
   }
-  if (!cache$exists(key = target, namespace = "errors")){
+  if (!cache$exists(key = target, namespace = "meta")){
     stop("No diagnostic information for target ", target, ".")
   }
-  cache$get(key = target, namespace = "errors")
+  cache$get(
+    key = standardize_filename(target),
+    namespace = "meta"
+  )
 }

@@ -23,7 +23,7 @@ config <- make(my_plan, verbose = FALSE)
 ## ----explore_basic-------------------------------------------------------
 head(cached())
 
-readd(small)
+head(readd(small))
 
 loadd(large)
 
@@ -40,7 +40,7 @@ class(cache)
 
 cache$list() # Functionality from storr
 
-cache$get("small") # Functionality from storr
+head(cache$get("small")) # Functionality from storr
 
 ## ----hashes--------------------------------------------------------------
 library(digest) # package for hashing objects and files
@@ -70,7 +70,7 @@ short_hash(cache)
 long_hash(cache)
 
 ## ----default_cache_reset-------------------------------------------------
-cache_path(cache) # Default cache from before.
+# cache_path(cache) # Default cache from before. # nolint
 
 # Start from scratch to reset both hash algorithms.
 clean(destroy = TRUE)
@@ -114,9 +114,8 @@ faster_cache <- new_cache(
   long_hash_algo = "murmur32"
 )
 
-cache_path(faster_cache)
-
-cache_path(cache) # location of the previous cache
+# cache_path(faster_cache) # nolint
+# cache_path(cache) # location of the previous cache # nolint
 
 short_hash(faster_cache)
 

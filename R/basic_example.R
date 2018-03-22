@@ -1,4 +1,4 @@
-#' @title Load the basic example from \code{drake_example("basic")}
+#' @title Load the basic example from `drake_example("basic")`
 #' @description Is there an association between
 #' the weight and the fuel efficiency of cars?
 #' To find out, we use the mtcars dataset.
@@ -7,29 +7,43 @@
 #' and then analyze them with regression models.
 #' Finally, we summarize the regression models
 #' to see if there is an association.
-#' @details Use \code{\link{drake_example}('basic')} to get the code
+#' @details Use \code{\link{drake_example}("basic")} to get the code
 #' for the basic example. The included R script is a detailed,
-#' heavily-commented walkthrough. The quickstart vignette at
-#' \url{https://github.com/ropensci/drake/blob/master/vignettes/quickstart.Rmd} # nolint
-#' and \url{https://ropensci.github.io/drake/articles/quickstart.html}
+#' heavily-commented walkthrough. The basic example vignette at
+#' <https://github.com/ropensci/drake/blob/master/vignettes/example-basic.Rmd> # nolint
 #' also walks through the basic example.
 #' This function also writes/overwrites
-#' the file, \code{report.Rmd}.
+#' the file, `report.Rmd`.
 #' @export
-#' @return A \code{\link{drake_config}()} configuration list.
+#' @return A [drake_config()] configuration list.
+#' @inheritParams drake_config
 #' @param envir The environment to load the example into.
-#' Defaults to your workspace.
-#' For an insulated workspace,
-#' set \code{envir = new.env(parent = globalenv())}.
-#' @param cache Optional \code{storr} cache to use.
-#' @param report_file where to write the report file \code{report.Rmd}.
+#'   Defaults to your workspace.
+#'   For an insulated workspace,
+#'   set `envir = new.env(parent = globalenv())`.
+#' @param seed integer, the root pseudo-random seed to use for your project.
+#'   To ensure reproducibility across different R sessions,
+#'   `set.seed()` and `.Random.seed` are ignored and have no affect on
+#'   `drake` workflows. Conversely, [make()] does not change `.Random.seed`,
+#'   even when pseudo-random numbers are generated.
+#'
+#'   On the first call to [make()] or [drake_config()], `drake`
+#'   uses the random number generator seed from the `seed` argument.
+#'   Here, if the `seed` is `NULL` (default), `drake` uses a `seed` of `0`.
+#'   On subsequent [make()]s for existing projects, the project's
+#'   cached seed will be used in order to ensure reproducibility.
+#'   Thus, the `seed` argument must either be `NULL` or the same
+#'   seed from the project's cache (usually the `.drake/` folder).
+#'   To reset the random number generator seed for a project,
+#'   use `clean(destroy = TRUE)`.
+#' @param cache Optional `storr` cache to use.
+#' @param report_file where to write the report file `report.Rmd`.
 #' @param to deprecated, where to write the dynamic report source file
-#' \code{report.Rmd}
+#'   `report.Rmd`
 #' @param overwrite logical, whether to overwrite an
-#' existing file \code{report.Rmd}
-#' @param verbose logical, whether to print console messages.
+#'   existing file `report.Rmd`
 #' @param force logical, whether to force the loading of a
-#' non-back-compatible cache from a previous version of drake.
+#'   non-back-compatible cache from a previous version of drake.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -52,16 +66,17 @@
 #' # Remove the whole cache.
 #' clean(destroy = TRUE)
 #' # Clean up the imported file.
-#' unlink('report.Rmd')
+#' unlink("report.Rmd")
 #' })
 #' }
 load_basic_example <- function(
   envir = parent.frame(),
+  seed = NULL,
   cache = NULL,
   report_file = "report.Rmd",
   overwrite = FALSE,
   to = report_file,
-  verbose = TRUE,
+  verbose = drake::default_verbose(),
   force = FALSE
 ){
   if (to != report_file){
@@ -75,29 +90,45 @@ load_basic_example <- function(
   eval(parse(text = "base::require(knitr, quietly = TRUE)"))
   mtcars <- get("mtcars")
 
-  # Bootstrapped datasets from mtcars.
-  envir$simulate <- function(n){
-    # Pick a random set of cars to bootstrap from the mtcars data.
-    index <- sample.int(n = nrow(mtcars), size = n, replace = TRUE)
-    data <- mtcars[index, ]
+  # Pick a random subset of n rows from a dataset
+  evalq(
+    random_rows <- function(data, n){
+      data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
+    },
+    envir = envir
+  )
 
-    # x is the car's weight, and y is the fuel efficiency.
-    data.frame(
-      x = data$wt,
-      y = data$mpg
-    )
-  }
+  # Bootstrapped datasets from mtcars.
+  evalq(
+    simulate <- function(n){
+      # Pick a random set of cars to bootstrap from the mtcars data.
+      data <- random_rows(data = mtcars, n = n)
+
+      # x is the car's weight, and y is the fuel efficiency.
+      data.frame(
+        x = data$wt,
+        y = data$mpg
+      )
+    },
+    envir = envir
+  )
 
   # Is there a linear relationship between weight and fuel efficiency?
-  envir$reg1 <- function(d) {
-    lm(y ~ +x, data = d)
-  }
+  evalq(
+    reg1 <- function(d) {
+      lm(y ~ +x, data = d)
+    },
+    envir = envir
+  )
 
   # Is there a QUADRATIC relationship between weight and fuel efficiency?
-  envir$reg2 <- function(d) {
-    d$x2 <- d$x ^ 2
-    lm(y ~ x2, data = d)
-  }
+  evalq(
+    reg2 <- function(d) {
+      d$x2 <- d$x ^ 2
+      lm(y ~ x2, data = d)
+    },
+    envir = envir
+  )
 
   # construct workflow plan
 
@@ -127,18 +158,14 @@ load_basic_example <- function(
   # skip 'gather' (drake_plan my_plan is more readable)
   results <- plan_summaries(summary_types, analyses, datasets, gather = NULL)
 
-  # External file targets and dependencies should be
-  # single-quoted.  Use double quotes to remove any special
-  # meaning from character strings.  Single quotes inside
-  # imported functions are ignored, so this mechanism only
-  # works inside the drake_plan my_plan data frame.  WARNING:
-  # drake cannot track entire directories (folders).
-  report <- drake_plan(report.md = knit("report.Rmd", quiet = TRUE),
-    file_targets = TRUE, strings_in_dots = "filenames")
+  report <- tibble(
+    target = "",
+    command = 'knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)', # nolint  
+  )
 
   # Row order doesn't matter in the drake_plan my_plan.
-  envir$my_plan <- rbind(report, datasets,
-    analyses, results)
+  envir$my_plan <- rbind(report, datasets, analyses, results) %>%
+    tibble::as_tibble()
 
   # Write the R Markdown source for a dynamic knitr report
   report <- system.file(
@@ -153,6 +180,7 @@ load_basic_example <- function(
   invisible(drake_config(
     plan = envir$my_plan,
     envir = envir,
+    seed = seed,
     cache = cache,
     force = force,
     verbose = verbose

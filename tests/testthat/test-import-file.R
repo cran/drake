@@ -2,7 +2,7 @@ drake_context("import file")
 
 test_with_dir("responses to imported file", {
   config <- dbug()
-  expect_message(check_plan(plan = config$plan, envir = config$envir))
+  expect_silent(check_plan(plan = config$plan, envir = config$envir))
   expect_warning(
     check_plan(plan = config$plan[-1, ], envir = config$envir,
           verbose = FALSE))
@@ -27,7 +27,7 @@ test_with_dir("responses to imported file", {
   # actually change file
   saveRDS(2:10, "input.rds")
   testrun(config)
-  expect_equal(justbuilt(config), sort(c("'intermediatefile.rds'",
+  expect_equal(justbuilt(config), sort(c("\"intermediatefile.rds\"",
     "combined", "final", "myinput", "nextone")))
   expect_false(length(final0) == length(readd(final, search = FALSE)))
 })

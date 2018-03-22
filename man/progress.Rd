@@ -3,12 +3,12 @@
 \name{progress}
 \alias{progress}
 \title{Get the build progress of your targets
-during a \code{\link{make}()}.}
+during a \code{\link[=make]{make()}}.}
 \usage{
 progress(..., list = character(0), no_imported_objects = FALSE,
   imported_files_only = logical(0), path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = TRUE, jobs = 1)
+  verbose = drake::default_verbose(), jobs = 1)
 }
 \arguments{
 \item{...}{objects to load from the cache, as names (unquoted)
@@ -16,7 +16,7 @@ or character strings (quoted). Similar to \code{...} in
 \code{\link{remove}(...)}.}
 
 \item{list}{character vector naming objects to be loaded from the
-cache. Similar to the \code{list} argument of \code{\link{remove}()}.}
+cache. Similar to the \code{list} argument of \code{\link[=remove]{remove()}}.}
 
 \item{no_imported_objects}{logical, whether to only return information
 about imported files and targets with commands (i.e. whether to ignore
@@ -28,23 +28,34 @@ instead.}
 
 \item{path}{Root directory of the drake project,
 or if \code{search} is \code{TRUE}, either the
-project root or a subdirectory of the project.}
+project root or a subdirectory of the project.
+Ignored if a \code{cache} is supplied.}
 
-\item{search}{If \code{TRUE}, search parent directories
+\item{search}{logical. If \code{TRUE}, search parent directories
 to find the nearest drake cache. Otherwise, look in the
-current working directory only.}
+current working directory only.
+Ignored if a \code{cache} is supplied.}
 
-\item{cache}{optional drake cache. See code{\link{new_cache}()}.
-If \code{cache} is supplied,
-the \code{path} and \code{search} arguments are ignored.}
+\item{cache}{drake cache. See \code{\link[=new_cache]{new_cache()}}.
+If supplied, \code{path} and \code{search} are ignored.}
 
-\item{verbose}{whether to print console messages}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 
 \item{jobs}{number of jobs/workers for parallel processing}
 }
 \value{
 The build progress of each target reached by
-the current \code{\link{make}()} so far.
+the current \code{\link[=make]{make()}} so far.
 }
 \description{
 Objects that drake imported, built, or attempted
@@ -65,7 +76,7 @@ progress(no_imported_objects = TRUE) # Ignore imported R objects.
 }
 }
 \seealso{
-\code{\link{diagnose}}, \code{\link{session}},
-\code{\link{built}}, \code{\link{imported}},
-\code{\link{readd}}, \code{\link{drake_plan}}, \code{\link{make}}
+\code{\link[=diagnose]{diagnose()}}, \code{\link[=session]{session()}},
+\code{\link[=built]{built()}}, \code{\link[=imported]{imported()}},
+\code{\link[=readd]{readd()}}, \code{\link[=drake_plan]{drake_plan()}}, \code{\link[=make]{make()}}
 }

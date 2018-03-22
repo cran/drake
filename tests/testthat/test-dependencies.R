@@ -6,6 +6,59 @@ test_with_dir("unparsable commands are handled correctly", {
   expect_error(deps(x))
 })
 
+test_with_dir("magrittr dot is ignored", {
+  expect_equal(
+    sort(deps("sqrt(x + y + .)")),
+    sort(c("sqrt", "x", "y"))
+  )
+  expect_equal(
+    sort(deps("dplyr::filter(complete.cases(.))")),
+    sort(c("complete.cases", "dplyr::filter"))
+  )
+})
+
+test_with_dir("file_out() and knitr_in(): commands vs imports", {
+  cmd <- "file_in(\"x\"); file_out(\"y\"); knitr_in(\"report.Rmd\")"
+  f <- function(){
+    file_in("x")
+    file_out("y")
+    knitr_in("report.Rmd")
+  }
+  file.create("x")
+  file.create("y")
+  path <- system.file(
+    file.path("examples", "basic", "report.Rmd"),
+    package = "drake",
+    mustWork = TRUE
+  )
+  file.copy(from = path, to = getwd(), overwrite = TRUE)
+  x <- commands_edges("\"y\"", cmd)
+  y <- imports_edges("f", f)
+  expect_equal(
+    sort(x$from),
+    sort(
+      c("coef_regression2_small", "large",
+        "\"report.Rmd\"", "small", "\"x\""
+      )
+    )
+  )
+  expect_equal(x$to, rep("\"y\"", 5))
+  expect_equal(
+    sort(y$from),
+    sort(c("\"report.Rmd\"", "\"x\""))
+  )
+  expect_equal(y$to, rep("f", 2))
+  expect_equal(sort(deps(f)), sort(c("\"report.Rmd\"", "\"x\"")))
+  expect_equal(
+    sort(deps(cmd)),
+    sort(
+      c("coef_regression2_small", "large",
+        "\"report.Rmd\"", "small", "\"x\"", "\"y\""
+      )
+    )
+  )
+})
+
 test_with_dir(
   "deps() correctly reports dependencies of functions and commands", {
   expect_equal(deps(""), character(0))
@@ -24,33 +77,40 @@ test_with_dir(
   expect_equal(sort(deps(f)), sort(c("g", "saveRDS")))
   my_plan <- drake_plan(
     x = 1 + some_object,
-    my_target = x + readRDS("tracked_input_file.rds"),
-    return_value = f(x, y, g(z + w)))
+    my_target = x + readRDS(file_in("tracked_input_file.rds")),
+    return_value = f(x, y, g(z + w)),
+    botched = read.csv(file_in(nothing)),
+    meta = read.table(file_in("file_in")),
+    strings_in_dots = "literals"
+  )
   expect_equal(deps(my_plan$command[1]), "some_object")
   expect_equal(sort(deps(my_plan$command[2])),
-    sort(c("'tracked_input_file.rds'", "readRDS", "x")))
+    sort(c("\"tracked_input_file.rds\"", "readRDS", "x")))
   expect_equal(sort(deps(my_plan$command[3])), sort(c("f", "g", "w",
     "x", "y", "z")))
+  expect_equal(sort(deps(my_plan$command[4])), sort(c("read.csv")))
+  expect_equal(sort(deps(my_plan$command[5])),
+    sort(c("read.table", "\"file_in\"")))
 })
 
 test_with_dir("tracked() works", {
   config <- dbug()
   x <- sort(
     tracked(plan = config$plan, envir = config$envir, verbose = FALSE))
-  y <- sort(c("'intermediatefile.rds'",
+  y <- sort(c("\"intermediatefile.rds\"",
     "yourinput", "nextone",
     "combined", "myinput", "final", "j", "i", "h", "g", "f",
-    "c", "b", "a", "saveRDS", "'input.rds'", "readRDS"))
+    "c", "b", "a", "saveRDS", "\"input.rds\"", "readRDS"))
   expect_equal(x, y)
   x <- sort(tracked(plan = config$plan, targets = "myinput",
     envir = config$envir, verbose = FALSE))
-  y <- sort(c("myinput", "'input.rds'", "readRDS"))
+  y <- sort(c("myinput", "\"input.rds\"", "readRDS"))
   expect_equal(x, y)
 })
 
 test_with_dir("missing files via check_plan()", {
   config <- dbug()
-  expect_message(check_plan(config$plan, envir = config$envir))
+  expect_silent(check_plan(config$plan, envir = config$envir))
   expect_silent(tmp <- missing_input_files(config))
   unlink("input.rds", force = TRUE)
   expect_warning(

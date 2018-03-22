@@ -2,10 +2,10 @@
 #' if applicable.
 #' @export
 #' @description Currently only works with
-#' \code{storr::storr_rds} file system caches.
+#' [storr::storr_rds()] file system caches.
 #' @return File path where the cache is stored.
 #' @param cache the cache whose file path
-#' you want to know
+#'   you want to know
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -39,28 +39,20 @@ force_cache_path <- function(cache = NULL){
 
 #' @title Get the drake cache, optionally searching up the file system.
 #' @description Only works if the cache
-#' is in a folder called \code{.drake/}.
-#' @seealso \code{\link{this_cache}}, \code{\link{new_cache}},
-#' \code{\link{recover_cache}}, \code{\link{config}}
+#' is in a folder called `.drake/`.
+#' @seealso [this_cache()], [new_cache()],
+#'   [recover_cache()], [config()]
 #' @export
-#' @return A drake/storr cache in a folder called \code{.drake/},
-#' if available. \code{NULL} otherwise.
-#' @param path file path to the folder containing the cache.
-#' Yes, this is the parent directory containing the cache,
-#' not the cache itself, and it assumes the cache is in the
-#' `.drake` folder. If you are looking for a different cache
-#' with a known folder different from `.drake`, use
-#' the \code{\link{this_cache}()} function.
-#' @param search logical, whether to search back in the file system
-#' for the cache.
-#' @param verbose logical, whether to print the location of the cache
+#' @return A drake/storr cache in a folder called `.drake/`,
+#'   if available. `NULL` otherwise.
+#' @inheritParams cached
 #' @param force logical, whether to load the cache
-#' despite any back compatibility issues with the
-#' running version of drake.
+#'   despite any back compatibility issues with the
+#'   running version of drake.
 #' @param fetch_cache character vector containing lines of code.
-#' The purpose of this code is to fetch the \code{storr} cache
-#' with a command like \code{storr_rds()} or \code{storr_dbi()},
-#' but customized. This feature is experimental.
+#'   The purpose of this code is to fetch the `storr` cache
+#'   with a command like `storr_rds()` or `storr_dbi()`,
+#'   but customized. This feature is experimental.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -77,7 +69,7 @@ force_cache_path <- function(cache = NULL){
 get_cache <- function(
   path = getwd(),
   search = TRUE,
-  verbose = 1,
+  verbose = drake::default_verbose(),
   force = FALSE,
   fetch_cache = NULL
 ){
@@ -95,17 +87,17 @@ get_cache <- function(
 #' @title Get the cache at the exact file path specified.
 #' @export
 #' @description This function does not apply to
-#' in-memory caches such as \code{storr_environment()}.
+#' in-memory caches such as `storr_environment()`.
 #' @return A drake/storr cache at the specified path, if it exists.
+#' @inheritParams cached
 #' @param path file path of the cache
 #' @param force logical, whether to load the cache
-#' despite any back compatibility issues with the
-#' running version of drake.
-#' @param verbose, whether to print the file path of the cache.
+#'   despite any back compatibility issues with the
+#'   running version of drake.
 #' @param fetch_cache character vector containing lines of code.
-#' The purpose of this code is to fetch the \code{storr} cache
-#' with a command like \code{storr_rds()} or \code{storr_dbi()},
-#' but customized. This feature is experimental.
+#'   The purpose of this code is to fetch the `storr` cache
+#'   with a command like [storr_rds()] or [storr_dbi()],
+#'   but customized. This feature is experimental.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -120,7 +112,8 @@ get_cache <- function(
 #' })
 #' }
 this_cache <- function(
-  path = drake::default_cache_path(), force = FALSE, verbose = TRUE,
+  path = drake::default_cache_path(), force = FALSE,
+  verbose = drake::default_verbose(),
   fetch_cache = NULL
 ){
   usual_path_missing <- is.null(path) || !file.exists(path)
@@ -132,15 +125,14 @@ this_cache <- function(
   }
   fetch_cache <- as.character(fetch_cache)
   if (length(fetch_cache) && nchar(fetch_cache)){
-    cache <- eval(parse(text = functionize(fetch_cache)))
+    cache <- eval(parse(text = localize(fetch_cache)))
   } else {
     cache <- drake_fetch_rds(path)
   }
   configure_cache(
     cache = cache,
     long_hash_algo = "md5",
-    overwrite_hash_algos = FALSE,
-    log_progress = FALSE
+    overwrite_hash_algos = FALSE
   )
   if (!force){
     assert_compatible_cache(cache = cache)
@@ -161,25 +153,25 @@ drake_fetch_rds <- function(path){
   )
 }
 
-#' @title  Make a new \code{drake} cache.
-#' @description Uses the \code{storr_rds()} function
-#' from the \code{storr} package.
+#' @title  Make a new `drake` cache.
+#' @description Uses the [storr_rds()] function
+#' from the `storr` package.
 #' @export
 #' @return A newly created drake cache as a storr object.
-#' @seealso \code{\link{default_short_hash_algo}},
-#' \code{\link{default_long_hash_algo}},
-#' \code{\link{make}}
+#' @inheritParams cached
+#' @seealso [default_short_hash_algo()],
+#'   [default_long_hash_algo()],
+#'   [make()]
 #' @param path file path to the cache if the cache
-#' is a file system cache.
-#' @param verbose logical, whether to print out the path of the cache.
+#'   is a file system cache.
 #' @param type deprecated argument. Once stood for cache type.
-#' Use \code{storr} to customize your caches instead.
+#'   Use `storr` to customize your caches instead.
 #' @param short_hash_algo short hash algorithm for the cache.
-#' See \code{\link{default_short_hash_algo}()} and
-#' \code{\link{make}()}
+#'   See [default_short_hash_algo()] and
+#'   [make()]
 #' @param long_hash_algo long hash algorithm for the cache.
-#' See \code{\link{default_long_hash_algo}()} and
-#' \code{\link{make}()}
+#'   See [default_long_hash_algo()] and
+#'   [make()]
 #' @param ... other arguments to the cache constructor
 #' @examples
 #' \dontrun{
@@ -193,7 +185,7 @@ drake_fetch_rds <- function(path){
 #' }
 new_cache <- function(
   path = drake::default_cache_path(),
-  verbose = 1,
+  verbose = drake::default_verbose(),
   type = NULL,
   short_hash_algo = drake::default_short_hash_algo(),
   long_hash_algo = drake::default_long_hash_algo(),
@@ -210,11 +202,14 @@ new_cache <- function(
     mangle_key = TRUE,
     hash_algorithm = short_hash_algo
   )
+  writeLines(
+    text = c("*", "!/.gitignore"),
+    con = file.path(path, ".gitignore")
+  )
   configure_cache(
     cache = cache,
     short_hash_algo = short_hash_algo,
     long_hash_algo = long_hash_algo,
-    log_progress = FALSE,
     overwrite_hash_algos = FALSE
   )
   console_cache(path = cache_path(cache), verbose = verbose)
@@ -222,29 +217,29 @@ new_cache <- function(
 }
 
 #' @title Load an existing drake files system cache if it exists
-#' or create a new one otherwise.
+#'   or create a new one otherwise.
 #' @export
-#' @seealso \code{\link{new_cache}}, \code{\link{this_cache}},
-#' \code{\link{get_cache}}
+#' @seealso [new_cache()], [this_cache()],
+#'   [get_cache()]
 #' @description
 #' Does not work with
-#' in-memory caches such as \code{storr_environment()}.
+#' in-memory caches such as [storr_environment()].
 #' @return A drake/storr cache.
+#' @inheritParams cached
 #' @param path file path of the cache
 #' @param short_hash_algo short hash algorithm for the cache.
-#' See \code{\link{default_short_hash_algo}()} and
-#' \code{\link{make}()}
+#'   See [default_short_hash_algo()] and
+#'   [make()]
 #' @param long_hash_algo long hash algorithm for the cache.
-#' See \code{\link{default_long_hash_algo}()} and
-#' \code{\link{make}()}
+#'   See [default_long_hash_algo()] and
+#'   [make()]
 #' @param force logical, whether to load the cache
-#' despite any back compatibility issues with the
-#' running version of drake.
-#' @param verbose logical, whether to print the file path of the cache.
+#'   despite any back compatibility issues with the
+#'   running version of drake.
 #' @param fetch_cache character vector containing lines of code.
-#' The purpose of this code is to fetch the \code{storr} cache
-#' with a command like \code{storr_rds()} or \code{storr_dbi()},
-#' but customized.
+#'   The purpose of this code is to fetch the `storr` cache
+#'   with a command like [storr_rds()] or [storr_dbi()],
+#'   but customized.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -259,7 +254,7 @@ recover_cache <- function(
   short_hash_algo = drake::default_short_hash_algo(),
   long_hash_algo = drake::default_long_hash_algo(),
   force = FALSE,
-  verbose = TRUE,
+  verbose = drake::default_verbose(),
   fetch_cache = NULL
 ){
   cache <- this_cache(
@@ -283,42 +278,44 @@ recover_cache <- function(
 #' @description Applies to file system caches only.
 #' @return Default file path of the drake/storr cache.
 #' @examples
+#' \dontrun{
 #' default_cache_path()
+#' }
 default_cache_path <- function(){
   file.path(getwd(), ".drake")
 }
 
 #' @title Configure the hash algorithms, etc. of a drake cache.
 #' @export
-#' @seealso \code{\link{default_short_hash_algo}},
-#' \code{\link{default_long_hash_algo}}
+#' @seealso [default_short_hash_algo()],
+#'   [default_long_hash_algo()]
 #' @description The purpose of this function is
-#' to prepare the cache to be called from \code{\link{make}()}.
+#' to prepare the cache to be called from [make()].
 #' @return A drake/storr cache.
+#'
+#' @inheritParams cached
 #'
 #' @param cache cache to configure
 #'
 #' @param short_hash_algo short hash algorithm for drake.
+#'   The short algorithm must be among [available_hash_algos()],
+#'   which is just the collection of algorithms available to the `algo`
+#'   argument in [digest::digest()].
+#'   See [default_short_hash_algo()] for more.
 #'
-#' The short algorithm must be among \code{\link{available_hash_algos}{}},
-#' which is just the collection of algorithms available to the `algo`
-#' argument in \code{digest::digest()}.
-#' See \code{?\link{default_short_hash_algo}} for more.
+#' @param long_hash_algo long hash algorithm for drake.
+#'   The long algorithm must be among \code{\link{available_hash_algos}{}},
+#'   which is just the collection of algorithms available to the `algo`
+#'   argument in `digest::digest()`.
+#'   See [default_long_hash_algo()] for more.
 #'
-#' @param long_hash_algo short hash algorithm for drake.
-#' The long algorithm must be among \code{\link{available_hash_algos}{}},
-#' which is just the collection of algorithms available to the `algo`
-#' argument in \code{digest::digest()}.
-#' See \code{?\link{default_long_hash_algo}} for more.
-#'
-#' @param log_progress logical, whether to clear the recorded
-#' build progress if this cache was used for previous calls to
-#' \code{\link{make}()}
+#' @param log_progress deprecated logical.
+#'   Previously toggled whether to clear the recorded
+#'   build progress if this cache was used for previous calls to
+#'   [make()].
 #'
 #' @param overwrite_hash_algos logical, whether to try to overwrite
-#' the hash algorithms in the cache with any user-specified ones.
-#'
-#' @param verbose whether to print console messages
+#'   the hash algorithms in the cache with any user-specified ones.
 #'
 #' @param jobs number of jobs for parallel processing
 #'
@@ -348,7 +345,7 @@ configure_cache <- function(
   long_hash_algo = drake::default_long_hash_algo(cache = cache),
   log_progress = FALSE,
   overwrite_hash_algos = FALSE,
-  verbose = TRUE,
+  verbose = drake::default_verbose(),
   jobs = 1
 ){
   short_hash_algo <- match.arg(short_hash_algo,
@@ -356,7 +353,10 @@ configure_cache <- function(
   long_hash_algo <- match.arg(long_hash_algo,
     choices = available_hash_algos())
   if (log_progress){
-    clear_progress(cache = cache, jobs = jobs)
+    warning(
+      "The `log_progress` argument of `configure_cache()` is deprecated.",
+      call. = FALSE
+    )
   }
   short_exists <- cache$exists(key = "short_hash_algo", namespace = "config")
   long_exists <- cache$exists(key = "long_hash_algo", namespace = "config")

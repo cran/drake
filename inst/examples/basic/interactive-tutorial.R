@@ -1,3 +1,11 @@
+# This script is meant to stand on its own, depending only on
+# the included report.Rmd file.
+# It is meant to walk you through the example step by step.
+# The other files show you how to set up the example
+# as a serious drake project.
+# To run the project as a serious workflow, just run make.R.
+# Then, read the output report.md file.
+#
 ###############
 ### PURPOSE ###
 ###############
@@ -45,11 +53,15 @@ library(drake)
 
 clean() # remove any previous drake output
 
-# The simulate() function bootstraps cars from the mtcars dataset.
+# Pick a random subset of n rows from a dataset
+random_rows <- function(data, n){
+  data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
+}
+
+# Bootstrapped datasets from mtcars.
 simulate <- function(n){
   # Pick a random set of cars to bootstrap from the mtcars data.
-  index <- sample.int(n = nrow(mtcars), size = n, replace = TRUE)
-  data <- mtcars[index, ]
+  data <- random_rows(data = mtcars, n = n)
 
   # x is the car's weight, and y is the fuel efficiency.
   data.frame(
@@ -87,7 +99,7 @@ my_datasets <- drake_plan(
   large = simulate(64)
 )
 
-# Optionally, get replicates with expand(my_datasets,
+# Optionally, get replicates with expand_plan(my_datasets,
 #   values = c("rep1", "rep2")).
 # Bootstrapping involves randomness, so this is good practice
 # in real life. But this is a miniaturized workflow,
@@ -127,28 +139,44 @@ results <- plan_summaries(
   gather = NULL
 ) # skip 'gather' (workflow my_plan is more readable)
 
-# External file targets and dependencies should be single-quoted.
-# Use double quotes to remove any special meaning from character strings.
-# Single quotes inside imported functions are ignored, so this mechanism
-# only works inside the workflow my_plan data frame.
-# WARNING: drake cannot track entire directories (folders).
+# Use `knitr_in()` to tell drake to look for dependencies
+# inside report.Rmd (targets referenced explicitly with loadd() and readd()
+# in active code chunks).
+# Use file_out() to tell drake that the target is a file.
+# Drake knows to put report.md in the "target" column when it comes
+# time to make().
 report <- drake_plan(
-  # As long as `knit()`, `knitr::knit()`, `render()`, or `rmarkdown::render()`
-  # is visible in your workflow plan command,
-  # drake will dig into the active code chunks of your `report.Rmd`
-  # and find the dependencies of `report.md` in the arguments of
-  # calls to loadd() and readd().
-  report.md = knit(
-    'report.Rmd', #nolint: use single quotes to specify file dependency.
-     quiet = TRUE
-  ),
-  file_targets = TRUE,
-  strings_in_dots = "filenames" # Redundant, since we used single quotes
+  knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)
 )
 
 # Row order doesn't matter in the workflow my_plan.
 my_plan <- rbind(report, my_datasets, my_analyses, results)
 
+
+# For the commands you specify the free-form `...` argument,
+# `drake_plan()` also supports tidy evaluation.
+# For example, it supports quasiquotation with the `!!` argument.
+# Use `tidy_evaluation = FALSE` or the `list` argument
+# to suppress this behavior.
+
+my_variable <- 5
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable")
+)
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable"),
+  tidy_evaluation = FALSE
+)
+
+# For instances of !! that remain in the workflow plan,
+# make() will run these commands in tidy fashion,
+# evaluating the !! operator using the environment you provided.
 
 #####################################
 ### CHECK AND DEBUG WORKFLOW PLAN ###
@@ -206,7 +234,7 @@ outdated(config) # Everything is up to date
 # session() # get the sessionInfo() of the last call to make() #nolint: optional
 
 # Since the p-value on x2 is so low,
-# we can say that 
+# we can say that
 readd(coef_regression2_large) # see also: loadd(), cached(), imported(), and built() # nolint
 
 # Everything is up to date.
@@ -230,6 +258,17 @@ reg2 <- function(d){
     lm(y ~ x3, data = d) # I indented here.
 }
 outdated(config) # Everything is still up to date.
+
+# Drake cares about nested functions too:
+# nontrivial changes to `random_rows()` will propagate to `simulate()`
+# and all the downstream targets.
+
+random_rows <- function(data, n){
+  n <- n + 1
+  data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
+}
+outdated(config)
+make(my_plan)
 
 #########################################
 ### NEED TO ADD MORE WORK ON THE FLY? ###

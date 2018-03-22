@@ -1,5 +1,5 @@
 run_mclapply <- function(config){
-  run_parallel(config = config, worker = worker_mclapply)
+  run_staged_parallelism(config = config, worker = worker_mclapply)
 }
 
 worker_mclapply <- function(targets, meta_list, config){
@@ -24,7 +24,11 @@ warn_mclapply_windows <- function(
     parallelism,
     choices = parallelism_choices(distributed_only = FALSE)
   )
-  if (parallelism == "mclapply" & jobs > 1 & os == "windows"){
+  if (
+    identical(parallelism, "mclapply") &&
+    jobs_targets(jobs) > 1 &&
+    identical(os, "windows")
+  ){
     warning(
       "Demoting to one job at a time (no parallel computing). ",
       "The mclapply parallel backend does not support ",

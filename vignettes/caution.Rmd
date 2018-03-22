@@ -1,7 +1,7 @@
 ---
 title: "Caution"
 subtitle: "Cautionary notes for drake"
-author: "William Michael Landau"
+author: "Will Landau"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
@@ -12,8 +12,6 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-
-![](logo-vignettes.png)
 
 ```{r cautionstart, echo = F}
 suppressMessages(suppressWarnings(library(drake)))
@@ -46,64 +44,6 @@ Versions of `drake` after 4.4.0 have different caching internals. That means if 
 
 It is common practice to divide the work of a project into multiple R files, but if you do this, you will not get the most out of `drake`. Please see the [best practices vignette](https://github.com/ropensci/drake/blob/master/vignettes/best-practices.Rmd) for more details.
 
-## Beware unparsable symbols in your workflow plan.
-
-In your workflow plan, be sure that target names can be parsed as symbols and commands can be parsed as R code. To be safe, use `check_plan(my_plan)` to screen for illegal symbols and other problem areas.
-
-A common pitfall is using the `evaluate_plan()` function to expand wildcards after applying single quotes to file targets.
-
-```{r filethenevaluate}
-library(magrittr) # for the pipe operator %>%
-drake_plan(
-  data = readRDS("data_DATASIZE__rds")
-) %>%
-  rbind(drake::drake_plan(
-    file.csv = write.csv(
-      data_DATASIZE__, # nolint
-      "file_DATASIZE__csv"
-    ),
-    strings_in_dots = "literals",
-    file_targets = T
-  )) %>%
-  evaluate_plan(
-    rules = list(DATASIZE__ = c("small", "large"))
-  )
-```
-
-The single quotes in the middle of `'file.csv'_small` and `'file.csv'large` are illegal, and the target names do not even correspond to the files written. Instead, construct your workflow plan in multiple stages and apply the single quotes at the very end.
-
-```{r correctevaldatasize}
-rules <- list(DATASIZE__ = c("small", "large"))
-datasets <- drake_plan(data = readRDS("data_DATASIZE__rds")) %>%
-  evaluate_plan(rules = rules)
-```
-
-Plan the CSV files separately.
-```{r correctevaldatasize2}
-files <- drake_plan(
-  file = write.csv(data_DATASIZE__, "file_DATASIZE__csv"), # nolint
-  strings_in_dots = "literals"
-) %>%
-  evaluate_plan(rules = rules)
-```
-
-Single-quote the file targets after `evaluate_plan()`.
-
-```{r correctevaldatasize3}
-files$target <- paste0(
-  files$target, ".csv"
-) %>%
-  as_drake_filename
-```
-
-Put the workflow plan together.
-
-```{r correctevaldatasize4}
-rbind(datasets, files)
-```
-
-For finer control over target names in cases like this, you may want to use the [wildcard package](https://github.com/wlandau/wildcard).
-
 ## Commands are NOT perfectly flexible.
 
 In your workflow plan data frame (produced by `drake_plan()` and accepted by `make()`), your commands can usually be flexible R expressions.
@@ -128,11 +68,48 @@ You must properly install `drake` using `install.packages()`, `devtools::install
 Your workflow may depend on external packages such as
 [ggplot2](https://CRAN.R-project.org/package=ggplot2), [dplyr](https://CRAN.R-project.org/package=dplyr), and [MASS](https://CRAN.R-project.org/package=MASS). Such packages must be formally installed with `install.packages()`, `devtools::install_github()`, `devtools::install_local()`, or a similar command. If you load uninstalled packages with `devtools::load_all()`, results may be unpredictable and incorrect.
 
+## A note on tidy evaluation
+
+Running commands in your R console is not always exactly like running them with `make()`. That's because `make()` uses tidy evaluation as implemented in the [`rlang` package](https://github.com/tidyverse/rlang).
+
+```{r demotidyeval}
+# This workflow plan uses rlang's quasiquotation operator `!!`.
+my_plan <- drake_plan(list = c(
+  little_b = "\"b\"",
+  letter = "!!little_b"
+))
+my_plan
+make(my_plan)
+readd(letter)
+```
+
+For the commands you specify the free-form `...` argument, `drake_plan()` also supports tidy evaluation. For example, it supports quasiquotation with the `!!` argument. Use `tidy_evaluation = FALSE` or the `list` argument to suppress this behavior.
+
+```{r testquasiquoplan}
+my_variable <- 5
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable")
+)
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable"),
+  tidy_evaluation = FALSE
+)
+```
+
+For instances of `!!` that remain in the workflow plan, `make()` will run these commands in tidy fashion, evaluating the `!!` operator using the environment you provided.
+
 ## Find and diagnose your errors.
 
 When `make()` fails, use `failed()` and `diagnose()` to debug. Try the following out yourself.
 
 ```{r diagnosecaution}
+# Targets with available diagnostic metadata, incluing errors, warnings, etc.
 diagnose()
 
 f <- function(){
@@ -148,11 +125,11 @@ withr::with_message_sink(
 
 failed() # From the last make() only
 
-diagnose() # From all previous make()s
+error <- diagnose(target)$error # See also warnings and messages.
 
-error <- diagnose(target)
+error$message
 
-str(error)
+error$call
 
 error$calls # View the traceback.
 ```
@@ -194,60 +171,9 @@ readd(out)
 
 The master configuration list returned by `drake_config()` is important to `drake`'s internals, and you will need it for functions like `outdated()` and `vis_drake_graph()`. The config list corresponds to a single call to `make()`, and you should not modify it by hand afterwards. For example, modifying the `targets` element post-hoc will have no effect because the `graph` element will remain the same. It is best to just call `drake_config()` again.
 
-## Take special precautions if your `drake` project is a package.
+## Workflows as R packages. 
 
-Some users like to structure their `drake` projects as [formal R packages](https://cran.r-project.org/doc/manuals/R-exts.html). The straightforward way to run such a project is to 
-
-1. Write all your imported functions in `*.R` files in the package's `R/` folder.
-1. Load the package's environment with `devtools::load_all()`.
-1. Call `drake::make()`.
-
-```{r devtools1, eval = FALSE}
-env <- devtools::load_all("yourProject")$env # Has all your imported functions
-drake::make(my_plan, envir = env)            # Run the project normally.
-```
-
-However, the simple strategy above only works for `parLapply` parallelism with `jobs = 1` and `mcapply` parallelism. For other kinds of parallelism, you must turn  `devtools::load_all("yourProject")$env` into an ordinary environment that does not look like a package namespace. Thanks to [Jasper Clarkberg](https://github.com/dapperjapper), we have the following workaround.
-
-1. Clone `devtools::load_all("yourProject")$env` in order to change the *binding environment* of all your functions.
-
-```{r devtools2, eval = FALSE}
-env <- devtools::load_all("yourProject")$env
-env <- list2env(as.list(env), parent = globalenv())
-```
-
-2. Change the [*enclosing environment*](http://adv-r.had.co.nz/Environments.html#function-envs) of your functions using an [unfortunate hack](https://stackoverflow.com/questions/14464442/using-get-with-replacement-functions) involving `environment<-`.
-
-```{r devtools3, eval = FALSE}
-for (name in ls(env)){
-  assign(
-    x = name,
-    envir = env,
-    value = `environment<-`(get(n, envir = env), env)
-  )
-}
-```
-
-3. Make sure `drake` does not attach `yourProject` as an external package.
-
-```{r devtools4, eval = FALSE}
-package_name <- "yourProject" # devtools::as.package(".")$package # nolint
-packages_to_load <- setdiff(.packages(), package_name)
-```
-
-4. Run the project with `make()`.
-
-```{r devtools5, eval = FALSE}
-make(
-  my_plan,                    # Prepared in advance
-  envir = env,                # Environment of package "yourProject"
-  parallelism = "Makefile",   # Or "parLapply"
-  jobs = 2,
-  packages = packages_to_load # Does not include "yourProject"
-)
-```
-
-You may need to adapt this last workaround, depending on the structure of the package, `yourProject`.
+The R package structure is a great way to organize the files of your project. Writing your own package to contain your data science workflow is a good idea, but you will need to use `expose_imports()` to run it properly with `drake`. See the [best practices vignette](https://github.com/ropensci/drake/blob/master/vignettes/best-practices.Rmd) and `?expose_imports` for detailed explanations. Thanks to [Jasper Clarkberg](https://github.com/dapperjapper) for the workaround.
 
 ## The `lazy_load` flag does not work with `"parLapply"` parallelism.
 
@@ -270,6 +196,15 @@ You can call `make(..., timeout = 10)` to time out all each target after 10 seco
 
 # Dependencies
 
+## The `magrittr` dot (`.`) is always ignored.
+
+It is common practice to use a literal dot (`.`) to carry an object through a [`magrittr`](https://github.com/tidyverse/magrittr) pipeline. Due to some tricky  limitations in static code analysis, `drake` never treats the dot (`.`) as a dependency, even if you use it as an ordinary variable outside of a [`tidyverse`](https://www.tidyverse.org/) context.
+
+```{r depsdot}
+deps("sqrt(x + y + .)")
+deps("dplyr::filter(complete.cases(.))")
+```
+
 ## Triggers and skipped imports
 
 With alternate [triggers](https://github.com/ropensci/drake/blob/master/vignettes/debug.Rmd#test-with-triggers) and the [option to skip imports](https://github.com/ropensci/drake/blob/master/vignettes/debug.Rmd#skipping-imports), you can sacrifice reproducibility to gain speed. However, these options can throw the dependency network out of sync. You should only use them for testing and debugging.
@@ -288,55 +223,46 @@ You should explicitly learn the items in your workflow and the dependencies of y
 
 ```{r cautiondeps}
 f <- function(){
-  b <- get("x", envir = globalenv())           # x is incorrectly ignored
-  file_dependency <- readRDS('input_file.rds') # 'input_file.rds' is incorrectly ignored # nolint
+  b <- get("x", envir = globalenv()) # x is incorrectly ignored
   digest::digest(file_dependency)
 }
 
 deps(f)
 
-command <- "x <- digest::digest('input_file.rds'); assign(\"x\", 1); x"
+command <- "x <- digest::digest(file_in(\"input_file.rds\")); assign(\"x\", 1); x" # nolint
 deps(command)
 ```
 
-## Dynamic R Markdown / `knitr` reports
+`Drake` takes special precautions so that a target/import does not depend on itself. For example, `deps(f)` might return `"f"` if `f()` is a recursive function, but `make()` just ignores this conflict and runs as expected. In other words, `make()` automatically removes all self-referential loops in the dependency network.
 
-In [dynamic knitr reports](https://yihui.name/knitr/), `drake` automatically looks for active code chunks and learns dependencies from calls to `loadd()` and `readd()`. This behavior activates when
+## Dependencies of `knitr` reports
 
-1. the appropriate command in your command has an explicit reference to `knit()` or `render()` (from the `rmarkdown` package), and
-1. the `*.Rmd`/`*.Rnw` source file already exists before `make()`.
+If you have `knitr` reports, you can use `knitr_report()` in your commands so that your reports are refreshed every time one of their dependencies changes. See `drake_example("basic")` and the `?knitr_in()` help file examples for demonstrations. Dependencies are detected if you call `loadd()` or `readd()` in your code chunks. But beware: an empty call to `loadd()` does not account for any dependencies even though it loads all the available targets into your R session.
 
-```{r knitrdeps1}
-load_basic_example() # Get the code with drake_example("basic").
-my_plan[1, ]
+## Knitr inputs and file outputs in imported functions.
+
+Similarly, `file_out()` in a command tells `drake` that the result of a command is an output file. Clearly, this is inappropriate for imported functions, but `drake` will look anyway. Do not try to use `file_out()` or `knitr_in()` inside your custom imported functions. `Drake` only pays attention to them in proper commands in your workflow plan data frame. However, `file_in()` is perfectly fine if your imported function needs a file in order to run. Here are some examples.
+
+```{r fileimportsfunctions}
+# toally_fine() will depend on the imported data.csv file.
+# But make sure data.csv is an imported file and not a file target.
+totally_okay <- function(x, y, z){
+  read.csv(file_in("data.csv"))
+}
+
+# file_out() is for file targets, so `drake` will ignore it.
+avoid_this <- function(x, y, z){
+  read.csv(file_out("data.csv"))
+}
+
+# knitr_in() is for knitr files with dependencies
+# in their active code chunks (explicitly referenced with loadd() and readd().
+# Drake just treats knitr_in() as an ordinary file input in this case.
+# You should really be using file_in() instead.
+avoid_this <- function(x, y, z){
+  read.csv(knitr_in("report.Rmd"))
+}
 ```
-
-Above, the [R Markdown report](http://rmarkdown.rstudio.com/lesson-1.html) loads targets 'small', 'large', and 'coef_regression2_small' using code chunks marked for evaluation.
-
-```{r knitr2}
-deps("knit('report.Rmd')")
-
-deps("render('report.Rmd')")
-
-deps("'report.Rmd'") # These are actually dependencies of 'report.md' (output)
-```
-
-However, **you must explicitly mention each and every target loaded into a report**. The following examples are discouraged in code chunks because they do not reference any particular target directly or literally in a way that static code analysis can detect.
-
-```{r badknitr, eval = FALSE}
-var <- "good_target"
-# Works in isolation, but drake sees "var" literally as a dependency,
-# not "good_target".
-readd(target = var, character_only = TRUE)
-loadd(list = var)
-# All cached items are loaded, but none are treated as dependencies.
-loadd()
-loadd(imports_only = TRUE)
-```
-
-## The `knit()` and `render()` functions
-
-Functions `knit()` and `render()` are special. When you explicitly mention them in a command for a target, you are signaling to `drake` that you have a dynamic report (like an R Markdown `*.Rmd` file). Drake assumes you are using `knit()` from the `knitr` package and `render()` from the `rmarkdown` package. Thus, unless you know exactly what you are doing, **please do not define your own custom `knitr()` or `render()` functions or load different versions of these functions from other packages.** 
 
 ## Functions produced by `Vectorize()`
 
@@ -359,7 +285,7 @@ Some R functions use `.Call()` to run compiled code in the backend. The R code i
 
 ## Directories (folders) are not reproducibly tracked.
 
-In your workflow plan, you can use single quotes to assert that some targets/imports are external files. However, entire directories (i.e. folders) cannot be reproducibly tracked this way. Please see [issue 12](https://github.com/ropensci/drake/issues/12) for a discussion.
+In your workflow plan, you can use `file_in()`, `file_out()`, and `knitr_in()` to assert that some targets/imports are external files. However, entire directories (i.e. folders) cannot be reproducibly tracked this way. Please see [issue 12](https://github.com/ropensci/drake/issues/12) for a discussion.
 
 ## Packages are not tracked as dependencies.
 
@@ -441,9 +367,35 @@ fork_kill_zombies <- function(){
 
 # Storage
 
+## Projects hosted on Dropbox and similar platforms
+
+If download a `drake` project from [Dropbox](https://www.dropbox.com/), you may get an error like the one in [issue 198](https://github.com/ropensci/drake/issues/198):
+
+<pre><code>
+cache pathto/.drake
+connect 61 imports: ...
+connect 200 targets: ...
+Error in rawToChar(as.raw(x)) : 
+  embedded nul in string: 'initial_drake_version\0\0\x9a\x9d\xdc\0J\xe9\0\0\0(\x9d\xf9brם\0\xca)\0\0\xb4\xd7\0\0\0\0\xb9'
+In addition: Warning message:
+In rawToChar(as.raw(x)) :
+  out-of-range values treated as 0 in coercion to raw
+</code></pre>
+
+This is probably because [Dropbox](https://www.dropbox.com/) generates a bunch of "conflicted copy" files when file transfers do not go smoothly. This confuses [storr](https://github.com/richfitz/storr), `drake`'s caching backend.
+
+<pre><code>
+keys/config/aG9vaw (Sandy Sum's conflicted copy 2018-01-31)
+keys/config/am9icw (Sandy Sum's conflicted copy 2018-01-31)
+keys/config/c2VlZA (Sandy Sum's conflicted copy 2018-01-31)
+</code></pre>
+
+Just remove these files and proceed with your work.
+
+
 ## Cache customization is limited
 
-The [storage vignette](https://github.com/ropensci/drake/blob/master/vignettes/storage.Rmd) describes how storage works in `drake`. As explained near the end of that vignette, you can plug custom [storr](https://github.com/richfitz/storr) caches into `make()`. However, non-RDS caches such as `storr_dbi()` may not work with parallel computing. In addition, please do not try to change the short hash algorithm of an existing cache.
+The [storage vignette](https://github.com/ropensci/drake/blob/master/vignettes/storage.Rmd) describes how storage works in `drake`. As explained near the end of that vignette, you can plug custom [storr](https://github.com/richfitz/storr) caches into `make()`. However, non-RDS caches such as `storr_dbi()` may not work with most forms of parallel computing. The `storr::storr_dbi()` cache and many others are not thread-safe. Either use no parallel computing at all or set `parallelism = "future"` with `caching = "master"`. The `"future"` backend is currently experimental, but it allows the master process to do all the caching in order to avoid race conditions.
 
 ## Runtime predictions
 

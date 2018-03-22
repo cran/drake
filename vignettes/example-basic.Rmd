@@ -1,19 +1,17 @@
 ---
-title: "Quickstart"
-subtitle: "A walk through drake's basic example"
-author: "William Michael Landau"
+title: "The basic example"
+subtitle: "A thorough walkthrough of drake's main functionality"
+author: "Will Landau"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
     toc: true
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{quickstart}
+  %\VignetteIndexEntry{example-basic}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-
-![](logo-vignettes.png)
 
 ```{r suppression, echo = F}
 suppressMessages(suppressWarnings(library(drake)))
@@ -25,6 +23,18 @@ knitr::opts_chunk$set(
   warning = TRUE
 )
 ```
+
+This vignette is a walkthrough of `drake`'s main functionality based on the basic example. It sets up the project and runs it repeatedly to demonstrate `drake`'s most important functionality.
+
+# Get the code.
+
+Write the code files to your workspace.
+
+```{r getthequickstartcode, eval = FALSE}
+drake_example("basic")
+```
+
+The new `basic` folder now includes a file structure of a serious `drake` project, plus an `interactive-tutorial.R` to narrate the example. The code is also [online here](https://github.com/ropensci/drake/tree/master/inst/examples/basic).
 
 # Quick examples
 
@@ -42,11 +52,13 @@ outdated(config)                # Everything is up to date.
 Debug errors.
 
 ```{r quickdebug, eval = FALSE}
-failed()                 # Targets that failed in the most recent `make()`
-diagnose()               # Targets that failed in any previous `make()`
-error <- diagnose(large) # Most recent verbose error log of `large`
-str(error)               # Object of class "error"
-error$calls              # Call stack / traceback
+failed()                   # Targets that failed in the most recent `make()`
+context <- diagnose(large) # Diagnostic metadata: errors, warnings, etc.
+error <- context$error
+str(error)                 # Object of class "error"
+error$message
+error$call
+error$calls                # Full traceback of nested calls leading up to the error. # nolint
 ```
 
 Dive deeper into the built-in examples.
@@ -80,10 +92,15 @@ library(drake)
 We need a function to bootstrap larger datasets from `mtcars`.
 
 ```{r sim}
+# Pick a random subset of n rows from a dataset
+random_rows <- function(data, n){
+  data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
+}
+
+# Bootstrapped datasets from mtcars.
 simulate <- function(n){
   # Pick a random set of cars to bootstrap from the mtcars data.
-  index <- sample.int(n = nrow(mtcars), size = n, replace = TRUE)
-  data <- mtcars[index, ]
+  data <- random_rows(data = mtcars, n = n)
 
   # x is the car's weight, and y is the fuel efficiency.
   data.frame(
@@ -152,7 +169,7 @@ vis_drake_graph(config, width = "100%", height = "500px") # Also drake_graph()
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/ropensci/drake/0b76e536/images/outdated.html"
+src = "https://ropensci.github.io/drake/images/outdated.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -230,12 +247,12 @@ results
 
 The `gather` feature reduces a collection of targets to a single target. The resulting commands are long, so gathering is deactivated for the sake of readability.
 
-For the dynamic report `'report.Rmd'`/`'report.md'`, be sure the file names are single-quoted. Single quotes denote file targets/imports, and double quotes denote literal strings that should not be treated as dependencies. To tell `drake` to look for the other dependencies of `'report.md'`, be sure the source file `'report.Rmd'` exists and `knit()` is in the workflow plan command. That way, `drake` searches the active code chunks in `'report.Rmd'` for any targets/imports mentioned in calls to `loadd()` and `readd()`.
+For your `knitr` reports, use `knitr_in()` in your commands so that `report.Rmd` is a dependency and targets loaded with `loadd()` and `readd()` in active code chunks are also dependencies. Use `file_out()` to tell `drake` that the target is a file output. If the file is an output, you do not need to name the target. The target name will be the name of the output file in quotes.
 
 ```{r reportplan}
 report <- drake_plan(
-  report.md = knit('report.Rmd', quiet = TRUE), # nolint
-  file_targets = TRUE, strings_in_dots = "filenames")
+  knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)
+)
 report
 ```
 
@@ -248,7 +265,7 @@ my_plan
 
 # Flexible workflow plan generation
 
-If your workflow does not fit the rigid datasets/analyses/summaries framework, consider using functions `expand_plan()`, `evaluate_plan()`, and `gather_plan()`.
+If your workflow does not fit the rigid datasets/analyses/summaries framework, consider using functions `expand_plan()`, `evaluate_plan()`, `gather_plan()`, and `reduce_plan()`.
 
 ```{r more_expansions_and_plans}
 df <- drake_plan(data = simulate(center = MU, scale = SIGMA))
@@ -268,6 +285,19 @@ evaluate_plan(df, rules = list(MU = 1:2, SIGMA = c(0.1, 1, 10)))
 gather_plan(df)
 
 gather_plan(df, target = "my_summaries", gather = "rbind")
+
+x_plan <- evaluate_plan(
+  drake_plan(x = VALUE),
+  wildcard = "VALUE",
+  values = 1:8
+)
+x_plan
+
+x_plan
+reduce_plan(
+  x_plan, target = "x_sum", pairwise = TRUE,
+  begin = "fun(", op = ", ", end = ")"
+)
 ```
 
 # Run the workflow
@@ -315,7 +345,7 @@ vis_drake_graph(config, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/ropensci/drake/0b76e536/images/built.html"
+src = "https://ropensci.github.io/drake/images/built.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -391,7 +421,7 @@ vis_drake_graph(config, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/ropensci/drake/0b76e536/images/reg2.html"
+src = "https://ropensci.github.io/drake/images/reg2.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -411,6 +441,19 @@ reg2 <- function(d) {
     lm(y ~ x3, data = d) # I indented here.
 }
 outdated(config) # Everything is up to date.
+```
+
+Drake cares about nested functions too: nontrivial changes to `random_rows()` will propagate to `simulate()`  and all the downstream targets.
+
+```{r, changerandomrows}
+random_rows <- function(data, n){
+  n <- n + 1
+  data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
+}
+
+outdated(config)
+
+make(my_plan)
 ```
 
 Need to add new work on the fly? Just append rows to the workflow plan. If the rest of your workflow is up to date, only the new work is run.
@@ -442,20 +485,55 @@ clean(destroy = TRUE, verbose = FALSE) # removes the cache entirely
 
 # Automatic watching for changed dependencies
 
-As you have seen with `reg2()`, `drake` reacts to changes in dependencies. In other words, `make()` notices when your dependencies are different from last time, rebuilds any affected targets, and continues downstream. In particular, `drake` watches for nontrivial changes to the following.
+As you have seen with `reg2()`, `drake` reacts to changes in dependencies. In other words, `make()` notices when your dependencies are different from last time, rebuilds any affected targets, and continues downstream. In particular, `drake` watches for nontrivial changes to the following items as long as they are connected to your workflow.
 
-1. Other imported functions, whether user-defined or from packages.
-1. For imported functions from your environment, any nested functions also in your environment or from packages.
-1. Commands in your workflow plan data frame.
-1. Global variables mentioned in the commands or imported functions.
-1. The output values of upstream targets.
-1. For [dynamic knitr reports](https://yihui.name/knitr/) generated with the right commands, targets and imports mentioned in calls to `readd()` and `loadd()` in the code chunks to be evaluated. `Drake` treats these targets and imports as dependencies of the compiled output target (say, `'report.md'` or `report.html`). **To activate this feature, the command in your workflow plan data frame must call `knitr::knit()` or `rmarkdown::render()`. Examples of acceptable commands:
-    - `knit('report.Rmd')`
-    - `knitr::knit(input = 'report.Rmd', quiet = TRUE)`
-    - `render('report.Rmd')`
-    - `rmarkdown::('report.Rmd', output_file = "report.html")`
+1. The output values of targets in your workflow plan.
+1. The commands themselves.
+1. External files, if their names are enclosed in single quotes in commands.
+1. R objects mentioned in the commands, including but not limited to user-defined functions and functions from packages.
+1. R objects (but not files) nested inside user-defined functions.
+1. For packages exposed with `expose_imports()`, R objects (but not files) nested inside package functions.
+1. Files declared with `file_in()` inside your commands or custom functions.
+1. `knitr` reports declared with `knitr_in()` in your commands, along with any targets explicitly loaded in active code chunks with `loadd()` or `readd()`. Do not use `knitr_in()` inside your imported functions.
+1. Files declared with `file_out()` in your commands. Do not use `file_out()` inside your imported functions.
 
-To enhance reproducibility beyond the scope of drake, you might consider [packrat](https://rstudio.github.io/packrat) and [Docker](https://www.docker.com/). [Packrat](https://rstudio.github.io/packrat) creates a tightly-controlled local library of packages to extend the shelf life of your project. And with [Docker](https://www.docker.com/), you can execute your project on a [virtual machine](https://en.wikipedia.org/wiki/Virtual_machine) to ensure platform independence. Together, [packrat](https://rstudio.github.io/packrat) and [Docker](https://www.docker.com/) can help others reproduce your work even if they have different software and hardware.
+To enhance reproducibility beyond the scope of drake, you might consider [packrat](https://rstudio.github.io/packrat) and a container tool (such as [Singularity](http://singularity.lbl.gov/) or [Docker](https://www.docker.com/). [Packrat](https://rstudio.github.io/packrat) creates a tightly-controlled local library of packages to extend the shelf life of your project. And with containerization, you can execute your project on a [virtual machine](https://en.wikipedia.org/wiki/Virtual_machine) to ensure platform independence. Together, [packrat](https://rstudio.github.io/packrat) and containers can help others reproduce your work even if they have different software and hardware.
+
+# A note on tidy evaluation
+
+Running commands in your R console is not always exactly like running them with `make()`. That's because `make()` uses tidy evaluation as implemented in the [`rlang` package](https://github.com/tidyverse/rlang).
+
+```{r demotidyeval}
+# This workflow plan uses rlang's quasiquotation operator `!!`.
+my_plan <- drake_plan(list = c(
+  little_b = "\"b\"",
+  letter = "!!little_b"
+))
+my_plan
+make(my_plan)
+readd(letter)
+```
+
+For the commands you specify the free-form `...` argument, `drake_plan()` also supports tidy evaluation. For example, it supports quasiquotation with the `!!` argument. Use `tidy_evaluation = FALSE` or the `list` argument to suppress this behavior.
+
+```{r testquasiquoplan}
+my_variable <- 5
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable")
+)
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable"),
+  tidy_evaluation = FALSE
+)
+```
+
+For instances of `!!` that remain in the workflow plan, `make()` will run these commands in tidy fashion, evaluating the `!!` operator using the environment you provided.
 
 # Need more speed?
 

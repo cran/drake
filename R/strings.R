@@ -1,17 +1,14 @@
-# All functions in this file are taken from eply:
-# https://github.com/ropensci/eply
-
 #' @title Put quotes around each element of a character vector.
 #' @description Quotes are important in drake.
 #' In workflow plan data frame commands,
 #' single-quoted targets denote physical files,
 #' and double-quoted strings are treated as ordinary string literals.
-#' @seealso \code{\link{drake_unquote}}, \code{\link{drake_strings}}
+#' @seealso [drake_unquote()], [drake_strings()]
 #' @export
 #' @return character vector with quotes around it
 #' @param x character vector or object to be coerced to character.
-#' @param single Add single quotes if \code{TRUE}
-#' and double quotes otherwise.
+#' @param single Add single quotes if `TRUE`
+#'   and double quotes otherwise.
 #' @examples
 #' # Single-quote this string.
 #' drake_quotes("abcd", single = TRUE) # "'abcd'"
@@ -19,6 +16,9 @@
 #' drake_quotes("abcd") # "\"abcd\""
 drake_quotes <- function(x = NULL, single = FALSE){
   stopifnot(is.logical(single))
+  if (!length(x)){
+    return(character(0))
+  }
   if (single){
     paste0("'", x, "'")
   } else {
@@ -27,36 +27,36 @@ drake_quotes <- function(x = NULL, single = FALSE){
 }
 
 #' @title Remove leading and trailing
-#' escaped quotes from character strings.
+#'   escaped quotes from character strings.
 #' @description Quotes are important in drake.
 #' In workflow plan data frame commands,
 #' single-quoted targets denote physical files,
 #' and double-quoted strings are treated as ordinary string literals.
-#' @seealso \code{\link{drake_quotes}}, \code{\link{drake_strings}}
+#' @seealso [drake_quotes()], [drake_strings()]
 #' @export
 #' @return character vector without leading
-#' or trailing escaped quotes around
-#' the elements
+#'   or trailing escaped quotes around
+#'   the elements
 #' @param x character vector
-#' @param deep remove all outer quotes if \code{TRUE}
-#' and only the outermost set otherwise. Single and double
-#' quotes are treated interchangeably, and matching is not checked.
+#' @param deep deprecated logical.
 #' @examples
 #' x <- "'abcd'"
 #' # Remove the literal quotes around x.
 #' drake_unquote(x) # "abcd"
 drake_unquote <- function(x = NULL, deep = FALSE){
   if (deep){
-    gsub("^[\"']*|[\"']*$", "", x)
-  } else {
-    gsub("^[\"']|[\"']$", "", x)
+    warning(
+      "The `deep` argument to `drake_unquote()` is deprecated",
+      call. = FALSE
+    )
   }
+  gsub(pattern = quotes_regex, replacement = "\\1\\2", x = x)
 }
 
 #' @title Turn valid expressions into character strings.
 #' @description This function may be useful for
-#' constructing workflow plan data frames.
-#' @seealso \code{\link{drake_quotes}}, \code{\link{drake_unquote}}
+#'   constructing workflow plan data frames.
+#' @seealso [drake_quotes()], [drake_unquote()]
 #' @export
 #' @return a character vector
 #' @param ... unquoted symbols to turn into character strings.
@@ -71,26 +71,45 @@ drake_strings <- function(...){
   out
 }
 
-#' @title Converts an ordinary character string
-#' into a filename understandable by drake.
-#' @description This function simply wraps single quotes around \code{x}.
-#' Quotes are important in drake.
-#' In workflow plan data frame commands,
-#' single-quoted targets denote physical files,
-#' and double-quoted strings are treated as ordinary string literals.
+#' @title Tell `drake` that you want information
+#'   on a *file* (target or import), not an ordinary object.
+#' @description This function simply wraps literal double quotes around
+#'   the argument `x` so `drake` knows it is the name of a file.
+#'   Use when you are calling functions like `deps()`: for example,
+#'   `deps(file_store("report.md"))`. See the examples for details.
+#'   Internally, `drake` wraps the names of file targets/imports
+#'   inside literal double quotes to avoid confusion between
+#'   files and generic R objects.
 #' @export
 #' @return A single-quoted character string: i.e., a filename
-#' understandable by drake.
+#'   understandable by drake.
 #' @param x character string to be turned into a filename
-#' understandable by drake (i.e., a string with literal
-#' single quotes on both ends).
+#'   understandable by drake (i.e., a string with literal
+#'   single quotes on both ends).
 #' @examples
-#' # Wraps the string in single quotes.
-#' as_drake_filename("my_file.rds") # "'my_file.rds'"
-as_drake_filename <- function(x){
-  drake::drake_quotes(x, single = TRUE)
+#'   # Wraps the string in single quotes.
+#'   file_store("my_file.rds") # "'my_file.rds'"
+#'   \dontrun{
+#'   test_with_dir("contain side effects", {
+#'   load_basic_example() # Get the code with drake_example("basic").
+#'   make(my_plan) # Run the workflow to build the targets
+#'   list.files() # Should include input "report.Rmd" and output "report.md".
+#'   head(readd(small)) # You can use symbols for ordinary objects.
+#'   # But if you want to read cached info on files, use `file_store()`.
+#'   readd(file_store("report.md"), character_only = TRUE) # File fingerprint.
+#'   deps(file_store("report.Rmd"))
+#'   config <- drake_config(my_plan)
+#'   dependency_profile(file_store("report.Rmd"), config = config)
+#'   loadd(list = file_store("report.md"))
+#'   get(file_store("report.md"))
+#'   })
+#'   }
+file_store <- function(x){
+  drake::drake_quotes(x, single = FALSE)
 }
 
 wide_deparse <- function(x){
   paste(deparse(x), collapse = "\n")
 }
+
+quotes_regex <- "^(?:'(.*)'|\"(.*)\")$"

@@ -11,7 +11,7 @@ Names of all the drake examples.
 }
 \description{
 The \code{'basic'} example is the one from the
-quickstart vignette: \code{vignette('quickstart')}.
+basic example vignette: \code{vignette("example-basic")}.
 All are in the \code{inst/examples/} folder
 of the package source code.
 }
@@ -19,7 +19,7 @@ of the package source code.
 \dontrun{
 test_with_dir("Quarantine side effects.", {
 drake_examples() # List all the drake examples.
-# Sets up the same example as the quickstart vignette.
+# Sets up the same example as the basic example vignette.
 drake_example("basic")
 # Sets up the SLURM example.
 drake_example("slurm")
@@ -27,5 +27,5 @@ drake_example("slurm")
 }
 }
 \seealso{
-\code{\link{drake_example}}, \code{\link{make}}
+\code{\link[=drake_example]{drake_example()}}, \code{\link[=make]{make()}}
 }

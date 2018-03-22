@@ -8,6 +8,9 @@ clean(destroy = TRUE, verbose = FALSE)
 unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 knitr::opts_chunk$set(collapse = TRUE)
 
+## ----getthequickstartcode, eval = FALSE----------------------------------
+#  drake_example("gsp")
+
 ## ----masterdata2---------------------------------------------------------
 library(Ecdat)
 data(Produc)
@@ -62,13 +65,19 @@ rmspe_results_plan <- gather_plan(
 
 ## ----masterknitrreport---------------------------------------------------
 output_plan <- drake_plan(
-  rmspe.pdf = ggsave(filename = "rmspe.pdf", plot = plot_rmspe(rmspe)),
-  report.md = knit("report.Rmd", quiet = TRUE),
-  file_targets = TRUE,
-  strings_in_dots = "literals"
+  ggsave(
+    filename = file_out("rmspe.pdf"),
+    plot = plot_rmspe(rmspe)
+  ),
+  knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)
 )
 
 head(output_plan)
+
+## ----copyreport----------------------------------------------------------
+local <- file.path("examples", "gsp", "report.Rmd")
+path <- system.file(path = local, package = "drake", mustWork = TRUE)
+file.copy(from = path, to = "report.Rmd", overwrite = TRUE)
 
 ## ----wholeplan-----------------------------------------------------------
 whole_plan <- rbind(model_plan, rmspe_plan, rmspe_results_plan, output_plan)
@@ -78,11 +87,6 @@ plot_rmspe <- function(rmspe){
   ggplot(rmspe) +
     geom_histogram(aes(x = rmspe), bins = 30)
 }
-
-## ----copyreport----------------------------------------------------------
-local <- file.path("examples", "gsp", "report.Rmd")
-path <- system.file(path = local, package = "drake", mustWork = TRUE)
-file.copy(from = path, to = "report.Rmd", overwrite = TRUE)
 
 ## ----appmake-------------------------------------------------------------
 make(whole_plan, verbose = FALSE)

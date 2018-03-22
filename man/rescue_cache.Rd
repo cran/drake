@@ -5,9 +5,10 @@
 \title{Try to repair a drake cache that is prone
 to throwing \code{storr}-related errors.}
 \usage{
-rescue_cache(targets = NULL, path = getwd(), search = TRUE, verbose = 1,
-  force = FALSE, cache = drake::get_cache(path = path, search = search,
-  verbose = verbose, force = force), jobs = 1, garbage_collection = FALSE)
+rescue_cache(targets = NULL, path = getwd(), search = TRUE,
+  verbose = drake::default_verbose(), force = FALSE,
+  cache = drake::get_cache(path = path, search = search, verbose = verbose,
+  force = force), jobs = 1, garbage_collection = FALSE)
 }
 \arguments{
 \item{targets}{Character vector, names of the targets to rescue.
@@ -17,21 +18,39 @@ as well as true targets.
 If \code{targets} is \code{NULL}, everything in the
 cache is rescued.}
 
-\item{path}{same as for \code{\link{get_cache}()}}
+\item{path}{Root directory of the drake project,
+or if \code{search} is \code{TRUE}, either the
+project root or a subdirectory of the project.
+Ignored if a \code{cache} is supplied.}
 
-\item{search}{same as for \code{\link{get_cache}()}}
+\item{search}{logical. If \code{TRUE}, search parent directories
+to find the nearest drake cache. Otherwise, look in the
+current working directory only.
+Ignored if a \code{cache} is supplied.}
 
-\item{verbose}{same as for \code{\link{get_cache}()}}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 
-\item{force}{same as for \code{\link{get_cache}()}}
+\item{force}{logical, whether to load the cache
+despite any back compatibility issues with the
+running version of drake.}
 
-\item{cache}{a `storr` cache object}
+\item{cache}{a \code{storr} cache object}
 
 \item{jobs}{number of jobs for light parallelism
 (disabled on Windows)}
 
 \item{garbage_collection}{logical, whether to do garbage collection
-as a final step. See \code{\link{drake_gc}} and \code{\link{clean}}
+as a final step. See \code{\link[=drake_gc]{drake_gc()}} and \code{\link[=clean]{clean()}}
 for details.}
 }
 \value{
@@ -57,6 +76,6 @@ rescue_cache(targets = c("small", "large"))
 }
 }
 \seealso{
-\code{\link{get_cache}}, \code{\link{cached}},
-\code{\link{drake_gc}}, \code{\link{clean}}
+\code{\link[=get_cache]{get_cache()}}, \code{\link[=cached]{cached()}},
+\code{\link[=drake_gc]{drake_gc()}}, \code{\link[=clean]{clean()}}
 }

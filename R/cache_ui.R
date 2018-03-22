@@ -1,47 +1,47 @@
 #' @title Enumerate cached targets or check if a target is cached.
-#' @description Read/load a cached item with \code{\link{readd}()}
-#' or \code{\link{loadd}()}.
-#' @seealso \code{\link{built}}, \code{\link{imported}},
-#' \code{\link{readd}}, \code{\link{loadd}},
-#' \code{\link{drake_plan}}, \code{\link{make}}
+#' @description Read/load a cached item with [readd()]
+#' or [loadd()].
+#' @seealso [built()], [imported()],
+#'   [readd()], [loadd()],
+#'   [drake_plan()], [make()]
 #' @export
 #' @return Either a named logical indicating whether the given
-#' targets or cached or a character vector listing all cached
-#' items, depending on whether any targets are specified
+#'   targets or cached or a character vector listing all cached
+#'   items, depending on whether any targets are specified
+#'
+#' @inheritParams drake_config
 #'
 #' @param ... objects to load from the cache, as names (unquoted)
-#' or character strings (quoted). Similar to \code{...} in
-#' \code{\link{remove}(...)}.
+#'   or character strings (quoted). Similar to `...` in
+#'   \code{\link{remove}(...)}.
 #'
 #' @param list character vector naming objects to be loaded from the
-#' cache. Similar to the \code{list} argument of \code{\link{remove}()}.
+#'   cache. Similar to the `list` argument of [remove()].
 #'
 #' @param no_imported_objects logical, applies only when
-#' no targets are specified and a list of cached targets is returned.
-#' If \code{no_imported_objects} is \code{TRUE}, then \code{cached()}
-#' shows built targets (with commands) plus imported files,
-#' ignoring imported objects. Otherwise, the full collection of
-#' all cached objects will be listed. Since all your functions and
-#' all their global variables are imported, the full list of
-#' imported objects could get really cumbersome.
+#'   no targets are specified and a list of cached targets is returned.
+#'   If `no_imported_objects` is `TRUE`, then `cached()`
+#'   shows built targets (with commands) plus imported files,
+#'   ignoring imported objects. Otherwise, the full collection of
+#'   all cached objects will be listed. Since all your functions and
+#'   all their global variables are imported, the full list of
+#'   imported objects could get really cumbersome.
 #'
-#' @param cache drake cache. See \code{\link{new_cache}()}.
-#' If supplied, \code{path} and \code{search} are ignored.
+#' @param cache drake cache. See [new_cache()].
+#'   If supplied, `path` and `search` are ignored.
 #'
 #' @param path Root directory of the drake project,
-#' or if \code{search} is \code{TRUE}, either the
-#' project root or a subdirectory of the project.
-#' Ignored if a \code{cache} is supplied.
+#'   or if `search` is `TRUE`, either the
+#'   project root or a subdirectory of the project.
+#'   Ignored if a `cache` is supplied.
 #'
-#' @param search logical. If \code{TRUE}, search parent directories
-#' to find the nearest drake cache. Otherwise, look in the
-#' current working directory only.
-#' Ignored if a \code{cache} is supplied.
-#'
-#' @param verbose whether to print console messages
+#' @param search logical. If `TRUE`, search parent directories
+#'   to find the nearest drake cache. Otherwise, look in the
+#'   current working directory only.
+#'   Ignored if a `cache` is supplied.
 #'
 #' @param namespace character scalar, name of the storr namespace
-#' to use for listing objects
+#'   to use for listing objects
 #'
 #' @param jobs number of jobs/workers for parallel processing
 #'
@@ -76,7 +76,7 @@ cached <- function(
   path = getwd(),
   search = TRUE,
   cache = NULL,
-  verbose = 1,
+  verbose = drake::default_verbose(),
   namespace = NULL,
   jobs = 1
 ){
@@ -118,28 +118,20 @@ is_cached <- function(targets, no_imported_objects, cache, namespace, jobs){
 list_cache <- function(no_imported_objects, cache, namespace, jobs){
   targets <- cache$list(namespace = namespace)
   if (no_imported_objects){
-    plan <- read_drake_plan(cache = cache)
-    targets <- no_imported_objects(targets = targets, plan = plan, jobs = jobs)
+    targets <- no_imported_objects(
+      targets = targets, cache = cache, jobs = jobs)
   }
   targets
 }
 
 #' @title List all the built targets (non-imports) in the cache.
 #' @description Targets are listed in the workflow plan
-#' data frame (see \code{\link{drake_plan}()}.
-#' @seealso \code{\link{cached}}, \code{\link{loadd}},
-#' \code{link{imported}}
+#' data frame (see [drake_plan()].
+#' @seealso [cached()], [loadd()],
+#'   \code{link{imported}}
 #' @export
 #' @return Character vector naming the built targets in the cache.
-#' @param cache drake cache. See \code{\link{new_cache}()}.
-#' If supplied, \code{path} and \code{search} are ignored.
-#' @param path Root directory of the drake project,
-#' or if \code{search} is \code{TRUE}, either the
-#' project root or a subdirectory of the project.
-#' @param search logical. If \code{TRUE}, search parent directories
-#' to find the nearest drake cache. Otherwise, look in the
-#' current working directory only.
-#' @param verbose whether to print console messages
+#' @inheritParams cached
 #' @param jobs number of jobs/workers for parallel processing
 #' @examples
 #' \dontrun{
@@ -153,17 +145,16 @@ list_cache <- function(no_imported_objects, cache, namespace, jobs){
 built <- function(
   path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = TRUE,
+  verbose = drake::default_verbose(),
   jobs = 1
 ){
   if (is.null(cache)){
     return(character(0))
   }
-  plan <- read_drake_plan(cache = cache)
   cache$list(namespace = cache$default_namespace) %>%
     parallel_filter(
       f = function(target){
-        !is_imported(target = target, plan = plan)
+        !is_imported(target = target, cache = cache)
       },
       jobs = jobs
     )
@@ -171,27 +162,23 @@ built <- function(
 
 #' @title List all the imports in the drake cache.
 #' @description An import is a non-target object processed
-#' by \code{\link{make}()}. Targets in the workflow
-#' plan data frame (see \code{\link{drake_config}()}
+#' by [make()]. Targets in the workflow
+#' plan data frame (see [drake_config()]
 #' may depend on imports.
-#' @seealso \code{\link{cached}}, \code{\link{loadd}},
-#' \code{\link{built}}
+#' @seealso [cached()], [loadd()],
+#'   [built()]
 #' @export
 #' @return Character vector naming the imports in the cache.
+#'
+#' @inheritParams cached
+#'
 #' @param files_only logical, whether to show imported files only
-#' and ignore imported objects. Since all your functions and
-#' all their global variables are imported, the full list of
-#' imported objects could get really cumbersome.
-#' @param cache drake cache. See \code{\link{new_cache}()}.
-#' If supplied, \code{path} and \code{search} are ignored.
-#' @param path Root directory of the drake project,
-#' or if \code{search} is \code{TRUE}, either the
-#' project root or a subdirectory of the project.
-#' @param search logical. If \code{TRUE}, search parent directories
-#' to find the nearest drake cache. Otherwise, look in the
-#' current working directory only.
-#' @param verbose whether to print console messages
+#'   and ignore imported objects. Since all your functions and
+#'   all their global variables are imported, the full list of
+#'   imported objects could get really cumbersome.
+#'
 #' @param jobs number of jobs/workers for parallel processing
+#'
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -204,17 +191,16 @@ built <- function(
 imported <- function(
   files_only = FALSE, path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = TRUE,
+  verbose = drake::default_verbose(),
   jobs = 1
 ){
   if (is.null(cache)){
     return(character(0))
   }
-  plan <- read_drake_plan(cache = cache)
   targets <- cache$list(namespace = cache$default_namespace) %>%
     parallel_filter(
       f = function(target){
-        is_imported(target = target, plan = plan)
+        is_imported(target = target, cache = cache)
       },
       jobs = jobs
     )
@@ -229,38 +215,42 @@ targets_from_dots <- function(dots, list) {
     is.character(x), NA, USE.NAMES = FALSE)))
     stop("... must contain names or character strings")
   names <- vapply(dots, as.character, "")
-  if (length(names) == 0L)
-    names <- character()
-  .Primitive("c")(names, list) %>% unique
+  targets <- c(names, list) %>% unique
+  standardize_filename(targets)
 }
 
-imported_only <- function(targets, plan, jobs) {
+imported_only <- function(targets, cache, jobs) {
   parallel_filter(
     x = targets,
     f = function(target){
-      is_imported(target = target, plan = plan)
+      is_imported(target = target, cache = cache)
     },
     jobs = jobs
   )
 }
 
-no_imported_objects <- function(targets, plan, jobs) {
+no_imported_objects <- function(targets, cache, jobs) {
   parallel_filter(
     x = targets,
     f = function(target){
-      is_built_or_imported_file(target = target, plan = plan)
+      is_built_or_imported_file(target = target, cache = cache)
     },
     jobs = jobs
   )
 }
 
-is_imported <- Vectorize(function(target, plan) {
-  !(target %in% plan$target)
+is_imported <- Vectorize(function(target, cache) {
+  cache$exists(key = target) &&
+  diagnose(
+    target = target,
+    character_only = TRUE,
+    cache = cache
+  )$imported
 },
 "target", SIMPLIFY = TRUE)
 
-is_built_or_imported_file <- Vectorize(function(target, plan) {
-  imported <- is_imported(target = target, plan = plan)
+is_built_or_imported_file <- Vectorize(function(target, cache) {
+  imported <- is_imported(target = target, cache = cache)
   !imported | (imported & is_file(target))
 },
 "target", SIMPLIFY = TRUE)

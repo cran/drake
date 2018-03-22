@@ -3,22 +3,44 @@
 \name{drake_plan}
 \alias{drake_plan}
 \title{Create a workflow plan data frame
-for the \code{plan} argument of \code{\link{make}}.}
+for the \code{plan} argument of \code{\link[=make]{make()}}.}
 \usage{
-drake_plan(..., list = character(0), file_targets = FALSE,
-  strings_in_dots = c("filenames", "literals"))
+drake_plan(..., list = character(0), file_targets = NULL,
+  strings_in_dots = pkgconfig::get_config("drake::strings_in_dots"),
+  tidy_evaluation = TRUE)
 }
 \arguments{
 \item{...}{A collection of symbols/targets
 with commands assigned to them. See the examples for details.}
 
-\item{list}{A named list of targets, where the values
-are commands.}
+\item{list}{A named character vector of commands
+with names as targets.}
 
-\item{file_targets}{logical, whether the targets should be
-(single-quoted) external file targets.}
+\item{file_targets}{deprecated argument. See \code{\link[=file_out]{file_out()}},
+\code{\link[=file_in]{file_in()}}, and \code{\link[=knitr_in]{knitr_in()}} for the current way to work
+with files.
+In the past, this argument was a logical to indicate whether the
+target names should be single-quoted to denote files. But the newer
+interface is much better.}
 
-\item{strings_in_dots}{Character scalar,
+\item{strings_in_dots}{deprecated argument for handling strings in
+commands specified in the \code{...} argument. Defaults to \code{NULL} for backward
+compatibility. New code should use \code{\link[=file_out]{file_out()}}, \code{\link[=file_in]{file_in()}}, and
+\code{\link[=knitr_in]{knitr_in()}} to specify file names and set this argument to \code{"literals"},
+which will at some point become the only accepted value.
+
+To fully embrace the glorious new file API, call
+\code{pkgconfig::set_config("drake::strings_in_dots" = "literals")}
+right when you start your R session.
+That way, \code{drake} totally relies on \code{\link[=file_in]{file_in()}}, \code{\link[=file_out]{file_out()}},
+and \code{\link[=knitr_in]{knitr_in()}} to coordinate input and output files, as
+opposed to deprecated features like single-quotes
+(and in the case of \code{knitr} reports,
+explicit calls to \code{knitr::knit()} and \code{rmarkdown::render()} in commands).
+This is why the default value of \code{strings_in_dots} is
+\code{pkgconfig::get_config("drake::strings_in_dots")}.
+
+In the past, this argument was a character scalar denoting
 how to treat quoted character strings in the commands
 specified through \code{...}.
 Set to \code{"filenames"} to treat all these strings as
@@ -30,14 +52,19 @@ you cannot simply leave literal quotes alone in the
 \code{...} argument. R will either convert all these quotes
 to single quotes or double quotes. Literal quotes in the
 \code{list} argument are left alone.}
+
+\item{tidy_evaluation}{logical, whether to use tidy evaluation
+such as quasiquotation
+when evaluating commands passed through the free-form
+\code{...} argument.}
 }
 \value{
-A data frame of targets and commands.
+A data frame of targets and commands. See the details
+for optional columns you can append manually post-hoc.
 }
 \description{
 Turns a named collection of target/command pairs into
-a workflow plan data frame for \code{\link{make}()} and
-\code{\link{check}()}. You can give the commands
+a workflow plan data frame for \code{\link[=make]{make()}}. You can give the commands
 as named expressions, or you can use the \code{list}
 argument to supply them as character strings.
 }
@@ -47,39 +74,71 @@ with a \code{target} column and a \code{command} column.
 Targets are the objects and files that drake generates,
 and commands are the pieces of R code that produce them.
 
-For file inputs and targets, drake uses single quotes.
-Double quotes are reserved for ordinary strings.
-The distinction is important because drake thinks about
-how files, objects, targets, etc. depend on each other.
-Quotes in the \code{list} argument are left alone,
-but R messes with quotes when it parses the free-form
-arguments in \code{...}, so use the \code{strings_in_dots}
-argument to control the quoting in \code{...}.
+To use custom files in your workflow plan,
+use the \code{\link[=file_in]{file_in()}}, \code{\link[=knitr_in]{knitr_in()}}, and
+\code{\link[=file_out]{file_out()}} functions in your commands.
+the examples in this help file provide some guidance.
+
+Besides the \code{target} and \code{command} columns, there are optional columns
+you may append to your workflow plan data frame:
+\itemize{
+\item \code{trigger}: a character vector of triggers. A trigger is a rule for
+when to cause a target to (re)build. See \code{\link[=triggers]{triggers()}} for your options.
+For a walkthrough, see
+\url{https://github.com/ropensci/drake/blob/master/vignettes/debug.Rmd#test-with-triggers}. # nolint
+\item \code{retries}: number of times to retry a target if it fails
+to build the first time.
+\item \code{timeout}: Seconds of overall time to allow before imposing
+a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+Assign target-level timeout times with an optional \code{timeout}
+column in \code{plan}.
+\item \code{cpu}: Seconds of cpu time to allow before imposing
+a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+Assign target-level cpu timeout times with an optional \code{cpu}
+column in \code{plan}.
+\item \code{elapsed}: Seconds of elapsed time to allow before imposing
+a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+Assign target-level elapsed timeout times with an optional \code{elapsed}
+column in \code{plan}.
+\item \code{evaluator}: An experimental column. Each entry is a function
+passed to the \code{evaluator} argument of \code{future::future()}
+for each worker in \code{make(..., parallelism = "future")}.
+}
 }
 \examples{
-# Create example workflow plan data frames for make()
-drake_plan(small = simulate(5), large = simulate(50))
-# Commands can be multi-line code chunks.
-small_plan <- drake_plan(
-  small_target = {
-    local_object <- 1 + 1
-    2 + sqrt(local_object)
-  }
+test_with_dir("Contain side effects", {
+# Create workflow plan data frames.
+mtcars_plan <- drake_plan(
+  write.csv(mtcars[, c("mpg", "cyl")], file_out("mtcars.csv")),
+  value = read.csv(file_in("mtcars.csv")),
+  strings_in_dots = "literals"
 )
-small_plan
-\dontrun{
-make(small_plan)
-cached()
-readd(small_target)
-# local_object only applies to the code chunk.
-ls() # your environment is protected (local_object not found)
-}
-# For tighter control over commands, use the `list` argument.
-drake_plan(list = c(x = "1 + 1", y = "sqrt(x)"))
-# This becomes important for file targets,
-# which you must put in single quotes.
-# (Double quotes are for string literals.)
-drake_plan(data = readRDS("my_data.rds"))
-drake_plan(my_file.rds = saveRDS(1+1, "my_file.rds"), file_targets = TRUE,
-  strings_in_dots = "literals")
+mtcars_plan
+make(mtcars_plan) # Makes `mtcars.csv` and then `value`
+head(readd(value))
+# You can use knitr inputs too. See the top command below.
+load_basic_example()
+head(my_plan)
+# The `knitr_in("report.Rmd")` tells `drake` to dive into the active
+# code chunks to find dependencies.
+# There, `drake` sees that `small`, `large`, and `coef_regression2_small`
+# are loaded in with calls to `loadd()` and `readd()`.
+deps("report.Rmd")
+# Are you a fan of tidy evaluation?
+my_variable <- 1
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable")
+)
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable"),
+  tidy_evaluation = FALSE
+)
+# For instances of !! that remain unevaluated in the workflow plan,
+# make() will run these commands in tidy fashion,
+# evaluating the !! operator using the environment you provided.
+})
 }

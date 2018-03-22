@@ -143,6 +143,22 @@ future::plan()
 #  drake_batchtools_tmpl_file("sge")   # Writes sge-simple.tmpl
 #  drake_batchtools_tmpl_file("slurm") # Writes batchtools.slurm.tmpl
 
+## ----democustomfutureevaluators, eval = FALSE----------------------------
+#  library(future)
+#  library(drake)
+#  load_basic_example()
+#  remote <- future::plan(multisession)
+#  local <- future::plan(multicore)
+#  evaluator <- NULL
+#  # Make the targets with the multisession future backend...
+#  for (i in seq_len(nrow(my_plan))){
+#    evaluator <- c(evaluator, remote)
+#  }
+#  # ...except for the R Markdown report.
+#  evaluator[[1]] <- local
+#  my_plan$evaluator <- evaluator
+#  make(my_plan, parallelism = "future", jobs = 8)
+
 ## ----Makefilehpc, eval = FALSE-------------------------------------------
 #  make(my_plan, parallelism = "Makefile", jobs = 2)
 
@@ -168,7 +184,7 @@ r_recipe_wildcard()
 #    recipe_command = "R -e 'R_RECIPE' -q")
 
 ## ----makefilerecipefunction----------------------------------------------
-Makefile_recipe()
+Makefile_recipe(cache_path = "just_use_the_default")
 
 Makefile_recipe(
   recipe_command = "R -e 'R_RECIPE' -q",
@@ -177,7 +193,7 @@ Makefile_recipe(
 )
 
 ## ----reappendrrecipe-----------------------------------------------------
-Makefile_recipe(recipe_command = "R -q -e")
+Makefile_recipe(recipe_command = "R -q -e", cache_path = "supplied_by_default")
 
 ## ----examplerecipes, eval = FALSE----------------------------------------
 #  make(my_plan, parallelism = "Makefile", jobs = 4)

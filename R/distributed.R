@@ -1,12 +1,12 @@
 #' @title Do the preparatory work
-#' for \code{\link{make}()} with a distributed computing
-#' backend (see the \code{parallelism} argument of \code{\link{make}()}).
+#'   for [make()] with a distributed computing
+#'   backend (see the `parallelism` argument of [make()]).
 #' @description For internal use only. Exported to flesh out some
 #' of the more advanced examples.
 #' @export
 #' @keywords internal
 #' @param config Internal configuration list from
-#' \code{\link{drake_config}()}.
+#'   [drake_config()].
 #' @return Nothing.
 #' @examples
 #' \dontrun{
@@ -43,8 +43,10 @@ finish_distributed <- function(config){
 
 build_distributed <- function(target, meta_list, cache_path){
   config <- recover_drake_config(cache_path = cache_path)
-  do_prework(config = config, verbose_packages = FALSE)
-  prune_envir(targets = target, config = config)
+  config$hook({
+    do_prework(config = config, verbose_packages = FALSE)
+    prune_envir(targets = target, config = config)
+  })
   if (is.null(meta_list)){
     meta_list <- meta_list(targets = target, config = config)
     do_build <- should_build_target(
@@ -56,7 +58,7 @@ build_distributed <- function(target, meta_list, cache_path){
       return(invisible())
     }
   }
-  drake_build(
+  build_and_store(
     target = target,
     meta = meta_list[[target]],
     config = config

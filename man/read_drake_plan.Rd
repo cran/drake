@@ -3,25 +3,36 @@
 \name{read_drake_plan}
 \alias{read_drake_plan}
 \title{Read the workflow plan
-from your last attempted call to \code{\link{make}()}.}
+from your last attempted call to \code{\link[=make]{make()}}.}
 \usage{
 read_drake_plan(path = getwd(), search = TRUE, cache = NULL,
-  verbose = TRUE)
+  verbose = drake::default_verbose())
 }
 \arguments{
 \item{path}{Root directory of the drake project,
 or if \code{search} is \code{TRUE}, either the
-project root or a subdirectory of the project.}
+project root or a subdirectory of the project.
+Ignored if a \code{cache} is supplied.}
 
 \item{search}{logical. If \code{TRUE}, search parent directories
 to find the nearest drake cache. Otherwise, look in the
-current working directory only.}
+current working directory only.
+Ignored if a \code{cache} is supplied.}
 
-\item{cache}{optional drake cache. See code{\link{new_cache}()}.
-If \code{cache} is supplied,
-the \code{path} and \code{search} arguments are ignored.}
+\item{cache}{drake cache. See \code{\link[=new_cache]{new_cache()}}.
+If supplied, \code{path} and \code{search} are ignored.}
 
-\item{verbose}{whether to print console messages}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 }
 \value{
 A workflow plan data frame.
@@ -39,5 +50,5 @@ read_drake_plan() # Retrieve the workflow plan data frame from the cache.
 }
 }
 \seealso{
-\code{\link{read_drake_config}}
+\code{\link[=read_drake_config]{read_drake_config()}}
 }

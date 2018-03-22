@@ -9,51 +9,40 @@ knitr::opts_chunk$set(
   warning = TRUE
 )
 
-## ----filethenevaluate----------------------------------------------------
-library(magrittr) # for the pipe operator %>%
-drake_plan(
-  data = readRDS("data_DATASIZE__rds")
-) %>%
-  rbind(drake::drake_plan(
-    file.csv = write.csv(
-      data_DATASIZE__, # nolint
-      "file_DATASIZE__csv"
-    ),
-    strings_in_dots = "literals",
-    file_targets = T
-  )) %>%
-  evaluate_plan(
-    rules = list(DATASIZE__ = c("small", "large"))
-  )
-
-## ----correctevaldatasize-------------------------------------------------
-rules <- list(DATASIZE__ = c("small", "large"))
-datasets <- drake_plan(data = readRDS("data_DATASIZE__rds")) %>%
-  evaluate_plan(rules = rules)
-
-## ----correctevaldatasize2------------------------------------------------
-files <- drake_plan(
-  file = write.csv(data_DATASIZE__, "file_DATASIZE__csv"), # nolint
-  strings_in_dots = "literals"
-) %>%
-  evaluate_plan(rules = rules)
-
-## ----correctevaldatasize3------------------------------------------------
-files$target <- paste0(
-  files$target, ".csv"
-) %>%
-  as_drake_filename
-
-## ----correctevaldatasize4------------------------------------------------
-rbind(datasets, files)
-
 ## ----tidyplancaution-----------------------------------------------------
 drake_plan(
   target1 = 1 + 1 - sqrt(sqrt(3)),
   target2 = my_function(web_scraped_data) %>% my_tidy
 )
 
+## ----demotidyeval--------------------------------------------------------
+# This workflow plan uses rlang's quasiquotation operator `!!`.
+my_plan <- drake_plan(list = c(
+  little_b = "\"b\"",
+  letter = "!!little_b"
+))
+my_plan
+make(my_plan)
+readd(letter)
+
+## ----testquasiquoplan----------------------------------------------------
+my_variable <- 5
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable")
+)
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable"),
+  tidy_evaluation = FALSE
+)
+
 ## ----diagnosecaution-----------------------------------------------------
+# Targets with available diagnostic metadata, incluing errors, warnings, etc.
 diagnose()
 
 f <- function(){
@@ -69,11 +58,11 @@ withr::with_message_sink(
 
 failed() # From the last make() only
 
-diagnose() # From all previous make()s
+error <- diagnose(target)$error # See also warnings and messages.
 
-error <- diagnose(target)
+error$message
 
-str(error)
+error$call
 
 error$calls # View the traceback.
 
@@ -105,41 +94,15 @@ envir$out
 
 readd(out)
 
-## ----devtools1, eval = FALSE---------------------------------------------
-#  env <- devtools::load_all("yourProject")$env # Has all your imported functions
-#  drake::make(my_plan, envir = env)            # Run the project normally.
-
-## ----devtools2, eval = FALSE---------------------------------------------
-#  env <- devtools::load_all("yourProject")$env
-#  env <- list2env(as.list(env), parent = globalenv())
-
-## ----devtools3, eval = FALSE---------------------------------------------
-#  for (name in ls(env)){
-#    assign(
-#      x = name,
-#      envir = env,
-#      value = `environment<-`(get(n, envir = env), env)
-#    )
-#  }
-
-## ----devtools4, eval = FALSE---------------------------------------------
-#  package_name <- "yourProject" # devtools::as.package(".")$package # nolint
-#  packages_to_load <- setdiff(.packages(), package_name)
-
-## ----devtools5, eval = FALSE---------------------------------------------
-#  make(
-#    my_plan,                    # Prepared in advance
-#    envir = env,                # Environment of package "yourProject"
-#    parallelism = "Makefile",   # Or "parLapply"
-#    jobs = 2,
-#    packages = packages_to_load # Does not include "yourProject"
-#  )
-
 ## ----lazyloadfuture, eval = FALSE----------------------------------------
 #  library(future)
 #  future::plan(multisession)
 #  load_basic_example() # Get the code with drake_example("basic").
 #  make(my_plan, lazy_load = TRUE, parallelism = "future_lapply")
+
+## ----depsdot-------------------------------------------------------------
+deps("sqrt(x + y + .)")
+deps("dplyr::filter(complete.cases(.))")
 
 ## ----helpfuncitons, eval = FALSE-----------------------------------------
 #  ?deps
@@ -148,36 +111,34 @@ readd(out)
 
 ## ----cautiondeps---------------------------------------------------------
 f <- function(){
-  b <- get("x", envir = globalenv())           # x is incorrectly ignored
-  file_dependency <- readRDS('input_file.rds') # 'input_file.rds' is incorrectly ignored # nolint
+  b <- get("x", envir = globalenv()) # x is incorrectly ignored
   digest::digest(file_dependency)
 }
 
 deps(f)
 
-command <- "x <- digest::digest('input_file.rds'); assign(\"x\", 1); x"
+command <- "x <- digest::digest(file_in(\"input_file.rds\")); assign(\"x\", 1); x" # nolint
 deps(command)
 
-## ----knitrdeps1----------------------------------------------------------
-load_basic_example() # Get the code with drake_example("basic").
-my_plan[1, ]
+## ----fileimportsfunctions------------------------------------------------
+# toally_fine() will depend on the imported data.csv file.
+# But make sure data.csv is an imported file and not a file target.
+totally_okay <- function(x, y, z){
+  read.csv(file_in("data.csv"))
+}
 
-## ----knitr2--------------------------------------------------------------
-deps("knit('report.Rmd')")
+# file_out() is for file targets, so `drake` will ignore it.
+avoid_this <- function(x, y, z){
+  read.csv(file_out("data.csv"))
+}
 
-deps("render('report.Rmd')")
-
-deps("'report.Rmd'") # These are actually dependencies of 'report.md' (output)
-
-## ----badknitr, eval = FALSE----------------------------------------------
-#  var <- "good_target"
-#  # Works in isolation, but drake sees "var" literally as a dependency,
-#  # not "good_target".
-#  readd(target = var, character_only = TRUE)
-#  loadd(list = var)
-#  # All cached items are loaded, but none are treated as dependencies.
-#  loadd()
-#  loadd(imports_only = TRUE)
+# knitr_in() is for knitr files with dependencies
+# in their active code chunks (explicitly referenced with loadd() and readd().
+# Drake just treats knitr_in() as an ordinary file input in this case.
+# You should really be using file_in() instead.
+avoid_this <- function(x, y, z){
+  read.csv(knitr_in("report.Rmd"))
+}
 
 ## ----vectorizedfunctioncaution, eval = FALSE-----------------------------
 #  args <- lapply(as.list(match.call())[-1L], eval, parent.frame())

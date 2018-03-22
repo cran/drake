@@ -1,11 +1,11 @@
 #' Drake is a pipeline toolkit
-#' (\url{https://github.com/pditommaso/awesome-pipeline})
+#' (<https://github.com/pditommaso/awesome-pipeline>)
 #' and a scalable, R-focused solution for reproducibility
 #' and high-performance computing.
 #' @docType package
 #' @name drake-package
 #' @aliases drake
-#' @author William Michael Landau \email{will.landau@@lilly.com}
+#' @author William Michael Landau \email{will.landau@@gmail.com}
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -36,34 +36,42 @@
 #' unlink("report.Rmd") # Clean up the remaining files.
 #' })
 #' }
-#' @references \url{https://github.com/ropensci/drake}
-#' @importFrom codetools findGlobals
+#' @references <https://github.com/ropensci/drake>
+#' @importFrom bindr populate_env
+#' @importFrom CodeDepends getInputs
 #' @importFrom crayon make_style
 #' @importFrom digest digest
 #' @importFrom evaluate try_capture_stack
 #' @importFrom formatR tidy_source
-#' @importFrom future plan
+#' @importFrom future future plan resolved value
 #' @importFrom future.apply future_lapply
 #' @importFrom grDevices col2rgb rgb
-#' @importFrom igraph adjacent_vertices delete_vertices degree edge
-#' induced_subgraph is_dag make_empty_graph plot.igraph subcomponent V vertex
+#' @importFrom igraph adjacent_vertices components delete_vertices
+#'   degree edge induced_subgraph is_dag make_empty_graph plot.igraph
+#'   simplify subcomponent V vertex
 #' @importFrom knitr knit
 #' @importFrom lubridate dseconds duration
 #' @importFrom magrittr %>%
 #' @importFrom parallel clusterCall clusterExport makePSOCKcluster
-#' mclapply parLapply stopCluster
+#'   mclapply parLapply stopCluster
+#' @importFrom pkgconfig get_config
 #' @importFrom plyr ddply dlply
+#' @importFrom purrr map_int
+#' @importFrom R6 R6Class
 #' @importFrom R.utils isPackageLoaded withTimeout
+#' @importFrom rlang expr exprs
 #' @importFrom rprojroot find_root
 #' @importFrom stats coef complete.cases lm rnorm rpois runif setNames
 #' @importFrom storr encode64 storr_environment storr_rds
 #' @importFrom stringi stri_extract_all_regex stri_rand_strings
 #' @importFrom stringr str_split str_trim
 #' @importFrom testthat context expect_false expect_true test_dir test_that
+#' @importFrom tibble as_tibble tibble
+#' @importFrom tidyselect vars_select
 #' @importFrom utils capture.output compareVersion installed.packages
-#' packageVersion read.csv sessionInfo type.convert unzip write.table
+#'   packageVersion read.csv sessionInfo type.convert unzip write.table
 #' @importFrom visNetwork toVisNetworkData visEvents visHierarchicalLayout
-#' visIgraphLayout visInteraction visLegend visNetwork visSave
+#'   visIgraphLayout visInteraction visLegend visNetwork visSave
 #' @importFrom withr with_dir with_options with_output_sink
-#' with_preserve_seed with_seed
+#'   with_preserve_seed with_seed
 NULL

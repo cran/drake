@@ -4,10 +4,10 @@
 \alias{make}
 \title{Run your project (build the outdated targets).}
 \usage{
-make(plan = drake_plan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = 1, hook = default_hook,
-  cache = drake::get_cache(verbose = verbose, force = force),
-  fetch_cache = NULL, parallelism = drake::default_parallelism(),
+make(plan = read_drake_plan(), targets = drake::possible_targets(plan),
+  envir = parent.frame(), verbose = drake::default_verbose(),
+  hook = default_hook, cache = drake::get_cache(verbose = verbose, force =
+  force), fetch_cache = NULL, parallelism = drake::default_parallelism(),
   jobs = 1, packages = rev(.packages()), prework = character(0),
   prepend = character(0), command = drake::default_Makefile_command(),
   args = drake::default_Makefile_args(jobs = jobs, verbose = verbose),
@@ -15,22 +15,25 @@ make(plan = drake_plan(), targets = drake::possible_targets(plan),
   imports_only = FALSE, timeout = Inf, cpu = NULL, elapsed = NULL,
   retries = 0, force = FALSE, return_config = NULL, graph = NULL,
   trigger = drake::default_trigger(), skip_imports = FALSE,
-  skip_safety_checks = FALSE, config = NULL, lazy_load = FALSE,
-  session_info = TRUE, cache_log_file = NULL)
+  skip_safety_checks = FALSE, config = NULL, lazy_load = "eager",
+  session_info = TRUE, cache_log_file = NULL, seed = NULL,
+  caching = "worker", keep_going = FALSE)
 }
 \arguments{
 \item{plan}{workflow plan data frame.
 A workflow plan data frame is a data frame
 with a \code{target} column and a \code{command} column.
+(See the details in the \code{\link[=drake_plan]{drake_plan()}} help file
+for descriptions of the optional columns.)
 Targets are the objects and files that drake generates,
 and commands are the pieces of R code that produce them.
-Use the function \code{\link{drake_plan}()} to generate workflow plan
-data frames easily, and see functions \code{\link{analyses}()},
-\code{\link{summaries}()}, \code{\link{evaluate}()},
-\code{\link{expand}()}, and \code{\link{gather}()} for
+Use the function \code{\link[=drake_plan]{drake_plan()}} to generate workflow plan
+data frames easily, and see functions \code{\link[=plan_analyses]{plan_analyses()}},
+\code{\link[=plan_summaries]{plan_summaries()}}, \code{\link[=evaluate_plan]{evaluate_plan()}},
+\code{\link[=expand_plan]{expand_plan()}}, and \code{\link[=gather_plan]{gather_plan()}} for
 easy ways to generate large workflow plan data frames.}
 
-\item{targets}{character string, names of targets to build.
+\item{targets}{character vector, names of targets to build.
 Dependencies are built too. Together, the \code{plan} and
 \code{targets} comprise the workflow network
 (i.e. the \code{graph} argument).
@@ -46,13 +49,15 @@ from \code{envir} and the global environment and
 then reproducibly tracked as dependencies.}
 
 \item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
 \describe{
-  \item{0 or \code{FALSE}:}{print nothing.}
-  \item{1 or \code{TRUE}:}{print checks and targets to build.}
-  \item{2:}{print checks, targets, to build,
-    and any potentially missing items.}
-  \item{3:}{full verbosity: print checks, targets to build, potentially
-    missing items, and imports.}
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
 }}
 
 \item{hook}{function with at least one argument.
@@ -60,25 +65,25 @@ The hook is as a wrapper around the code that drake uses
 to build a target (see the body of \code{drake:::build_in_hook()}).
 Hooks can control the side effects of build behavior.
 For example, to redirect output and error messages to text files,
-you might use the built-in \code{\link{silencer_hook}()}, as in
+you might use the built-in \code{\link[=silencer_hook]{silencer_hook()}}, as in
 \code{make(my_plan, hook = silencer_hook)}.
 The silencer hook is useful for distributed parallelism,
 where the calling R process does not have control over all the
-error and output streams. See also \code{\link{output_sink_hook}()}
-and \code{\link{message_sink_hook}()}.
+error and output streams. See also \code{\link[=output_sink_hook]{output_sink_hook()}}
+and \code{\link[=message_sink_hook]{message_sink_hook()}}.
 For your own custom hooks, treat the first argument as the code
 that builds a target, and make sure this argument is actually evaluated.
 Otherwise, the code will not run and none of your targets will build.
 For example, \code{function(code){force(code)}} is a good hook
 and \code{function(code){message("Avoiding the code")}} is a bad hook.}
 
-\item{cache}{drake cache as created by \code{\link{new_cache}()}.
-See also \code{\link{get_cache}()}, \code{\link{this_cache}()},
-and \code{\link{recover_cache}()}}
+\item{cache}{drake cache as created by \code{\link[=new_cache]{new_cache()}}.
+See also \code{\link[=get_cache]{get_cache()}}, \code{\link[=this_cache]{this_cache()}},
+and \code{\link[=recover_cache]{recover_cache()}}}
 
 \item{fetch_cache}{character vector containing lines of code.
 The purpose of this code is to fetch the \code{storr} cache
-with a command like \code{storr_rds()} or \code{storr_dbi()},
+with a command like \code{\link[=storr_rds]{storr_rds()}} or \code{\link[=storr_dbi]{storr_dbi()}},
 but customized. This feature is experimental. It will turn out
 to be necessary if you are using both custom non-RDS caches
 and distributed parallelism (\code{parallelism = "future_lapply"}
@@ -86,19 +91,24 @@ or \code{"Makefile"}) because the distributed R sessions
 need to know how to load the cache.}
 
 \item{parallelism}{character, type of parallelism to use.
-To list the options, call \code{\link{parallelism_choices}()}.
+To list the options, call \code{\link[=parallelism_choices]{parallelism_choices()}}.
 For detailed explanations, see \code{?\link{parallelism_choices}},
 the tutorial vignettes, or the tutorial files generated by
 \code{\link{drake_example}("basic")}}
 
 \item{jobs}{number of parallel processes or jobs to run.
-See \code{\link{max_useful_jobs}()} or \code{\link{vis_drake_graph}()}
+See \code{\link[=max_useful_jobs]{max_useful_jobs()}} or \code{\link[=vis_drake_graph]{vis_drake_graph()}}
 to help figure out what the number of jobs should be.
 Windows users should not set \code{jobs > 1} if
 \code{parallelism} is \code{"mclapply"} because
-\code{\link{mclapply}()} is based on forking. Windows users
-who use \code{parallelism == "Makefile"} will need to
+\code{\link[=mclapply]{mclapply()}} is based on forking. Windows users
+who use \code{parallelism = "Makefile"} will need to
 download and install Rtools.
+
+Imports and targets are processed separately, and they usually
+have different parallelism needs. To use at most 2 jobs at a time
+for imports and at most 4 jobs at a time for targets, call
+\code{make(..., jobs = c(imports = 2, targets = 4))}.
 
 For \code{"future_lapply"} parallelism, \code{jobs}
 only applies to the imports.
@@ -108,26 +118,27 @@ argument where it exists: for example, call
 \code{future::plan(multisession(workers = 4))},
 then call \code{\link{make}(your_plan, parallelism = "future_lapply")}.
 You might also try \code{options(mc.cores = jobs)},
-or see \code{?future::future::.options}
+or see \code{future::.options}
 for environment variables that set the max number of jobs.
 
 If \code{parallelism} is \code{"Makefile"},  Makefile-level parallelism is
 only used for targets in your workflow plan data frame, not imports.  To
 process imported objects and files, drake selects the best parallel backend
 for your system and uses the number of jobs you give to the \code{jobs}
-argument to \code{\link{make}()}. To use at most 2 jobs for imports and at
+argument to \code{\link[=make]{make()}}. To use at most 2 jobs for imports and at
 most 4 jobs for targets, run
-\code{make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")}}
+\code{make(..., parallelism = "Makefile", jobs = c(imports = 2, targets = 4))} or
+\code{make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")}.}
 
 \item{packages}{character vector packages to load, in the order
 they should be loaded. Defaults to \code{rev(.packages())}, so you
 should not usually need to set this manually. Just call
-\code{\link{library}()} to load your packages before \code{make()}.
+\code{\link[=library]{library()}} to load your packages before \code{make()}.
 However, sometimes packages need to be strictly forced to load
 in a certain order, especially if \code{parallelism} is
-\code{"Makefile"}. To do this, do not use \code{\link{library}()}
-or \code{\link{require}()} or \code{\link{loadNamespace}()} or
-\code{\link{attachNamespace}()} to load any libraries beforehand.
+\code{"Makefile"}. To do this, do not use \code{\link[=library]{library()}}
+or \code{\link[=require]{require()}} or \code{\link[=loadNamespace]{loadNamespace()}} or
+\code{\link[=attachNamespace]{attachNamespace()}} to load any libraries beforehand.
 Just list your packages in the \code{packages} argument in the order
 you want them to be loaded.
 If \code{parallelism} is \code{"mclapply"},
@@ -156,7 +167,7 @@ to take advantage of multiple nodes of a supercomputer.}
 generated for distributed computing.
 Only applies when \code{parallelism} is \code{"Makefile"}.
 Defaults to the usual \code{"make"}
-(\code{\link{default_Makefile_command}()}),
+(\code{\link[=default_Makefile_command]{default_Makefile_command()}}),
 but it could also be
 \code{"lsmake"} on supporting systems, for example.
 \code{command} and \code{args} are executed via
@@ -186,7 +197,7 @@ creates a lot of little files in the cache, and it may make builds
 a tiny bit slower. So you may see gains in storage efficiency
 and speed with
 \code{make(..., log_progress = FALSE)}. But be warned that
-\code{\link{progress}()} and \code{\link{in_progress}()}
+\code{\link[=progress]{progress()}} and \code{\link[=in_progress]{in_progress()}}
 will no longer work if you do that.}
 
 \item{imports_only}{logical, whether to skip building the targets
@@ -222,14 +233,14 @@ is always invisibly returned.}
 
 \item{graph}{An \code{igraph} object from the previous \code{make()}.
 Supplying a pre-built graph could save time.
-The graph is constructed by \code{\link{build_drake_graph}()}.
+The graph is constructed by \code{\link[=build_drake_graph]{build_drake_graph()}}.
 You can also get one from \code{\link{config}(my_plan)$graph}.
 Overrides \code{skip_imports}.}
 
 \item{trigger}{Name of the trigger to apply to all targets.
 Ignored if \code{plan} has a \code{trigger} column.
-Must be in \code{\link{triggers}()}.
-See \code{?triggers} for explanations of the choices.}
+Must be in \code{\link[=triggers]{triggers()}}.
+See \link{triggers} for explanations of the choices.}
 
 \item{skip_imports}{logical, whether to totally neglect to
 process the imports and jump straight to the targets. This can be useful
@@ -240,51 +251,81 @@ This argument is overridden if you supply your own \code{graph} argument.}
 \item{skip_safety_checks}{logical, whether to skip the safety checks
 on your workflow. Use at your own peril.}
 
-\item{config}{optional master configuration list created by
-\code{\link{drake_config}()}. Using one could cut out some
-superfluous overhead. Overrides all other arguments
-if supplied}
+\item{config}{Master configuration list produced by both
+\code{\link[=make]{make()}} and \code{\link[=drake_config]{drake_config()}}.}
 
-\item{lazy_load}{logical.
-Should always be set to \code{FALSE} for \code{"parLapply"}
-parallelism and \code{jobs} greater than 1.
+\item{lazy_load}{either a character vector or a logical. Choices:
+\itemize{
+\item \code{"eager"}: no lazy loading. The target is loaded right away
+with \code{\link[=assign]{assign()}}.
+\item \code{"promise"}: lazy loading with \code{\link[=delayedAssign]{delayedAssign()}}
+\item \code{"bind"}: lazy loading with active bindings:
+\code{\link[bindr:populate_env]{bindr::populate_env()}}.
+\item \code{TRUE}: same as \code{"promise"}.
+\item \code{FALSE}: same as \code{"eager"}.
+}
+
+\code{lazy_load} should not be \code{"promise"}
+for \code{"parLapply"} parallelism combined with \code{jobs} greater than 1.
 For local multi-session parallelism and lazy loading, try
 \code{library(future); future::plan(multisession)} and then
-\code{make(..., parallelism = "future_lapply", lazy_load = TRUE)}.
-If \code{lazy_load} is \code{FALSE},
+\code{make(..., parallelism = "future_lapply", lazy_load = "bind")}.
+
+If \code{lazy_load} is \code{"eager"},
 drake prunes the execution environment before every
 parallelizable stages, removing all superfluous targets
 and then loading any dependencies it will need
 for the targets in the current parallelizable stage.
 In other words, drake prepares the environment in advance
 for all the whole collection of targets in the stage.
-If \code{lazy_load} is \code{TRUE}, drake assigns
+If \code{lazy_load} is \code{"bind"} or \code{"promise"}, drake assigns
 promises to load any dependencies at the last minute.
 Lazy loading may be more memory efficient in some use cases, but
 it may duplicate the loading of dependencies, costing time.}
 
 \item{session_info}{logical, whether to save the \code{sessionInfo()}
-to the cache. This behavior is recommended for serious \code{\link{make}()}s
+to the cache. This behavior is recommended for serious \code{\link[=make]{make()}}s
 for the sake of reproducibility. This argument only exists to
 speed up tests. Apparently, \code{sessionInfo()} is a bottleneck
-for small \code{\link{make}()}s.}
+for small \code{\link[=make]{make()}}s.}
 
 \item{cache_log_file}{Name of the cache log file to write.
 If \code{TRUE}, the default file name is used (\code{drake_cache.log}).
 If \code{NULL}, no file is written.
 If activated, this option uses
-\code{\link{drake_cache_log_file}()} to write a flat text file
+\code{\link[=drake_cache_log_file]{drake_cache_log_file()}} to write a flat text file
 to represent the state of the cache
 (fingerprints of all the targets and imports).
 If you put the log file under version control, your commit history
 will give you an easy representation of how your results change
 over time as the rest of your project changes. Hopefully,
 this is a step in the right direction for data reproducibility.}
+
+\item{seed}{integer, the root pseudo-random seed to use for your project.
+To ensure reproducibility across different R sessions,
+\code{set.seed()} and \code{.Random.seed} are ignored and have no affect on
+\code{drake} workflows. Conversely, \code{make()} does not change \code{.Random.seed},
+even when pseudo-random numbers are generated.
+
+On the first call to \code{make()} or \code{drake_config()}, \code{drake}
+uses the random number generator seed from the \code{seed} argument.
+Here, if the \code{seed} is \code{NULL} (default), \code{drake} uses a \code{seed} of \code{0}.
+On subsequent \code{make()}s for existing projects, the project's
+cached seed will be used in order to ensure reproducibility.
+Thus, the \code{seed} argument must either be \code{NULL} or the same
+seed from the project's cache (usually the \code{.drake/} folder).
+To reset the random number generator seed for a project,
+use \code{clean(destroy = TRUE)}.}
+
+\item{caching}{character string, only applies to \code{"future"} parallelism.}
+
+\item{keep_going}{logical, whether to still keep running \code{\link[=make]{make()}}
+if targets fail.}
 }
 \value{
 The master internal configuration list, mostly
 containing arguments to \code{make()} and important objects
-constructed along the way. See \code{\link{config}()}
+constructed along the way. See \code{\link[=config]{config()}}
 for more details.
 }
 \description{
@@ -292,8 +333,8 @@ This is the central, most important function
 of the drake package. It runs all the steps of your
 workflow in the correct order, skipping any work
 that is already up to date.
-See \url{https://ropensci.github.io/drake/}
-for the full documentation, which includes multiple in-depth tutorials.
+See \url{https://github.com/ropensci/drake/blob/master/README.md#documentation}
+for an overview of the documentation.
 }
 \examples{
 \dontrun{
@@ -316,6 +357,10 @@ outdated(config) # Everything is up to date again.
 make(my_plan, cache_log_file = TRUE) # Write a text log file this time.
 vis_drake_graph(config) # The colors changed in the graph.
 clean() # Start from scratch.
+# Run with at most 2 jobs at a time for the imports
+# and at most 4 jobs at a time for the targets.
+make(my_plan, jobs = c(imports = 2, targets = 4))
+clean() # Start from scratch.
 # Rerun with "Makefile" parallelism with at most 4 jobs.
 # Requires Rtools on Windows.
 # make(my_plan, parallelism = "Makefile", jobs = 4) # nolint
@@ -324,14 +369,24 @@ clean() # Start from scratch.
 # Requires Rtools on Windows.
 # make(my_plan, parallelism = "Makefile", jobs = 4, # nolint
 #   recipe_command = "R -q -e") # nolint
+#
+# make() respects tidy evaluation as implemented in the rlang package.
+# This workflow plan uses rlang's quasiquotation operator `!!`.
+my_plan <- drake_plan(list = c(
+  little_b = "\\"b\\"",
+  letter = "!!little_b"
+))
+my_plan
+make(my_plan)
+readd(letter) # "b"
 })
 }
 }
 \seealso{
-\code{\link{make_with_config}},
-\code{\link{drake_plan}}, \code{\link{drake_plan}},
-\code{\link{vis_drake_graph}},
-\code{\link{max_useful_jobs}}, \code{\link{shell_file}},
-\code{\link{default_hook}}, \code{\link{silencer_hook}},
-\code{\link{triggers}}
+\code{\link[=drake_plan]{drake_plan()}},
+\code{\link[=vis_drake_graph]{vis_drake_graph()}},
+\code{\link[=parallelism_choices]{parallelism_choices()}},
+\code{\link[=max_useful_jobs]{max_useful_jobs()}},
+\code{\link[=triggers]{triggers()}},
+\code{\link[=make_with_config]{make_with_config()}}
 }

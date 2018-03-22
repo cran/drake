@@ -36,7 +36,10 @@ check_plan(my_plan) # No issues.
 ## ----checkdepsdebug------------------------------------------------------
 deps(reg2)
 
-deps(my_plan$command[1]) # File dependencies like report.Rmd are single-quoted.
+# knitr_in() makes sure your target depends on `report.Rmd`
+# and any dependencies loaded with loadd() and readd()
+# in the report's active code chunks.
+deps(my_plan$command[1])
 
 deps(my_plan$command[nrow(my_plan)])
 
@@ -75,7 +78,9 @@ config$cache$get_hash(key = "reg2", namespace = "kernels") # same
 config$cache$get_hash(key = "reg2") # different
 
 ## ----readdrakemeta-------------------------------------------------------
-read_drake_meta("'report.md'")
+str(diagnose(small))
+
+str(diagnose("\"report.md\""))
 
 ## ----rushdebug-----------------------------------------------------------
 clean(verbose = FALSE) # Start from scratch
@@ -127,12 +132,13 @@ withr::with_message_sink(
 )
 
 ## ----diagnosedebug-------------------------------------------------------
-diagnose(verbose = FALSE)
+diagnose(verbose = FALSE) # Targets with available metadata.
 
 f <- function(x){
   if (x < 0){
-    stop("unusual error")
+    stop("`x` cannot be negative.")
   }
+  x
 }
 bad_plan <- drake_plan(
   a = 12,
@@ -149,11 +155,12 @@ withr::with_message_sink(
 
 failed(verbose = FALSE) # from the last make() only
 
-diagnose(verbose = FALSE) # from all previous make()'s
+# See also warnings and messages.
+error <- diagnose(my_target, verbose = FALSE)$error
 
-error <- diagnose(my_target, verbose = FALSE)
+error$message
 
-str(error)
+error$call
 
 error$calls # View the traceback.
 
@@ -167,23 +174,48 @@ config <- drake_config(plan = bad_plan)
 # my_target depends on b.
 "b" %in% ls()
 
-loadd(my_target, deps = TRUE)
-
-"b" %in% ls()
-
 # Try to build my_target until the error is fixed.
 # Skip all that pesky work checking dependencies.
-drake_build(target = "my_target", config = config)
+drake_build(my_target, config = config)
 
+# The target failed, but the dependency was loaded.
+"b" %in% ls()
+
+# What was `b` again?
+b
+
+# How was `b` used?
 diagnose(my_target)$message
+
+diagnose(my_target)$call
 
 f
 
 # Aha! The error was in f(). Let's fix it and try again.
 f <- function(x){
-  return(x)
+  x <- abs(x)
+  if (x < 0){
+    stop("`x` cannot be negative.")
+  }
+  x
 }
-drake_build(target = "my_target", config = config)
+
+# Now it works!
+# Since you called make() previously, `config` is read from the cache
+# if you do not supply it.
+drake_build(my_target)
+
+readd(my_target)
+
+## ----demotidyeval--------------------------------------------------------
+# This workflow plan uses rlang's quasiquotation operator `!!`.
+my_plan <- drake_plan(list = c(
+  little_b = "\"b\"",
+  letter = "!!little_b"
+))
+my_plan
+make(my_plan)
+readd(letter)
 
 ## ----debriefdebug--------------------------------------------------------
 make(my_plan, verbose = FALSE)
@@ -196,20 +228,19 @@ built(verbose = FALSE)
 
 imported(verbose = FALSE)
 
-loadd(large, verbose = FALSE)
+loadd(little_b, verbose = FALSE)
 
-head(large)
+little_b
 
-readd(small, verbose = FALSE)
+readd(letter, verbose = FALSE)
 
 progress(verbose = FALSE)
 
 in_progress(verbose = FALSE) # Unfinished targets
 
 ## ----finddebug-----------------------------------------------------------
-find_project()
-
-find_cache()
+# find_project() # nolint
+# find_cache()   # nolint
 
 ## ----examplesdrakedebug--------------------------------------------------
 drake_examples()

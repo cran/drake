@@ -1,8 +1,10 @@
 drake_context("console")
 
 test_with_dir("console_cache", {
-  expect_message(console_cache("12345", verbose = TRUE))
-  expect_message(console_cache(NULL, verbose = TRUE))
+  expect_silent(console_cache("12345", verbose = TRUE))
+  expect_message(console_cache("12345", verbose = 2))
+  expect_silent(console_cache(NULL, verbose = TRUE))
+  expect_message(console_cache(NULL, verbose = 2))
 })
 
 test_with_dir("console_up_to_date", {
@@ -15,6 +17,18 @@ test_with_dir("console_up_to_date", {
   con <- make(pl, verbose = FALSE, session_info = FALSE)
   con$verbose <- TRUE
   expect_message(console_up_to_date(con))
+})
+
+test_with_dir("verbose consoles", {
+  config <- list(verbose = 2)
+  expect_silent(console_missing("\"myfile\"", config))
+  expect_silent(console_import("\"myfile\"", config))
+  config$verbose <- 3
+  expect_message(console_missing("\"myfile\"", config))
+  expect_silent(console_import("\"myfile\"", config))
+  config$verbose <- 4
+  expect_message(console_missing("\"myfile\"", config))
+  expect_message(console_import("\"myfile\"", config))
 })
 
 test_with_dir("console_parLapply", {
@@ -44,7 +58,7 @@ test_with_dir("console", {
   config$verbose <- 3
   expect_message(console(imported = FALSE, target = "myinput",
     config = config))
-  expect_message(console(imported = TRUE, target = "myinput",
+  expect_silent(console(imported = TRUE, target = "myinput",
     config = config))
   expect_message(console(imported = NA, target = "myinput",
     config = config))
@@ -54,7 +68,7 @@ test_with_dir("console", {
     )
   )
   x1 <- "12345"
-  x2 <- paste(rep(0:9, length.out = console_length + 400), collapse = "")
+  x2 <- paste(rep(0:9, length.out = getOption("width") + 400), collapse = "")
   expect_equal(x1, color(x = x1, color = NULL))
   o1 <- evaluate_promise(
     console(
@@ -72,8 +86,8 @@ test_with_dir("console", {
     ),
     print = TRUE
   )$messages
-  expect_true(nchar(o1) < console_length)
-  expect_true(nchar(o2) < console_length + 20)
+  expect_true(nchar(o1) < getOption("width"))
+  expect_true(nchar(o2) < getOption("width") + 20)
   dots <- "\\.\\.\\.\n$"
   expect_false(grepl(dots, o1))
   expect_true(grepl(dots, o2))
@@ -88,8 +102,11 @@ test_with_dir("console_many_targets() works", {
   config <- list(verbose = TRUE)
   expect_silent(console_many_targets(
     targets = character(0), pattern = "check", config = config))
-  expect_message(console_many_targets(
+  expect_silent(console_many_targets(
     targets = "my_target", pattern = "check", config = config))
+  config$verbose <- 2
+  expect_silent(console_many_targets(
+    targets = character(0), pattern = "check", config = config))
   tmp <- evaluate_promise(
     console_many_targets(
       targets = LETTERS,
@@ -99,5 +116,5 @@ test_with_dir("console_many_targets() works", {
     print = TRUE
   )$messages
   expect_true(is.character(tmp))
-  expect_true(nchar(tmp) <= console_length + 20)
+  expect_true(nchar(tmp) <= getOption("width") + 20)
 })

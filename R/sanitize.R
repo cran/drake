@@ -1,17 +1,24 @@
 sanitize_plan <- function(plan){
-  for (field in drake_plan_character_columns()){
+  plan <- as_tibble(plan)
+  for (field in drake_plan_non_factors()){
     if (!is.null(plan[[field]])){
-      plan[[field]] <- str_trim(plan[[field]], side = "both")
+      if (is.factor(plan[[field]])){
+         plan[[field]] <- as.character(plan[[field]])
+      }
+      if (is.character(plan[[field]])){
+        plan[[field]] <- str_trim(plan[[field]], side = "both")
+      }
     }
   }
   if (!is.null(plan[["trigger"]])){
     assert_legal_triggers(plan[["trigger"]])
   }
+  plan <- file_outs_to_targets(plan)
   plan$target <- repair_target_names(plan$target)
   plan[nchar(plan$target) > 0, ]
 }
 
-drake_plan_character_columns <- function(){
+drake_plan_non_factors <- function(){
   c(
     "command",
     "target",
@@ -21,7 +28,7 @@ drake_plan_character_columns <- function(){
 
 drake_plan_columns <- function(){
   c(
-    drake_plan_character_columns(),
+    drake_plan_non_factors(),
     "cpu",
     "elapsed",
     "evaluator",
@@ -60,7 +67,8 @@ sanitize_nodes <- function(nodes, choices){
 repair_target_names <- function(x){
   illegals <- c(
     ":", "\\+", "\\-", "\\*", "\\^",
-    "\\(", "\\)", "\\[", "\\]", "^_"
+    "\\(", "\\)", "\\[", "\\]", "^_",
+    "\\\""
   ) %>%
     paste(collapse = "|")
   non_files <- x[is_not_file(x)]
@@ -74,4 +82,34 @@ repair_target_names <- function(x){
   x <- gsub("^_", "", x)
   x[!nchar(x)] <- "X"
   make.unique(x, sep = "_")
+}
+
+file_outs_to_targets <- function(plan){
+  index <- grepl("file_out", plan$command)
+  plan$target[index] <- vapply(
+    plan$command[index],
+    single_file_out,
+    character(1)
+  )
+  plan$target[is_file(plan$target)] <-
+    plan$target[is_file(plan$target)] %>%
+    gsub(pattern = "^'|'$", replacement = "\"")
+  plan
+}
+
+single_file_out <- function(command){
+  file_out <- command_dependencies(command)$file_out
+  if (length(file_out) < 1){
+    stop("found an empty file_out() in command: ", command, call. = FALSE)
+  }
+  if (length(file_out) > 1){
+    warning(
+      "Multiple file outputs found for command `", command, "`. ",
+      "Choosing ", file_out[1], " as the target name.",
+      call. = FALSE
+    )
+    file_out[1]
+  } else {
+    file_out
+  }
 }

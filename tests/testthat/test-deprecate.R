@@ -1,5 +1,20 @@
 drake_context("deprecation")
 
+test_with_dir("pkgconfig::get_config(\"drake::strings_in_dots\")", {
+  old_strings_in_dots <- pkgconfig::get_config("drake::strings_in_dots")
+  on.exit(
+    pkgconfig::set_config("drake::strings_in_dots" = old_strings_in_dots)
+  )
+  cmd <- "readRDS('my_file.rds')"
+  pkgconfig::set_config("drake::strings_in_dots" = "literals")
+  expect_equal(command_dependencies(cmd), list(globals = "readRDS"))
+  pkgconfig::set_config("drake::strings_in_dots" = "garbage")
+  expect_equal(
+    expect_warning(command_dependencies(cmd)),
+    list(globals = "readRDS", file_in = "\"my_file.rds\"")
+  )
+})
+
 test_with_dir("deprecation: future", {
   expect_warning(backend())
 })
@@ -13,12 +28,17 @@ test_with_dir("deprecation: make() and config()", {
 
 test_with_dir("deprecation: cache functions", {
   plan <- drake_plan(x = 1)
+  expect_error(expect_warning(tmp <- read_drake_meta(search = FALSE)))
   expect_silent(make(plan, verbose = FALSE, session_info = FALSE))
   expect_true(is.numeric(readd(x, search = FALSE)))
   expect_equal(cached(), "x")
   expect_warning(read_config())
   expect_warning(read_graph())
   expect_warning(read_plan())
+  expect_true(expect_warning(is.list(
+    tmp <- read_drake_meta(targets = NULL, search = FALSE))))
+  expect_true(expect_warning(is.list(
+    tmp <- read_drake_meta(targets = "x", search = FALSE))))
 })
 
 test_with_dir("drake_plan deprecation", {
@@ -84,4 +104,42 @@ test_with_dir("deprecated example(s)_drake functions", {
 
 test_with_dir("deprecate misc utilities", {
   expect_warning(as_file("x"))
+  expect_warning(as_drake_filename("x"))
+  expect_warning(drake_unquote("x", deep = TRUE))
+  cache <- storr::storr_environment()
+  expect_warning(configure_cache(cache, log_progress = TRUE))
+})
+
+test_with_dir("deprecated arguments", {
+  pl <- drake_plan(a = 1, b = a)
+  con <- drake_config(plan = pl, session_info = FALSE)
+  expect_warning(drake_build(a, config = con, meta = list()))
+})
+
+test_with_dir("old file API", {
+  expect_warning(x <- drake_plan(
+    file.csv = write.csv(mtcars, file = "file.csv"),
+    strings_in_dots = "literals",
+    file_targets = TRUE
+  ))
+  expect_warning(y <- drake_plan(
+    contents = read.csv('file.csv'), # nolint
+    strings_in_dots = "filenames"
+  ))
+  z <- rbind(x, y)
+  expect_warning(check_plan(z))
+  expect_warning(make(z, session_info = FALSE) -> config)
+  expect_equal(readd("'file.csv'"), readd("\"file.csv\""))
+  expect_true(is.character(readd("'file.csv'")))
+  expect_error(is.character(`"file.csv"`))
+  expect_silent(loadd("'file.csv'", verbose = FALSE))
+  expect_true(is.character(`"file.csv"`))
+  expect_equal(
+    z,
+    tibble::tibble(
+      target = c("\"file.csv\"", "contents"),
+      command = c("write.csv(mtcars, file = \"file.csv\")", "read.csv('file.csv')") # nolint
+    )
+  )
+  expect_equal(sort(justbuilt(config)), sort(c("contents", "\"file.csv\"")))
 })

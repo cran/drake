@@ -8,28 +8,38 @@ or create a new one otherwise.}
 recover_cache(path = drake::default_cache_path(),
   short_hash_algo = drake::default_short_hash_algo(),
   long_hash_algo = drake::default_long_hash_algo(), force = FALSE,
-  verbose = TRUE, fetch_cache = NULL)
+  verbose = drake::default_verbose(), fetch_cache = NULL)
 }
 \arguments{
 \item{path}{file path of the cache}
 
 \item{short_hash_algo}{short hash algorithm for the cache.
-See \code{\link{default_short_hash_algo}()} and
-\code{\link{make}()}}
+See \code{\link[=default_short_hash_algo]{default_short_hash_algo()}} and
+\code{\link[=make]{make()}}}
 
 \item{long_hash_algo}{long hash algorithm for the cache.
-See \code{\link{default_long_hash_algo}()} and
-\code{\link{make}()}}
+See \code{\link[=default_long_hash_algo]{default_long_hash_algo()}} and
+\code{\link[=make]{make()}}}
 
 \item{force}{logical, whether to load the cache
 despite any back compatibility issues with the
 running version of drake.}
 
-\item{verbose}{logical, whether to print the file path of the cache.}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 
 \item{fetch_cache}{character vector containing lines of code.
 The purpose of this code is to fetch the \code{storr} cache
-with a command like \code{storr_rds()} or \code{storr_dbi()},
+with a command like \code{\link[=storr_rds]{storr_rds()}} or \code{\link[=storr_dbi]{storr_dbi()}},
 but customized.}
 }
 \value{
@@ -37,7 +47,7 @@ A drake/storr cache.
 }
 \description{
 Does not work with
-in-memory caches such as \code{storr_environment()}.
+in-memory caches such as \code{\link[=storr_environment]{storr_environment()}}.
 }
 \examples{
 \dontrun{
@@ -50,6 +60,6 @@ x <- recover_cache(".drake") # Recover the project's storr cache.
 }
 }
 \seealso{
-\code{\link{new_cache}}, \code{\link{this_cache}},
-\code{\link{get_cache}}
+\code{\link[=new_cache]{new_cache()}}, \code{\link[=this_cache]{this_cache()}},
+\code{\link[=get_cache]{get_cache()}}
 }

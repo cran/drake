@@ -10,9 +10,7 @@ drake_unquote(x = NULL, deep = FALSE)
 \arguments{
 \item{x}{character vector}
 
-\item{deep}{remove all outer quotes if \code{TRUE}
-and only the outermost set otherwise. Single and double
-quotes are treated interchangeably, and matching is not checked.}
+\item{deep}{deprecated logical.}
 }
 \value{
 character vector without leading
@@ -31,5 +29,5 @@ x <- "'abcd'"
 drake_unquote(x) # "abcd"
 }
 \seealso{
-\code{\link{drake_quotes}}, \code{\link{drake_strings}}
+\code{\link[=drake_quotes]{drake_quotes()}}, \code{\link[=drake_strings]{drake_strings()}}
 }

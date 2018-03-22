@@ -1,9 +1,9 @@
 #' @title Show the analysis wildcard
-#' used in \code{\link{plan_summaries}()}.
+#'   used in [plan_summaries()].
 #' @description Used to generate workflow plan data frames.
 #' @export
-#' @seealso \code{\link{plan_summaries}()}
-#' @return The analysis wildcard used in \code{\link{plan_summaries}()}.
+#' @seealso [plan_summaries()]
+#' @return The analysis wildcard used in [plan_summaries()].
 #' @examples
 #' # See ?plan_analyses for examples
 analysis_wildcard <- function(){
@@ -11,12 +11,12 @@ analysis_wildcard <- function(){
 }
 
 #' @title Show the dataset wildcard
-#' used in \code{\link{plan_analyses}()} and \code{\link{plan_summaries}()}.
+#'   used in [plan_analyses()] and [plan_summaries()].
 #' @description Used to generate workflow plan data frames.
 #' @export
-#' @seealso \code{\link{plan_analyses}()}
+#' @seealso [plan_analyses()]
 #' @return The dataset wildcard used in
-#' \code{\link{plan_analyses}()} and \code{\link{plan_summaries}()}.
+#'   [plan_analyses()] and [plan_summaries()].
 #' @examples
 #' # See ?plan_analyses for examples
 dataset_wildcard <- function(){
@@ -24,44 +24,44 @@ dataset_wildcard <- function(){
 }
 
 #' @title Use wildcard templating to create a
-#' workflow plan data frame from a template data frame.
+#'   workflow plan data frame from a template data frame.
 #' @description The commands in workflow plan data frames can have
 #' wildcard symbols that can stand for datasets, parameters, function
 #' arguments, etc. These wildcards can be evaluated over a set of
-#' possible values using \code{evaluate_plan}.
-#' @details Specify a single wildcard with the \code{wildcard}
-#' and \code{values} arguments. In each command, the text in
-#' \code{wildcard} will be replaced by each value in \code{values}
-#' in turn. Specify multiple wildcards with the \code{rules} argument,
-#' which overrules \code{wildcard} and \code{values} if
-#' not \code{NULL}. Here, \code{rules} should be a list with wildcards
+#' possible values using `evaluate_plan`.
+#' @details Specify a single wildcard with the `wildcard`
+#' and `values` arguments. In each command, the text in
+#' `wildcard` will be replaced by each value in `values`
+#' in turn. Specify multiple wildcards with the `rules` argument,
+#' which overrules `wildcard` and `values` if
+#' not `NULL`. Here, `rules` should be a list with wildcards
 #' as names and vectors of possible values as list elements.
 #' @export
 #' @return A workflow plan data frame with the wildcards evaluated.
 #'
 #' @param plan workflow plan data frame, similar to one produced by
-#' \code{\link{drake_plan}}
+#'   [drake_plan()]
 #'
 #' @param rules Named list with wildcards as names and vectors of
-#' replacements
-#' as values. This is a way to evaluate multiple wildcards at once.
-#' When not \code{NULL}, \code{rules} overrules \code{wildcard} and
-#' \code{values} if
-#' not \code{NULL}.
+#'   replacements
+#'   as values. This is a way to evaluate multiple wildcards at once.
+#'   When not `NULL`, `rules` overrules `wildcard` and
+#'   `values` if
+#'   not `NULL`.
 #'
 #' @param wildcard character scalar denoting a wildcard placeholder
 #'
 #' @param values vector of values to replace the wildcard
-#' in the drake instructions. Will be treated as a character vector.
-#' Must be the same length as \code{plan$command} if \code{expand} is
-#' \code{TRUE}.
+#'   in the drake instructions. Will be treated as a character vector.
+#'   Must be the same length as `plan$command` if `expand` is
+#'   `TRUE`.
 #'
-#' @param expand If \code{TRUE}, create a new rows in the workflow plan
-#' data frame
-#' if multiple values are assigned to a single wildcard.
-#' If \code{FALSE}, each occurrence of the wildcard
-#' is replaced with the next entry in the \code{values} vector,
-#' and the values are recycled.
+#' @param expand If `TRUE`, create a new rows in the workflow plan
+#'   data frame
+#'   if multiple values are assigned to a single wildcard.
+#'   If `FALSE`, each occurrence of the wildcard
+#'   is replaced with the next entry in the `values` vector,
+#'   and the values are recycled.
 #'
 #' @examples
 #' # Create the part of the workflow plan for the datasets.
@@ -161,7 +161,7 @@ evaluations <- function(
 #' @return An expanded workflow plan data frame (with replicated targets).
 #' @param plan workflow plan data frame
 #' @param values values to expand over. These will be appended to
-#' the names of the new targets.
+#'   the names of the new targets.
 #' @examples
 #' # Create the part of the workflow plan for the datasets.
 #' datasets <- drake_plan(
@@ -185,18 +185,18 @@ expand_plan <- function(plan, values = NULL){
 }
 
 #' @title Write commands to combine several targets into one
-#' or more overarching targets.
+#'   or more overarching targets.
 #' @description Creates a new workflow plan data frame with a single new
 #' target. This new target is a list, vector, or other aggregate of
 #' a collection of existing targets in another workflow plan data frame.
 #' @export
 #' @return A workflow plan data frame that aggregates multiple
-#' prespecified targets into one additional target downstream.
+#'   prespecified targets into one additional target downstream.
 #' @param plan workflow plan data frame of prespecified targets
 #' @param target name of the new aggregated target
 #' @param gather function used to gather the targets. Should be
-#' one of \code{\link{list}(...)}, \code{\link{c}(...)},
-#' \code{\link{rbind}(...)}, or similar.
+#'   one of \code{\link{list}(...)}, \code{\link{c}(...)},
+#'   \code{\link{rbind}(...)}, or similar.
 #' @examples
 #' # Workflow plan for datasets:
 #' datasets <- drake_plan(
@@ -221,27 +221,117 @@ gather_plan <- function(
   command <- paste(plan$target, "=", plan$target)
   command <- paste(command, collapse = ", ")
   command <- paste0(gather, "(", command, ")")
-  return(
-    data.frame(target = target, command = command, stringsAsFactors = FALSE)
+  tibble(target = target, command = command)
+}
+
+#' @title Write commands to reduce several targets down to one.
+#' @description Creates a new workflow plan data frame with the
+#'   commands to do a reduction (i.e. to repeatedly apply a binary
+#'   operator to pairs of targets to produce one target).
+#' @export
+#' @return A workflow plan data frame that aggregates multiple
+#'   prespecified targets into one additional target downstream.
+#' @param plan workflow plan data frame of prespecified targets
+#' @param target name of the new reduced target
+#' @param begin character, code to place at the beginning
+#'   of each step in the reduction
+#' @param op binary operator to apply in the reduction
+#' @param end character, code to place at the end
+#'   of each step in the reduction
+#' @param pairwise logical, whether to create multiple
+#'   new targets, one for each pair/step in the reduction (`TRUE`), 
+#'   or to do the reduction all in one command.
+#' @examples
+#' # Workflow plan for datasets:
+#' x_plan <- evaluate_plan(
+#'   drake_plan(x = VALUE),
+#'   wildcard = "VALUE",
+#'   values = 1:8
+#' )
+#' # Create a new target from the sum of the others.
+#' reduce_plan(x_plan, target = "x_sum", pairwise = FALSE)
+#' # For memory efficiency and parallel computing,
+#' # reduce pairwise:
+#' reduce_plan(x_plan, target = "x_sum", pairwise = TRUE)
+#' # Optionally define your own function and use it as the
+#' # binary operator in the reduction.
+#' x_plan <- evaluate_plan(
+#'   drake_plan(x = VALUE),
+#'   wildcard = "VALUE",
+#'   values = 1:9
+#' )
+#' x_plan
+#' reduce_plan(
+#'   x_plan, target = "x_sum", pairwise = TRUE,
+#'   begin = "fun(", op = ", ", end = ")"
+#' )
+reduce_plan <- function(
+  plan = NULL,
+  target = "target",
+  begin = "",
+  op = " + ",
+  end = "",
+  pairwise = TRUE
+){
+  if (pairwise){
+    pairs <- reduction_pairs(
+      x = plan$target,
+      base_name = paste0(target, "_")
+    )
+    pairs$names[nrow(pairs)] <- target
+    tibble(
+      target = pairs$names,
+      command = paste0(begin, pairs$odds, op, pairs$evens, end)
+    )
+  } else {
+    command <- Reduce(
+      x = plan$target,
+      f = function(x, y){
+        paste0(begin, x, op, y, end)
+      }
+    )
+    tibble(target = target, command = command)
+  }
+}
+
+reduction_pairs <- function(x, pairs = NULL, base_name = "reduced_"){
+  if (length(x) < 2){
+    return(pairs)
+  }
+  evens <- x[seq(from = 2, to = length(x), by = 2)]
+  odds <- x[seq(from = 1, to = length(x), by = 2)]
+  names <- new_x <- paste0(base_name, seq_along(odds) + (nrow(pairs) %||% 0))
+  if (length(odds) > length(evens)){
+    evens[length(evens) + 1] <- names[1]
+    new_x <- new_x[-1]
+  }
+  new_pairs <- data.frame(
+    names = names, odds = odds, evens = evens,
+    stringsAsFactors = FALSE
+  )
+  reduction_pairs(
+    x = new_x,
+    pairs = rbind(pairs, new_pairs),
+    base_name = base_name
   )
 }
 
 #' @title Generate a workflow plan data frame to
-#' analyze multiple datasets using multiple methods of analysis.
+#'   analyze multiple datasets using multiple methods of analysis.
 #' @description Uses wildcards to create a new
 #' workflow plan data frame from a template data frame.
-#' @seealso \code{\link{plan_summaries}},
-#'  \code{\link{make}}, \code{\link{drake_plan}}
+#' @seealso [plan_summaries()],
+#'    [make()], [drake_plan()]
 #' @export
 #' @return An evaluated workflow plan data frame of analysis targets.
 #' @param plan workflow plan data frame of analysis methods.
-#' The commands in the \code{command} column must
-#' have the \code{dataset__} wildcard where the datasets go.
-#' For example, one command could be \code{lm(dataset__)}. Then,
-#' the commands in the output will include \code{lm(your_dataset_1)},
-#' \code{lm(your_dataset_2)}, etc.
+#'   The commands in the `command` column must
+#'   have the `dataset__` wildcard where the datasets go.
+#'   For example, one command could be `lm(dataset__)`. Then,
+#'   the commands in the output will include `lm(your_dataset_1)`,
+#'   `lm(your_dataset_2)`, etc.
 #' @param datasets workflow plan data frame with instructions
-#' to make the datasets.
+#'   to make the datasets.
 #' @examples
 #' # Create the piece of the workflow plan for the datasets.
 #' datasets <- drake_plan(
@@ -272,25 +362,25 @@ plan_analyses <- function(plan, datasets){
 }
 
 #' @title Generate a workflow plan data frame for summarizing
-#' multiple analyses of multiple datasets multiple ways.
+#'   multiple analyses of multiple datasets multiple ways.
 #' @description Uses wildcards to create a new
 #' workflow plan data frame from a template data frame.
-#' @seealso \code{\link{plan_analyses}}, \code{\link{make}},
-#' \code{\link{drake_plan}}
+#' @seealso [plan_analyses()], [make()],
+#'   [drake_plan()]
 #' @export
 #' @return An evaluated workflow plan data frame of instructions
-#' for computing summaries of analyses and datasets.
-#' analyses of multiple datasets in multiple ways.
+#'   for computing summaries of analyses and datasets.
+#'   analyses of multiple datasets in multiple ways.
 #' @param plan workflow plan data frame with commands for the summaries.
-#' Use the \code{analysis__} and \code{dataset__} wildcards
-#' just like the \code{dataset__} wildcard in \code{\link{analyses}()}.
+#'   Use the `analysis__` and `dataset__` wildcards
+#'   just like the `dataset__` wildcard in [analyses()].
 #' @param analyses workflow plan data frame of analysis instructions
 #' @param datasets workflow plan data frame with instructions to make
-#' or import the datasets.
+#'   or import the datasets.
 #' @param gather Character vector, names of functions to gather the
-#' summaries. If not \code{NULL}, the length must be the number of
-#' rows in the \code{plan}. See the \code{\link{gather}()} function
-#' for more.
+#'   summaries. If not `NULL`, the length must be the number of
+#'   rows in the `plan`. See the [gather()] function
+#'   for more.
 #' @examples
 #' # Create the part of the workflow plan data frame for the datasets.
 #' datasets <- drake_plan(
@@ -372,7 +462,8 @@ plan_summaries <- function(
         target = summary_type,
         gather = gather[which(summary_type == plan$target)])
     }
-    )
+  ) %>%
+    as_tibble
   out[[group]] <- NULL
   gathered[[group]] <- NULL
   return(rbind(gathered, out))
@@ -401,5 +492,5 @@ unique_random_string <- function(n = 30, exclude = NULL){
     out <- stri_rand_strings(1, n)
     next
   }
-  return(out)
+  make.names(out)
 }

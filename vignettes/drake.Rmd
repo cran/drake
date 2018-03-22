@@ -1,7 +1,7 @@
 ---
 title: "drake"
 subtitle: "where to begin"
-author: "William Michael Landau"
+author: "Will Landau"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
@@ -26,14 +26,20 @@ knitr::opts_chunk$set(
 )
 ```
 
-![](logo-vignettes.png)
+<img src="https://ropensci.github.io/drake/images/infographic.svg" alt="infographic" align="center" style = "border: none; float: center;">
 
-This tutorial is the abridged version of the [quickstart vignette](https://github.com/ropensci/drake/blob/master/vignettes/quickstart.Rmd). For more information, see the [documentation website](https://ropensci.github.io/drake/), which includes the [rendered online version of the quickstart vignette](https://ropensci.github.io/drake/articles/quickstart.html).
+This tutorial is a recommended starting place for learning how to use `drake`. It is the abridged version of the [basic example vignette](https://github.com/ropensci/drake/blob/master/vignettes/example-basic.Rmd). See [this section of the README](https://github.com/ropensci/drake/blob/master/README.md#documentation) for a high-level overview of the available documentation.
 
-```{r precleangetstarteddrake, echo = FALSE}
-# Remove any previous work.
-clean(destroy = TRUE)
+# Get the code.
+
+Write the code files to your workspace.
+
+```{r getthequickstartcode, eval = FALSE}
+drake_example("basic")
 ```
+
+The new `basic` folder now includes a file structure of a serious `drake` project, plus an `interactive-tutorial.R` to narrate the example. The code is also [online here](https://github.com/ropensci/drake/tree/master/inst/examples/basic).
+
 
 # The motivation of the basic example
 
@@ -46,7 +52,7 @@ head(mtcars)
 
 Here, `wt` is weight in tons, and `mpg` is fuel efficiency in miles per gallon. We want to figure out if there is an association between `wt` and `mpg`. The `mtcars` dataset itself only has 32 rows, so we generate two larger bootstrapped datasets and then analyze them with regression models. We summarize the regression models to see if there is an association.
 
-# A taste of `drake`'s basic example
+# A taste of the basic example
 
 Your workspace begins with a bunch of imports: functions, pre-loaded data objects, and saved files available before the real work begins.
 
@@ -92,6 +98,27 @@ whole_plan <- rbind(dataset_plan, analysis_plan)
 whole_plan
 ```
 
+For the commands you pass in with the free-form `...` argument, `drake_plan()` uses tidy evaluation. For example, it supports quasiquotation with the `!!` argument. Use `tidy_evaluation = FALSE` or the `list` argument to suppress this behavior.
+
+```{r testquasiquoplan}
+my_variable <- 5
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable")
+)
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable"),
+  tidy_evaluation = FALSE
+)
+```
+
+For instances of `!!` that remain in the workflow plan, `make()` will run these commands in tidy fashion, evaluating the `!!` operator using the environment you provided.
+
 Using static code analysis, `drake` detects the dependencies of all your targets. The result is an interactive network diagram.
 
 ```{r drakevisgraph, eval = FALSE}
@@ -99,7 +126,7 @@ vis_drake_graph(my_plan)
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/ropensci/drake/0b76e536/images/outdated.html"
+src = "https://ropensci.github.io/drake/images/outdated.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -151,7 +178,7 @@ unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
 
 ## Learn how to use `drake`.
 
-- `basic`: A tiny, minimal example with the `mtcars` dataset to demonstrate how to use `drake`. Use `load_basic_example()` to set up the project in your workspace. The [quickstart vignette](https://github.com/ropensci/drake/blob/master/vignettes/quickstart.Rmd) is a parallel walkthrough of the same example. 
+- `basic`: A tiny, minimal example with the `mtcars` dataset to demonstrate how to use `drake`. Use `load_basic_example()` to set up the project in your workspace. The [basic example vignette](https://github.com/ropensci/drake/blob/master/vignettes/example-basic.Rmd) is a parallel walkthrough of the same example.
 - `gsp`: A more concrete, practical example using real econometrics data. It explores the relationships between gross state product and other quantities, and it shows off `drake`'s ability to generate lots of reproducibly-tracked tasks with ease.
 - `packages`: A concrete, practical example using data on R package downloads. It demonstrates how `drake` can refresh a project based on new incoming data without restarting everything from scratch.
 

@@ -10,7 +10,7 @@ drake_example(example = drake::drake_examples(), to = getwd(),
 \arguments{
 \item{example}{name of the example.
 To see all the available example names,
-run \code{\link{drake_examples}}.}
+run \code{\link[=drake_examples]{drake_examples()}}.}
 
 \item{to}{Character scalar, file path, where
 to write the folder containing the code files for the example.}
@@ -26,15 +26,15 @@ with the same name as the drake example.}
 \description{
 Copy a folder of code files for a
 drake example to the current working directory.
-Call \code{drake_example('basic')} to generate the code files from the
-quickstart vignette: \code{vignette('quickstart')}.
-To see the names of all the examples, run \code{\link{drake_examples}}.
+Call \code{drake_example("basic")} to generate the code files from the
+basic example vignette: \code{vignette("example-basic")}.
+To see the names of all the examples, run \code{\link[=drake_examples]{drake_examples()}}.
 }
 \examples{
 \dontrun{
 test_with_dir("Quarantine side effects.", {
 drake_examples() # List all the drake examples.
-# Sets up the same example as the quickstart vignette.
+# Sets up the same example as the basic example vignette.
 drake_example("basic")
 # Sets up the SLURM example.
 drake_example("slurm")
@@ -42,6 +42,6 @@ drake_example("slurm")
 }
 }
 \seealso{
-\code{\link{drake_examples}}, \code{\link{make}},
-\code{\link{shell_file}}, \code{\link{drake_batchtools_tmpl_file}}
+\code{\link[=drake_examples]{drake_examples()}}, \code{\link[=make]{make()}},
+\code{\link[=shell_file]{shell_file()}}, \code{\link[=drake_batchtools_tmpl_file]{drake_batchtools_tmpl_file()}}
 }

@@ -10,9 +10,8 @@ knitr::opts_chunk$set(
   warning = TRUE
 )
 
-## ----precleangetstarteddrake, echo = FALSE-------------------------------
-# Remove any previous work.
-clean(destroy = TRUE)
+## ----getthequickstartcode, eval = FALSE----------------------------------
+#  drake_example("basic")
 
 ## ----mtcarsdrake1--------------------------------------------------------
 # ?mtcars # more info
@@ -52,6 +51,22 @@ analysis_plan
 
 whole_plan <- rbind(dataset_plan, analysis_plan)
 whole_plan
+
+## ----testquasiquoplan----------------------------------------------------
+my_variable <- 5
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable")
+)
+
+drake_plan(
+  a = !!my_variable,
+  b = !!my_variable + 1,
+  list = c(d = "!!my_variable"),
+  tidy_evaluation = FALSE
+)
 
 ## ----drakevisgraph, eval = FALSE-----------------------------------------
 #  vis_drake_graph(my_plan)

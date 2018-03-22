@@ -6,21 +6,33 @@
 \usage{
 drake_cache_log(path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = TRUE, jobs = 1, targets_only = FALSE)
+  verbose = drake::default_verbose(), jobs = 1, targets_only = FALSE)
 }
 \arguments{
 \item{path}{Root directory of the drake project,
 or if \code{search} is \code{TRUE}, either the
-project root or a subdirectory of the project.}
+project root or a subdirectory of the project.
+Ignored if a \code{cache} is supplied.}
 
 \item{search}{logical. If \code{TRUE}, search parent directories
 to find the nearest drake cache. Otherwise, look in the
-current working directory only.}
+current working directory only.
+Ignored if a \code{cache} is supplied.}
 
-\item{cache}{drake cache. See \code{\link{new_cache}()}.
+\item{cache}{drake cache. See \code{\link[=new_cache]{new_cache()}}.
 If supplied, \code{path} and \code{search} are ignored.}
 
-\item{verbose}{whether to print console messages}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 
 \item{jobs}{number of jobs/workers for parallel processing}
 
@@ -50,7 +62,7 @@ This function is particularly useful if you are
 storing your drake project in a version control repository.
 The cache has a lot of tiny files, so you should not put it
 under version control. Instead, save the output
-of \code{drake_cache_log()} as a text file after each \code{\link{make}()},
+of \code{drake_cache_log()} as a text file after each \code{\link[=make]{make()}},
 and put the text file under version control.
 That way, you have a changelog of your project's results.
 See the examples below for details.
@@ -58,7 +70,7 @@ Depending on your project's
 history, the targets may be different than the ones
 in your workflow plan data frame.
 Also, the keys depend on the short hash algorithm
-of your cache (default: \code{\link{default_short_hash_algo}()}).
+of your cache (default: \code{\link[=default_short_hash_algo]{default_short_hash_algo()}}).
 }
 \examples{
 \dontrun{
@@ -89,11 +101,11 @@ write.table(
 }
 }
 \seealso{
-\code{\link{drake_cache_log_file}}
-\code{\link{cached}},
-\code{\link{get_cache}},
-\code{\link{default_short_hash_algo}},
-\code{\link{default_long_hash_algo}},
-\code{\link{short_hash}},
-\code{\link{long_hash}}
+\code{\link[=drake_cache_log_file]{drake_cache_log_file()}}
+\code{\link[=cached]{cached()}},
+\code{\link[=get_cache]{get_cache()}},
+\code{\link[=default_short_hash_algo]{default_short_hash_algo()}},
+\code{\link[=default_long_hash_algo]{default_long_hash_algo()}},
+\code{\link[=short_hash]{short_hash()}},
+\code{\link[=long_hash]{long_hash()}}
 }

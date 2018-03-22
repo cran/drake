@@ -5,40 +5,47 @@
 \title{Remove targets/imports from the cache.}
 \usage{
 clean(..., list = character(0), destroy = FALSE, path = getwd(),
-  search = TRUE, cache = NULL, verbose = 1, jobs = 1, force = FALSE,
-  garbage_collection = FALSE, purge = FALSE)
+  search = TRUE, cache = NULL, verbose = drake::default_verbose(),
+  jobs = 1, force = FALSE, garbage_collection = FALSE, purge = FALSE)
 }
 \arguments{
-\item{...}{targets to remove from the cache, as names (unquoted)
-or character strings (quoted). Similar to \code{...} in
-\code{\link{remove}(...)}.
-The symbols must not match other (formal) arguments of \code{clean()},
-such as \code{destroy}, \code{cache}, \code{path}, \code{search},
-\code{verbose}, or \code{jobs}. If there are name conflicts,
-use the \code{list} argument instead of \code{...}.}
+\item{...}{targets to remove from the cache: as names (symbols),
+character strings, or \code{dplyr}-style \code{tidyselect}
+commands such as \code{starts_with()}.}
 
 \item{list}{character vector naming targets to be removed from the
-cache. Similar to the \code{list} argument of \code{\link{remove}()}.}
+cache. Similar to the \code{list} argument of \code{\link[=remove]{remove()}}.}
 
 \item{destroy}{logical, whether to totally remove the drake cache.
 If \code{destroy} is \code{FALSE}, only the targets
-from \code{make}()
+from \code{make()}
 are removed. If \code{TRUE}, the whole cache is removed, including
 session metadata, etc.}
 
 \item{path}{Root directory of the drake project,
 or if \code{search} is \code{TRUE}, either the
-project root or a subdirectory of the project.}
+project root or a subdirectory of the project.
+Ignored if a \code{cache} is supplied.}
 
 \item{search}{logical. If \code{TRUE}, search parent directories
 to find the nearest drake cache. Otherwise, look in the
-current working directory only.}
+current working directory only.
+Ignored if a \code{cache} is supplied.}
 
-\item{cache}{optional drake cache. See code{\link{new_cache}()}. If
-If \code{cache} is supplied,
-the \code{path} and \code{search} arguments are ignored.}
+\item{cache}{drake cache. See \code{\link[=new_cache]{new_cache()}}.
+If supplied, \code{path} and \code{search} are ignored.}
 
-\item{verbose}{whether to print console messages}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 
 \item{jobs}{Number of jobs for light parallelism
 (disabled on Windows).}
@@ -62,21 +69,21 @@ metadata namespaces such as "meta", "build_times", and "errors".}
 Invisibly return \code{NULL}.
 }
 \description{
-Cleans up the work done by \code{\link{make}()}.
+Cleans up the work done by \code{\link[=make]{make()}}.
 }
 \details{
 By default, \code{clean()} removes references to cached data.
 To deep-clean the data to free up storage/memory, use
 \code{clean(garbage_collection = TRUE)}. Garbage collection is slower,
 but it purges data with no remaining references. To just do garbage
-collection without cleaning, see \code{\link{drake_gc}()}.
+collection without cleaning, see \code{\link[=drake_gc]{drake_gc()}}.
 Also, for \code{clean()}, you must be in your project's working directory
 or a subdirectory of it.
 \code{clean(search = TRUE)} searches upwards in your folder structure
 for the drake cache and acts on the first one it sees. Use
-\code{search == FALSE} to look within the current working
+\code{search = FALSE} to look within the current working
 directory only.
-WARNING: This deletes ALL work done with \code{\link{make}()},
+WARNING: This deletes ALL work done with \code{\link[=make]{make()}},
 which includes
 file targets as well as the entire drake cache. Only use \code{clean()}
 if you're sure you won't lose anything important.
@@ -92,6 +99,9 @@ cached(no_imported_objects = TRUE)
 # Remove 'summ_regression1_large' and 'small' from the cache.
 clean(summ_regression1_large, small)
 # Those objects should be gone.
+cached(no_imported_objects = TRUE)
+# How about `tidyselect`?
+clean(starts_with("coef"))
 cached(no_imported_objects = TRUE)
 # Rebuild the missing targets.
 make(my_plan)
@@ -119,5 +129,5 @@ clean(destroy = TRUE)
 }
 }
 \seealso{
-\code{\link{drake_gc}}, \code{\link{make}}
+\code{\link[=drake_gc]{drake_gc()}}, \code{\link[=make]{make()}}
 }

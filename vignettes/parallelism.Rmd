@@ -1,6 +1,6 @@
 ---
-title: "Parallel computing"
-author: "William Michael Landau"
+title: "High-performance computing with drake"
+author: "Will Landau"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
@@ -11,8 +11,6 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-
-![](logo-vignettes.png)
 
 ```{r suppression, echo = F}
 suppressMessages(suppressWarnings(library(future)))
@@ -57,7 +55,7 @@ vis_drake_graph(config, width = "100%", height = "500px")
 ```
 
 <iframe
-src = "https://cdn.rawgit.com/ropensci/drake/0b76e536/images/reg2.html"
+src = "https://ropensci.github.io/drake/images/reg2.html"
 width = "100%" height = "600px" allowtransparency="true"
 style="border: none; box-shadow: none">
 </iframe>
@@ -251,6 +249,29 @@ drake_batchtools_tmpl_file("slurm") # Writes batchtools.slurm.tmpl
 
 Be sure to heed the previously-mentioned cautionary note about deploying too many jobs at once. In `"future_lapply"` parallelism, the `jobs` argument applies to the imports, but not the targets. Functions passed to `future::plan()` such as `mulitisession()` and `batchtools_slurm()` usually have a `workers` arguments for this purpose. Depending on the `future` backend you select with `future::plan()`, you might also make use of one of the other environment variables listed in `?future::future.options`.
 
+## future
+
+The `future` backend is experimental and needs more real-world testing. It is similar to `future_lapply` except that individual futures are launched and managed using a manual job scheduler. Jobs are submitted as soon as workers become available, which overcomes an inefficiency of the usual staged parallelism. And with the optional `evaluator` column of the workflow plan data frame, you can use different computing resources for different targets. (See the `evaluator` argument of `future()`.)
+
+```{r democustomfutureevaluators, eval = FALSE}
+library(future)
+library(drake)
+load_basic_example()
+remote <- future::plan(multisession)
+local <- future::plan(multicore)
+evaluator <- NULL
+# Make the targets with the multisession future backend...
+for (i in seq_len(nrow(my_plan))){
+  evaluator <- c(evaluator, remote)
+}
+# ...except for the R Markdown report.
+evaluator[[1]] <- local
+my_plan$evaluator <- evaluator
+make(my_plan, parallelism = "future", jobs = 8)
+```
+
+In addition, you can set the `caching` argument to control when the values of the targets are cached: `"worker"` for the individual workers (default) and `"master"` for the master process. If you let the workers do the caching, you can take advantage of parallelism when targets are stored. On the other hand, `"master"` is a better option if workers do not have cache access or you are using a custom cache that is not thread-safe (e.g. `storr::storr_dbi()`.
+
 ## Makefile
 
 `Makefile` parallelism uses proper [Makefiles](https://www.gnu.org/software/make/) to distribute targets across different R sessions. Similarly to `future_lapply` parallelism, it is a mechanism for distributing targets at scale. 
@@ -317,7 +338,7 @@ But be warned: that particular recipe fails on Windows.
 Use the `Makefile_recipe()` function to show and tweak `Makefile` recipes in advance.
 
 ```{r makefilerecipefunction}
-Makefile_recipe()
+Makefile_recipe(cache_path = "just_use_the_default")
 
 Makefile_recipe(
   recipe_command = "R -e 'R_RECIPE' -q",
@@ -329,7 +350,7 @@ Makefile_recipe(
 If `recipe_command` contains no mention of `R_RECIPE`, then `R_RECIPE` is single-quoted and appended automatically.
 
 ```{r reappendrrecipe}
-Makefile_recipe(recipe_command = "R -q -e")
+Makefile_recipe(recipe_command = "R -q -e", cache_path = "supplied_by_default")
 ```
 
 Try each of the following and look at the generated `Makefile` after each call to `make()`. To see the recipes printed to the console, run `clean()` between each `make()` and leave `verbose` equal to `TRUE` (default).

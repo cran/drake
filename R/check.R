@@ -2,33 +2,32 @@
 #' @description Possible obvious errors include
 #' circular dependencies and
 #' missing input files.
-#' @seealso \code{ink{drake_plan}}, \code{\link{make}}
+#' @seealso \code{ink{drake_plan}}, [make()]
 #' @export
-#' @return Invisibly return \code{plan}.
+#' @return Invisibly return `plan`.
+#' @inheritParams cached
 #' @param plan workflow plan data frame, possibly from
-#' \code{\link{drake_plan}()}.
+#'   [drake_plan()].
 #' @param targets character vector of targets to make
 #' @param envir environment containing user-defined functions
-#' @param cache optional drake cache. See \code{\link{new_cache}()}
-#' @param verbose same as for \code{\link{make}()}
-#' @param jobs number of jobs/workers for light parallelism
+#' @param cache optional drake cache. See [new_cache()].
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' load_basic_example() # Get the code with drake_example("basic").
 #' check_plan(my_plan) # Check the workflow plan dataframe for obvious errors.
-#' unlink('report.Rmd') # Remove an import file mentioned in the plan.
+#' unlink("report.Rmd") # Remove an import file mentioned in the plan.
 #' # If you un-suppress the warnings, check_plan()
 #' # will tell you that 'report.Rmd' is missing.
 #' suppressWarnings(check_plan(my_plan))
 #' })
 #' }
 check_plan <- function(
-  plan = drake_plan(),
+  plan = read_drake_plan(),
   targets = drake::possible_targets(plan),
   envir = parent.frame(),
   cache = drake::get_cache(verbose = verbose),
-  verbose = TRUE,
+  verbose = drake::default_verbose(),
   jobs = 1
 ){
   force(envir)
@@ -41,7 +40,6 @@ check_plan <- function(
     jobs = jobs
   )
   check_drake_config(config)
-  check_strings(config$plan, jobs = jobs)
   invisible(plan)
 }
 
@@ -59,6 +57,7 @@ check_drake_config <- function(config) {
   assert_standard_columns(config = config)
   warn_bad_symbols(config$plan$target)
   parallelism_warnings(config = config)
+  check_drake_graph(graph = config$graph)
 }
 
 assert_standard_columns <- function(config){
@@ -85,7 +84,7 @@ missing_input_files <- function(config) {
 }
 
 warn_bad_symbols <- function(x) {
-  x <- drake_unquote(x)
+  x <- Filter(x = x, f = is_not_file)
   bad <- which(!is_parsable(x)) %>% names
   if (!length(bad))
     return(invisible())
@@ -94,30 +93,38 @@ warn_bad_symbols <- function(x) {
   invisible()
 }
 
-check_strings <- function(plan, jobs) {
-  x <- stri_extract_all_regex(plan$command, "(?<=\").*?(?=\")")
-  names(x) <- plan$target
-  x <- x[!is.na(x)]
-  if (!length(x))
+check_drake_graph <- function(graph){
+  if (is_dag(graph)){
     return()
-  x <- lightly_parallelize(
-    X = x,
-    FUN = function(y) {
-      if (length(y) > 2)
-        return(y[seq(from = 1, to = length(y), by = 2)])
-      else
-        return(y)
-    },
-    jobs = jobs
+  }
+  comp <- igraph::components(graph, mode = "strong")
+  cycle_component_indices <- which(comp$csize > 1)
+  cycles <- lapply(cycle_component_indices, function(i){
+    names(comp$membership[comp$membership == i]) %>%
+      paste(collapse = " ")
+  }) %>%
+    unlist
+  stop(
+    "Circular workflow: there is a target ",
+    "that ultimately depends on itself. Cycles:\n",
+    multiline_message(cycles)
   )
-  message("Double-quoted strings were found in plan$command.\n",
-    "Should these be single-quoted instead?\n",
-    "Remember: single-quoted strings are file target dependencies\n",
-    "and double-quoted strings are just ordinary strings.")
-  for (target in seq_len(length(x))) {
-    message("\ntarget: ", names(x)[target])
-    message("strings in command:\n",
-      multiline_message(drake::drake_quotes(x[[target]],
-      single = FALSE)), sep = "")
+}
+
+check_jobs <- function(jobs){
+  stopifnot(length(jobs) > 0)
+  stopifnot(is.numeric(jobs) || is.integer(jobs))
+  stopifnot(all(jobs > 0))
+  if (length(jobs) > 1){
+    if (
+      is.null(names(jobs)) ||
+      !identical(sort(names(jobs)), sort(c("imports", "targets")))
+    ){
+      stop(
+        "In the `jobs` argument, you must either give a numeric scalar ",
+        "or a named numeric vector with names 'imports' and 'targets'.",
+        call. = FALSE
+      )
+    }
   }
 }

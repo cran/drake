@@ -5,21 +5,13 @@ run_parallel_backend <- function(config){
   )(config)
 }
 
-run_parallel <- function(config, worker) {
-  config <- exclude_imports_if(config = config)
-  while (length(V(config$execution_graph))){
-    config <- parallel_stage(worker = worker, config = config)
-  }
-  invisible()
-}
-
 parallel_filter <- function(x, f, jobs = 1, ...){
   index <- lightly_parallelize(X = x, FUN = f, jobs = jobs, ...)
   x[as.logical(index)]
 }
 
 lightly_parallelize <- function(X, FUN, jobs = 1, ...) {
-  jobs <- safe_jobs(jobs)
+  jobs <- safe_jobs_imports(jobs)
   if (is.atomic(X)){
     lightly_parallelize_atomic(X = X, FUN = FUN, jobs = jobs, ...)
   } else {
@@ -28,15 +20,38 @@ lightly_parallelize <- function(X, FUN, jobs = 1, ...) {
 }
 
 lightly_parallelize_atomic <- function(X, FUN, jobs = 1, ...){
-  jobs <- safe_jobs(jobs)
+  jobs <- safe_jobs_imports(jobs)
   keys <- unique(X)
   index <- match(X, keys)
   values <- mclapply(X = keys, FUN = FUN, mc.cores = jobs, ...)
   values[index]
 }
 
+jobs_imports <- function(jobs){
+  check_jobs(jobs)
+  if (length(jobs) < 2){
+    jobs
+  } else {
+    unname(jobs["imports"])
+  }
+}
+
+jobs_targets <- function(jobs){
+  check_jobs(jobs)
+  if (length(jobs) < 2){
+    jobs
+  } else {
+    unname(jobs["targets"])
+  }
+}
+
 safe_jobs <- function(jobs){
+  stopifnot(length(jobs) == 1)
   ifelse(on_windows(), 1, jobs)
+}
+
+safe_jobs_imports <- function(jobs){
+  ifelse(on_windows(), 1, jobs_imports(jobs = jobs))
 }
 
 on_windows <- function(){

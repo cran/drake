@@ -5,13 +5,13 @@
 \title{Return the detailed dependency profile
 of the target.}
 \usage{
-dependency_profile(target, config)
+dependency_profile(target, config = drake::read_drake_config())
 }
 \arguments{
 \item{target}{name of the target}
 
 \item{config}{configuration list output by
-\code{\link{config}} or \code{\link{make}}}
+\code{\link[=config]{config()}} or \code{\link[=make]{make()}}}
 }
 \value{
 A list of information that drake takes into account
@@ -27,16 +27,16 @@ of the returned list should agree: for example,
 \examples{
 \dontrun{
 test_with_dir("Quarantine side effects.", {
-load_basic_example() # Load drake's canonical exmaple.
+load_basic_example() # Load drake's canonical example.
 con <- make(my_plan) # Run the project, build the targets.
 # Get some example dependency profiles of targets.
 dependency_profile("small", config = con)
-dependency_profile("'report.md'", config = con)
+dependency_profile(file_store("report.md"), config = con)
 })
 }
 }
 \seealso{
-\code{\link{read_drake_meta}},
-\code{\link{deps}}, \code{\link{make}},
-\code{\link{config}}
+\code{\link[=read_drake_meta]{read_drake_meta()}},
+\code{\link[=deps]{deps()}}, \code{\link[=make]{make()}},
+\code{\link[=config]{config()}}
 }

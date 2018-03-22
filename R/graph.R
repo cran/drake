@@ -1,30 +1,16 @@
-#' @title Create the \code{igraph} dependency network of your project.
+#' @title Create the `igraph` dependency network of your project.
 #' @description This function returns an igraph object representing how
 #' the targets in your workflow plan data frame
 #' depend on each other.
-#' (\code{help(package = "igraph")}). To plot the graph, call
-#' to \code{\link{plot.igraph}()} on your graph, or just use
-#' \code{\link{vis_drake_graph}()} from the start.
-#' @seealso \code{\link{vis_drake_graph}}
+#' (`help(package = "igraph")`). To plot the graph, call
+#' to [plot.igraph()] on your graph, or just use
+#' [vis_drake_graph()] from the start.
+#' @seealso [vis_drake_graph()]
 #' @export
 #' @return An igraph object representing
-#' the workflow plan dependency network.
-#'
-#' @param plan workflow plan data frame, same as for function
-#' \code{\link{make}()}.
-#'
-#' @param targets names of targets to build, same as for function
-#' \code{\link{make}()}.
-#'
-#' @param envir environment to import from, same as for function
-#' \code{\link{make}()}.
-#'
-#' @param verbose logical, whether to output messages to the console.
-#'
-#' @param jobs number of jobs to accelerate the construction
-#' of the dependency graph. A light \code{mclapply}-based
-#' parallelism is used if your operating system is not Windows.
-#'
+#'   the workflow plan dependency network.
+#' @inheritParams drake_config
+#' @param sanitize_plan logical, whether to sanitize the workflow plan first.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -35,14 +21,17 @@
 #' })
 #' }
 build_drake_graph <- function(
-  plan = drake_plan(),
+  plan = read_drake_plan(),
   targets = drake::possible_targets(plan),
   envir = parent.frame(),
-  verbose = 1,
-  jobs = 1
+  verbose = drake::default_verbose(),
+  jobs = 1,
+  sanitize_plan = TRUE
 ){
   force(envir)
-  plan <- sanitize_plan(plan)
+  if (sanitize_plan){
+    plan <- sanitize_plan(plan)
+  }
   targets <- sanitize_targets(plan, targets)
   imports <- as.list(envir)
   assert_unique_names(
@@ -51,65 +40,78 @@ build_drake_graph <- function(
     envir = envir,
     verbose = verbose
   )
-  true_import_names <- setdiff(names(imports), targets)
-  imports <- imports[true_import_names]
+  import_names <- setdiff(names(imports), targets)
+  imports <- imports[import_names]
   console_many_targets(
     targets = names(imports),
     pattern = "connect",
     type = "import",
     config = list(verbose = verbose)
   )
-  import_deps <- lightly_parallelize(
-    imports, import_dependencies, jobs = jobs)
+  imports_edges <- lightly_parallelize(
+    X = seq_along(imports),
+    FUN = function(i){
+      imports_edges(name = import_names[[i]], value = imports[[i]])
+    },
+    jobs = jobs
+  )
   console_many_targets(
     targets = plan$target,
     pattern = "connect",
     type = "target",
     config = list(verbose = verbose)
   )
-  command_deps <- lightly_parallelize(
-    plan$command, command_dependencies, jobs = jobs)
-  names(command_deps) <- plan$target
-  dependency_list <- c(command_deps, import_deps)
-  keys <- names(dependency_list)
-  vertices <- c(keys, unlist(dependency_list)) %>% unique
-  from <- unlist(dependency_list) %>%
-    unname()
-  times <- vapply(
-    X = dependency_list,
-    FUN = length,
-    FUN.VALUE = integer(1),
-    USE.NAMES = TRUE
+  commands_edges <- lightly_parallelize(
+    X = seq_len(nrow(plan)),
+    FUN = function(i){
+      commands_edges(target = plan$target[i], command = plan$command[i])
+    },
+    jobs = jobs
   )
-  to <- rep(keys, times = times)
-  edges <- rbind(from, to) %>%
-    as.character()
-  graph <- make_empty_graph() +
-    vertex(vertices) +
-    edge(edges)
-  graph <- prune_drake_graph(graph = graph, to = targets, jobs = jobs)
-  if (!is_dag(graph)){
-    stop("Workflow is circular (chicken and egg dilemma).")
+  c(imports_edges, commands_edges) %>%
+    do.call(what = rbind) %>%
+    igraph::graph_from_data_frame() %>%
+    prune_drake_graph(to = targets, jobs = jobs) %>%
+    igraph::simplify(remove.multiple = TRUE, remove.loops = TRUE)
+}
+
+commands_edges <- function(target, command){
+  deps <- command_dependencies(command)
+  code_deps_to_edges(target = target, deps = deps)
+}
+
+imports_edges <- function(name, value){
+  deps <- import_dependencies(value)
+  code_deps_to_edges(target = name, deps = deps)
+}
+
+code_deps_to_edges <- function(target, deps){
+  inputs <- clean_dependency_list(deps[setdiff(names(deps), "file_out")])
+  edges <- NULL
+  if (length(inputs)){
+    data.frame(from = inputs, to = target, stringsAsFactors = FALSE)
+  } else {
+    # Loops will be removed.
+    data.frame(from = target, to = target, stringsAsFactors = FALSE)
   }
-  return(graph)
 }
 
 #' @title Prune the dependency network of your project.
 #' @export
-#' @seealso \code{\link{build_drake_graph}}, \code{\link{config}},
-#' \code{\link{make}}
-#' @description \code{igraph} objects are used
+#' @seealso [build_drake_graph()], [config()],
+#'   [make()]
+#' @description `igraph` objects are used
 #' internally to represent the dependency network of your workflow.
 #' See \code{\link{config}(my_plan)$graph} from the basic example.
 #' @details For a supplied graph, take the subgraph of all combined
-#' incoming paths to the vertices in \code{to}. In other words,
-#' remove the vertices after \code{to} from the graph.
+#' incoming paths to the vertices in `to`. In other words,
+#' remove the vertices after `to` from the graph.
 #' @return A pruned igraph object representing the dependency network
-#' of the workflow.
+#'   of the workflow.
 #' @param graph An igraph object to be pruned.
 #' @param to Character vector, names of the vertices that draw
-#' the line for pruning. The pruning process removes all vertices
-#' downstream of \code{to}.
+#'   the line for pruning. The pruning process removes all vertices
+#'   downstream of `to`.
 #' @param jobs Number of jobs for light parallelism (on non-Windows machines).
 #' @examples
 #' \dontrun{
@@ -139,7 +141,7 @@ prune_drake_graph <- function(
   unlisted <- setdiff(to, V(graph)$name)
   if (length(unlisted)){
     warning(
-      "supplied targets not in the workflow graph:\n",
+      "supplied targets not in the dependency graph:\n",
       multiline_message(unlisted),
       call. = FALSE
     )

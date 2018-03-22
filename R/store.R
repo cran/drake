@@ -1,14 +1,18 @@
-store_target <- function(target, value, meta, start, config) {
-  # Need complete up-to-date metadata
-  # to store targets properly.
+store_target <- function(target, value, meta, config) {
+  # Failed targets need to stay invalidated,
+  # even when `config$keep_going` is `TRUE`.
+  if (inherits(meta$error, "error")){
+    return()
+  }
   meta <- finish_meta(
     target = target,
     meta = meta,
     config = config
   )
   if (is_file(target)) {
-    store_file(
+    store_object(
       target = target,
+      value = meta$file,
       meta = meta,
       config = config
     )
@@ -23,15 +27,21 @@ store_target <- function(target, value, meta, start, config) {
     store_object(
       target = target,
       value = value,
+      meta = meta,
       config = config
     )
   }
-  # Add build times to metadata at the last minute
-  # so that the timing information takes caching operations
-  # into account.
-  meta <- append_times_to_meta(
+  finalize_storage(
     target = target,
-    start = start,
+    value = value,
+    meta = meta,
+    config = config
+  )
+}
+
+finalize_storage <- function(target, value, meta, config){
+  meta <- finalize_times(
+    target = target,
     meta = meta,
     config = config
   )
@@ -43,24 +53,10 @@ store_target <- function(target, value, meta, start, config) {
   )
 }
 
-store_object <- function(target, value, config) {
+store_object <- function(target, value, meta, config) {
   hash <- config$cache$set(
     key = target,
     value = value,
-    namespace = config$cache$default_namespace
-  )
-  config$cache$driver$set_hash(
-    key = target,
-    namespace = "kernels",
-    hash = hash
-  )
-}
-
-store_file <- function(target, meta, config) {
-  # meta$file should have a file hash at this point.
-  hash <- config$cache$set(
-    key = target,
-    value = meta$file,
     namespace = config$cache$default_namespace
   )
   config$cache$driver$set_hash(
@@ -76,6 +72,11 @@ store_function <- function(target, value, meta, config){
     value = value,
     namespace = config$cache$default_namespace
   )
+  # For the kernel of an imported function,
+  # we ignore any code wrapped in ignore().
+  if (meta$imported){
+    value <- ignore_ignore(value)
+  }
   # Unfortunately, vectorization is removed, but this is for the best.
   string <- deparse(unwrap_function(value))
   if (meta$imported){
@@ -86,4 +87,21 @@ store_function <- function(target, value, meta, config){
     value = string,
     namespace = "kernels"
   )
+}
+
+store_failure <- function(target, meta, config){
+  set_progress(
+    target = target,
+    value = "failed",
+    config = config
+  )
+  for (field in c("messages", "warnings", "error")){
+    set_in_subspace(
+      key = target,
+      value = meta[[field]],
+      subspace = field,
+      namespace = "meta",
+      cache = config$cache
+    )
+  }
 }

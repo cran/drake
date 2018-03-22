@@ -2,7 +2,7 @@ Package: drake
 Title: Data Frames in R for Make
 Description: An R-focused pipeline toolkit
   for reproducible code and high-performance computing.
-Version: 5.0.0
+Version: 5.1.0
 License: GPL-3
 URL: https://github.com/ropensci/drake
 BugReports: https://github.com/ropensci/drake/issues
@@ -26,6 +26,12 @@ Authors@R: c(
     role = "ctb"
   ),
   person(
+    family = "Müller",
+    given = "Kirill",
+    email = "krlmlr+r@mailbox.org",
+    role = "ctb"
+  ),
+  person(
     family = "Marwick",
     given = "Ben",
     email = "bmarwick@uw.edu",
@@ -42,22 +48,27 @@ Authors@R: c(
     role = "cph"
   ))
 Depends: R (>= 3.2.0)
-Imports: codetools, crayon, evaluate, digest, formatR, future,
+Imports: bindr, CodeDepends, crayon, evaluate, digest, formatR, future,
         future.apply, grDevices, igraph, knitr, lubridate, magrittr,
-        parallel, plyr, R.utils, rprojroot, stats, storr (>= 1.1.0),
-        stringi, stringr, testthat, utils, visNetwork, withr
-Suggests: abind, cranlogs, DBI, Ecdat, future.batchtools, ggplot2,
-        MASS, methods, RSQLite, rmarkdown, tibble
+        parallel, pkgconfig, plyr, purrr, R6, R.utils, rlang (>=
+        0.2.0), rprojroot, stats, storr (>= 1.1.0), stringi, stringr,
+        testthat, tibble, tidyselect (>= 0.2.4), utils, visNetwork,
+        withr
+Suggests: abind, cranlogs, curl, DBI, DT, dplyr, Ecdat,
+        future.batchtools, ggplot2, httr, MASS, methods, RSQLite,
+        rmarkdown, tidyr
 VignetteBuilder: knitr
+Encoding: UTF-8
 RoxygenNote: 6.0.1
 NeedsCompilation: no
-Packaged: 2018-01-26 05:57:11 UTC; wlandau
+Packaged: 2018-03-22 17:14:54 UTC; c240390
 Author: William Michael Landau [aut, cre],
   Alex Axthelm [ctb],
   Jasper Clarkberg [ctb],
+  Kirill Müller [ctb],
   Ben Marwick [rev],
   Peter Slaughter [rev],
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-01-26 11:22:52 UTC
+Date/Publication: 2018-03-22 18:05:03 UTC

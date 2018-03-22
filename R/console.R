@@ -1,5 +1,3 @@
-console_length <- 80
-
 console <- function(imported, target, config) {
   if (is.na(imported)) {
     console_missing(target = target, config = config)
@@ -11,26 +9,38 @@ console <- function(imported, target, config) {
 }
 
 console_missing <- function(target, config){
-  if (config$verbose < 2){
+  if (config$verbose < 3){
     return()
   }
   pattern <- "missing"
-  text <- paste(pattern, target)
+  text <- target
+  if (is_file(target)){
+    text <- paste0("file ", text)
+  }
+  text <- paste(pattern, text)
   finish_console(text = text, pattern = pattern, verbose = config$verbose)
 }
 
 console_import <- function(target, config){
-  if (config$verbose < 3){
+  if (config$verbose < 4){
     return()
   }
   pattern <- "import"
-  text <- paste(pattern, target)
+  text <- target
+  if (is_file(target)){
+    text <- paste0("file ", text)
+  }
+  text <- paste(pattern, text)
   finish_console(text = text, pattern = pattern, verbose = config$verbose)
 }
 
 console_target <- function(target, config){
   pattern <- "target"
-  text <- paste("target", target)
+  text <- target
+  if (is_file(target)){
+    text <- paste0("file ", text)
+  }
+  text <- paste("target", text)
   trigger <- get_trigger(target = target, config = config)
   if (trigger != "any"){
     trigger <- get_trigger(target = target, config = config)
@@ -41,6 +51,9 @@ console_target <- function(target, config){
 }
 
 console_cache <- function(path, verbose){
+  if (verbose < 2){
+    return()
+  }
   if (!length(path)){
     path <- default_cache_path()
   }
@@ -51,10 +64,14 @@ console_cache <- function(path, verbose){
 console_many_targets <- function(
   targets, pattern, config, color = color_of(pattern), type = "item"
 ){
+  if (config$verbose < 2){
+    return()
+  }
   n <- length(targets)
   if (n < 1){
     return(invisible())
   }
+  targets[is_file(targets)] <- paste("file", targets[is_file(targets)])
   paste0(
     pattern,
     " ", n, " ", type,
@@ -71,7 +88,7 @@ console_parLapply <- function(config){ # nolint
     verbose = config$verbose)
 }
 
-console_retry <- function(target, retries, config){
+console_retry <- function(target, error, retries, config){
   if (retries <= config$retries){
     text <- paste0("retry ", target, ": ", retries, " of ", config$retries)
     finish_console(text = text, pattern = "retry", verbose = config$verbose)
@@ -127,14 +144,14 @@ finish_console <- function(text, pattern, verbose){
   if (!verbose){
     return(invisible())
   }
-  crop_text(x = text, length = console_length) %>%
+  crop_text(x = text) %>%
     color_grep(pattern = pattern, color = color_of(pattern)) %>%
     message(sep = "")
 }
 
-crop_text <- Vectorize(function(x, length = 50) {
-  if (nchar(x) > length)
-    x <- paste0(substr(x, 1, length - 3), "...")
+crop_text <- Vectorize(function(x, width = getOption("width")) {
+  if (nchar(x) > width)
+    x <- paste0(substr(x, 1, width - 3), "...")
   x
 },
 "x", USE.NAMES = FALSE)
@@ -145,4 +162,16 @@ multiline_message <- function(x) {
     x <- c(x[1:(n - 1)], "...")
   }
   paste0("  ", x) %>% paste(collapse = "\n")
+}
+
+#' @title Default verbosity for `drake`
+#' @description Set with `pkgconfig`: for example,
+#'   `pkgconfig::set_config("drake::verbose" = 2)`.
+#' @export
+#' @keywords internal
+#' @return a logical or integer with the value of
+#'   the default `verbose` argument to `drake` functions.
+default_verbose <- function(){
+  default <- pkgconfig::get_config("drake::verbose")
+  ifelse(!length(default), 1, default)
 }

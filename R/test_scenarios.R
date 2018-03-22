@@ -8,12 +8,15 @@ testing_scenarios <- function(){
   rownames(x) <- paste(
     x$envir,
     x$parallelism,
-    x$jobs, x$backend,
+    x$jobs,
+    x$backend,
+    x$caching,
     sep = "_"
   ) %>%
-    gsub(pattern = "_$", replacement = "")
+    gsub(pattern = "_*$", replacement = "")
   x$backend <- backend_code(x$backend)
   x$envir <- envir_code(x$envir)
+  x$caching[!nchar(x$caching)] <- "worker"
   apply_skip_os(x)
 }
 
@@ -86,7 +89,7 @@ test_scenarios <- function(
   ...
 ){
   scenarios <- testing_scenarios()
-  for (index in seq_along(scenario_names)){
+  for (index in seq_along(along.with = scenario_names)){
     scenario_names[index] <- match.arg(
       arg = scenario_names[index],
       choices = testing_scenario_names()

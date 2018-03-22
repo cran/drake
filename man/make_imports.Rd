@@ -4,34 +4,33 @@
 \alias{make_imports}
 \title{Just make the imports.}
 \usage{
-make_imports(config)
+make_imports(config = drake::read_drake_config())
 }
 \arguments{
-\item{config}{a configuration list returned by \code{\link{config}()}}
+\item{config}{a configuration list returned by \code{\link[=config]{config()}}}
 }
 \value{
 The master internal configuration list
-used by \code{\link{make}()}.
+used by \code{\link[=make]{make()}}.
 }
 \description{
-\code{\link{make}()} is the central, most important function
-of the drake package. \code{\link{make}()} runs all the steps of your
+\code{\link[=make]{make()}} is the central, most important function
+of the drake package. \code{\link[=make]{make()}} runs all the steps of your
 workflow in the correct order, skipping any work
-that is already up to date. During \code{\link{make}()},
+that is already up to date. During \code{\link[=make]{make()}},
 there are two kinds of processing steps: "imports",
 which are pre-existing functions and input data files
 that are loaded or checked, and targets, which are
 serious reproducibly-tracked data analysis steps
 that have commands in your workflow plan data frame.
-The \code{\link{make_targets}()} function just makes the targets
+The \code{\link[=make_targets]{make_targets()}} function just makes the targets
 (skipping any targets that are already up to date)
-and \code{\link{make_imports}()} just makes the imports.
-Most users should just use \code{\link{make}()}
-instead of either \code{\link{make_imports}()} or
-\code{\link{make_targets}()}.
-See \url{https://ropensci.github.io/drake/}
-for the full documentation of drake,
-including multiple in-depth tutorials.
+and \code{\link[=make_imports]{make_imports()}} just makes the imports.
+Most users should just use \code{\link[=make]{make()}}
+instead of either \code{\link[=make_imports]{make_imports()}} or
+\code{\link[=make_targets]{make_targets()}}.
+See \url{https://github.com/ropensci/drake/blob/master/README.md#documentation}
+for an overview of the documentation.
 }
 \examples{
 \dontrun{
@@ -47,6 +46,6 @@ make_targets(config = con)
 }
 }
 \seealso{
-\code{\link{make}}, \code{\link{config}},
-\code{\link{make_targets}}
+\code{\link[=make]{make()}}, \code{\link[=config]{config()}},
+\code{\link[=make_targets]{make_targets()}}
 }

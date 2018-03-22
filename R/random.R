@@ -1,15 +1,30 @@
-# From withr
-get_valid_seed <- function(seed = get_seed()){
-  if (is.null(seed)) {
-    runif(1L)
-    seed <- get_seed()
+choose_seed <- function(supplied, cache){
+  previous <- get_previous_seed(cache = cache)
+  seed_conflict <-
+    !is.null(previous) &&
+    !is.null(supplied) &&
+    !identical(previous, supplied)
+  if (seed_conflict){
+    stop(
+      "You supplied a seed of ", supplied,
+      "to either make() or drake_config(). ",
+      "Your project already has a different seed: ", previous, ". ",
+      "Use read_drake_seed() to see the seed for yourself. ",
+      "To reset the project's seed, you will have to destroy the cache ",
+      "and restart from scratch: clean(destroy = TRUE). This may seem ",
+      "excessive and inconvenient, but it ensures reproducible results.",
+      call. = FALSE
+    )
   }
-  seed
+  (previous %||% supplied) %||% 0
 }
 
-# From withr
-get_seed <- function(){
-  get0(".Random.seed", globalenv(), mode = "integer")
+get_previous_seed <- function(cache){
+  if (cache$exists(key = "seed", namespace = "config")){
+    cache$get(key = "seed", namespace = "config")
+  } else {
+    NULL
+  }
 }
 
 # A numeric hash that could be used as a

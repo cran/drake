@@ -13,30 +13,29 @@ meta_list <- function(targets, config) {
   out
 }
 
-#' @title Compute the metadata of a target or import.
+#' @title Compute the initial pre-build metadata of a target or import.
 #' @description The metadata helps determine if the
 #' target is up to date or outdated. The metadata of imports
 #' is used to compute the metadata of targets.
 #' @details Target metadata is computed
-#' with \code{drake_meta()} and then
-#' \code{drake:::finish_meta()}.
-#' This metadata corresponds
-#' to the state of the target immediately after it was built
-#' or imported in the last \code{\link{make}()} that
-#' did not skip it.
-#' The exception to this is the \code{$missing} element
-#' of the metadata, which indicates if the target/import
-#' was missing just \emph{before} it was built.
-#' @seealso \code{\link{dependency_profile}}, \code{\link{make}}
+#' with `drake_meta()`, and then
+#' `drake:::finish_meta()` completes the metadata
+#' after the target is built.
+#' In other words, the output of `drake_meta()` corresponds
+#' to the state of the target immediately before [make()]
+#' builds it.
+#' See [diagnose()] to read the final metadata of a target,
+#' including any errors, warnings, and messages in the last build.
+#' @seealso [diagnose()], [dependency_profile()], [make()]
 #' @export
 #' @return A list of metadata on a target. Does not include
-#' the file modification time if the target is a file.
-#' That piece is provided later in \code{\link{make}()} by
-#' \code{drake:::finish_meta}.
+#'   the file modification time if the target is a file.
+#'   That piece is provided later in [make()] by
+#'   `drake:::finish_meta`.
 #' @param target Character scalar, name of the target
-#' to get metadata.
+#'   to get metadata.
 #' @param config Master internal configuration list produced
-#' by \code{\link{drake_config}()}.
+#'   by [drake_config()].
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -61,18 +60,20 @@ meta_list <- function(targets, config) {
 #' readd(small)
 #' })
 #' }
-drake_meta <- function(target, config) {
+drake_meta <- function(target, config = drake::read_drake_config()) {
   meta <- list(
     target = target,
     imported = !(target %in% config$plan$target),
-    missing = !target_exists(target = target, config = config)
+    foreign = !exists(x = target, envir = config$envir, inherits = FALSE),
+    missing = !target_exists(target = target, config = config),
+    seed = seed_from_object(list(seed = config$seed, target = target))
   )
   trigger <- get_trigger(target = target, config = config)
   # Need to make sure meta includes all these
   # fields at the beginning of build_in_hook(),
   # but only after drake decides to actually build the target.
   if (trigger %in% triggers_with_command()){
-    meta$command <- get_command(target = target, config = config)
+    meta$command <- get_standardized_command(target = target, config = config)
   }
   if (trigger %in% triggers_with_depends()){
     meta$depends <- dependency_hash(target = target, config = config)
@@ -101,7 +102,7 @@ finish_meta <- function(target, meta, config){
     meta$file <- file_hash(target = target, config = config)
   }
   if (is.null(meta$command)){
-    meta$command <- get_command(target = target, config = config)
+    meta$command <- get_standardized_command(target = target, config = config)
   }
   if (is.null(meta$depends)){
     meta$depends <- dependency_hash(target = target, config = config)

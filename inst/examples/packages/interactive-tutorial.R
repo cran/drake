@@ -1,3 +1,10 @@
+# This file is an interactive tutorial that only depends
+# on the included report.Rmd file.
+# It is meant to walk you through the analysis step by step.
+# The other files show how to set up this example
+# as a serious drake project. Run make.R to deploy it
+# as a serious workflow.
+#
 ################
 ### OVERVIEW ###
 ################
@@ -90,8 +97,7 @@ output_plan <- plan_analyses(
 # in a dynamic knitr report.
 
 report_plan <- drake_plan(
-  report.md = knit("report.Rmd", quiet = TRUE),
-  file_targets = TRUE
+  knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)
 )
 
 # And we complete the workflow plan data frame by

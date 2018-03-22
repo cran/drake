@@ -4,7 +4,8 @@
 \alias{new_cache}
 \title{Make a new \code{drake} cache.}
 \usage{
-new_cache(path = drake::default_cache_path(), verbose = 1, type = NULL,
+new_cache(path = drake::default_cache_path(),
+  verbose = drake::default_verbose(), type = NULL,
   short_hash_algo = drake::default_short_hash_algo(),
   long_hash_algo = drake::default_long_hash_algo(), ...)
 }
@@ -12,18 +13,28 @@ new_cache(path = drake::default_cache_path(), verbose = 1, type = NULL,
 \item{path}{file path to the cache if the cache
 is a file system cache.}
 
-\item{verbose}{logical, whether to print out the path of the cache.}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 
 \item{type}{deprecated argument. Once stood for cache type.
 Use \code{storr} to customize your caches instead.}
 
 \item{short_hash_algo}{short hash algorithm for the cache.
-See \code{\link{default_short_hash_algo}()} and
-\code{\link{make}()}}
+See \code{\link[=default_short_hash_algo]{default_short_hash_algo()}} and
+\code{\link[=make]{make()}}}
 
 \item{long_hash_algo}{long hash algorithm for the cache.
-See \code{\link{default_long_hash_algo}()} and
-\code{\link{make}()}}
+See \code{\link[=default_long_hash_algo]{default_long_hash_algo()}} and
+\code{\link[=make]{make()}}}
 
 \item{...}{other arguments to the cache constructor}
 }
@@ -31,7 +42,7 @@ See \code{\link{default_long_hash_algo}()} and
 A newly created drake cache as a storr object.
 }
 \description{
-Uses the \code{storr_rds()} function
+Uses the \code{\link[=storr_rds]{storr_rds()}} function
 from the \code{storr} package.
 }
 \examples{
@@ -46,7 +57,7 @@ clean(destroy = TRUE, cache = cache2)
 }
 }
 \seealso{
-\code{\link{default_short_hash_algo}},
-\code{\link{default_long_hash_algo}},
-\code{\link{make}}
+\code{\link[=default_short_hash_algo]{default_short_hash_algo()}},
+\code{\link[=default_long_hash_algo]{default_long_hash_algo()}},
+\code{\link[=make]{make()}}
 }

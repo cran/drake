@@ -6,34 +6,42 @@
 \title{Show an interactive visual network representation
 of your drake project.}
 \usage{
-vis_drake_graph(config, file = character(0), selfcontained = FALSE,
-  build_times = TRUE, digits = 3, targets_only = FALSE,
-  split_columns = FALSE, font_size = 20, layout = "layout_with_sugiyama",
-  main = NULL, direction = "LR", hover = TRUE, navigationButtons = TRUE,
-  from = NULL, mode = c("out", "in", "all"), order = NULL,
-  subset = NULL, ncol_legend = 1, make_imports = TRUE,
-  from_scratch = FALSE, ...)
+vis_drake_graph(config = drake::read_drake_config(), file = character(0),
+  selfcontained = FALSE, build_times = "build", digits = 3,
+  targets_only = FALSE, split_columns = FALSE, font_size = 20,
+  layout = "layout_with_sugiyama", main = NULL, direction = "LR",
+  hover = TRUE, navigationButtons = TRUE, from = NULL, mode = c("out",
+  "in", "all"), order = NULL, subset = NULL, ncol_legend = 1,
+  full_legend = TRUE, make_imports = TRUE, from_scratch = FALSE, ...)
 }
 \arguments{
-\item{config}{Master configuration list produced by both
-\code{\link{make}()} and \code{\link{drake_config}()}.}
+\item{config}{a \code{\link[=drake_config]{drake_config()}} configuration list.
+You can get one as a return value from \code{\link[=make]{make()}} as well.}
 
 \item{file}{Name of HTML file to save the graph.
 If \code{NULL} or \code{character(0)},
 no file is saved and the graph is rendered and displayed within R.}
 
-\item{selfcontained}{logical, whether to save
-the \code{file} as a self-contained
+\item{selfcontained}{logical, whether
+to save the \code{file} as a self-contained
 HTML file (with external resources base64 encoded) or a file with
 external resources placed in an adjacent directory. If \code{TRUE},
 pandoc is required.}
 
-\item{build_times}{logical, whether to print the \code{\link{build_times}()}
-in the graph.}
+\item{build_times}{character string or logical.
+If character, the choices are
+1. \code{"build"}: runtime of the command plus the time
+it take to store the target or import.
+2. \code{"command"}: just the runtime of the command.
+3. \code{"none"}: no build times.
+If logical, \code{build_times} selects whether to show the
+times from `build_times(..., type = "build")`` or use
+no build times at all. See \code{\link[=build_times]{build_times()}} for details.}
 
 \item{digits}{number of digits for rounding the build times}
 
-\item{targets_only}{logical, whether to skip the imports and only show the
+\item{targets_only}{logical,
+whether to skip the imports and only include the
 targets in the workflow plan.}
 
 \item{split_columns}{logical, whether to break up the
@@ -47,16 +55,15 @@ indicates.)}
 
 \item{font_size}{numeric, font size of the node labels in the graph}
 
-\item{layout}{name of an igraph layout
-to use, such as 'layout_with_sugiyama'
-or 'layout_as_tree'. Be careful with
-'layout_as_tree': the graph is a directed
+\item{layout}{name of an igraph layout to use,
+such as 'layout_with_sugiyama'
+or 'layout_as_tree'.
+Be careful with 'layout_as_tree': the graph is a directed
 acyclic graph, but not necessarily a tree.}
 
-\item{main}{title of the graph}
+\item{main}{character string, title of the graph}
 
-\item{direction}{an argument to
-\code{visNetwork::visHierarchicalLayout()}
+\item{direction}{an argument to \code{\link[visNetwork:visHierarchicalLayout]{visNetwork::visHierarchicalLayout()}}
 indicating the direction of the graph.
 Options include 'LR', 'RL', 'DU', and 'UD'.
 At the time of writing this, the letters must be capitalized,
@@ -69,7 +76,7 @@ change with hovering.}
 \item{navigationButtons}{logical, whether to add navigation buttons with
 \code{visNetwork::visInteraction(navigationButtons = TRUE)}}
 
-\item{from}{Optional character vector of target/import names.
+\item{from}{Optional collection of target/import names.
 If \code{from} is nonempty,
 the graph will restrict itself to
 a neighborhood of \code{from}.
@@ -95,21 +102,22 @@ Be advised: edges are only kept for adjacent nodes in \code{subset}.
 If you do not select all the intermediate nodes,
 edges will drop from the graph.}
 
-\item{ncol_legend}{number of columns in the legend nodes}
+\item{ncol_legend}{number of columns in the legend nodes.
+To remove the legend entirely, set \code{ncol_legend} to \code{NULL} or \code{0}.}
 
-\item{make_imports}{logical, whether to import external files
-and objects from the user's workspace to determine
-which targets are up to date. If \code{FALSE}, the computation
-is faster, but all the relevant information is drawn from the cache
-and may be out of date.}
+\item{full_legend}{logical. If \code{TRUE}, all the node types
+are printed in the legend. If \code{FALSE}, only the
+node types used are printed in the legend.}
+
+\item{make_imports}{logical, whether to make the imports first.
+Set to \code{FALSE} to increase speed and risk using obsolete information.}
 
 \item{from_scratch}{logical, whether to assume all the targets
-will be made from scratch on the next \code{\link{make}()}.
+will be made from scratch on the next \code{\link[=make]{make()}}.
 Makes all targets outdated, but keeps information about
-build progress in previous \code{\link{make}()}s.}
+build progress in previous \code{\link[=make]{make()}}s.}
 
-\item{...}{other arguments passed to
-\code{visNetwork::visNetwork()} to plot the graph.}
+\item{...}{arguments passed to \code{\link[=visNetwork]{visNetwork()}}.}
 }
 \value{
 A visNetwork graph.
@@ -117,7 +125,7 @@ A visNetwork graph.
 \description{
 To save time for repeated plotting,
 this function is divided into
-\code{\link{dataframes_graph}()} and \code{\link{render_drake_graph}()}.
+\code{\link[=dataframes_graph]{dataframes_graph()}} and \code{\link[=render_drake_graph]{render_drake_graph()}}.
 }
 \examples{
 \dontrun{
@@ -137,5 +145,5 @@ vis_drake_graph(
 }
 }
 \seealso{
-\code{\link{build_drake_graph}}
+\code{\link[=build_drake_graph]{build_drake_graph()}}
 }

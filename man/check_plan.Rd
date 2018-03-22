@@ -4,23 +4,34 @@
 \alias{check_plan}
 \title{Check a workflow plan data frame for obvious errors.}
 \usage{
-check_plan(plan = drake_plan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), cache = drake::get_cache(verbose = verbose),
-  verbose = TRUE, jobs = 1)
+check_plan(plan = read_drake_plan(),
+  targets = drake::possible_targets(plan), envir = parent.frame(),
+  cache = drake::get_cache(verbose = verbose),
+  verbose = drake::default_verbose(), jobs = 1)
 }
 \arguments{
 \item{plan}{workflow plan data frame, possibly from
-\code{\link{drake_plan}()}.}
+\code{\link[=drake_plan]{drake_plan()}}.}
 
 \item{targets}{character vector of targets to make}
 
 \item{envir}{environment containing user-defined functions}
 
-\item{cache}{optional drake cache. See \code{\link{new_cache}()}}
+\item{cache}{optional drake cache. See \code{\link[=new_cache]{new_cache()}}.}
 
-\item{verbose}{same as for \code{\link{make}()}}
+\item{verbose}{logical or numeric, control printing to the console.
+Use \code{pkgconfig} to set the default value of \code{verbose}
+for your R session:
+for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
+\describe{
+\item{0 or \code{FALSE}:}{print nothing.}
+\item{1 or \code{TRUE}:}{print only targets to build.}
+\item{2:}{in addition, print checks and cache info.}
+\item{3:}{in addition, print any potentially missing items.}
+\item{4:}{in addition, print imports. Full verbosity.}
+}}
 
-\item{jobs}{number of jobs/workers for light parallelism}
+\item{jobs}{number of jobs/workers for parallel processing}
 }
 \value{
 Invisibly return \code{plan}.
@@ -35,7 +46,7 @@ missing input files.
 test_with_dir("Quarantine side effects.", {
 load_basic_example() # Get the code with drake_example("basic").
 check_plan(my_plan) # Check the workflow plan dataframe for obvious errors.
-unlink('report.Rmd') # Remove an import file mentioned in the plan.
+unlink("report.Rmd") # Remove an import file mentioned in the plan.
 # If you un-suppress the warnings, check_plan()
 # will tell you that 'report.Rmd' is missing.
 suppressWarnings(check_plan(my_plan))
@@ -43,5 +54,5 @@ suppressWarnings(check_plan(my_plan))
 }
 }
 \seealso{
-\code{ink{drake_plan}}, \code{\link{make}}
+\code{ink{drake_plan}}, \code{\link[=make]{make()}}
 }

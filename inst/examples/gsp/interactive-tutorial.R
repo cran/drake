@@ -1,10 +1,17 @@
+# This file is an interactive tutorial that only depends
+# on the included report.Rmd file.
+# It is meant to walk you through the analysis step by step.
+# The other files show how to set up this example
+# as a serious drake project. Run make.R to deploy it
+# as a serious workflow.
+#
 # The following data analysis workflow shows off
 # `drake`'s ability to generate lots of reproducibly-tracked
 # tasks with ease.
 # The same technique would be cumbersome, even intractable,
 # with GNU Make (https://www.gnu.org/software/make/).
 #
-# The goal is to search for factors closely associated with
+# The goal of the example is to search for factors closely associated with
 # the productivity of states in the USA around the 1970s and 1980s.
 # For the sake of simplicity, we use gross state product as a metric
 # of productivity, and we restrict ourselves to
@@ -80,10 +87,8 @@ rmspe_results_plan <- gather_plan(
 
 # Plan some final output.
 output_plan <- drake_plan(
-  rmspe.pdf = ggsave(filename = "rmspe.pdf", plot = plot_rmspe(rmspe)),
-  report.md = knit("report.Rmd", quiet = TRUE),
-  file_targets = TRUE,
-  strings_in_dots = "literals"
+  ggsave(filename = file_out("rmspe.pdf"), plot = plot_rmspe(rmspe)),
+  knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)
 )
 
 # We need a function to generate the plot.
@@ -100,7 +105,12 @@ whole_plan <- rbind(model_plan, rmspe_plan, rmspe_results_plan, output_plan)
 # vis_drake_graph(config) # nolint
 
 # Just see the dependencies of the report.
-# vis_drake_graph(config, from = "'report.md'", mode = "in", order = 1) # nolint
+# vis_drake_graph(
+#   config,
+#   from = file_store("report.md"),
+#   mode = "in",
+#   order = 1 # nolint
+# )
 
 # Run the project.
 # View the results rmspe.pdf and report.md

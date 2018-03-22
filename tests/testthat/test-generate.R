@@ -15,49 +15,45 @@ test_with_dir("evaluate, expand, and gather", {
   expect_equal(m1, df)
 
   x <- expand_plan(df, values = c("rep1", "rep2"))
-  y <- data.frame(
+  y <- tibble(
     target = c("data_rep1", "data_rep2"),
-    command = rep("simulate(center = MU, scale = SIGMA)", 2),
-    stringsAsFactors = FALSE
+    command = rep("simulate(center = MU, scale = SIGMA)", 2)
   )
   expect_equal(x, y)
 
   x2 <- evaluate_plan(x, wildcard = "MU", values = 1:2)
-  y <- data.frame(
+  y <- tibble(
     target = c("data_rep1_1", "data_rep1_2", "data_rep2_1", "data_rep2_2"),
     command = c(
       "simulate(center = 1, scale = SIGMA)",
       "simulate(center = 2, scale = SIGMA)",
       "simulate(center = 1, scale = SIGMA)",
       "simulate(center = 2, scale = SIGMA)"
-    ),
-    stringsAsFactors = FALSE
+    )
   )
   expect_equal(x2, y)
 
   x3 <- evaluate_plan(x2, wildcard = "SIGMA", values = letters[1:2],
     expand = FALSE)
-  y <- data.frame(
+  y <- tibble(
     target = c("data_rep1_1", "data_rep1_2", "data_rep2_1", "data_rep2_2"),
     command = c(
       "simulate(center = 1, scale = a)",
       "simulate(center = 2, scale = b)",
       "simulate(center = 1, scale = a)",
       "simulate(center = 2, scale = b)"
-    ),
-    stringsAsFactors = FALSE
+    )
   )
   expect_equal(x3, y)
 
   x4 <- evaluate_plan(x, rules = list(MU = 1:2, SIGMA = c(0.1, 1)),
     expand = FALSE)
-  y <- data.frame(
+  y <- tibble(
     target = c("data_rep1", "data_rep2"),
     command = c(
       "simulate(center = 1, scale = 0.1)",
       "simulate(center = 2, scale = 1)"
-    ),
-    stringsAsFactors = FALSE
+    )
   )
   expect_equal(x4, y)
 
@@ -67,18 +63,16 @@ test_with_dir("evaluate, expand, and gather", {
   expect_equal(6, length(unique(x5$command)))
 
   x6 <- gather_plan(x)
-  y <- data.frame(
+  y <- tibble(
     target = "target",
-    command = "list(data_rep1 = data_rep1, data_rep2 = data_rep2)",
-    stringsAsFactors = F
+    command = "list(data_rep1 = data_rep1, data_rep2 = data_rep2)"
   )
   expect_equal(x6, y)
 
   x7 <- gather_plan(x, target = "my_summaries", gather = "rbind")
-  y <- data.frame(
+  y <- tibble(
     target = "my_summaries",
-    command = "rbind(data_rep1 = data_rep1, data_rep2 = data_rep2)",
-    stringsAsFactors = F
+    command = "rbind(data_rep1 = data_rep1, data_rep2 = data_rep2)"
   )
   expect_equal(x7, y)
 })
@@ -89,8 +83,8 @@ test_with_dir("analyses and summaries", {
     regression1 = reg1(dataset__),
     regression2 = reg2(dataset__)
   )
-  analyses <- plan_analyses(methods, data = datasets)
-  x <- data.frame(
+  analyses <- plan_analyses(methods, datasets = datasets)
+  x <- tibble(
     target = c(
       "regression1_small",
       "regression1_large",
@@ -101,13 +95,12 @@ test_with_dir("analyses and summaries", {
       "reg1(small)",
       "reg1(large)",
       "reg2(small)",
-      "reg2(large)"),
-    stringsAsFactors = F
+      "reg2(large)")
   )
   expect_equal(analyses, x)
 
   m2 <- drake_plan(regression1 = reg1(n), regression2 = reg2(n))
-  expect_equal(plan_analyses(m2, data = datasets), m2)
+  expect_equal(plan_analyses(m2, datasets = datasets), m2)
 
   no_analyses <- drake_plan(
     summ = summary(dataset__),
@@ -124,7 +117,7 @@ test_with_dir("analyses and summaries", {
     coef = coefficients(analysis__)
   )
   results <- plan_summaries(summary_types, analyses, datasets, gather = NULL)
-  x <- data.frame(
+  x <- tibble(
     target = c(
       "summ_regression1_small",
       "summ_regression1_large",
@@ -144,8 +137,7 @@ test_with_dir("analyses and summaries", {
       "coefficients(regression1_large)",
       "coefficients(regression2_small)",
       "coefficients(regression2_large)"
-    ),
-    stringsAsFactors = FALSE
+    )
   )
   expect_equal(results, x)
 
@@ -159,7 +151,7 @@ test_with_dir("analyses and summaries", {
     datasets,
     gather = c("list", "rbind")
   )
-  x <- data.frame(
+  x <- tibble(
     target = c(
       "summ_regression1_small",
       "summ_regression1_large",
@@ -179,8 +171,7 @@ test_with_dir("analyses and summaries", {
       "coefficients(regression1_large)",
       "coefficients(regression2_small)",
       "coefficients(regression2_large)"
-    ),
-    stringsAsFactors = FALSE
+    )
   )
   y <- results[-1:-2, ]
   row.names(x) <- row.names(y) <- NULL
@@ -213,4 +204,113 @@ test_with_dir("analyses and summaries", {
   expect_warning(s <- plan_summaries(newtypes, analyses, datasets,
     gather = NULL))
   expect_equal(nrow(s), 8)
+})
+
+test_with_dir("reduce_plan()", {
+  # Non-pairwise reduce
+  x_plan <- evaluate_plan(
+    drake_plan(x = VALUE),
+    wildcard = "VALUE",
+    values = 1:8
+  )
+  x <- reduce_plan(
+    x_plan, target = "x_sum", pairwise = FALSE,
+    begin = "", end = ""
+  )
+  x0 <- tibble::tibble(
+    target = "x_sum",
+    command = paste0(x_plan$target, collapse = " + ")
+  )
+  expect_equal(x, x0)
+  make(rbind(x_plan, x), session_info = FALSE)
+  expect_equal(readd(x_sum), sum(1:8))
+  clean(destroy = TRUE)
+
+  # Pairwise reduce even number of targets
+  x <- reduce_plan(x_plan, target = "x_sum", pairwise = TRUE)
+  x0 <- tibble(
+    target = c(paste0("x_sum_", 1:6), "x_sum"),
+    command = c(
+      "x_1 + x_2", "x_3 + x_4", "x_5 + x_6", "x_7 + x_8",
+      "x_sum_1 + x_sum_2", "x_sum_3 + x_sum_4",
+      "x_sum_5 + x_sum_6"
+    )
+  )
+  expect_equal(x, x0)
+  x <- reduce_plan(
+    x_plan, target = "x_sum", pairwise = FALSE,
+    begin = "", end = ""
+  )
+  x0 <- tibble::tibble(
+    target = "x_sum",
+    command = paste0(x_plan$target, collapse = " + ")
+  )
+  expect_equal(x, x0)
+  x <- reduce_plan(x_plan, target = "x_sum", pairwise = TRUE)
+  x0 <- tibble(
+    target = c(paste0("x_sum_", 1:6), "x_sum"),
+    command = c(
+      "x_1 + x_2", "x_3 + x_4", "x_5 + x_6", "x_7 + x_8",
+      "x_sum_1 + x_sum_2", "x_sum_3 + x_sum_4",
+      "x_sum_5 + x_sum_6"
+    )
+  )
+  expect_equal(x, x0)
+  make(rbind(x_plan, x), session_info = FALSE)
+  expect_equal(readd(x_sum), sum(1:8))
+  clean(destroy = TRUE)
+
+  # Odd number of targets
+  x_plan <- evaluate_plan(
+    drake_plan(x = VALUE),
+    wildcard = "VALUE",
+    values = 1:9
+  )
+  x <- reduce_plan(x_plan, target = "x_sum", pairwise = TRUE)
+  x0 <- tibble(
+    target = c(paste0("x_sum_", 1:7), "x_sum"),
+    command = c(
+      "x_1 + x_2", "x_3 + x_4", "x_5 + x_6", "x_7 + x_8",
+      "x_9 + x_sum_1",
+      "x_sum_2 + x_sum_3", "x_sum_4 + x_sum_5",
+      "x_sum_6 + x_sum_7"
+    )
+  )
+  expect_equal(x, x0)
+  make(rbind(x_plan, x), session_info = FALSE)
+  expect_equal(readd(x_sum), sum(1:9))
+  clean(destroy = TRUE)
+
+  # Arbitrary function in reduction
+  x_plan <- evaluate_plan(
+    drake_plan(x = VALUE),
+    wildcard = "VALUE",
+    values = 1:8
+  )
+  fun <- function(x, y){
+    x ^ 2 - 3 * y
+  }
+  x <- reduce_plan(x_plan, target = "x_sum", pairwise = TRUE,
+    begin = "fun(", op = ", ", end = ")")
+  x0 <- tibble(
+    target = c(paste0("x_sum_", 1:6), "x_sum"),
+    command = c(
+      "fun(x_1, x_2)", "fun(x_3, x_4)", "fun(x_5, x_6)", "fun(x_7, x_8)",
+      "fun(x_sum_1, x_sum_2)", "fun(x_sum_3, x_sum_4)",
+      "fun(x_sum_5, x_sum_6)"
+    )
+  )
+  expect_equal(x, x0)
+  make(rbind(x_plan, x))
+  out <- fun(
+    fun(
+      fun(1, 2),
+      fun(3, 4)
+    ),
+    fun(
+      fun(5, 6),
+      fun(7, 8)
+    )
+  )
+  expect_equal(readd(x_sum), out)
 })

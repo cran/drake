@@ -8,7 +8,8 @@ dbug <- function() {
     envir = envir, parallelism = scenario$parallelism,
     jobs = scenario$jobs, verbose = FALSE,
     session_info = FALSE,
-    log_progress = TRUE
+    log_progress = TRUE,
+    caching = scenario$caching
   )
 }
 
@@ -27,12 +28,12 @@ dbug_envir <- function(envir) {
 
 dbug_plan <- function() {
   drake_plan(list = c(
-    `'intermediatefile.rds'` = "saveRDS(combined, \"intermediatefile.rds\")",
-    yourinput = "f(1+1)",
+    "saveRDS(combined, file_out(\"intermediatefile.rds\"))",
+    yourinput = "f(1 + 1)",
     nextone = "myinput + g(7)",
     combined = "nextone + yourinput",
-    myinput = "readRDS('input.rds')",
-    final = "readRDS('intermediatefile.rds')"))
+    myinput = "readRDS(file_in(\"input.rds\"))",
+    final = "readRDS(file_in(\"intermediatefile.rds\"))"))
 }
 
 dbug_files <- function() {
