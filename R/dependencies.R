@@ -3,16 +3,21 @@
 #' @description Intended for debugging and checking your project.
 #'   The dependency structure of the components of your analysis
 #'   decides which targets are built and when.
-#' @details If the argument is a double-quoted string that points to
-#'   a dynamic knitr report, the dependencies of the expected compiled
+#' @details If the argument is a `knitr` report
+#'   (for example, `file_store("report.Rmd")` or `"\"report.Rmd\""`)
+#'   the the dependencies of the expected compiled
 #'   output will be given. For example, `deps(file_store("report.Rmd"))`
 #'   will return target names found in calls to [loadd()]
-#'   and [readd()] in active code chunks. The [file_store()] function
-#'   (alerts `drake` utility functions to file names by double-quoting them.) 
+#'   and [readd()] in active code chunks.
 #'   These [loadd()]/[readd()] targets are needed
 #'   in order to run `knit(knitr_in("report.Rmd"))`
 #'   to produce the output file `"report.md"`, so technically,
 #'   they are dependencies of `"report.md"`, not `"report.Rmd"`.
+#'
+#'   The [file_store()] function
+#'   alerts `drake` utility functions to file names by
+#'   enclosing them in literal double quotes.
+#'   (For example, `file_store("report.Rmd")` is just `"\"report.Rmd\""`.)
 #'
 #'   `Drake` takes special precautions so that a target/import
 #'   does not depend on itself. For example, `deps(f)`` might return
@@ -30,7 +35,7 @@
 #' # Your workflow likely depends on functions in your workspace.
 #' f <- function(x, y){
 #'   out <- x + y + g(x)
-#'   saveRDS(out, 'out.rds')
+#'   saveRDS(out, "out.rds")
 #' }
 #' # Find the dependencies of f. These could be R objects/functions
 #' # in your workspace or packages. Any file names or target names
@@ -340,10 +345,23 @@ code_dependencies <- function(expr){
       results <<- merge_lists(x = results, y = new_results)
     }
   }
-
   walk(expr)
-  results$globals <- intersect(results$globals, find_globals(expr))
+  results$globals <- intersect(results$globals, safe_find_globals(expr))
   results[purrr::map_int(results, length) > 0]
+}
+
+safe_find_globals <- function(expr){
+  tryCatch(
+    find_globals(expr),
+    error = function(e){
+      warning(
+        "could not resolve implicit dependencies of code:",
+        head(deparse(expr)),
+        call. = FALSE
+      )
+      character(0)
+    }
+  )
 }
 
 find_globals <- function(expr){
@@ -400,6 +418,19 @@ analyze_knitr_in <- function(expr){
   out
 }
 
+analyze_target_call <- function(expr){
+  out <- as.list(expr)
+  out[nzchar(names(out))] %>%
+    purrr::map(.f = function(x){
+      if (is.language(x)){
+        wide_deparse(x)
+      } else {
+        x
+      }
+    }) %>%
+    tibble::as_tibble()
+}
+
 parse_loadd_arg_list <- function(expr){
   lapply(as.list(expr)[-1], function(arg){
     inputs <- CodeDepends::getInputs(arg)
@@ -411,7 +442,7 @@ unnamed_in_list <- function(x){
   if (!length(names(x))){
     out <- x
   } else {
-    out <- x[!nchar(names(x))]
+    out <- x[!nzchar(names(x))]
   }
   unlist(out)
 }
@@ -455,13 +486,15 @@ file_out_fns <- pair_text(drake_prefix, c("file_out"))
 loadd_fns <- pair_text(drake_prefix, "loadd")
 readd_fns <- pair_text(drake_prefix, "readd")
 ignore_fns <- pair_text(drake_prefix, "ignore")
+target_fns <- pair_text(drake_prefix, "target")
 drake_fn_patterns <- c(
   knitr_in_fns,
   file_in_fns,
   file_out_fns,
   loadd_fns,
   readd_fns,
-  ignore_fns
+  ignore_fns,
+  target_fns
 )
 
 is_knitr_in_call <- function(expr){
@@ -486,4 +519,11 @@ is_readd_call <- function(expr){
 
 is_ignore_call <- function(expr){
   wide_deparse(expr[[1]]) %in% ignore_fns
+}
+
+is_target_call <- function(expr){
+  tryCatch(
+    wide_deparse(expr[[1]]) %in% target_fns,
+    error = error_false
+  )
 }

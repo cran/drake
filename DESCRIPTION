@@ -2,7 +2,7 @@ Package: drake
 Title: Data Frames in R for Make
 Description: An R-focused pipeline toolkit
   for reproducible code and high-performance computing.
-Version: 5.1.0
+Version: 5.1.2
 License: GPL-3
 URL: https://github.com/ropensci/drake
 BugReports: https://github.com/ropensci/drake/issues
@@ -48,20 +48,20 @@ Authors@R: c(
     role = "cph"
   ))
 Depends: R (>= 3.2.0)
-Imports: bindr, CodeDepends, crayon, evaluate, digest, formatR, future,
-        future.apply, grDevices, igraph, knitr, lubridate, magrittr,
-        parallel, pkgconfig, plyr, purrr, R6, R.utils, rlang (>=
-        0.2.0), rprojroot, stats, storr (>= 1.1.0), stringi, stringr,
+Imports: bindr, CodeDepends, crayon, evaluate, digest, dplyr, formatR,
+        future, future.apply, grDevices, igraph, knitr, lubridate,
+        magrittr, parallel, pkgconfig, plyr, purrr, R6, R.utils, rlang
+        (>= 0.2.0), rprojroot, stats, storr (>= 1.1.0), stringi,
         testthat, tibble, tidyselect (>= 0.2.4), utils, visNetwork,
         withr
-Suggests: abind, cranlogs, curl, DBI, DT, dplyr, Ecdat,
+Suggests: abind, callr, cranlogs, curl, DBI, DT, Ecdat,
         future.batchtools, ggplot2, httr, MASS, methods, RSQLite,
         rmarkdown, tidyr
 VignetteBuilder: knitr
 Encoding: UTF-8
 RoxygenNote: 6.0.1
 NeedsCompilation: no
-Packaged: 2018-03-22 17:14:54 UTC; c240390
+Packaged: 2018-04-10 03:51:03 UTC; landau
 Author: William Michael Landau [aut, cre],
   Alex Axthelm [ctb],
   Jasper Clarkberg [ctb],
@@ -71,4 +71,4 @@ Author: William Michael Landau [aut, cre],
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-03-22 18:05:03 UTC
+Date/Publication: 2018-04-10 04:26:32 UTC

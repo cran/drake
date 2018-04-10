@@ -219,10 +219,10 @@ sort(names(config))
 ## [16] &quot;keep_going&quot;         &quot;lazy_load&quot;          &quot;log_progress&quot;      
 ## [19] &quot;long_hash_algo&quot;     &quot;parallelism&quot;        &quot;plan&quot;              
 ## [22] &quot;prepend&quot;            &quot;prework&quot;            &quot;recipe_command&quot;    
-## [25] &quot;retries&quot;            &quot;seed&quot;               &quot;session_info&quot;      
-## [28] &quot;short_hash_algo&quot;    &quot;skip_imports&quot;       &quot;skip_safety_checks&quot;
-## [31] &quot;targets&quot;            &quot;timeout&quot;            &quot;trigger&quot;           
-## [34] &quot;verbose&quot;
+## [25] &quot;retries&quot;            &quot;seed&quot;               &quot;session&quot;           
+## [28] &quot;session_info&quot;       &quot;short_hash_algo&quot;    &quot;skip_imports&quot;      
+## [31] &quot;skip_safety_checks&quot; &quot;targets&quot;            &quot;timeout&quot;           
+## [34] &quot;trigger&quot;            &quot;verbose&quot;
 </code></pre>
 
 <p>The fields of <code>config</code> mostly arguments to <code>make()</code> and are documented there. The rest of the fields are as follows.</p>
@@ -257,21 +257,21 @@ my_plan
 ## # A tibble: 15 x 2
 ##    target                 command                                         
 ##    &lt;chr&gt;                  &lt;chr&gt;                                           
-##  1 &quot;&quot;                     &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;repo~
+##  1 &quot;&quot;                     &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;repo…
 ##  2 small                  simulate(48)                                    
 ##  3 large                  simulate(64)                                    
 ##  4 regression1_small      reg1(small)                                     
 ##  5 regression1_large      reg1(large)                                     
 ##  6 regression2_small      reg2(small)                                     
 ##  7 regression2_large      reg2(large)                                     
-##  8 summ_regression1_small suppressWarnings(summary(regression1_small$resi~
-##  9 summ_regression1_large suppressWarnings(summary(regression1_large$resi~
-## 10 summ_regression2_small suppressWarnings(summary(regression2_small$resi~
-## 11 summ_regression2_large suppressWarnings(summary(regression2_large$resi~
-## 12 coef_regression1_small suppressWarnings(summary(regression1_small))$co~
-## 13 coef_regression1_large suppressWarnings(summary(regression1_large))$co~
-## 14 coef_regression2_small suppressWarnings(summary(regression2_small))$co~
-## 15 coef_regression2_large suppressWarnings(summary(regression2_large))$co~
+##  8 summ_regression1_small suppressWarnings(summary(regression1_small$resi…
+##  9 summ_regression1_large suppressWarnings(summary(regression1_large$resi…
+## 10 summ_regression2_small suppressWarnings(summary(regression2_small$resi…
+## 11 summ_regression2_large suppressWarnings(summary(regression2_large$resi…
+## 12 coef_regression1_small suppressWarnings(summary(regression1_small))$co…
+## 13 coef_regression1_large suppressWarnings(summary(regression1_large))$co…
+## 14 coef_regression2_small suppressWarnings(summary(regression2_small))$co…
+## 15 coef_regression2_large suppressWarnings(summary(regression2_large))$co…
 
 check_plan(my_plan) # No issues.
 </code></pre>
@@ -317,14 +317,14 @@ deps(my_plan$command[nrow(my_plan)])
 <p>List all the reproducibly-tracked objects and files, including imports and targets.</p>
 
 <pre><code class="r">tracked(my_plan, targets = &quot;small&quot;)
-## [1] &quot;data.frame&quot;  &quot;mtcars&quot;      &quot;random_rows&quot; &quot;nrow&quot;        &quot;sample.int&quot; 
+## [1] &quot;nrow&quot;        &quot;sample.int&quot;  &quot;data.frame&quot;  &quot;mtcars&quot;      &quot;random_rows&quot;
 ## [6] &quot;small&quot;       &quot;simulate&quot;
 
 tracked(my_plan)
-##  [1] &quot;lm&quot;                     &quot;data.frame&quot;            
-##  [3] &quot;mtcars&quot;                 &quot;random_rows&quot;           
-##  [5] &quot;\&quot;report.Rmd\&quot;&quot;         &quot;nrow&quot;                  
-##  [7] &quot;sample.int&quot;             &quot;coef_regression2_small&quot;
+##  [1] &quot;nrow&quot;                   &quot;sample.int&quot;            
+##  [3] &quot;data.frame&quot;             &quot;mtcars&quot;                
+##  [5] &quot;random_rows&quot;            &quot;\&quot;report.Rmd\&quot;&quot;        
+##  [7] &quot;lm&quot;                     &quot;coef_regression2_small&quot;
 ##  [9] &quot;knit&quot;                   &quot;large&quot;                 
 ## [11] &quot;small&quot;                  &quot;simulate&quot;              
 ## [13] &quot;reg1&quot;                   &quot;reg2&quot;                  
@@ -429,7 +429,7 @@ config$cache$get_hash(key = &quot;reg2&quot;, namespace = &quot;kernels&quot;) #
 ## [1] &quot;d47109544c89ca7a&quot;
 
 config$cache$get_hash(key = &quot;reg2&quot;) # different
-## [1] &quot;ec0c4b9499814ace&quot;
+## [1] &quot;89c33700774643ff&quot;
 </code></pre>
 
 <p>In <code>drake</code>, the &ldquo;kernel&rdquo; of a target or import is the piece of the output that is reproducibly tracked. For ordinary R objects, the kernel is just the object itself. For custom external files, it is a separate hash. But for functions, the kernel is the deparsed body of the function, together with the dependency hash if the function is imported (see <code>drake:::store_function()</code>).</p>
@@ -446,19 +446,19 @@ config$cache$get_hash(key = &quot;reg2&quot;) # different
 ##  $ command     : chr &quot;{\n simulate(48) \n}&quot;
 ##  $ depends     : chr &quot;5aa9da170b33b159cfd382e15229d7efe6d6a5777d1c69e71b0c6a1188ee5116&quot;
 ##  $ file        : chr NA
-##  $ start       :Class &#39;proc_time&#39;  Named num [1:5] 24.884 0.613 31.978 0.298 0.147
+##  $ start       :Class &#39;proc_time&#39;  Named num [1:5] 13.905 0.22 14.745 0.024 0.018
 ##   .. ..- attr(*, &quot;names&quot;)= chr [1:5] &quot;user.self&quot; &quot;sys.self&quot; &quot;elapsed&quot; &quot;user.child&quot; ...
 ##  $ time_command:&#39;data.frame&#39;:    1 obs. of  5 variables:
 ##   ..$ item   : chr &quot;small&quot;
 ##   ..$ type   : chr &quot;target&quot;
-##   ..$ elapsed: num 0.001
+##   ..$ elapsed: num 0
 ##   ..$ user   : num 0.001
 ##   ..$ system : num 0
 ##  $ time_build  :&#39;data.frame&#39;:    1 obs. of  5 variables:
 ##   ..$ item   : chr &quot;small&quot;
 ##   ..$ type   : chr &quot;target&quot;
-##   ..$ elapsed: num 0.006
-##   ..$ user   : num 0.005
+##   ..$ elapsed: num 0.003
+##   ..$ user   : num 0.003
 ##   ..$ system : num 0
 
 str(diagnose(&quot;\&quot;report.md\&quot;&quot;))
@@ -471,21 +471,21 @@ str(diagnose(&quot;\&quot;report.md\&quot;&quot;))
 ##  $ command     : chr &quot;{\n knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;report.md\&quot;), quiet = TRUE) \n}&quot;
 ##  $ depends     : chr &quot;5f72f8f2a06b7a515e17a3ea3f57b1dd3522d7143e0cbd0650a3c0985683f81d&quot;
 ##  $ file        : chr &quot;ed35f108e2ccd75a904273f1e8559d5a0acb9c2700531276a7acdcfba09decc6&quot;
-##  $ start       :Class &#39;proc_time&#39;  Named num [1:5] 25.061 0.617 32.159 0.298 0.147
+##  $ start       :Class &#39;proc_time&#39;  Named num [1:5] 14.001 0.224 14.845 0.024 0.018
 ##   .. ..- attr(*, &quot;names&quot;)= chr [1:5] &quot;user.self&quot; &quot;sys.self&quot; &quot;elapsed&quot; &quot;user.child&quot; ...
 ##  $ time_command:&#39;data.frame&#39;:    1 obs. of  5 variables:
 ##   ..$ item   : chr &quot;\&quot;report.md\&quot;&quot;
 ##   ..$ type   : chr &quot;target&quot;
-##   ..$ elapsed: num 0.055
-##   ..$ user   : num 0.054
-##   ..$ system : num 0.001
-##  $ mtime       : POSIXct[1:1], format: &quot;2018-03-22 13:13:09&quot;
+##   ..$ elapsed: num 0.032
+##   ..$ user   : num 0.031
+##   ..$ system : num 0
+##  $ mtime       : POSIXct[1:1], format: &quot;2018-04-09 23:50:07&quot;
 ##  $ time_build  :&#39;data.frame&#39;:    1 obs. of  5 variables:
 ##   ..$ item   : chr &quot;\&quot;report.md\&quot;&quot;
 ##   ..$ type   : chr &quot;target&quot;
-##   ..$ elapsed: num 0.06
-##   ..$ user   : num 0.059
-##   ..$ system : num 0.001
+##   ..$ elapsed: num 0.034
+##   ..$ user   : num 0.035
+##   ..$ system : num 0
 </code></pre>
 
 <p>If your target&#39;s last build succeeded, then <code>diagnose(your_target)</code> has the most current information from that build. But if your target failed, then only <code>diagnose(your_target)$error</code>, <code>diagnose(your_target)$warnings</code>, and <code>diagnose(your_target)$messages</code> correspond to the failure, and all the other metadata correspond to the last build that completed without an error.</p>
@@ -499,9 +499,9 @@ str(diagnose(&quot;\&quot;report.md\&quot;&quot;))
 <pre><code class="r">clean(verbose = FALSE) # Start from scratch
 config &lt;- make(my_plan, trigger = &quot;missing&quot;)
 ## Unloading targets from environment:
-##   small
-##   large
 ##   coef_regression2_small
+##   large
+##   small
 ## target large: trigger &quot;missing&quot;
 ## target small: trigger &quot;missing&quot;
 ## target regression1_large: trigger &quot;missing&quot;
@@ -517,7 +517,7 @@ config &lt;- make(my_plan, trigger = &quot;missing&quot;)
 ## target summ_regression2_large: trigger &quot;missing&quot;
 ## target summ_regression2_small: trigger &quot;missing&quot;
 ## target file &quot;report.md&quot;: trigger &quot;missing&quot;
-## Used non-default triggers. Some targets may be not be up to date.
+## Used non-default triggers. Some targets may not be up to date.
 </code></pre>
 
 <p>You can choose from any of the following triggers for all targets or for each target individually.</p>
@@ -539,21 +539,21 @@ my_plan
 ## # A tibble: 15 x 3
 ##    target                 command                                  trigger
 ##    &lt;chr&gt;                  &lt;chr&gt;                                    &lt;chr&gt;  
-##  1 &quot;&quot;                     &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_ou~ file   
+##  1 &quot;&quot;                     &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_ou… file   
 ##  2 small                  simulate(48)                             command
 ##  3 large                  simulate(64)                             command
 ##  4 regression1_small      reg1(small)                              command
 ##  5 regression1_large      reg1(large)                              command
 ##  6 regression2_small      reg2(small)                              command
 ##  7 regression2_large      reg2(large)                              command
-##  8 summ_regression1_small suppressWarnings(summary(regression1_sm~ command
-##  9 summ_regression1_large suppressWarnings(summary(regression1_la~ command
-## 10 summ_regression2_small suppressWarnings(summary(regression2_sm~ command
-## 11 summ_regression2_large suppressWarnings(summary(regression2_la~ command
-## 12 coef_regression1_small suppressWarnings(summary(regression1_sm~ command
-## 13 coef_regression1_large suppressWarnings(summary(regression1_la~ command
-## 14 coef_regression2_small suppressWarnings(summary(regression2_sm~ command
-## 15 coef_regression2_large suppressWarnings(summary(regression2_la~ command
+##  8 summ_regression1_small suppressWarnings(summary(regression1_sm… command
+##  9 summ_regression1_large suppressWarnings(summary(regression1_la… command
+## 10 summ_regression2_small suppressWarnings(summary(regression2_sm… command
+## 11 summ_regression2_large suppressWarnings(summary(regression2_la… command
+## 12 coef_regression1_small suppressWarnings(summary(regression1_sm… command
+## 13 coef_regression1_large suppressWarnings(summary(regression1_la… command
+## 14 coef_regression2_small suppressWarnings(summary(regression2_sm… command
+## 15 coef_regression2_large suppressWarnings(summary(regression2_la… command
 
 # Change an imported dependency:
 reg2
@@ -571,7 +571,7 @@ make(my_plan, trigger = &quot;any&quot;) # Nothing changes!
 ##   coef_regression2_small
 ##   large
 ##   small
-## Used non-default triggers. Some targets may be not be up to date.
+## Used non-default triggers. Some targets may not be up to date.
 </code></pre>
 
 <p>The <code>outdated()</code> function responds to triggers. For example, even if <code>outdated(my_plan)</code> shows all targets up to date, <code>outdated(my_plan, trigger = &quot;always&quot;)</code> will claim that all the targets are outdated.</p>
@@ -625,8 +625,12 @@ withr::with_message_sink(
 ## Unloading targets from environment:
 ##   x
 ## target x
-## [2018-03-22 13:13:17] TimeoutException: reached elapsed time limit
-## [cpu=0.001s, elapsed=0.001s]
+## target y
+## retry y: 1 of 2
+## retry y: 2 of 2
+## [2018-04-09 23:50:14] TimeoutException: reached CPU time limit [cpu=0.001s,
+## elapsed=0.001s]
+## Warning: No message sink to remove.
 </code></pre>
 
 <p>To tailor these settings to each individual target, create new <code>timeout</code>, <code>cpu</code>, <code>elapsed</code>, or <code>retries</code> columns in your workflow plan. These columns override the analogous arguments to <code>make()</code>.</p>
@@ -646,6 +650,8 @@ withr::with_message_sink(
   new = stdout(),
   make(debug_plan, timeout = Inf, retries = 0)
 )
+## Unloading targets from environment:
+##   x
 ## target x
 ## target y
 ## fail y

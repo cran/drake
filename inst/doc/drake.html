@@ -244,25 +244,26 @@ ls()
 ##  [7] &quot;b&quot;                 &quot;bad_plan&quot;          &quot;cache&quot;            
 ## [10] &quot;command&quot;           &quot;config&quot;            &quot;cranlogs_plan&quot;    
 ## [13] &quot;debug_plan&quot;        &quot;digest&quot;            &quot;digest_impl&quot;      
-## [16] &quot;envir&quot;             &quot;error&quot;             &quot;f&quot;                
-## [19] &quot;g&quot;                 &quot;get_logs&quot;          &quot;good_plan&quot;        
-## [22] &quot;hard_plan&quot;         &quot;hmac&quot;              &quot;little_b&quot;         
-## [25] &quot;logs&quot;              &quot;makeRaw&quot;           &quot;makeRaw.character&quot;
-## [28] &quot;makeRaw.default&quot;   &quot;makeRaw.digest&quot;    &quot;makeRaw.raw&quot;      
-## [31] &quot;modes&quot;             &quot;my_plan&quot;           &quot;my_variable&quot;      
-## [34] &quot;myplan&quot;            &quot;new_objects&quot;       &quot;num2hex&quot;          
-## [37] &quot;padWithZeros&quot;      &quot;plan&quot;              &quot;print.AES&quot;        
-## [40] &quot;query&quot;             &quot;random_rows&quot;       &quot;reg1&quot;             
-## [43] &quot;reg2&quot;              &quot;rules_grid&quot;        &quot;sha1&quot;             
-## [46] &quot;sha1.Date&quot;         &quot;sha1.NULL&quot;         &quot;sha1.POSIXct&quot;     
-## [49] &quot;sha1.POSIXlt&quot;      &quot;sha1.anova&quot;        &quot;sha1.array&quot;       
-## [52] &quot;sha1.call&quot;         &quot;sha1.character&quot;    &quot;sha1.complex&quot;     
-## [55] &quot;sha1.data.frame&quot;   &quot;sha1.default&quot;      &quot;sha1.factor&quot;      
-## [58] &quot;sha1.function&quot;     &quot;sha1.integer&quot;      &quot;sha1.list&quot;        
-## [61] &quot;sha1.logical&quot;      &quot;sha1.matrix&quot;       &quot;sha1.name&quot;        
-## [64] &quot;sha1.numeric&quot;      &quot;sha1.pairlist&quot;     &quot;sha1.raw&quot;         
-## [67] &quot;simulate&quot;          &quot;timestamp&quot;         &quot;tmp&quot;              
-## [70] &quot;totally_okay&quot;      &quot;url&quot;               &quot;x&quot;
+## [16] &quot;envir&quot;             &quot;error&quot;             &quot;example_class&quot;    
+## [19] &quot;example_object&quot;    &quot;f&quot;                 &quot;g&quot;                
+## [22] &quot;get_logs&quot;          &quot;good_plan&quot;         &quot;hard_plan&quot;        
+## [25] &quot;hmac&quot;              &quot;little_b&quot;          &quot;logs&quot;             
+## [28] &quot;makeRaw&quot;           &quot;makeRaw.character&quot; &quot;makeRaw.default&quot;  
+## [31] &quot;makeRaw.digest&quot;    &quot;makeRaw.raw&quot;       &quot;modes&quot;            
+## [34] &quot;my_plan&quot;           &quot;my_variable&quot;       &quot;myplan&quot;           
+## [37] &quot;new_objects&quot;       &quot;num2hex&quot;           &quot;padWithZeros&quot;     
+## [40] &quot;plan&quot;              &quot;print.AES&quot;         &quot;query&quot;            
+## [43] &quot;random_rows&quot;       &quot;reg1&quot;              &quot;reg2&quot;             
+## [46] &quot;rules_grid&quot;        &quot;sha1&quot;              &quot;sha1.Date&quot;        
+## [49] &quot;sha1.NULL&quot;         &quot;sha1.POSIXct&quot;      &quot;sha1.POSIXlt&quot;     
+## [52] &quot;sha1.anova&quot;        &quot;sha1.array&quot;        &quot;sha1.call&quot;        
+## [55] &quot;sha1.character&quot;    &quot;sha1.complex&quot;      &quot;sha1.data.frame&quot;  
+## [58] &quot;sha1.default&quot;      &quot;sha1.factor&quot;       &quot;sha1.function&quot;    
+## [61] &quot;sha1.integer&quot;      &quot;sha1.list&quot;         &quot;sha1.logical&quot;     
+## [64] &quot;sha1.matrix&quot;       &quot;sha1.name&quot;         &quot;sha1.numeric&quot;     
+## [67] &quot;sha1.pairlist&quot;     &quot;sha1.raw&quot;          &quot;simulate&quot;         
+## [70] &quot;timestamp&quot;         &quot;tmp&quot;               &quot;totally_okay&quot;     
+## [73] &quot;url&quot;               &quot;x&quot;
 
 # and saved files in your file system.
 list.files()
@@ -272,9 +273,8 @@ list.files()
 ## [10] &quot;debug.Rmd&quot;            &quot;debug.html&quot;           &quot;debug.md&quot;            
 ## [13] &quot;drake.R&quot;              &quot;drake.Rmd&quot;            &quot;example-basic.Rmd&quot;   
 ## [16] &quot;example-gsp.Rmd&quot;      &quot;example-packages.Rmd&quot; &quot;faq.Rmd&quot;             
-## [19] &quot;figure&quot;               &quot;graph.Rmd&quot;            &quot;parallelism.Rmd&quot;     
-## [22] &quot;report.R&quot;             &quot;report.Rmd&quot;           &quot;storage.Rmd&quot;         
-## [25] &quot;timing.Rmd&quot;
+## [19] &quot;graph.Rmd&quot;            &quot;parallelism.Rmd&quot;      &quot;report.R&quot;            
+## [22] &quot;report.Rmd&quot;           &quot;storage.Rmd&quot;          &quot;timing.Rmd&quot;
 </code></pre>
 
 <p>Your real work is outlined in a data frame of data analysis steps called &ldquo;targets&rdquo;. The targets depend on the imports, and <code>drake</code> will figure out how they are all connected.</p>
@@ -283,21 +283,21 @@ list.files()
 ## # A tibble: 15 x 2
 ##    target                 command                                         
 ##    &lt;chr&gt;                  &lt;chr&gt;                                           
-##  1 &quot;&quot;                     &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;repo~
+##  1 &quot;&quot;                     &quot;knit(knitr_in(\&quot;report.Rmd\&quot;), file_out(\&quot;repo…
 ##  2 small                  simulate(48)                                    
 ##  3 large                  simulate(64)                                    
 ##  4 regression1_small      reg1(small)                                     
 ##  5 regression1_large      reg1(large)                                     
 ##  6 regression2_small      reg2(small)                                     
 ##  7 regression2_large      reg2(large)                                     
-##  8 summ_regression1_small suppressWarnings(summary(regression1_small$resi~
-##  9 summ_regression1_large suppressWarnings(summary(regression1_large$resi~
-## 10 summ_regression2_small suppressWarnings(summary(regression2_small$resi~
-## 11 summ_regression2_large suppressWarnings(summary(regression2_large$resi~
-## 12 coef_regression1_small suppressWarnings(summary(regression1_small))$co~
-## 13 coef_regression1_large suppressWarnings(summary(regression1_large))$co~
-## 14 coef_regression2_small suppressWarnings(summary(regression2_small))$co~
-## 15 coef_regression2_large suppressWarnings(summary(regression2_large))$co~
+##  8 summ_regression1_small suppressWarnings(summary(regression1_small$resi…
+##  9 summ_regression1_large suppressWarnings(summary(regression1_large$resi…
+## 10 summ_regression2_small suppressWarnings(summary(regression2_small$resi…
+## 11 summ_regression2_large suppressWarnings(summary(regression2_large$resi…
+## 12 coef_regression1_small suppressWarnings(summary(regression1_small))$co…
+## 13 coef_regression1_large suppressWarnings(summary(regression1_large))$co…
+## 14 coef_regression2_small suppressWarnings(summary(regression2_small))$co…
+## 15 coef_regression2_large suppressWarnings(summary(regression2_large))$co…
 </code></pre>
 
 <p>Wildcard templating generates these data frames at scale.</p>

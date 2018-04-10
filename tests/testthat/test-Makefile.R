@@ -39,7 +39,7 @@ test_with_dir("prepend arg works", {
   store_drake_config(config = config)
   run_Makefile(config, run = FALSE)
   lines <- readLines("Makefile")
-  expect_true(grepl("# add", lines[1]))
+  expect_true(grepl("# add", lines[1], fixed = TRUE))
 })
 
 test_with_dir("files inside directories can be timestamped", {
@@ -53,6 +53,7 @@ test_with_dir("files inside directories can be timestamped", {
   path <- cache_path(config$cache)
   store_drake_config(config = config)
   run_Makefile(config, run = FALSE)
+  prepare_distributed(config = config)
   expect_silent(mk(config$plan$target[1], cache_path = path))
   expect_true(file.exists("t1"))
   expect_true(file.exists(drake::drake_unquote(file)))

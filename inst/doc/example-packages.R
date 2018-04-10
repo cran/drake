@@ -39,11 +39,17 @@ package_list <- c(
 
 ## ----datadataplan--------------------------------------------------------
 data_plan <- drake_plan(
-  recent = cran_downloads(packages = package_list, when = "last-month"),
   older = cran_downloads(
     packages = package_list,
     from = "2016-11-01",
     to = "2016-12-01"
+  ),
+  recent = target(
+    command = cran_downloads(
+      packages = package_list,
+      when = "last-month"
+    ),
+    trigger = "always"
   ),
   strings_in_dots = "literals"
 )
@@ -86,17 +92,11 @@ report_plan <- drake_plan(
 report_plan
 
 ## ----packageswhole_plan--------------------------------------------------
-whole_plan <- rbind(
+whole_plan <- bind_plans(
   data_plan,
   output_plan,
   report_plan
 )
-
-whole_plan
-
-## ----packagestriggers----------------------------------------------------
-whole_plan$trigger <- "any" # default trigger
-whole_plan$trigger[whole_plan$target == "recent"] <- "always"
 
 whole_plan
 

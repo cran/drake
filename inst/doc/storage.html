@@ -292,22 +292,22 @@ digest(smaller_data) # compute the hash
 ## [1] &quot;23c80a31c0713176016e6e18d76a5f31&quot;
 
 digest(larger_data)
-## [1] &quot;f2b2f4bef0888e67f304184fc6b38ab7&quot;
+## [1] &quot;d667cb4e86bc358992bdcd486c29e976&quot;
 </code></pre>
 
 <p>However, different hash algorithms vary in length.</p>
 
 <pre><code class="r">digest(larger_data, algo = &quot;sha512&quot;)
-## [1] &quot;335941c74a80d61d95a3c9d9338c3012c7d4c7045223b866ee5ca1435763b2f028d676ac93d7a3ad86945da7eaae6a514aa75e00b378bf114dd4f213e5f8ff7c&quot;
+## [1] &quot;5125636b48d17ec4ad59ce27d42b1d33b9b1bdf22c23054a5ce91aa684ffe143e478fe2cfa07bb949d0e1274851bdbe4d365a31c3bb98e015e160aa471984eb6&quot;
 
 digest(larger_data, algo = &quot;md5&quot;)
-## [1] &quot;f2b2f4bef0888e67f304184fc6b38ab7&quot;
+## [1] &quot;d667cb4e86bc358992bdcd486c29e976&quot;
 
 digest(larger_data, algo = &quot;xxhash64&quot;)
-## [1] &quot;4c78893ea3b0de86&quot;
+## [1] &quot;ae4a84cb926c7bfc&quot;
 
 digest(larger_data, algo = &quot;murmur32&quot;)
-## [1] &quot;cbd6c247&quot;
+## [1] &quot;deddff38&quot;
 </code></pre>
 
 <h1>Which hash algorithm should you choose?</h1>

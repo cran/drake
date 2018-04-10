@@ -439,7 +439,14 @@ readd(out)
 
 <h2>Workflows as R packages.</h2>
 
-<p>The R package structure is a great way to organize the files of your project. Writing your own package to contain your data science workflow is a good idea, but you will need to use <code>expose_imports()</code> to run it properly with <code>drake</code>. See the <a href="https://github.com/ropensci/drake/blob/master/vignettes/best-practices.Rmd">best practices vignette</a> and <code>?expose_imports</code> for detailed explanations. Thanks to <a href="https://github.com/dapperjapper">Jasper Clarkberg</a> for the workaround.</p>
+<p>The R package structure is a great way to organize the files of your project. Writing your own package to contain your data science workflow is a good idea, but you will need to</p>
+
+<ol>
+<li>Use <code>expose_imports()</code> to properly account for all your nested function dependencies, and</li>
+<li>If you load the package with <code>devtools::load_all()</code>, set the <code>prework</code> argument of <code>make()</code>: e.g. <code>make(prework = &quot;devtools::load_all()&quot;)</code>.</li>
+</ol>
+
+<p>See the <a href="https://github.com/ropensci/drake/blob/master/vignettes/best-practices.Rmd">best practices vignette</a> and <code>?expose_imports</code> for detailed explanations. Thanks to <a href="https://github.com/dapperjapper">Jasper Clarkberg</a> for the workaround.</p>
 
 <h2>The <code>lazy_load</code> flag does not work with <code>&quot;parLapply&quot;</code> parallelism.</h2>
 
@@ -461,6 +468,37 @@ make(my_plan, lazy_load = TRUE, parallelism = &quot;future_lapply&quot;)
 <p>You can call <code>make(..., timeout = 10)</code> to time out all each target after 10 seconds. However, timeouts rely on <a href="https://github.com/HenrikBengtsson/R.utils/issues/74">R.utils::withTimeout()</a>, which in turn relies on <code>setTimeLimit()</code>. These functions are the best that R can offer right now, but they have <a href="https://github.com/HenrikBengtsson/R.utils/issues/74">known issues</a>, and timeouts may fail to take effect for certain environments.</p>
 
 <h1>Dependencies</h1>
+
+<h2>Dependency objects containing functions may change unexpectedly</h2>
+
+<p>For example, an <code>R6</code> class changes whenever a new <code>R6</code> object of that class is created.</p>
+
+<pre><code class="r">library(digest)
+library(R6)
+example_class &lt;- R6Class(
+  &quot;example_class&quot;,
+  private = list(data = list()),
+  public = list(
+    initialize = function(data = list()) {
+      private$data = data
+    }
+  )
+)
+digest(example_class)
+## [1] &quot;d123d15bb7cd05363355cb769afa2e7d&quot;
+example_object &lt;- example_class$new(data = 1234)
+digest(example_class) # example_class changed
+## [1] &quot;9f21372d350984e5e1b0a77e1103f2cd&quot;
+</code></pre>
+
+<p><code>Drake</code> detects this type strange change and unavoidably rebuilds targets.</p>
+
+<pre><code class="r">plan &lt;- drake_plan(example_target = example_class$new(1234))
+make(plan) # `example_class` changes because it is referenced.
+make(plan) # Builds `example_target` again because `example_class` changed.
+</code></pre>
+
+<p>The same behavior affects objects containing functions more broadly, not just <code>R6</code> classes. For more on this edge case, see <a href="https://github.com/ropensci/drake/issues/345">issue 345</a>.</p>
 
 <h2>The <code>magrittr</code> dot (<code>.</code>) is always ignored.</h2>
 
@@ -640,7 +678,7 @@ cache pathto/.drake
 connect 61 imports: ...
 connect 200 targets: ...
 Error in rawToChar(as.raw(x)) : 
-  embedded nul in string: 'initial_drake_version\0\0\x9a\x9d\xdc\0J\xe9\0\0\0(\x9d\xf9br<U+05DD>\0\xca)\0\0\xb4\xd7\0\0\0\0\xb9'
+  embedded nul in string: 'initial_drake_version\0\0\x9a\x9d\xdc\0J\xe9\0\0\0(\x9d\xf9brם\0\xca)\0\0\xb4\xd7\0\0\0\0\xb9'
 In addition: Warning message:
 In rawToChar(as.raw(x)) :
   out-of-range values treated as 0 in coercion to raw

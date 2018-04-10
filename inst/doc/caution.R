@@ -100,6 +100,27 @@ readd(out)
 #  load_basic_example() # Get the code with drake_example("basic").
 #  make(my_plan, lazy_load = TRUE, parallelism = "future_lapply")
 
+## ----r6change------------------------------------------------------------
+library(digest)
+library(R6)
+example_class <- R6Class(
+  "example_class",
+  private = list(data = list()),
+  public = list(
+    initialize = function(data = list()) {
+      private$data = data
+    }
+  )
+)
+digest(example_class)
+example_object <- example_class$new(data = 1234)
+digest(example_class) # example_class changed
+
+## ----r6rebuild, eval = FALSE---------------------------------------------
+#  plan <- drake_plan(example_target = example_class$new(1234))
+#  make(plan) # `example_class` changes because it is referenced.
+#  make(plan) # Builds `example_target` again because `example_class` changed.
+
 ## ----depsdot-------------------------------------------------------------
 deps("sqrt(x + y + .)")
 deps("dplyr::filter(complete.cases(.))")

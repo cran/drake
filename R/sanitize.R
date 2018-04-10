@@ -6,16 +6,21 @@ sanitize_plan <- function(plan){
          plan[[field]] <- as.character(plan[[field]])
       }
       if (is.character(plan[[field]])){
-        plan[[field]] <- str_trim(plan[[field]], side = "both")
+        plan[[field]] <- stringi::stri_trim_both(plan[[field]])
       }
     }
   }
-  if (!is.null(plan[["trigger"]])){
+  if ("trigger" %in% colnames(plan)){
+    plan$trigger[is.na(plan$trigger) | !nzchar(plan$trigger)] <- "any"
     assert_legal_triggers(plan[["trigger"]])
   }
   plan <- file_outs_to_targets(plan)
   plan$target <- repair_target_names(plan$target)
-  plan[nchar(plan$target) > 0, ]
+  plan <- plan[nzchar(plan$target), ]
+  plan$command[is.na(plan$command)] <- ""
+  first <- c("target", "command")
+  cols <- c(first, setdiff(colnames(plan), first))
+  plan[, cols]
 }
 
 drake_plan_non_factors <- function(){
@@ -77,15 +82,15 @@ repair_target_names <- function(x){
   } else {
     return(x)
   }
-  x <- str_trim(x, side = "both")
+  x <- stringi::stri_trim_both(x)
   x[is_not_file(x)] <- gsub(illegals, "_", x[is_not_file(x)])
   x <- gsub("^_", "", x)
-  x[!nchar(x)] <- "X"
+  x[!nzchar(x)] <- "X"
   make.unique(x, sep = "_")
 }
 
 file_outs_to_targets <- function(plan){
-  index <- grepl("file_out", plan$command)
+  index <- grepl("file_out", plan$command, fixed = TRUE)
   plan$target[index] <- vapply(
     plan$command[index],
     single_file_out,

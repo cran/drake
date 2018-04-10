@@ -121,7 +121,13 @@ test_with_dir("in_progress() works and errors are handled correctly", {
   expect_equal(failed(), "x")
   expect_equal(in_progress(), character(0))
   expect_is(e <- diagnose(x)$error, "error")
-  expect_true(grepl(pattern = "function_doesnt_exist", x = e$message))
+  expect_true(
+    grepl(
+      pattern = "function_doesnt_exist",
+      x = e$message,
+      fixed = TRUE
+    )
+  )
   expect_error(diagnose("notfound"))
   expect_true(inherits(diagnose(x)$error, "error"))
   y <- "x"
@@ -140,10 +146,10 @@ test_with_dir("warnings and messages are caught", {
   bad_plan <- drake_plan(x = f(), y = x)
   expect_warning(make(bad_plan, verbose = TRUE, session_info = FALSE))
   x <- diagnose(x)
-  expect_true(grepl("my first warn", x$warnings[1]))
-  expect_true(grepl("my second warn", x$warnings[2]))
-  expect_true(grepl("my first mess", x$messages[1]))
-  expect_true(grepl("my second mess", x$messages[2]))
+  expect_true(grepl("my first warn", x$warnings[1], fixed = TRUE))
+  expect_true(grepl("my second warn", x$warnings[2], fixed = TRUE))
+  expect_true(grepl("my first mess", x$messages[1], fixed = TRUE))
+  expect_true(grepl("my second mess", x$messages[2], fixed = TRUE))
 })
 
 test_with_dir("missed() works", {
@@ -230,5 +236,20 @@ test_with_dir("unique_random_string() works", {
       unique_random_string(exclude = exclude, n = 1),
       "X0"
     )
+  }
+})
+
+test_with_dir("make(session = callr::r_vanilla)", {
+  con <- dbug()
+  con$envir <- dbug_envir(globalenv())
+  ls1 <- ls(envir = con$envir)
+  con$session <- callr::r_vanilla
+  make_with_config(con)
+  expect_equal(sort(justbuilt(con)), sort(con$plan$target))
+  ls2 <- ls(envir = con$envir)
+  expect_equal(sort(ls1), sort(ls2))
+  rm_these <- setdiff(ls(envir = con$envir), ls1)
+  if (length(rm_these)){
+    rm(list = rm_these, envir = con$envir)
   }
 })

@@ -10,8 +10,8 @@ worker_future_lapply <- function(targets, meta_list, config){
   if (!length(targets)){ # nocov # nolint
     return()             # nocov
   }                      # nocov
-  future::future_lapply(
-    x = targets,
+  future.apply::future_lapply(
+    X = targets,
     FUN = build_distributed,
     cache_path = config$cache$driver$path,
     meta_list = meta_list,
