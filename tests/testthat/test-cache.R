@@ -8,6 +8,12 @@ test_with_dir("dependency profile", {
     target = "a", config = config)))
 })
 
+test_with_dir("Missing cache", {
+  s <- storr::storr_rds("s")
+  unlink(s$driver$path, recursive = TRUE)
+  expect_error(assert_cache(s), regexp = "drake cache missing")
+})
+
 test_with_dir("Cache namespaces", {
   x <- cache_namespaces()
   y <- target_namespaces()
@@ -18,9 +24,29 @@ test_with_dir("Cache namespaces", {
   expect_false(all(y %in% z))
 })
 
+test_with_dir("safe_get", {
+  con <- list(cache = storr::storr_environment())
+  expect_true(is.na(safe_get(key = "x", namespace = "y", config = con)))
+})
+
 test_with_dir("clean() works if there is no cache already", {
   clean(list = "no_cache")
   expect_false(file.exists(default_cache_path()))
+})
+
+test_with_dir("can exclude bad targets from loadd()", {
+  plan <- drake_plan(a = TRUE)
+  make(plan)
+  expect_silent(loadd(a, b, lazy = FALSE))
+  expect_equal(a, TRUE)
+  expect_equal(
+    exclude_foreign_imports(
+      targets = "b",
+      cache = get_cache(),
+      jobs = 1
+    ),
+    character(0)
+  )
 })
 
 test_with_dir("bad/corrupt caches, no progress, no seed", {
@@ -73,18 +99,18 @@ test_with_dir("subspaces", {
   lst <- list_subspace(
     subspace = "y", namespace = "x", cache = x, jobs = 1)
   expect_equal(lst, character(0))
-  set_in_subspace(
+  set_in_subspaces(
     key = "a",
-    value = 1,
+    values = 1,
     namespace = "x",
-    subspace = "y",
+    subspaces = "y",
     cache = x
   )
-  set_in_subspace(
+  set_in_subspaces(
     key = "b",
-    value = 2,
+    values = 2,
     namespace = "x",
-    subspace = "y",
+    subspaces = "y",
     cache = x
   )
   lst <- list_subspace(
@@ -140,6 +166,7 @@ test_with_dir("cache functions work", {
   drake_gc()
   y <- cached()
   expect_equal(sort(x), sort(y))
+  expect_equal(outdated(config), character(0))
 
   # targets
   all <- sort(c("\"input.rds\"",
@@ -195,6 +222,8 @@ test_with_dir("cache functions work", {
   expect_equal(sort(cached(search = FALSE)), sort(all), twopiece)
   expect_equal(sort(cached(search = FALSE, no_imported_objects = TRUE)),
     sort(c("\"input.rds\"", builds)))
+  expect_true(is_cached(targets = "\"input.rds\"", no_imported_objects = TRUE,
+    cache = config$cache, jobs = 1, namespace = config$cache$default_namespace))
   expect_true(all(cached(search = FALSE, list = all)))
   expect_equal(
     length(cached(search = FALSE, i, list = imported(files_only = FALSE))),

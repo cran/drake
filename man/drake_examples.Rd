@@ -10,17 +10,15 @@ drake_examples()
 Names of all the drake examples.
 }
 \description{
-The \code{'basic'} example is the one from the
-basic example vignette: \code{vignette("example-basic")}.
-All are in the \code{inst/examples/} folder
-of the package source code.
+The \code{'mtcars'} example is
+documented at https://ropenscilabs.github.io/drake-manual/mtcars.html.
 }
 \examples{
 \dontrun{
 test_with_dir("Quarantine side effects.", {
 drake_examples() # List all the drake examples.
-# Sets up the same example as the basic example vignette.
-drake_example("basic")
+# Sets up the same example as https://ropenscilabs.github.io/drake-manual/mtcars.html # nolint
+drake_example("mtcars")
 # Sets up the SLURM example.
 drake_example("slurm")
 })

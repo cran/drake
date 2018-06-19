@@ -12,7 +12,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' config <- load_basic_example() # Get the code with drake_example("basic").
+#' config <- load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Plot the network graph representation of the workflow.
 #' vis_drake_graph(config, width = '100%') # The width is passed to visNetwork
 #' config <- make(my_plan) # Run the project, build the targets.
@@ -29,7 +29,7 @@ vis_drake_graph <- function(
   config = drake::read_drake_config(),
   file = character(0), selfcontained = FALSE,
   build_times = "build", digits = 3, targets_only = FALSE,
-  split_columns = FALSE, font_size = 20,
+  split_columns = NULL, font_size = 20,
   layout = "layout_with_sugiyama", main = NULL,
   direction = "LR", hover = TRUE,
   navigationButtons = TRUE, # nolint
@@ -123,7 +123,7 @@ drake_graph <- vis_drake_graph
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Instead of jumpting right to vis_drake_graph(), get the data frames
 #' # of nodes, edges, and legend nodes.
 #' config <- drake_config(my_plan) # Internal configuration list
@@ -145,7 +145,8 @@ render_drake_graph <- function(
   out <- visNetwork::visNetwork(
     nodes = graph_dataframes$nodes,
     edges = graph_dataframes$edges,
-    main = main, ...
+    main = main,
+    ...
   ) %>%
     visNetwork::visHierarchicalLayout(direction = direction)
   if (length(ncol_legend) && ncol_legend > 0){

@@ -17,7 +17,7 @@
 #' # This example is not really a user-side demonstration.
 #' # It just walks through a dive into the internals.
 #' # Populate your workspace and write 'report.Rmd'.
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Create the master internal configuration list.
 #' config <- drake_config(my_plan)
 #' out <- drake_build(small, config = config)
@@ -62,6 +62,33 @@ drake_build <- function(
     replace = replace
   )
   build_and_store(target = target, config = config)
+}
+
+build_check_store <- function(
+  target, config, downstream = NULL, announce = TRUE, flag_attempt = FALSE
+){
+  meta <- drake_meta(target = target, config = config)
+  if (!should_build_target(
+    target = target,
+    meta = meta,
+    config = config
+  )){
+    console_skip(target = target, config = config)
+    return()
+  }
+  meta$start <- proc.time()
+  config$hook({
+    prune_envir(
+      targets = target,
+      config = config,
+      downstream = downstream
+    )
+  })
+  value <- build_and_store(target = target, meta = meta, config = config)
+  assign_to_envir(target = target, value = value, config = config)
+  if (flag_attempt && target %in% config$plan$target){
+    set_attempt_flag(key = target, config = config)
+  }
 }
 
 build_and_store <- function(target, config, meta = NULL, announce = TRUE){
@@ -112,21 +139,21 @@ announce_build <- function(target, meta, config){
 }
 
 conclude_build <- function(target, value, meta, config){
-  check_processed_file(target)
+  check_processed_file(target, config)
   handle_build_exceptions(target = target, meta = meta, config = config)
   store_target(target = target, value = value, meta = meta, config = config)
   invisible(value)
 }
 
-check_processed_file <- function(target){
+check_processed_file <- function(target, config){
   if (!is_file(target)){
     return()
   }
   if (!file.exists(drake::drake_unquote(target))){
-    warning(
+    drake_warning(
       "File ", target, " was built or processed,\n",
       "but the file itself does not exist.",
-      call. = FALSE
+      config = config
     )
   }
 }

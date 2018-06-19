@@ -27,7 +27,7 @@ of the returned list should agree: for example,
 \examples{
 \dontrun{
 test_with_dir("Quarantine side effects.", {
-load_basic_example() # Load drake's canonical example.
+load_mtcars_example() # Load drake's canonical example.
 con <- make(my_plan) # Run the project, build the targets.
 # Get some example dependency profiles of targets.
 dependency_profile("small", config = con)
@@ -37,6 +37,6 @@ dependency_profile(file_store("report.md"), config = con)
 }
 \seealso{
 \code{\link[=read_drake_meta]{read_drake_meta()}},
-\code{\link[=deps]{deps()}}, \code{\link[=make]{make()}},
+\code{\link[=deps_code]{deps_code()}}, \code{\link[=make]{make()}},
 \code{\link[=config]{config()}}
 }

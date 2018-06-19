@@ -20,6 +20,7 @@ that is, outdated targets remain outdated and up to date targets
 remain up to date.
 }
 \description{
+Deprecated on May 4, 2018.
 Migrate a project/cache from drake 4.4.0 or earlier
 to be compatible with the version of drake on your system.
 }
@@ -45,10 +46,10 @@ it backed up your old project.
 \dontrun{
 test_with_dir("Quarantine side effects.", {
 # With drake 4.3.0:
-load_basic_example() # Get the code with drake_example("basic").
+load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Run the old project.
 # Now, install drake >= 5.0.0
-load_basic_example() # Get the code with drake_example("basic").
+load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Error: cache is not back compatible.
 # Convert the project's '.drake/' cache to the new format.
 migrate_drake_project()
@@ -63,3 +64,4 @@ outdated(config)
 \seealso{
 \code{\link[=rescue_cache]{rescue_cache()}}, \code{\link[=make]{make()}}
 }
+\keyword{internal}

@@ -48,7 +48,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Load drake's canonical example.
+#' load_mtcars_example() # Load drake's canonical example.
 #' make(my_plan) # Run the project, build all the targets.
 #' cached(list = 'reg1') # Is 'reg1' in the cache?
 #' # List all the targets and imported files in the cache.
@@ -91,12 +91,13 @@ cached <- function(
   }
   dots <- match.call(expand.dots = FALSE)$...
   targets <- targets_from_dots(dots, list)
-  if (!length(targets))
+  if (!length(targets)) {
     list_cache(no_imported_objects = no_imported_objects,
       cache = cache, namespace = namespace, jobs = jobs)
-  else
+  } else {
     is_cached(targets = targets, no_imported_objects = no_imported_objects,
       cache = cache, namespace = namespace, jobs = jobs)
+  }
 }
 
 is_cached <- function(targets, no_imported_objects, cache, namespace, jobs){
@@ -136,7 +137,7 @@ list_cache <- function(no_imported_objects, cache, namespace, jobs){
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Load drake's canonical example.
+#' load_mtcars_example() # Load drake's canonical example.
 #' make(my_plan) # Run the project, build all the targets.
 #' built() # List all the cached targets (built objects and files).
 #' # For file targets, only the fingerprints/hashes are stored.
@@ -182,7 +183,7 @@ built <- function(
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Load the canonical example.
+#' load_mtcars_example() # Load the canonical example.
 #' make(my_plan) # Run the project, build the targets.
 #' imported() # List all the imported objects/files in the cache.
 #' # For imported files, only the fingerprints/hashes are stored.
@@ -212,8 +213,9 @@ imported <- function(
 # from base::remove()
 targets_from_dots <- function(dots, list) {
   if (length(dots) && !all(vapply(dots, function(x) is.symbol(x) ||
-    is.character(x), NA, USE.NAMES = FALSE)))
-    stop("... must contain names or character strings")
+    is.character(x), NA, USE.NAMES = FALSE))){
+    stop("... must contain names or character strings", call. = FALSE)
+  }
   names <- vapply(dots, as.character, "")
   targets <- c(names, list) %>% unique
   standardize_filename(targets)

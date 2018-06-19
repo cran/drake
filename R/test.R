@@ -60,15 +60,14 @@ nobuild <- function(config) {
 #' file.exists("world.txt") # FALSE
 #' }
 test_with_dir <- function(desc, ...){
-  new <- tempfile()
-  dir_empty(new)
-  with_dir(
-    new = new,
-    code = {
-      set_test_backend()
-      test_that(desc = desc, ...)
-    }
-  )
+  while (file.exists(new <- tempfile())){
+    # Should not reach this part of the loop.
+    Sys.sleep(0.01) # nocov
+  }
+  dir.create(new)
+  withr::local_dir(new)
+  set_test_backend()
+  test_that(desc = desc, ...)
   invisible()
 }
 
@@ -98,7 +97,7 @@ with_all_options <- function(code) {
 
 write_v4.3.0_project <- function(){ # nolint
   zip <- system.file(
-    file.path("testing", "built_basic_example_v4.3.0.zip"),
+    file.path("testing", "built_mtcars_example_v4.3.0.zip"),
     package = "drake",
     mustWork = TRUE
   )

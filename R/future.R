@@ -1,5 +1,5 @@
 run_future <- function(config){
-  queue <- new_target_queue(config = config)
+  queue <- new_priority_queue(config = config)
   workers <- initialize_workers(config)
   # While any targets are queued or running...
   while (work_remains(queue = queue, workers = workers, config = config)){
@@ -12,7 +12,7 @@ run_future <- function(config){
           queue = queue
         )
         # Pop the head target only if its priority is 0
-        next_target <- queue$pop0(what = "names")
+        next_target <- queue$pop0()
         if (!length(next_target)){
           # It's hard to make this line run in a small test workflow
           # suitable enough for unit testing, but
@@ -21,7 +21,7 @@ run_future <- function(config){
           next # nocov
         }
         running <- running_targets(workers = workers, config = config)
-        protect <- c(running, queue$list(what = "names"))
+        protect <- c(running, queue$list())
         workers[[id]] <- new_worker(
           id = id,
           target = next_target,
@@ -30,7 +30,7 @@ run_future <- function(config){
         )
       }
     }
-    Sys.sleep(1e-9)
+    Sys.sleep(mc_wait)
   }
 }
 
@@ -61,7 +61,6 @@ drake_future_task <- function(target, meta, config, protect){
 
 new_worker <- function(id, target, config, protect){
   meta <- drake_meta(target = target, config = config)
-  meta$start <- proc.time()
   if (!should_build_target(
     target = target,
     meta = meta,
@@ -69,6 +68,7 @@ new_worker <- function(id, target, config, protect){
   )){
     return(empty_worker(target = target))
   }
+  meta$start <- proc.time()
   config$cache$flush_cache() # Less data to pass this way.
   DRAKE_GLOBALS__ <- NULL # Fixes warning about undefined globals.
   # Avoid potential name conflicts with other globals.
@@ -175,7 +175,6 @@ running_targets <- function(workers, config){
 }
 
 initialize_workers <- function(config){
-  config$cache$clear(namespace = "workers")
   out <- list()
   for (i in seq_len(config$jobs))
     out[[i]] <- empty_worker(target = NA)
@@ -192,8 +191,8 @@ decrease_revdep_keys <- function(worker, config, queue){
     config = config,
     reverse = TRUE
   ) %>%
-    intersect(y = queue$list(what = "names"))
-  queue$decrease_key(names = revdeps)
+    intersect(y = queue$list())
+  queue$decrease_key(targets = revdeps)
 }
 
 conclude_worker <- function(worker, config, queue){
@@ -206,7 +205,7 @@ conclude_worker <- function(worker, config, queue){
   if (is_empty_worker(worker)){
     return(out)
   }
-  set_attempt_flag(config = config)
+  set_attempt_flag(key = "_attempt", config = config)
   build <- resolve_worker_value(worker = worker, config = config)
   if (config$caching == "worker"){
     return(out)

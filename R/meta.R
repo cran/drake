@@ -1,18 +1,3 @@
-meta_list <- function(targets, config) {
-  console_many_targets(targets = targets,
-    pattern = "check", color = "check",
-    config = config)
-  out <- lightly_parallelize(
-    X = targets,
-    FUN = drake_meta,
-    jobs = config$jobs,
-    config = config
-  )
-  names(out) <- lapply(out, "[[", "target") %>%
-    unlist
-  out
-}
-
 #' @title Compute the initial pre-build metadata of a target or import.
 #' @description The metadata helps determine if the
 #' target is up to date or outdated. The metadata of imports
@@ -42,7 +27,7 @@ meta_list <- function(targets, config) {
 #' # This example is not really a user-side demonstration.
 #' # It just walks through a dive into the internals.
 #' # Populate your workspace and write 'report.Rmd'.
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Create the master internal configuration list.
 #' config <- drake_config(my_plan)
 #' # Optionally, compute metadata on 'small',

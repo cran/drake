@@ -8,7 +8,8 @@ or create a new one otherwise.}
 recover_cache(path = drake::default_cache_path(),
   short_hash_algo = drake::default_short_hash_algo(),
   long_hash_algo = drake::default_long_hash_algo(), force = FALSE,
-  verbose = drake::default_verbose(), fetch_cache = NULL)
+  verbose = drake::default_verbose(), fetch_cache = NULL,
+  console_log_file = NULL)
 }
 \arguments{
 \item{path}{file path of the cache}
@@ -40,7 +41,17 @@ for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
 \item{fetch_cache}{character vector containing lines of code.
 The purpose of this code is to fetch the \code{storr} cache
 with a command like \code{\link[=storr_rds]{storr_rds()}} or \code{\link[=storr_dbi]{storr_dbi()}},
-but customized.}
+but customized. This feature is experimental. It will turn out
+to be necessary if you are using both custom non-RDS caches
+and distributed parallelism (\code{parallelism = "future_lapply"}
+or \code{"Makefile"}) because the distributed R sessions
+need to know how to load the cache.}
+
+\item{console_log_file}{character scalar or \code{NULL}.
+If \code{NULL}, console output will be printed
+to the R console using \code{message()}.
+Otherwise, \code{console_log_file} should be the name of a flat file.
+Console output will be appended to that file.}
 }
 \value{
 A drake/storr cache.
@@ -53,7 +64,7 @@ in-memory caches such as \code{\link[=storr_environment]{storr_environment()}}.
 \dontrun{
 test_with_dir("Quarantine side effects.", {
 clean(destroy = TRUE)
-load_basic_example() # Get the code with drake_example("basic").
+load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Run the project, build all the targets.
 x <- recover_cache(".drake") # Recover the project's storr cache.
 })

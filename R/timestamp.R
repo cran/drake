@@ -13,7 +13,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan) # Master internal configuration list
 #' time_stamps(config)
 #' # Now look in '.drake/ts' for dummy timestamp files.
@@ -24,9 +24,9 @@ time_stamps <- function(config){
   stamp_dir <- time_stamp_dir(cache_path)
   dir_empty(stamp_dir)
   write_time_stamp_template(cache_path)
-  build_these <- next_stage(config = config)
+  build_these <- first_outdated(config = config)
   if (length(build_these)){
-    set_attempt_flag(config = config)
+    set_attempt_flag(key = "_attempt", config = config)
   }
   stamp_these <- setdiff(config$plan$target, build_these)
   lightly_parallelize(
@@ -83,7 +83,7 @@ time_stamp_template <- function(cache_path){
 
 dir_empty <- function(x){
   unlink(x, recursive = TRUE, force = TRUE)
-  dir.create(x)
+  fs::dir_create(x)
 }
 
 file_overwrite <- function(x){

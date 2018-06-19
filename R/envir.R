@@ -1,52 +1,59 @@
-assign_to_envir <- function(targets, values, config){
-  if (config$lazy_load != "eager"){
-    return()
+assign_to_envir <- function(target, value, config){
+  if (
+    identical(config$lazy_load, "eager") &&
+    !is_file(target) &&
+    target %in% config$plan$target
+  ){
+    assign(x = target, value = value, envir = config$envir)
   }
-  lightly_parallelize(
-    X = seq_along(along.with = targets),
-    FUN = assign_to_envir_single,
-    jobs = config$jobs,
-    targets = targets,
-    values = values,
-    config = config
-  )
   invisible()
 }
 
-assign_to_envir_single <- function(index, targets, values, config){
-  target <- targets[index]
-  value <- values[[index]]
-  if (is_file(target) | !(target %in% config$plan$target)){
-    return()
-  }
-  assign(x = target, value = value, envir = config$envir)
-  invisible()
-}
-
-prune_envir <- function(targets, config, downstream = NULL){
-  if (is.null(downstream)){
+#' @title Prune the evaluation environment
+#' @description Load targets that you need to build the targets
+#'   and unload the ones you will never need again in the
+#'   current runthrough of the pipeline. This function should
+#'   not be used directly by users. Only exported for
+#'   internal reasons.
+#' @export
+#' @keywords internal
+#' @return nothing
+#' @param targets character vector of targets
+#' @param config [drake_config()] list
+#' @param downstream optional, character vector of any targets
+#'   assumed to be downstream.
+#' @param jobs number of jobs for local parallel computing
+#' @examples
+#' # Users should use make().
+prune_envir <- function(targets, config, downstream = NULL, jobs = 1){
+  if (is.null(downstream) && !identical(config$pruning_strategy, "memory")){
     downstream <- downstream_nodes(
       from = targets,
       graph = config$graph,
-      jobs = config$jobs
+      jobs = jobs
     )
+  } else if (identical(config$pruning_strategy, "memory")){
+    downstream <- NULL
   }
   already_loaded <- ls(envir = config$envir, all.names = TRUE) %>%
     intersect(y = config$plan$target)
   target_deps <- nonfile_target_dependencies(
     targets = targets,
-    config = config
+    config = config,
+    jobs = jobs
   )
   downstream_deps <- nonfile_target_dependencies(
     targets = downstream,
-    config = config
+    config = config,
+    jobs = jobs
   )
   load_these <- setdiff(target_deps, targets) %>%
     setdiff(y = already_loaded)
-  load_these <- exclude_unloadable(targets = load_these, config = config)
+  load_these <- exclude_unloadable(
+    targets = load_these, config = config, jobs = jobs)
   keep_these <- c(target_deps, downstream_deps)
   discard_these <- setdiff(x = config$plan$target, y = keep_these) %>%
-    parallel_filter(f = is_not_file, jobs = config$jobs) %>%
+    parallel_filter(f = is_not_file, jobs = jobs) %>%
     intersect(y = already_loaded)
   if (length(discard_these)){
     console_many_targets(
@@ -86,12 +93,13 @@ flexible_get <- function(target, envir) {
   get(fun, envir = getNamespace(pkg))
 }
 
-exclude_unloadable <- function(targets, config){
+exclude_unloadable <- function(targets, config, jobs = jobs){
   unloadable <- parallel_filter(
     x = targets,
     f = function(target){
       !config$cache$exists(key = target)
-    }
+    },
+    jobs = jobs
   )
   if (length(unloadable)){
     warning(

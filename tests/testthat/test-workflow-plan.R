@@ -9,7 +9,39 @@ test_with_dir("duplicated targets", {
       b = 2,
       c = 3
     ),
-    regexp = "Duplicated target names"
+    regexp = "Duplicated targets"
+  )
+  expect_error(
+    bind_plans(
+      drake_plan(a = 1, b = 1, c = 1),
+      drake_plan(a = 5, b = 2, d = 5)
+    ),
+    regexp = "Duplicated targets"
+  )
+  expect_equal(
+    bind_plans(
+      drake_plan(a = 1, b = 1, c = 1),
+      drake_plan(a = 1, b = 1, d = 5)
+    ),
+    drake_plan(
+      a = 1,
+      b = 1,
+      c = 1,
+      d = 5
+    )
+  )
+  expect_equal(
+    bind_plans(
+      drake_plan(d = f(c, b)),
+      drake_plan(c = f(a), a = 5),
+      drake_plan(b = f(a), a = 5)
+    ),
+    drake_plan(
+      d = f(c, b),
+      c = f(a),
+      a = 5,
+      b = f(a)
+    )
   )
 })
 
@@ -184,16 +216,15 @@ test_with_dir("make() and check_plan() trim outer whitespace in target names", {
   expect_equal(progress(), stat)
 
   expect_warning(
-    make(
+    con <- make(
       x,
       verbose = FALSE,
       targets = c("a", "nobody_home"),
       session_info = FALSE
     )
   )
-
-  x <- tibble(target = c("a", " a"), command = 1)
-  expect_error(check_plan(x, verbose = FALSE))
+  expect_true(all(letters[1:4] %in% cached()))
+  expect_true(all(letters[1:4] %in% con$plan$target))
 })
 
 test_with_dir("make() plays nicely with tibbles", {
@@ -382,9 +413,10 @@ test_with_dir("ignore() in imported functions", {
 })
 
 test_with_dir("custom column interface", {
+  tidyvar <- 2
   plan <- drake_plan(
     x = target(
-      command = 1 + 2,
+      command = 1 + !!tidyvar,
       trigger = "always",
       user_column_1 = 1,
       user_column_2 = "some text"
@@ -425,4 +457,18 @@ test_with_dir("bind_plans()", {
     trigger = c("any", "any", "always")
   )
   expect_equal(plan3, plan4)
+})
+
+test_with_dir("spaces in target names are replaced only when appropriate", {
+  expect_warning(
+    pl <- drake_plan(a = x__, file_out("x__")) %>%
+      evaluate_plan(wildcard = "x__", values = c("b  \n  x y", "a x"))
+  )
+  pl2 <- tibble::tibble(
+    target = c("a_b_x_y", "a_a_x", "\"b  \n  x y\"", "\"a x\""),
+    command = c(
+      "b  \n  x y", "a x", "file_out(\"b  \n  x y\")", "file_out(\"a x\")"
+    )
+  )
+  expect_equal(pl, pl2)
 })

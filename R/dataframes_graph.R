@@ -41,14 +41,7 @@
 #'   whether to skip the imports and only include the
 #'   targets in the workflow plan.
 #'
-#' @param split_columns logical, whether to break up the
-#'   columns of nodes to make the aspect ratio of the rendered
-#'   graph closer to 1:1. This improves the viewing experience,
-#'   but the columns no longer strictly represent parallelizable
-#'   stages of build items. (Although the targets/imports
-#'   in each column are still conditionally independent,
-#'   there may be more conditional independence than the graph
-#'   indicates.)
+#' @param split_columns logical, deprecated.
 #'
 #' @param font_size numeric, font size of the node labels in the graph
 #'
@@ -79,7 +72,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' config <- load_basic_example() # Get the code with drake_example("basic").
+#' config <- load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Get a list of data frames representing the nodes, edges,
 #' # and legend nodes of the visNetwork graph from vis_drake_graph().
 #' raw_graph <- dataframes_graph(config = config)
@@ -109,7 +102,7 @@ dataframes_graph <- function(
   build_times = "build",
   digits = 3,
   targets_only = FALSE,
-  split_columns = FALSE,
+  split_columns = NULL,
   font_size = 20,
   from_scratch = FALSE,
   make_imports = TRUE,
@@ -118,14 +111,15 @@ dataframes_graph <- function(
   if (!length(V(config$graph)$name)){
     return(null_graph())
   }
+  if (!is.null(split_columns)){
+    warning("Argument split_columns is deprecated.", call. = FALSE)
+  }
   config$build_times <- resolve_build_times(build_times)
   config$digits <- digits
   config$font_size <- font_size
   config$from_scratch <- from_scratch
   config$make_imports <- make_imports
-  config$split_columns <- split_columns
   config <- get_raw_node_category_data(config)
-  config$stages <- graphing_parallel_stages(config)
   config$graph <- get_neighborhood(
     graph = config$graph,
     from = from,

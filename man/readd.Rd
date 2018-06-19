@@ -6,7 +6,8 @@
 \usage{
 readd(target, character_only = FALSE, path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  namespace = NULL, verbose = drake::default_verbose())
+  namespace = NULL, verbose = drake::default_verbose(),
+  show_source = FALSE)
 }
 \arguments{
 \item{target}{If \code{character_only} is \code{TRUE}, then
@@ -45,6 +46,10 @@ for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
 \item{3:}{in addition, print any potentially missing items.}
 \item{4:}{in addition, print imports. Full verbosity.}
 }}
+
+\item{show_source}{logical, option to show the command
+that produced the target or indicate that the object
+was imported (using \code{\link[=show_source]{show_source()}}).}
 }
 \value{
 The cached value of the \code{target}.
@@ -55,7 +60,7 @@ Does not delete the item from the cache.
 \examples{
 \dontrun{
 test_with_dir("Quarantine side effects.", {
-load_basic_example() # Get the code with drake_example("basic").
+load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Run the project, build the targets.
 readd(reg1) # Return imported object 'reg1' from the cache.
 readd(small) # Return targets 'small' from the cache.

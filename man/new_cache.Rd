@@ -7,7 +7,8 @@
 new_cache(path = drake::default_cache_path(),
   verbose = drake::default_verbose(), type = NULL,
   short_hash_algo = drake::default_short_hash_algo(),
-  long_hash_algo = drake::default_long_hash_algo(), ...)
+  long_hash_algo = drake::default_long_hash_algo(), ...,
+  console_log_file = NULL)
 }
 \arguments{
 \item{path}{file path to the cache if the cache
@@ -37,6 +38,12 @@ See \code{\link[=default_long_hash_algo]{default_long_hash_algo()}} and
 \code{\link[=make]{make()}}}
 
 \item{...}{other arguments to the cache constructor}
+
+\item{console_log_file}{character scalar or \code{NULL}.
+If \code{NULL}, console output will be printed
+to the R console using \code{message()}.
+Otherwise, \code{console_log_file} should be the name of a flat file.
+Console output will be appended to that file.}
 }
 \value{
 A newly created drake cache as a storr object.

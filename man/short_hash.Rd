@@ -28,13 +28,13 @@ A character vector naming a hash algorithm.
 }
 \description{
 See the advanced storage tutorial
-at \url{https://github.com/ropensci/drake/blob/master/vignettes/storage.Rmd}
+at \url{https://ropenscilabs.github.io/drake-manual/store.html}
 for details.
 }
 \examples{
 \dontrun{
 test_with_dir("Quarantine side effects.", {
-load_basic_example() # Get the code with drake_example("basic").
+load_mtcars_example() # Get the code with drake_example("mtcars").
 # Run the project and return the internal master configuration list.
 config <- make(my_plan)
 # Locate the storr cache.

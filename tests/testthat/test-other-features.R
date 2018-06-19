@@ -48,16 +48,11 @@ test_with_dir("drake_build works as expected", {
   x <- cached()
   expect_equal(x, "a")
   o <- make(pl, envir = e)
-  expect_true("a" %in% ls(envir = e))
   expect_equal(justbuilt(o), "b")
-  remove(list = "a", envir = e)
-  expect_false("a" %in% ls(envir = e))
 
   # Can run without config
   o <- drake_build(b, envir = e)
-  expect_equal(o, e$b)
   expect_equal(o, readd(b))
-  expect_true("a" %in% ls(envir = e))
 
   # Replacing deps in environment
   expect_equal(e$a, 1)
@@ -73,6 +68,7 @@ test_with_dir("drake_build works as expected", {
   expect_equal(e$a, 1)
 
   # `replace` in loadd()
+  e$b <- 1
   expect_equal(e$b, 1)
   e$b <- 5
   loadd(b, envir = e, replace = FALSE)
@@ -107,8 +103,8 @@ test_with_dir("shapes", {
   expect_equal(color_of("bluhlaksjdf"), color_of("other"))
 })
 
-test_with_dir("make() with imports_only", {
-  expect_silent(make(drake_plan(x = 1), imports_only = TRUE,
+test_with_dir("make() with skip_targets", {
+  expect_silent(make(drake_plan(x = 1), skip_targets = TRUE,
     verbose = FALSE, session_info = FALSE))
   expect_false(cached(x))
 })
@@ -239,17 +235,9 @@ test_with_dir("unique_random_string() works", {
   }
 })
 
-test_with_dir("make(session = callr::r_vanilla)", {
-  con <- dbug()
-  con$envir <- dbug_envir(globalenv())
-  ls1 <- ls(envir = con$envir)
-  con$session <- callr::r_vanilla
-  make_with_config(con)
-  expect_equal(sort(justbuilt(con)), sort(con$plan$target))
-  ls2 <- ls(envir = con$envir)
-  expect_equal(sort(ls1), sort(ls2))
-  rm_these <- setdiff(ls(envir = con$envir), ls1)
-  if (length(rm_these)){
-    rm(list = rm_these, envir = con$envir)
-  }
+test_with_dir("misc utils", {
+  expect_equal(pair_text("x", c("y", "z")), c("xy", "xz"))
+  config <- list(plan = data.frame(x = 1, y = 2))
+  expect_error(check_drake_config(config), regexp = "columns")
+  expect_error(targets_from_dots(123, NULL), regexp = "must contain names")
 })

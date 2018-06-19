@@ -12,7 +12,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build the targets.
 #' drake_session() # Retrieve the cached sessionInfo() of the last make().
 #' })
@@ -40,7 +40,7 @@ drake_session <- function(path = getwd(), search = TRUE,
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Kill before targets finish.
 #' # If you interrupted make(), some targets will probably be listed:
 #' in_progress()
@@ -67,10 +67,13 @@ in_progress <- function(path = getwd(), search = TRUE,
 #' @export
 #' @return A character vector of target names.
 #' @inheritParams cached
+#' @param upstream_only logical, whether to list only those targets
+#'   with no failed dependencies.
+#'   Naturally accompanies `make(keep_going = TRUE)`.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build the targets.
 #' failed() # Should show that no targets failed.
 #' # Build a workflow plan doomed to fail:
@@ -82,12 +85,18 @@ in_progress <- function(path = getwd(), search = TRUE,
 #' }
 failed <- function(path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = drake::default_verbose()
+  verbose = drake::default_verbose(),
+  upstream_only = FALSE
 ){
   prog <- progress(path = path, search = search, cache = cache)
-  which(prog == "failed") %>%
+  out <- which(prog == "failed") %>%
     names() %>%
     as.character()
+  if (upstream_only){
+    graph <- read_drake_graph(cache = cache)
+    out <- filter_upstream(targets = out, graph = graph)
+  }
+  out
 }
 
 #' @title Get the build progress of your targets
@@ -125,7 +134,7 @@ failed <- function(path = getwd(), search = TRUE,
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build the targets.
 #' # Watch the changing progress() as make() is running.
 #' progress() # List all the targets reached so far.
@@ -225,9 +234,10 @@ set_progress <- function(target, value, config){
   if (!config$log_progress){
     return()
   }
-  config$cache$set(
-    key = target,
-    value = value,
-    namespace = "progress"
+  config$cache$duplicate(
+    key_src = value,
+    key_dest = target,
+    namespace_src = "common",
+    namespace_dest = "progress"
   )
 }

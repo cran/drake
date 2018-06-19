@@ -1,6 +1,7 @@
 drake_context("dbi cache")
 
 test_with_dir("storr_dbi is usable", {
+  skip_on_cran() # low priority
   skip_if_not_installed("DBI")
   skip_if_not_installed("RSQLite")
 
@@ -35,7 +36,7 @@ test_with_dir("storr_dbi is usable", {
   # parallelism <- scenario$parallelism # nolint
   # jobs <- scenario$jobs # nolint
 
-  con <- load_basic_example(envir = e)
+  con <- load_mtcars_example(envir = e)
   con$cache$destroy()
 
   # Need to fix richfitz/storr#60 before using the full workflow plan.

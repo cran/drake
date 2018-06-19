@@ -14,7 +14,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' check_plan(my_plan) # Check the workflow plan dataframe for obvious errors.
 #' unlink("report.Rmd") # Remove an import file mentioned in the plan.
 #' # If you un-suppress the warnings, check_plan()
@@ -44,13 +44,16 @@ check_plan <- function(
 }
 
 check_drake_config <- function(config) {
-  if (config$skip_safety_checks){
+  if (identical(config$skip_safety_checks, TRUE)){
     return(invisible())
   }
   stopifnot(is.data.frame(config$plan))
-  if (!all(c("target", "command") %in% colnames(config$plan)))
-    stop("The columns of your workflow plan data frame ",
-      "must include 'target' and 'command'.")
+  if (!all(c("target", "command") %in% colnames(config$plan))){
+    stop(
+      "The columns of your workflow plan data frame ",
+      "must include 'target' and 'command'."
+    )
+  }
   stopifnot(nrow(config$plan) > 0)
   stopifnot(length(config$targets) > 0)
   missing_input_files(config = config)
@@ -123,6 +126,24 @@ check_jobs <- function(jobs){
       stop(
         "In the `jobs` argument, you must either give a numeric scalar ",
         "or a named numeric vector with names 'imports' and 'targets'.",
+        call. = FALSE
+      )
+    }
+  }
+}
+
+check_parallelism <- function(parallelism){
+  stopifnot(length(parallelism) > 0)
+  stopifnot(is.character(parallelism))
+  if (length(parallelism) > 1){
+    if (
+      is.null(names(parallelism)) ||
+      !identical(sort(names(parallelism)), sort(c("imports", "targets")))
+    ){
+      stop(
+        "In the `parallelism` argument, you must either ",
+        "give a character scalar or a named character vector ",
+        "with names 'imports' and 'targets'.",
         call. = FALSE
       )
     }

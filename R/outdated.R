@@ -1,9 +1,34 @@
+first_outdated <- function(config) {
+  graph <- targets_graph(config)
+  out <- character(0)
+  old_leaves <- NULL
+  while (TRUE){
+    new_leaves <- leaf_nodes(graph) %>%
+      setdiff(y = out)
+    do_build <- lightly_parallelize(
+      X = new_leaves,
+      FUN = should_build_target,
+      jobs = config$jobs,
+      config = config
+    ) %>%
+      unlist
+    out <- c(out, new_leaves[do_build])
+    if (all(do_build)){
+      break
+    } else {
+      graph <- delete_vertices(graph, v = new_leaves[!do_build])
+    }
+    old_leaves <- new_leaves
+  }
+  out
+}
+
 #' @title List the targets that are out of date.
 #' @description Outdated targets will be rebuilt in the next
 #'   [make()].
 #' @details `outdated()` is sensitive to the alternative triggers
 #' described at
-#' <https://github.com/ropensci/drake/blob/master/vignettes/debug.Rmd#test-with-triggers>. # nolint
+#' <https://ropenscilabs.github.io/drake-manual/debug.html>. # nolint
 #' For example, even if `outdated(...)` shows everything up to date,
 #' `outdated(..., trigger = "always")` will show
 #' all targets out of date.
@@ -27,7 +52,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Recopute the config list early and often to have the
 #' # most current information. Do not modify the config list by hand.
 #' config <- drake_config(my_plan)
@@ -36,7 +61,7 @@
 #' # Now, everything should be up to date (no targets listed).
 #' outdated(config = config)
 #' # outdated() is sensitive to triggers.
-#' # See the "debug" vignette for more on triggers.
+#' # See the debugging guide: https://ropenscilabs.github.io/drake-manual/debug.html # nolint
 #' config$trigger <- "always"
 #' outdated(config = config)
 #' })
@@ -49,7 +74,7 @@ outdated <-  function(
   if (make_imports){
     make_imports(config = config)
   }
-  first_targets <- next_stage(config = config)
+  first_targets <- first_outdated(config = config)
   later_targets <- downstream_nodes(
     from = first_targets,
     graph = config$graph,
@@ -76,7 +101,7 @@ outdated <-  function(
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' config <- load_basic_example() # Get the code with drake_example("basic").
+#' config <- load_mtcars_example() # Get the code with drake_example("mtcars").
 #' missed(config) # All the imported files and objects should be present.
 #' rm(reg1) # Remove an import dependency from you workspace.
 #' missed(config) # Should report that reg1 is missing.

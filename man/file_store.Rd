@@ -19,8 +19,8 @@ understandable by drake.
 \description{
 This function simply wraps literal double quotes around
 the argument \code{x} so \code{drake} knows it is the name of a file.
-Use when you are calling functions like \code{deps()}: for example,
-\code{deps(file_store("report.md"))}. See the examples for details.
+Use when you are calling functions like \code{deps_code()}: for example,
+\code{deps_code(file_store("report.md"))}. See the examples for details.
 Internally, \code{drake} wraps the names of file targets/imports
 inside literal double quotes to avoid confusion between
 files and generic R objects.
@@ -30,13 +30,13 @@ files and generic R objects.
   file_store("my_file.rds") # "'my_file.rds'"
   \dontrun{
   test_with_dir("contain side effects", {
-  load_basic_example() # Get the code with drake_example("basic").
+  load_mtcars_example() # Get the code with drake_example("mtcars").
   make(my_plan) # Run the workflow to build the targets
   list.files() # Should include input "report.Rmd" and output "report.md".
   head(readd(small)) # You can use symbols for ordinary objects.
   # But if you want to read cached info on files, use `file_store()`.
   readd(file_store("report.md"), character_only = TRUE) # File fingerprint.
-  deps(file_store("report.Rmd"))
+  deps_code(file_store("report.Rmd"))
   config <- drake_config(my_plan)
   dependency_profile(file_store("report.Rmd"), config = config)
   loadd(list = file_store("report.md"))

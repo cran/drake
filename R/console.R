@@ -18,7 +18,7 @@ console_missing <- function(target, config){
     text <- paste0("file ", text)
   }
   text <- paste(pattern, text)
-  finish_console(text = text, pattern = pattern, verbose = config$verbose)
+  finish_console(text = text, pattern = pattern, config = config)
 }
 
 console_import <- function(target, config){
@@ -31,7 +31,20 @@ console_import <- function(target, config){
     text <- paste0("file ", text)
   }
   text <- paste(pattern, text)
-  finish_console(text = text, pattern = pattern, verbose = config$verbose)
+  finish_console(text = text, pattern = pattern, config = config)
+}
+
+console_skip <- function(target, config){
+  if (config$verbose < 4){
+    return()
+  }
+  pattern <- "skip"
+  text <- target
+  if (is_file(target)){
+    text <- paste0("file ", text)
+  }
+  text <- paste(pattern, text)
+  finish_console(text = text, pattern = pattern, config = config)
 }
 
 console_target <- function(target, config){
@@ -47,18 +60,18 @@ console_target <- function(target, config){
     trigger_text <- color(x = "trigger", color = color_of("trigger"))
     text <- paste0(text, ": ", trigger_text, " \"", trigger, "\"")
   }
-  finish_console(text = text, pattern = pattern, verbose = config$verbose)
+  finish_console(text = text, pattern = pattern, config = config)
 }
 
-console_cache <- function(path, verbose){
-  if (verbose < 2){
+console_cache <- function(config){
+  if (config$verbose < 2){
     return()
   }
-  if (!length(path)){
-    path <- default_cache_path()
+  if (is.null(config$cache_path)){
+    config$cache_path <- default_cache_path()
   }
-  paste("cache", path) %>%
-    finish_console(pattern = "cache", verbose = verbose)
+  paste("cache", config$cache_path) %>%
+    finish_console(pattern = "cache", config = config)
 }
 
 console_many_targets <- function(
@@ -79,19 +92,18 @@ console_many_targets <- function(
     ": ",
     paste(targets, collapse = ", ")
   ) %>%
-    finish_console(pattern = pattern, verbose = config$verbose)
+    finish_console(pattern = pattern, config = config)
 }
 
 console_parLapply <- function(config){ # nolint
   text <- paste("load parallel socket cluster with", config$jobs, "workers")
-  finish_console(text = text, pattern = "load",
-    verbose = config$verbose)
+  finish_console(text = text, pattern = "load", config = config)
 }
 
 console_retry <- function(target, error, retries, config){
   if (retries <= config$retries){
     text <- paste0("retry ", target, ": ", retries, " of ", config$retries)
-    finish_console(text = text, pattern = "retry", verbose = config$verbose)
+    finish_console(text = text, pattern = "retry", config = config)
   }
 }
 
@@ -102,23 +114,23 @@ console_up_to_date <- function(config){
   any_attempted <- get_attempt_flag(config = config)
   default_triggers <- using_default_triggers(config)
   if (!any_attempted && default_triggers && !config$skip_imports){
-    console_all_up_to_date()
+    console_all_up_to_date(config = config)
     return(invisible())
   }
   if (config$skip_imports){
-    console_skipped_imports()
+    console_skipped_imports(config = config)
   }
   if (!default_triggers){
-    console_nondefault_triggers()
+    console_nondefault_triggers(config = config)
   }
 }
 
-console_all_up_to_date <- function(){
+console_all_up_to_date <- function(config){
   color("All targets are already up to date.", colors["target"]) %>%
-      message
+    drake_message(config = config)
 }
 
-console_skipped_imports <- function(){
+console_skipped_imports <- function(config){
   color(
     paste(
       "Skipped the imports.",
@@ -126,10 +138,10 @@ console_skipped_imports <- function(){
     ),
     colors["trigger"]
   ) %>%
-    message
+    drake_message(config = config)
 }
 
-console_nondefault_triggers <- function(){
+console_nondefault_triggers <- function(config){
   color(
     paste(
       "Used non-default triggers.",
@@ -137,16 +149,62 @@ console_nondefault_triggers <- function(){
     ),
     colors["trigger"]
   ) %>%
-    message
+    drake_message(config = config)
 }
 
-finish_console <- function(text, pattern, verbose){
-  if (!verbose){
+console_persistent_workers <- function(config){
+  if (config$verbose < 2){
+    return()
+  }
+  finish_console(
+    text = paste("launch", config$jobs, "persistent workers + master"),
+    pattern = "launch",
+    config = config
+  )
+}
+
+finish_console <- function(text, pattern, config){
+  if (is.null(config$verbose) || config$verbose < 1){
     return(invisible())
   }
-  crop_text(x = text) %>%
-    color_grep(pattern = pattern, color = color_of(pattern)) %>%
-    message(sep = "")
+  msg <- crop_text(x = text) %>%
+   color_grep(pattern = pattern, color = color_of(pattern))
+  drake_message(msg, config = config)
+}
+
+drake_message <- function(..., config){
+  if (!is.null(config$console_log_file)){
+    write(
+      x = crayon::strip_style(paste0(...)),
+      file = config$console_log_file,
+      append = TRUE
+    )
+  }
+  message(..., sep = "")
+}
+
+drake_warning <- function(..., config){
+  if (!is.null(config$console_log_file)){
+    write(
+      x = crayon::strip_style(paste0("Warning: ", ...)),
+      sep = "",
+      file = config$console_log_file,
+      append = TRUE
+    )
+  }
+  warning(..., call. = FALSE)
+}
+
+drake_error <- function(..., config){
+  if (!is.null(config$console_log_file)){
+    write(
+      x = crayon::strip_style(paste0("Error: ", ...)),
+      sep = "",
+      file = config$console_log_file,
+      append = TRUE
+    )
+  }
+  stop(..., call. = FALSE)
 }
 
 crop_text <- Vectorize(function(x, width = getOption("width")) {
@@ -174,4 +232,39 @@ multiline_message <- function(x) {
 default_verbose <- function(){
   default <- pkgconfig::get_config("drake::verbose")
   ifelse(!length(default), 1, default)
+}
+
+#' @title Show how a target/import was produced.
+#' @description Show the command that produced a target
+#'   or indicate that the object or file was imported.
+#' @export
+#' @param target symbol denoting the target or import
+#'   or a character vector if character_only is `TRUE`.
+#' @param config a [drake_config()] list
+#' @param character_only logical, whether to interpret
+#'   `target` as a symbol (`FALSE`) or character vector
+#'   (`TRUE`).
+#' @examples
+#' \dontrun{
+#' plan <- drake_plan(x = rnorm(15))
+#' make(plan)
+#' config <- drake_config(plan)
+#' show_source(x, config)
+#' show_source(rnorm, config)
+#' }
+show_source <- function(target, config, character_only = FALSE){
+  if (!character_only){
+    target <- as.character(substitute(target))
+  }
+  cache <- config$cache
+  meta <- diagnose(target = target, cache = cache, character_only = TRUE)
+  prefix <- ifelse(is_file(target), "File ", "Object ")
+  if (meta$imported){
+    message(prefix, target, " was imported.")
+  } else {
+    command <- gsub("^\\{\n ", "", meta$command)
+    command <- gsub(" \n\\}$", "", command)
+    message(
+      prefix, target, " was build from command:\n  ", target, " = ", command)
+  }
 }

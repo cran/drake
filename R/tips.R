@@ -14,16 +14,17 @@ drake_tip <- function() {
     "Use diagnose() to retrieve diagnostic metadata:
      errors, warnings, messages, commands, runtimes, etc.",
 
-    "Use drake_example(\"basic\") to generate code files
-     for a minimal drake example walkthrough.",
+    "Use drake_example(\"main\") to generate the code files
+     for a friendly example workflow.",
 
-    "Check out the documentation website: https://ropensci.github.io/drake/",
+    "Check out the reference website (https://ropensci.github.io/drake/)
+     and user manual (https://ropenscilabs.github.io/drake-manual/).",
 
     "Use suppressPackageStartupMessages() to eliminate
      package startup messages like this one.",
 
     "Drake quickstart:
-     load_basic_example();
+     load_mtcars_example();
      vis_drake_graph(my_plan);
      make(my_plan);
      vis_drake_graph(my_plan)"
@@ -31,7 +32,7 @@ drake_tip <- function() {
   sample(tips, 1)
 }
 
-drake_message <- function() {
+drake_tip_message <- function() {
   packageStartupMessage(drake_tip())
 }
 

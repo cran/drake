@@ -4,13 +4,7 @@ run_Makefile <- function( #nolint: we want Makefile capitalized.
   debug = FALSE
 ){
   prepare_distributed(config = config)
-  with_output_sink(
-    new = "Makefile",
-    code = {
-      makefile_head(config)
-      makefile_rules(config)
-    }
-  )
+  write_makefile(config = config)
   time_stamps(config = config)
   error_code <- ifelse(
     run,
@@ -23,7 +17,39 @@ run_Makefile <- function( #nolint: we want Makefile capitalized.
   return(invisible(config))
 }
 
+write_makefile <- function(config){
+  assert_no_conflicting_makefile(config)
+  with_output_sink(
+    new = config$makefile_path,
+    code = {
+      makefile_head(config)
+      makefile_rules(config)
+    }
+  )
+}
+
+assert_no_conflicting_makefile <- function(config){
+  if (file.exists(config$makefile_path)){
+    top_lines <- readLines(con = config$makefile_path, n = 2)
+    if (!identical(top_lines, makefile_top_lines)){
+      stop(
+        "Makefile at `", config$makefile_path, "` already exists ",
+        "and was not created by drake. You must either: \n  (1) ",
+        "Remove the file `", config$makefile_path, "` or \n  (2) ",
+        "Set the `parallelism` argument of drake::make() ",
+        "to a value other than \"Makefile\", along with the right `args`. ",
+        "Example: `make(parallelism = \"Makefile\", makefile_path = \".drake/.makefile\", command = \"make\", args = \"--file=.drake/.makefile\")` ", # nolint
+        "See `?parallelism_choices` for your options ",
+        "for the `parallelism` argument to `make()`.",
+        call. = FALSE
+      )
+    }
+  }
+}
+
 makefile_head <- function(config){
+  cat(makefile_top_lines, sep = "\n")
+  cat("\n")
   if (length(config$prepend)){
     cat(config$prepend, "\n", sep = "\n")
   }
@@ -99,7 +125,7 @@ build_recipe <- function(target, recipe_command,
 #' # make(..., parallelism = "Makefile").
 #' # These examples peer into the internals of drake,
 #' # but are not really of practical use for most users.
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan) # Internal configuration list.
 #' # Prepare to use a distributed computing parallel backend
 #' # such as "Makefile" or "future_lapply".
@@ -119,11 +145,7 @@ mk <- function(
 ){
   config <- recover_drake_config(cache_path)
   old_hash <- self_hash(target = target, config = config)
-  build_distributed(
-    target = target,
-    meta_list = NULL,
-    cache_path = cache_path
-  )
+  build_distributed(target = target, cache_path = cache_path)
   new_hash <- self_hash(target = target, config = config)
   if (!identical(old_hash, new_hash)){
     file <- time_stamp_file(target = target, config = config)
@@ -147,8 +169,8 @@ mk <- function(
 #' default_Makefile_args(jobs = 2, verbose = FALSE)
 #' default_Makefile_args(jobs = 4, verbose = TRUE)
 default_Makefile_args <- function(jobs, verbose){
-  out <- paste0("--jobs=", jobs_targets(jobs))
-  if (!verbose){
+  out <- paste0("--jobs=", targets_setting(jobs))
+  if (verbose < 1){
     out <- c(out, "--silent")
   }
   return(out)
@@ -169,6 +191,10 @@ default_Makefile_command <- function(){
 
 cache_macro <- "DRAKE_CACHE"
 cache_value_macro <- paste0("$(", cache_macro, ")")
+makefile_top_lines <- c(
+  "# Created by the drake R package for internal use only.",
+  "# Do not run it yourself or modify it by hand."
+)
 
 globalenv_file <- function(cache_path){
   file.path(cache_path, "globalenv.RData")

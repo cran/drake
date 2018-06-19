@@ -7,6 +7,7 @@ test_with_dir("empty triggers return logical", {
 })
 
 test_with_dir("triggers work as expected", {
+  skip_on_cran() # too slow for CRAN
   con <- dbug()
   con$plan$trigger <- "missing"
   con <- testrun(config = con)
@@ -109,7 +110,8 @@ test_with_dir("all triggers bring targets up to date", {
 # Similar enough to the triggers to include here:
 test_with_dir("make(..., skip_imports = TRUE) works", {
   con <- dbug()
-  verbose <- con$jobs < 2 & con$parallelism == "parLapply"
+  verbose <- max(con$jobs) < 2 &&
+    targets_setting(con$parallelism) == "parLapply"
   suppressMessages(
     con <- make(
       con$plan, parallelism = con$parallelism,

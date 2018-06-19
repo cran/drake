@@ -56,7 +56,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build the targets.
 #' # List objects in the cache, excluding R objects
 #' # imported from your workspace.
@@ -206,7 +206,7 @@ remove_file_target <- function(target, cache){
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build the targets.
 #' # At this point, check the size of the '.drake/' cache folder.
 #' # Clean without garbage collection.
@@ -233,8 +233,17 @@ drake_gc <- function(
   }
   if (!is.null(cache)){
     cache$gc()
+    rm_bad_cache_filenames(cache)
   }
   invisible()
+}
+
+rm_bad_cache_filenames <- function(cache){
+  if (is_default_cache(cache)){
+    files <- list.files(path = cache$driver$path, recursive = TRUE)
+    keep <- grepl(pattern = "^[-_./\\0-9a-zA-Z]*$", x = files)
+    unlink(files[!keep], recursive = TRUE)
+  }
 }
 
 #' @title Try to repair a drake cache that is prone
@@ -263,7 +272,7 @@ drake_gc <- function(
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build targets. This creates the cache.
 #' # Remove dangling cache files that could cause errors.
 #' rescue_cache(jobs = 2)

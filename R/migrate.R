@@ -1,6 +1,7 @@
 #' @title Reconfigure an old project (built with drake <= 4.4.0)
 #'   to be compatible with later versions of drake.
 #' @export
+#' @keywords internal
 #' @seealso [rescue_cache()], [make()]
 #' @param path Full path to the cache
 #' @param jobs number of jobs for light parallelism.
@@ -9,7 +10,8 @@
 #'   A migration is successful if the transition preserves target status:
 #'   that is, outdated targets remain outdated and up to date targets
 #'   remain up to date.
-#' @description Migrate a project/cache from drake 4.4.0 or earlier
+#' @description Deprecated on May 4, 2018.
+#' Migrate a project/cache from drake 4.4.0 or earlier
 #' to be compatible with the version of drake on your system.
 #' @details Drake versions after 4.4.0
 #' have a different internal structure for the cache.
@@ -31,10 +33,10 @@
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' # With drake 4.3.0:
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the old project.
 #' # Now, install drake >= 5.0.0
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Error: cache is not back compatible.
 #' # Convert the project's '.drake/' cache to the new format.
 #' migrate_drake_project()
@@ -48,9 +50,23 @@
 migrate_drake_project <- function(
   path = drake::default_cache_path(), jobs = 1
 ){
+  .Deprecated(
+    package = "drake",
+    msg = c(
+      "migrate_drake_project() is deprecated. Please run ",
+      "make() again on projects built with drake version <= 4.4.0"
+    )
+  )
   cache <- should_migrate(path = path)
   if (is.null(cache)){
     return(invisible(TRUE))
+  }
+  if (jobs > 1){
+    warning(
+      "Parallelism no longer supported in migrate_drake_project(). ",
+      "Please select jobs <= 1.",
+      call. = FALSE
+    )
   }
   version <- drake_session(cache = cache)$otherPkgs$drake$Version # nolint
   backup <- backup_cache_path(path = path, old = version)
@@ -59,23 +75,24 @@ migrate_drake_project <- function(
   file.copy(from = path, to = backup, recursive = TRUE)
   message("Migrating cache at ", path, " for your system's drake.")
   config <- read_drake_config(cache = cache)
+  config$schedule <- config$graph
   config$cache <- cache
-  config$parallelism <- "mclapply"
-  config$jobs <- safe_jobs_imports(jobs)
+  config$parallelism <- "parLapply"
+  config$jobs <- 1
   config$hook <- migrate_hook
   config$envir <- new.env(parent = globalenv())
   config$verbose <- TRUE
   config$trigger <- "any"
-  config$execution_graph <- config$graph
   config$lazy_load <- FALSE
   config$log_progress <- FALSE
   config$session_info <- TRUE
   config$outdated <- legacy_outdated(config) %>%
     as.character %>%
     sort
+  config$pruning_strategy <- "speed"
   config$cache$clear(namespace = "depends")
   store_drake_config(config = config)
-  run_mclapply(config = config)
+  run_loop(config = config)
   message("Checking for outdated targets.")
   config$hook <- empty_hook
   outdated <- outdated(config = config) %>%
@@ -288,8 +305,10 @@ legacy_file_hash <- function(target, config, size_cutoff = 1e5) {
   } else {
     return(as.character(NA))
   }
-  if (!file.exists(filename))
-    return(as.character(NA))
+  if (!file.exists(filename)){
+    # Little point in covering all the lines of deprecated functions.
+    return(as.character(NA)) # nocov
+  }
   old_mtime <- ifelse(
     target %in% config$cache$list(namespace = "filemtime"),
     config$cache$get(

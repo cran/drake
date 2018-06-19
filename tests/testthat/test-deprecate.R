@@ -15,6 +15,10 @@ test_with_dir("pkgconfig::get_config(\"drake::strings_in_dots\")", {
   )
 })
 
+test_with_dir("deprecation: examples", {
+  expect_warning(load_basic_example())
+})
+
 test_with_dir("deprecation: future", {
   expect_warning(backend())
 })
@@ -27,6 +31,7 @@ test_with_dir("deprecation: make() and config()", {
 })
 
 test_with_dir("deprecation: cache functions", {
+  skip_on_cran() # low priority
   plan <- drake_plan(x = 1)
   expect_error(expect_warning(tmp <- read_drake_meta(search = FALSE)))
   expect_silent(make(plan, verbose = FALSE, session_info = FALSE))
@@ -57,6 +62,7 @@ test_with_dir("drake_plan deprecation", {
 })
 
 test_with_dir("drake version checks in previous caches", {
+  skip_on_cran() # low priority
   # We need to be able to set the drake version
   # to check back compatibility.
   plan <- drake_plan(x = 1)
@@ -103,20 +109,32 @@ test_with_dir("deprecated example(s)_drake functions", {
 })
 
 test_with_dir("deprecate misc utilities", {
+  expect_error(parallel_stages(1), regexp = "parallelism")
+  expect_error(rate_limiting_times(1), regexp = "parallelism")
   expect_warning(as_file("x"))
   expect_warning(as_drake_filename("x"))
   expect_warning(drake_unquote("x", deep = TRUE))
   cache <- storr::storr_environment()
   expect_warning(configure_cache(cache, log_progress = TRUE))
+  expect_warning(max_useful_jobs(config(drake_plan(x = 1))))
+  expect_warning(deps(123))
 })
 
 test_with_dir("deprecated arguments", {
+  skip_on_cran() # low priority
   pl <- drake_plan(a = 1, b = a)
-  con <- drake_config(plan = pl, session_info = FALSE)
+  expect_warning(
+    con <- drake_config(
+      plan = pl,
+      session_info = FALSE,
+      imports_only = FALSE
+    )
+  )
   expect_warning(drake_build(a, config = con, meta = list()))
 })
 
 test_with_dir("old file API", {
+  skip_on_cran() # low priority
   expect_warning(x <- drake_plan(
     file.csv = write.csv(mtcars, file = "file.csv"),
     strings_in_dots = "literals",

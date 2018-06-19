@@ -19,7 +19,7 @@
 #' - `trigger`: a character vector of triggers. A trigger is a rule for
 #' when to cause a target to (re)build. See [triggers()] for your options.
 #' For a walkthrough, see
-#' <https://github.com/ropensci/drake/blob/master/vignettes/debug.Rmd#test-with-triggers>. # nolint
+#' <https://ropenscilabs.github.io/drake-manual/debug.html>
 #' - `retries`: number of times to retry a target if it fails
 #'   to build the first time.
 #' - `timeout`: Seconds of overall time to allow before imposing
@@ -96,13 +96,13 @@
 #' make(mtcars_plan) # Makes `mtcars.csv` and then `value`
 #' head(readd(value))
 #' # You can use knitr inputs too. See the top command below.
-#' load_basic_example()
+#' load_mtcars_example()
 #' head(my_plan)
 #' # The `knitr_in("report.Rmd")` tells `drake` to dive into the active
 #' # code chunks to find dependencies.
 #' # There, `drake` sees that `small`, `large`, and `coef_regression2_small`
 #' # are loaded in with calls to `loadd()` and `readd()`.
-#' deps("report.Rmd")
+#' deps_code("report.Rmd")
 #' # You can create your own custom columns too.
 #' # See ?triggers for more on triggers.
 #' drake_plan(
@@ -157,13 +157,6 @@ drake_plan <- function(
   }
   commands <- complete_target_names(commands)
   targets <- names(commands)
-  if (anyDuplicated(targets)) {
-    stop(
-      "The target names in the workflow plan must be unique. ",
-      "Duplicated target names:\n",
-      multiline_message(unique(targets[duplicated(targets)]))
-    )
-  }
   commands <- as.character(commands)
   plan <- tibble(
     target = targets,
@@ -206,8 +199,8 @@ drake_plan <- function(
       plan$command[from_dots] <- gsub("\"", "'", plan$command[from_dots])
     }
   }
-  plan <- parse_custom_columns(plan)
-  sanitize_plan(plan)
+  parse_custom_columns(plan) %>%
+    sanitize_plan
 }
 
 #' @title Row-bind together drake plans
@@ -234,8 +227,21 @@ drake_plan <- function(
 #' your_plan
 #' # make(your_plan) # nolint
 bind_plans <- function(...){
-  out <- dplyr::bind_rows(...)
-  sanitize_plan(out)
+  dplyr::bind_rows(...) %>%
+    sanitize_plan
+}
+
+handle_duplicated_targets <- function(plan){
+  plan <- plan[!duplicated(plan[, c("target", "command")]), ]
+  dups <- duplicated(plan$target)
+  if (any(dups)){
+    stop(
+      "Duplicated targets with different commands:\n",
+      multiline_message(plan$target[dups]),
+      call. = FALSE
+    )
+  }
+  plan
 }
 
 parse_custom_columns <- function(plan){
@@ -251,7 +257,7 @@ parse_custom_colums_row <- function(row){
   if (!length(expr) || !is_target_call(expr[[1]])){
     return(row)
   }
-  out <- analyze_target_call(expr[[1]])
+  out <- eval(expr[[1]])
   out$target <- row$target
   out
 }
@@ -393,9 +399,9 @@ file_out <- function(path){
 #' # source file and detects non-file dependencies.
 #' # That way, updates to the right dependencies trigger rebuilds
 #' # in your report.
-#' # The basic example (`drake_example("basic")`)
+#' # The mtcars example (`drake_example("mtcars")`)
 #' # already has a demonstration
-#' load_basic_example()
+#' load_mtcars_example()
 #' config <- make(my_plan)
 #' vis_drake_graph(config)
 #' # Now how did drake magically know that
@@ -487,4 +493,48 @@ detect_arrow <- function(command){
   } else {
     NULL
   }
+}
+
+#' @title Define custom columns in a [drake_plan()].
+#' @description The `target()` function lets you define
+#' custom columns in a workflow plan data frame, both
+#' inside and outside calls to [drake_plan()].
+#' @export
+#' @seealso [drake_plan()], [make()]
+#' @return A one-row workflow plan data frame with the named
+#' arguments as columns.
+#' @param ... named arguments specifying fields of the workflow plan.
+#'   Tidy evaluation will be applied to them, so the `!!` operator
+#'   is evaluated immediately for expressions and language objects.
+#' @examples
+#' # Use target() to create your own custom columns in a drake plan.
+#' # See ?triggers for more on triggers.
+#' plan <- drake_plan(
+#'   website_data = target(
+#'     command = download_data("www.your_url.com"),
+#'     trigger = "always",
+#'     custom_column = 5
+#'   ),
+#'   analysis = analyze(website_data),
+#'   strings_in_dots = "literals"
+#' )
+#' plan
+#' # make(plan) # nolint
+#' # Call target() inside or outside drake_plan().
+#' target(
+#'   command = download_data("www.your_url.com"),
+#'   trigger = "always",
+#'   custom_column = 5
+#' )
+target <- function(...){
+  out <- rlang::exprs(...)
+  out[nzchar(names(out))] %>%
+    purrr::map(.f = function(x){
+      if (is.language(x)){
+        wide_deparse(x)
+      } else {
+        x
+      }
+    }) %>%
+    tibble::as_tibble()
 }

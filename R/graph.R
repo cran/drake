@@ -14,7 +14,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Make the igraph network connecting all the targets and imports.
 #' g <- build_drake_graph(my_plan)
 #' class(g) # "igraph"
@@ -26,7 +26,8 @@ build_drake_graph <- function(
   envir = parent.frame(),
   verbose = drake::default_verbose(),
   jobs = 1,
-  sanitize_plan = TRUE
+  sanitize_plan = TRUE,
+  console_log_file = NULL
 ){
   force(envir)
   if (sanitize_plan){
@@ -34,7 +35,7 @@ build_drake_graph <- function(
   }
   targets <- sanitize_targets(plan, targets)
   imports <- as.list(envir)
-  assert_unique_names(
+  unload_conflicts(
     imports = names(imports),
     targets = plan$target,
     envir = envir,
@@ -42,11 +43,12 @@ build_drake_graph <- function(
   )
   import_names <- setdiff(names(imports), targets)
   imports <- imports[import_names]
+  config <- list(verbose = verbose, console_log_file = console_log_file)
   console_many_targets(
     targets = names(imports),
     pattern = "connect",
     type = "import",
-    config = list(verbose = verbose)
+    config = config
   )
   imports_edges <- lightly_parallelize(
     X = seq_along(imports),
@@ -59,7 +61,7 @@ build_drake_graph <- function(
     targets = plan$target,
     pattern = "connect",
     type = "target",
-    config = list(verbose = verbose)
+    config = config
   )
   commands_edges <- lightly_parallelize(
     X = seq_len(nrow(plan)),
@@ -102,7 +104,7 @@ code_deps_to_edges <- function(target, deps){
 #'   [make()]
 #' @description `igraph` objects are used
 #' internally to represent the dependency network of your workflow.
-#' See \code{\link{config}(my_plan)$graph} from the basic example.
+#' See \code{\link{config}(my_plan)$graph} from the mtcars example.
 #' @details For a supplied graph, take the subgraph of all combined
 #' incoming paths to the vertices in `to`. In other words,
 #' remove the vertices after `to` from the graph.
@@ -116,7 +118,7 @@ code_deps_to_edges <- function(target, deps){
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Build the igraph object representing the workflow dependency network.
 #' # You could also use drake_config(my_plan)$graph
 #' graph <- build_drake_graph(my_plan)
@@ -167,16 +169,7 @@ prune_drake_graph <- function(
   delete_vertices(graph = graph, v = ignore)
 }
 
-assert_unique_names <- function(imports, targets, envir, verbose){
-  if (anyDuplicated(targets)){
-    duplicated <- which(table(targets) > 1) %>%
-      names()
-    stop(
-      "Duplicate targets in workflow plan:\n",
-      multiline_message(duplicated),
-      call. = FALSE
-    )
-  }
+unload_conflicts <- function(imports, targets, envir, verbose){
   common <- intersect(imports, targets)
   if (verbose & length(common)){
     message(
@@ -225,22 +218,10 @@ leaf_nodes <- function(graph){
   V(graph)[is_leaf]$name
 }
 
-exclude_imports_if <- function(config){
-  if (!length(config$skip_imports)){
-    config$skip_imports <- FALSE
-  }
-  if (!config$skip_imports){
-    return(config)
-  }
-  delete_these <- setdiff(
-    V(config$execution_graph)$name,
-    config$plan$target
-  )
-  config$execution_graph <- delete_vertices(
-    graph = config$execution_graph,
-    v = delete_these
-  )
-  config
+filter_upstream <- function(targets, graph){
+  delete_these <- setdiff(V(graph)$name, targets)
+  graph <- delete_vertices(graph = graph, v = delete_these)
+  leaf_nodes(graph)
 }
 
 subset_graph <- function(graph, subset){
@@ -249,4 +230,14 @@ subset_graph <- function(graph, subset){
   }
   subset <- intersect(subset, V(graph)$name)
   igraph::induced_subgraph(graph = graph, vids = subset)
+}
+
+imports_graph <- function(config){
+  delete_these <- intersect(config$plan$target, V(config$graph)$name)
+  delete_vertices(config$graph, v = delete_these)
+}
+
+targets_graph <- function(config){
+  delete_these <- setdiff(V(config$graph)$name, config$plan$target)
+  delete_vertices(config$graph, v = delete_these)
 }

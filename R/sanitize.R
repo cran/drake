@@ -1,4 +1,4 @@
-sanitize_plan <- function(plan){
+sanitize_plan <- function(plan, allow_duplicated_targets = FALSE){
   plan <- as_tibble(plan)
   for (field in drake_plan_non_factors()){
     if (!is.null(plan[[field]])){
@@ -11,8 +11,7 @@ sanitize_plan <- function(plan){
     }
   }
   if ("trigger" %in% colnames(plan)){
-    plan$trigger[is.na(plan$trigger) | !nzchar(plan$trigger)] <- "any"
-    assert_legal_triggers(plan[["trigger"]])
+    plan$trigger <- parse_triggers(plan$trigger)
   }
   plan <- file_outs_to_targets(plan)
   plan$target <- repair_target_names(plan$target)
@@ -20,7 +19,10 @@ sanitize_plan <- function(plan){
   plan$command[is.na(plan$command)] <- ""
   first <- c("target", "command")
   cols <- c(first, setdiff(colnames(plan), first))
-  plan[, cols]
+  if (!allow_duplicated_targets) {
+    plan <- handle_duplicated_targets(plan[, cols])
+  }
+  plan
 }
 
 drake_plan_non_factors <- function(){
@@ -37,8 +39,10 @@ drake_plan_columns <- function(){
     "cpu",
     "elapsed",
     "evaluator",
+    "priority",
     "retries",
-    "timeout"
+    "timeout",
+    "worker"
   )
 }
 
@@ -70,10 +74,11 @@ sanitize_nodes <- function(nodes, choices){
 }
 
 repair_target_names <- function(x){
+  x <- stringi::stri_trim_both(x)
   illegals <- c(
     ":", "\\+", "\\-", "\\*", "\\^",
     "\\(", "\\)", "\\[", "\\]", "^_",
-    "\\\""
+    "\\\"", "\\s+"
   ) %>%
     paste(collapse = "|")
   non_files <- x[is_not_file(x)]
@@ -82,7 +87,6 @@ repair_target_names <- function(x){
   } else {
     return(x)
   }
-  x <- stringi::stri_trim_both(x)
   x[is_not_file(x)] <- gsub(illegals, "_", x[is_not_file(x)])
   x <- gsub("^_", "", x)
   x[!nzchar(x)] <- "X"
@@ -117,4 +121,10 @@ single_file_out <- function(command){
   } else {
     file_out
   }
+}
+
+parse_triggers <- function(x){
+  x[is.na(x) | !nzchar(x)] <- "any"
+  assert_legal_triggers(x)
+  x
 }

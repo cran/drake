@@ -5,7 +5,8 @@
 \title{Get the drake cache, optionally searching up the file system.}
 \usage{
 get_cache(path = getwd(), search = TRUE,
-  verbose = drake::default_verbose(), force = FALSE, fetch_cache = NULL)
+  verbose = drake::default_verbose(), force = FALSE, fetch_cache = NULL,
+  console_log_file = NULL)
 }
 \arguments{
 \item{path}{Root directory of the drake project,
@@ -38,6 +39,12 @@ running version of drake.}
 The purpose of this code is to fetch the \code{storr} cache
 with a command like \code{storr_rds()} or \code{storr_dbi()},
 but customized. This feature is experimental.}
+
+\item{console_log_file}{character scalar or \code{NULL}.
+If \code{NULL}, console output will be printed
+to the R console using \code{message()}.
+Otherwise, \code{console_log_file} should be the name of a flat file.
+Console output will be appended to that file.}
 }
 \value{
 A drake/storr cache in a folder called \code{.drake/},
@@ -53,7 +60,7 @@ test_with_dir("Quarantine side effects.", {
 clean(destroy = TRUE)
 # No cache is available.
 get_cache() # NULL
-load_basic_example() # Get the code with drake_example("basic").
+load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Run the project, build the targets.
 x <- get_cache() # Now, there is a cache.
 # List the objects readable from the cache with readd().

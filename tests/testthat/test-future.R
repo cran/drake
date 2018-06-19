@@ -1,26 +1,23 @@
 drake_context("future")
 
 test_with_dir("future package functionality", {
+  skip_on_cran() # too slow for CRAN
   future::plan(future::sequential)
   scenario <- get_testing_scenario()
   e <- eval(parse(text = scenario$envir))
-  load_basic_example(envir = e)
+  load_mtcars_example(envir = e)
   backends <- c("future_lapply", rep("future", 2))
   caching <- c(rep("worker", 2), "master")
   for (i in 1:3){
     clean(destroy = TRUE)
-    withr::with_options(
-      new = list(mc.cores = 2), code = {
-        config <- make(
-          e$my_plan,
-          envir = e,
-          parallelism = backends[i],
-          caching = caching[i],
-          jobs = 1,
-          verbose = FALSE,
-          session_info = FALSE
-        )
-      }
+    config <- make(
+      e$my_plan,
+      envir = e,
+      parallelism = backends[i],
+      caching = caching[i],
+      jobs = 1,
+      verbose = 4,
+      session_info = FALSE
     )
     expect_equal(
       outdated(config),
@@ -48,9 +45,10 @@ test_with_dir("future package functionality", {
     envir = e,
     parallelism = backends[3],
     caching = caching[3],
-    jobs = 2,
+    jobs = c(imports = 1, targets = 2),
     verbose = FALSE,
-    session_info = FALSE
+    session_info = FALSE,
+    ensure_workers = FALSE
   )
 })
 
@@ -62,10 +60,11 @@ test_with_dir("prepare_distributed() writes cache folder if nonexistent", {
 })
 
 test_with_dir("can gracefully conclude a crashed worker", {
+  skip_on_cran() # too slow for CRAN
   for (caching in c("master", "worker")){
     con <- dbug()
     con$caching <- caching
-    con$execution_graph <- con$graph
+    con$schedule <- con$graph
     worker <- structure(list(), target = "myinput")
     class(worker) <- "Future"
     expect_false(is_empty_worker(worker))
@@ -74,7 +73,7 @@ test_with_dir("can gracefully conclude a crashed worker", {
       conclude_worker(
         worker = worker,
         config = con,
-        queue = new_target_queue(config = con)
+        queue = new_priority_queue(config = con)
       ),
       regexp = "failed."
     )

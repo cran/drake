@@ -1,9 +1,24 @@
 drake_context("edge cases")
 
+test_with_dir("skip everything", {
+  f <- function(x){
+    x
+  }
+  pl <- drake_plan(a = f(0))
+  con <- make(
+    pl,
+    session_info = FALSE,
+    skip_targets = TRUE,
+    skip_imports = TRUE
+  )
+  expect_equal(justbuilt(con), character(0))
+})
+
 test_with_dir("can keep going", {
   scenario <- get_testing_scenario()
   e <- eval(parse(text = scenario$envir))
   parallelism <- scenario$parallelism
+  jobs <- scenario$jobs
   e$fail <- function(...) {
     stop("oops")
   }
@@ -27,14 +42,18 @@ test_with_dir("can keep going", {
       keep_going = TRUE,
       parallelism = parallelism,
       verbose = FALSE,
-      jobs = 2,
+      jobs = jobs,
       envir = e,
-      hook = suppressWarnings
+      hook = suppressWarnings,
+      session_info = FALSE
     )
   )
-  expect_equal(length(built()), 5)
-  expect_equal(length(failed()), 3)
-  expect_equal(length(intersect(built(), failed())), 0)
+  expect_equal(sort(built()), sort(c("a2", "a3", "b2", "b3", "b4")))
+  expect_equal(sort(failed()), sort(c("a1", "a4", "b1")))
+  expect_equal(
+    sort(failed(upstream_only = TRUE)),
+    sort(c("a1", "a4"))
+  )
 })
 
 test_with_dir("failed targets do not become up to date", {
@@ -94,6 +113,13 @@ test_with_dir("error handlers", {
   expect_equal(error_character0(1), character(0))
   expect_null(error_null(1))
   expect_error(error_tibble_times(123))
+  expect_error(
+    error_process(
+      e = list(message = 5),
+      id = "2",
+      config = dbug()),
+    regexp = "failed"
+  )
 })
 
 test_with_dir("error when file target names do not match actual filenames", {

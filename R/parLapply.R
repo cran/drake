@@ -1,54 +1,30 @@
 run_parLapply <- function(config) { # nolint
   eval(parse(text = "require(drake)"))
-  if (config$jobs < 2) {
-    return(run_lapply(config = config))
+  if (config$jobs < 2 && !length(config$debug)) {
+    return(run_loop(config = config))
   }
   console_parLapply(config) # nolint
-  config$cluster <- makePSOCKcluster(config$jobs)
+  config$cluster <- makePSOCKcluster(config$jobs + 1)
   on.exit(stopCluster(cl = config$cluster))
   clusterExport(cl = config$cluster, varlist = "config",
     envir = environment())
-  if (identical(config$envir, globalenv()))
-    clusterExport(cl = config$cluster, varlist = ls(globalenv(),
-      all.names = TRUE), envir = globalenv())
+  if (identical(config$envir, globalenv())){
+    # We should not use globalenv() in regular unit tests.
+    # drake has other tests for that.
+    clusterExport(cl = config$cluster, varlist = ls(globalenv(), # nocov
+      all.names = TRUE), envir = globalenv())                    # nocov
+  }
   clusterCall(cl = config$cluster, fun = function(){
     eval(parse(text = "require(drake)"))
   })
   clusterCall(cl = config$cluster, fun = do_prework, config = config,
     verbose_packages = FALSE)
-  run_staged_parallelism(
-    config = config,
-    worker = worker_parLapply # nolint
-  )
-}
-
-worker_parLapply <- function(targets, meta_list, config) { # nolint
-  prune_envir_parLapply(targets = targets, config = config) # nolint
-  values <- parLapply(
+  mc_init_worker_cache(config)
+  parLapply(
     cl = config$cluster,
-    X = targets,
-    fun = drake_build_worker,
-    meta_list = meta_list,
+    X = mc_worker_id(c(0, seq_len(config$jobs))),
+    fun = mc_process,
     config = config
   )
-  assign_to_envir_parLapply( # nolint
-    targets = targets,
-    values = values,
-    config = config
-  )
-}
-
-prune_envir_parLapply <- function(targets = targets, config = config) { # nolint
-  prune_envir(targets = targets, config = config)
-  if (identical(config$envir, globalenv()))
-    clusterCall(cl = config$cluster, fun = prune_envir, targets = targets,
-      config = config)
-}
-
-assign_to_envir_parLapply <- # nolint
-  function(targets, values, config) {
-  assign_to_envir(targets = targets, values = values, config = config)
-  if (identical(config$envir, globalenv()))
-    clusterCall(cl = config$cluster, fun = assign_to_envir,
-      targets = targets, values = values, config = config)
+  invisible()
 }

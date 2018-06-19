@@ -13,23 +13,6 @@ test_with_dir("Recursive functions are okay", {
   make(x, cache = cache, session_info = FALSE)
 })
 
-test_with_dir("drake searches past outdated targets for parallel stages", {
-  plan <- drake_plan(
-    a = 1,
-    b = a,
-    d = b,
-    e = d,
-    c = a,
-    f = c
-  )
-  config <- make(plan, targets = c("a", "b", "c", "d"), session_info = FALSE)
-  config <- drake_config(plan)
-  stages <- parallel_stages(config)
-  expect_equal(sort(stages$item), c("e", "f"))
-  expect_equal(length(unique(stages$stage)), 1)
-  expect_equal(sort(next_stage(config)), sort(c("e", "f")))
-})
-
 test_with_dir("Supplied graph is not an igraph.", {
   expect_error(prune_drake_graph(12345, to = "node"))
 })
@@ -93,14 +76,11 @@ test_with_dir("graph functions work", {
   tmp <- vis_drake_graph(config, full_legend = FALSE)
   dev.off()
   unlink("Rplots.pdf", force = TRUE)
-  expect_true(is.character(default_graph_title(
-    split_columns = FALSE)))
-  expect_true(is.character(default_graph_title(
-    split_columns = TRUE)))
+  expect_true(is.character(default_graph_title()))
 })
 
 test_with_dir("Supplied graph is pruned.", {
-  load_basic_example()
+  load_mtcars_example()
   graph <- build_drake_graph(my_plan)
   con <- drake_config(my_plan, targets = c("small", "large"), graph = graph)
   vertices <- V(con$graph)$name
@@ -110,28 +90,14 @@ test_with_dir("Supplied graph is pruned.", {
   expect_false(any(exclude %in% vertices))
 })
 
-test_with_dir("same graphical arrangements for distributed parallelism", {
-  e <- new.env()
-  x <- drake_plan(a = 1, b = f(2))
-  e$f <- function(x) x
-  con <- drake_config(x, envir = e, verbose = FALSE)
-  expect_equal(2, max_useful_jobs(config = con))
-  expect_equal(2, max_useful_jobs(config = con))
-  con$parallelism <- "Makefile"
-  expect_equal(2, max_useful_jobs(config = con))
-  expect_equal(2, max_useful_jobs(config = con))
-  y <- drake_plan(a = 1, b = 2)
-  tmp <- dataframes_graph(config = con)
-  expect_true(is.list(tmp))
-})
-
-test_with_dir("graphing args are not ignored (basic example)", {
+test_with_dir("graphing args are not ignored (mtcars example)", {
+  skip_on_cran() # too slow for CRAN
   scenario <- get_testing_scenario()
   e <- eval(parse(text = scenario$envir))
   jobs <- scenario$jobs
   parallelism <- scenario$parallelism
 
-  load_basic_example(envir = e)
+  load_mtcars_example(envir = e)
   my_plan <- e$my_plan
   config <- drake_config(my_plan, envir = e,
                          jobs = jobs, parallelism = parallelism,
@@ -145,6 +111,8 @@ test_with_dir("graphing args are not ignored (basic example)", {
     tmp <- dataframes_graph(
       config = config, build_times = FALSE, from_scratch = TRUE))
   expect_warning(
+    tmp <- dataframes_graph(config = config, split_columns = TRUE))
+  expect_warning(
     tmp <- dataframes_graph(config = config, build_times = FALSE))
   tmpcopy <- dataframes_graph(config = config,
     make_imports = FALSE, build_times = "none")
@@ -157,19 +125,17 @@ test_with_dir("graphing args are not ignored (basic example)", {
   tmp3 <- dataframes_graph(config = config, build_times = "none",
     targets_only = TRUE)
   tmp4 <- dataframes_graph(config = config, build_times = "none",
-    split_columns = TRUE)
-  tmp5 <- dataframes_graph(config = config, build_times = "none",
-    targets_only = TRUE, split_columns = TRUE)
+    targets_only = TRUE)
+  tmp5 <- dataframes_graph(config = config, build_times = "build",
+    targets_only = TRUE)
   tmp6 <- dataframes_graph(config = config, build_times = "build",
-    targets_only = TRUE, split_columns = TRUE)
-  tmp7 <- dataframes_graph(config = config, build_times = "build",
-    targets_only = TRUE, split_columns = TRUE, from_scratch = FALSE)
+    targets_only = TRUE, from_scratch = FALSE)
   expect_warning(
-    tmp8 <- dataframes_graph(config = config, build_times = "none",
+    tmp7 <- dataframes_graph(config = config, build_times = "none",
                              from = c("small", "not_found"))
   )
   expect_error(
-    tmp9 <- dataframes_graph(config = config, build_times = "none",
+    tmp8 <- dataframes_graph(config = config, build_times = "none",
                              from = "not_found")
   )
   expect_equal(nrow(tmp0$nodes), 2)

@@ -27,7 +27,7 @@
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan)
 #' outdated(config) # Which targets need to be (re)built?
 #' my_jobs = max_useful_jobs(config) # Depends on what is up to date.
@@ -75,7 +75,8 @@ make <- function(
   envir = parent.frame(),
   verbose = drake::default_verbose(),
   hook = default_hook,
-  cache = drake::get_cache(verbose = verbose, force = force),
+  cache = drake::get_cache(
+    verbose = verbose, force = force, console_log_file = console_log_file),
   fetch_cache = NULL,
   parallelism = drake::default_parallelism(),
   jobs = 1,
@@ -89,7 +90,7 @@ make <- function(
   ),
   recipe_command = drake::default_recipe_command(),
   log_progress = TRUE,
-  imports_only = FALSE,
+  skip_targets = FALSE,
   timeout = Inf,
   cpu = NULL,
   elapsed = NULL,
@@ -107,7 +108,12 @@ make <- function(
   seed = NULL,
   caching = "worker",
   keep_going = FALSE,
-  session = NULL
+  session = NULL,
+  imports_only = NULL,
+  pruning_strategy = c("speed", "memory"),
+  makefile_path = "Makefile",
+  console_log_file = NULL,
+  ensure_workers = TRUE
 ){
   force(envir)
   if (!is.null(return_config)){
@@ -143,7 +149,7 @@ make <- function(
       force = force,
       graph = graph,
       trigger = trigger,
-      imports_only = imports_only,
+      skip_targets = skip_targets,
       skip_imports = skip_imports,
       skip_safety_checks = skip_safety_checks,
       lazy_load = lazy_load,
@@ -151,7 +157,12 @@ make <- function(
       cache_log_file = cache_log_file,
       caching = caching,
       keep_going = keep_going,
-      session = session
+      session = session,
+      imports_only = imports_only,
+      pruning_strategy = pruning_strategy,
+      makefile_path = makefile_path,
+      console_log_file = console_log_file,
+      ensure_workers = ensure_workers
     )
   }
   make_with_config(config = config)
@@ -168,7 +179,7 @@ make <- function(
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # The following lines are the same as make(my_plan)
 #' config <- drake_config(my_plan) # Create the internal config list.
 #' make_with_config(config = config) # Run the project, build the targets.
@@ -212,18 +223,34 @@ make_session <- function(config){
   store_drake_config(config = config)
   initialize_session(config = config)
   do_prework(config = config, verbose_packages = config$verbose)
-  if (!config$skip_imports){
-    make_imports(config = config)
-  }
-  if (!config$imports_only){
-    make_targets(config = config)
-  }
+  make_with_schedules(config = config)
   drake_cache_log_file(
     file = config$cache_log_file,
     cache = config$cache,
     jobs = config$jobs
   )
+  remove(
+    list = intersect(config$plan$target, ls(envir = config$envir)),
+    envir = config$envir
+  )
   return(invisible(config))
+}
+
+make_with_schedules <- function(config){
+  if (config$skip_imports && config$skip_targets){
+    invisible(config)
+  } else if (config$skip_targets){
+    make_imports(config = config)
+  } else if (config$skip_imports){
+    make_targets(config = config)
+  } else if (
+    length(unique(config$parallelism)) > 1
+  ){
+    make_imports(config = config)
+    make_targets(config = config)
+  } else {
+    make_imports_targets(config = config)
+  }
 }
 
 #' @title Just make the imports.
@@ -253,7 +280,7 @@ make_session <- function(config){
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Generate the master internal configuration list.
 #' con <- drake_config(my_plan)
 #' # Just cache the imports, do not build any targets.
@@ -263,16 +290,11 @@ make_session <- function(config){
 #' })
 #' }
 make_imports <- function(config = drake::read_drake_config()){
-  config$execution_graph <- imports_graph(config = config)
-  config$jobs <- jobs_imports(jobs = config$jobs)
-  config$parallelism <- use_default_parallelism(config$parallelism)
+  config$schedule <- imports_graph(config = config)
+  config$jobs <- imports_setting(config$jobs)
+  config$parallelism <- imports_setting(config$parallelism)
   run_parallel_backend(config = config)
   invisible(config)
-}
-
-imports_graph <- function(config){
-  delete_these <- intersect(config$plan$target, V(config$graph)$name)
-  delete_vertices(config$graph, v = delete_these)
 }
 
 #' @title Just build the targets.
@@ -302,7 +324,7 @@ imports_graph <- function(config){
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Generate the master internal configuration list.
 #' con <- drake_config(my_plan)
 #' # Just cache the imports, do not build any targets.
@@ -312,23 +334,39 @@ imports_graph <- function(config){
 #' })
 #' }
 make_targets <- function(config = drake::read_drake_config()){
-  config$execution_graph <- targets_graph(config = config)
-  config$jobs <- jobs_targets(jobs = config$jobs)
+  config$schedule <- targets_graph(config = config)
+  config$jobs <- targets_setting(config$jobs)
+  config$parallelism <- targets_setting(config$parallelism)
   run_parallel_backend(config = config)
   console_up_to_date(config = config)
   invisible(config)
 }
 
-targets_graph <- function(config){
-  delete_these <- setdiff(V(config$graph)$name, config$plan$target)
-  delete_vertices(config$graph, v = delete_these)
+make_imports_targets <- function(config){
+  config$schedule <- config$graph
+  config$parallelism <- config$parallelism[1]
+  config$jobs <- max(config$jobs)
+  run_parallel_backend(config = config)
+  console_up_to_date(config = config)
+  invisible(config)
 }
 
 initialize_session <- function(config){
+  init_common_values(config$cache)
   if (config$log_progress){
-    clear_progress(cache = config$cache, jobs = jobs_imports(config$jobs))
+    clear_tmp_namespace(
+      cache = config$cache,
+      jobs = imports_setting(config$jobs),
+      namespace = "progress"
+    )
   }
-  config$cache$clear(namespace = "session")
+  for (namespace in c("attempt", "session")){
+    clear_tmp_namespace(
+      cache = config$cache,
+      jobs = imports_setting(config$jobs),
+      namespace = namespace
+    )
+  }
   if (config$session_info){
     config$cache$set(
       key = "sessionInfo",

@@ -1,6 +1,5 @@
 ---
 title: "drake"
-subtitle: "where to begin"
 author: "Will Landau"
 date: "`r Sys.Date()`"
 output:
@@ -13,182 +12,84 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, echo = F}
-suppressMessages(suppressWarnings(library(drake)))
-suppressMessages(suppressWarnings(library(magrittr)))
-unlink(".drake", recursive = TRUE)
-clean(destroy = TRUE, verbose = FALSE)
-unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  error = TRUE,
-  warning = TRUE
-)
-```
+# Learn about drake
 
-<img src="https://ropensci.github.io/drake/images/infographic.svg" alt="infographic" align="center" style = "border: none; float: center;">
+The main resources to learn `drake` are
 
-This tutorial is a recommended starting place for learning how to use `drake`. It is the abridged version of the [basic example vignette](https://github.com/ropensci/drake/blob/master/vignettes/example-basic.Rmd). See [this section of the README](https://github.com/ropensci/drake/blob/master/README.md#documentation) for a high-level overview of the available documentation.
+1. The [full manual](https://ropenscilabs.github.io/drake-manual/)
+2. The [package website](https://ropensci.github.io/drake/)
+3. [Kirill Müller](https://github.com/krlmlr)'s [`drake` workshop from March 5, 2018](https://github.com/krlmlr/drake-sib-zurich).
 
-# Get the code.
+## Cheat sheet
 
-Write the code files to your workspace.
+Thanks to [Kirill](https://github.com/krlmlr) for preparing a [`drake` cheat sheet](https://github.com/krlmlr/drake-sib-zurich/blob/master/cheat-sheet.pdf) for the [workshop](https://github.com/krlmlr/drake-sib-zurich).
 
-```{r getthequickstartcode, eval = FALSE}
-drake_example("basic")
-```
+## Frequently asked questions
 
-The new `basic` folder now includes a file structure of a serious `drake` project, plus an `interactive-tutorial.R` to narrate the example. The code is also [online here](https://github.com/ropensci/drake/tree/master/inst/examples/basic).
+The [FAQ page](https://ropenscilabs.github.io/drake-manual/faq.html) is an index of links to [appropriately-labeled issues on GitHub](https://github.com/ropensci/drake/issues?q=is%3Aissue+is%3Aopen+label%3A%22frequently+asked+question%22). To contribute, please [submit a new issue](https://github.com/ropensci/drake/issues/new) and ask that it be labeled as a frequently asked question.
 
+## Function reference
 
-# The motivation of the basic example
+The [reference section](https://ropensci.github.io/drake/reference/index.html) lists all the available functions. Here are the most important ones.
 
-Is there an association between the weight and the fuel efficiency of cars? To find out, we use the `mtcars` dataset from the `datasets` package. The `mtcars` dataset originally came from the 1974 Motor Trend US magazine, and it contains design and performance data on 32 models of automobile.
+- `drake_plan()`: create a workflow data frame (like `my_plan`).
+- `make()`: build your project.
+- `loadd()`: load one or more built targets into your R session.
+- `readd()`: read and return a built target.
+- `drake_config()`: create a master configuration list for other user-side functions.
+- `vis_drake_graph()`: show an interactive visual network representation of your workflow.
+- `outdated()`: see which targets will be built in the next `make()`.
+- `deps()`: check the dependencies of a command or function.
+- `failed()`: list the targets that failed to build in the last `make()`.
+- `diagnose()`: return the full context of a build, including errors, warnings, and messages.
 
-```{r mtcarsdrake1}
-# ?mtcars # more info
-head(mtcars)
-```
+## Tutorials
 
-Here, `wt` is weight in tons, and `mpg` is fuel efficiency in miles per gallon. We want to figure out if there is an association between `wt` and `mpg`. The `mtcars` dataset itself only has 32 rows, so we generate two larger bootstrapped datasets and then analyze them with regression models. We summarize the regression models to see if there is an association.
+Thanks to [Kirill](https://github.com/krlmlr) for constructing two interactive [`learnr`](https://rstudio.github.io/learnr/) tutorials: [one supporting `drake` itself](https://krlmlr.shinyapps.io/cooking-drake-tutorial/), and a [prerequisite walkthrough](https://krlmlr.shinyapps.io/cooking-tutorial/) of the [`cooking` package](https://github.com/krlmlr/cooking).
 
-# A taste of the basic example
+## Examples
 
-Your workspace begins with a bunch of imports: functions, pre-loaded data objects, and saved files available before the real work begins.
+`Drake` also has built-in example projects with code files [available here](https://github.com/ropensci/drake/tree/master/inst/examples). You can generate the files for a project with `drake_example()` (e.g. `drake_example("gsp")`), and you can list the available projects with `drake_examples()`. The beginner-oriented examples are listed below. They help you learn `drake`'s main features, and they show one way to organize the files of `drake` projects.
 
-```{r drakeimportdrakermd}
-load_basic_example(verbose = FALSE) # Get the code with drake_example("basic").
+- `main`: `drake`'s main example, based on [Kirill Müller's `drake` pitch](https://krlmlr.github.io/drake-pitch/). This is the most accessible example for beginners.
+- `gsp`: A concrete example using real econometrics data. It explores the relationships between gross state product and other quantities, and it shows off `drake`'s ability to generate lots of reproducibly-tracked tasks with ease.
+- `packages`: A concrete example using data on R package downloads. It demonstrates how `drake` can refresh a project based on new incoming data without restarting everything from scratch.
+- `mtcars`: An old example that demonstrates how to generate large workflow plan data frames using wildcard templating. Use `load_mtcars_example()` to set up the project in your workspace.
 
-# Drake looks for data objects and functions in your R session environment
-ls()
+## Presentations
 
-# and saved files in your file system.
-list.files()
-```
+- https://krlmlr.github.io/drake-pitch
+- https://krlmlr.github.io/slides/drake-sib-zurich
+- https://krlmlr.github.io/slides/drake-sib-zurich/cooking.html
 
-Your real work is outlined in a data frame of data analysis steps called "targets". The targets depend on the imports, and `drake` will figure out how they are all connected.
+## Real example projects
 
-```{r myplandrakevig}
-my_plan
-```
+Here are some real-world applications of `drake` in the wild.
 
-Wildcard templating generates these data frames at scale.
+- [efcaguab/demografia-del-voto](https://github.com/efcaguab/demografia-del-voto)
+- [efcaguab/great-white-shark-nsw](https://github.com/efcaguab/great-white-shark-nsw)
+- [IndianaCHE/Detailed-SSP-Reports](https://github.com/IndianaCHE/Detailed-SSP-Reports)
+- [tiernanmartin/home-and-hope](https://github.com/tiernanmartin/home-and-hope)
 
-```{r drake_plangeneration}
-library(magrittr)
-dataset_plan <- drake_plan(
-  small = simulate(5),
-  large = simulate(50)
-)
-dataset_plan
+If you have a project of your own, we would love to add it. [Click here to edit the `README.Rmd` file](https://github.com/ropensci/drake/edit/master/README.Rmd).
 
-analysis_methods <- drake_plan(
-  regression = regNUMBER(dataset__) # nolint
-) %>%
-  evaluate_plan(wildcard = "NUMBER", values = 1:2)
-analysis_methods
+## Context and history
 
-analysis_plan <- plan_analyses(
-  plan = analysis_methods,
-  datasets = dataset_plan
-)
-analysis_plan
+For context and history, check out [this post on the rOpenSci blog](https://ropensci.org/blog/2018/02/06/drake/) and [episode 22 of the R Podcast](https://www.r-podcast.org/episode/022-diving-in-to-drake-with-will-landau/).
 
-whole_plan <- rbind(dataset_plan, analysis_plan)
-whole_plan
-```
+# Acknowledgements
 
-For the commands you pass in with the free-form `...` argument, `drake_plan()` uses tidy evaluation. For example, it supports quasiquotation with the `!!` argument. Use `tidy_evaluation = FALSE` or the `list` argument to suppress this behavior.
+Special thanks to [Jarad Niemi](http://www.jarad.me/), my advisor from [graduate school](http://stat.iastate.edu/), for first introducing me to the idea of [Makefiles](https://www.gnu.org/software/make/) for research. He originally set me down the path that led to `drake`.
 
-```{r testquasiquoplan}
-my_variable <- 5
+Many thanks to [Julia Lowndes](https://github.com/jules32), [Ben Marwick](https://github.com/benmarwick), and [Peter Slaughter](https://github.com/gothub) for [reviewing drake for rOpenSci](https://github.com/ropensci/onboarding/issues/156), and to [Maëlle Salmon](https://github.com/maelle) for such active involvement as the editor. Thanks also to the following people for contributing early in development.
 
-drake_plan(
-  a = !!my_variable,
-  b = !!my_variable + 1,
-  list = c(d = "!!my_variable")
-)
+- [Alex Axthelm](https://github.com/AlexAxthelm)
+- [Chan-Yub Park](https://github.com/mrchypark)
+- [Daniel Falster](https://github.com/dfalster)
+- [Eric Nantz](https://github.com/thercast)
+- [Henrik Bengtsson](https://github.com/HenrikBengtsson)
+- [Ian Watson](https://github.com/IanAWatson)
+- [Jasper Clarkberg](https://github.com/dapperjapper)
+- [Kendon Bell](https://github.com/kendonB)
+- [Kirill M&uuml;ller](https://github.com/krlmlr)
 
-drake_plan(
-  a = !!my_variable,
-  b = !!my_variable + 1,
-  list = c(d = "!!my_variable"),
-  tidy_evaluation = FALSE
-)
-```
-
-For instances of `!!` that remain in the workflow plan, `make()` will run these commands in tidy fashion, evaluating the `!!` operator using the environment you provided.
-
-Using static code analysis, `drake` detects the dependencies of all your targets. The result is an interactive network diagram.
-
-```{r drakevisgraph, eval = FALSE}
-vis_drake_graph(my_plan)
-```
-
-<iframe
-src = "https://ropensci.github.io/drake/images/outdated.html"
-width = "100%" height = "600px" allowtransparency="true"
-style="border: none; box-shadow: none">
-</iframe>
-
-At this point, all your targets are out of date because the project is new.
-
-```{r outdateddrake}
-config <- drake_config(my_plan, verbose = FALSE) # Master configuration list
-outdated(config)
-```
-
-The `make()` function traverses the network and builds the targets that require updates.
-
-```{r firstmakedrake}
-make(my_plan)
-```
-
-For the `reg2()` model on the small dataset, the p-value on `x2` is so small that there may be an association between weight and fuel efficiency after all.
-
-```{r getmtcarsanswer}
-readd(coef_regression2_small)
-```
-
-The project is currently up to date, so the next `make()` does nothing.
-
-```{r makeuptodatedrake}
-make(my_plan)
-```
-
-But a nontrivial change in `reg2()` triggers updates to all the affected downstream targets.
-
-```{r reg2makedrake}
-reg2 <- function(d){
-  d$x3 <- d$x ^ 3
-  lm(y ~ x3, data = d)
-}
-
-make(my_plan)
-```
-
-```{r endofline_drake, echo = F}
-clean(destroy = TRUE, verbose = FALSE)
-unlink(c("Makefile", "report.Rmd", "shell.sh", "STDIN.o*", "Thumbs.db"))
-```
-
-# Built-in example projects
-
-`Drake` has [built-in example projects](https://github.com/ropensci/drake/tree/master/inst/examples). You can generate the code files for an example with `drake_example()`, and you can list the available examples with `drake_examples()`. For instance, `drake_example("gsp")` generates the R script and R Markdown report for the built-in econometrics data analysis project. See below for the currently supported examples.
-
-## Learn how to use `drake`.
-
-- `basic`: A tiny, minimal example with the `mtcars` dataset to demonstrate how to use `drake`. Use `load_basic_example()` to set up the project in your workspace. The [basic example vignette](https://github.com/ropensci/drake/blob/master/vignettes/example-basic.Rmd) is a parallel walkthrough of the same example.
-- `gsp`: A more concrete, practical example using real econometrics data. It explores the relationships between gross state product and other quantities, and it shows off `drake`'s ability to generate lots of reproducibly-tracked tasks with ease.
-- `packages`: A concrete, practical example using data on R package downloads. It demonstrates how `drake` can refresh a project based on new incoming data without restarting everything from scratch.
-
-
-## High-performance computing
-
-- `Docker-psock`: demonstrates how to deploy targets to a [Docker container](https://www.docker.com/what-container) using a specialized PSOCK cluster.
-- `Makefile-cluster`: uses [Makefiles](https://www.gnu.org/software/make/) to deploy targets to a generic cluster (configurable).
-- `sge`: uses `"future_lapply"` parallelism to deploy targets to a [Sun/Univa Grid Engine](https://supcom.hgc.jp/english/utili_info/manual/uge.html) cluster. Other clusters are similar. See the [batchtools/inst/templates](https://github.com/mllg/batchtools/tree/master/inst/templates) and [future.batchtools/inst/templates](https://github.com/HenrikBengtsson/future.batchtools/tree/master/inst/templates) for more example `*.tmpl` template files.
-- `slurm`: similar to `sge`, but for [SLURM](https://slurm.schedmd.com).
-- `torque`: similar to `sge`, but for [TORQUE](http://www.adaptivecomputing.com/products/open-source/torque/).
-
-Regarding the high-performance computing examples, there is no one-size-fits-all `*.tmpl` configuration file for any job scheduler, so we cannot guarantee that the above examples will work for you out of the box. To learn how to configure the files to suit your needs, you should make sure you understand how to use your job scheduler and [batchtools](https://github.com/mllg/batchtools).

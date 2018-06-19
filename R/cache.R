@@ -1,3 +1,11 @@
+assert_cache <- function(cache){
+  cache_exists <- inherits(x = cache$driver, what = "driver_environment") ||
+    file.exists(cache$driver$path)
+  if (!cache_exists){
+    stop("drake cache missing.", call. = FALSE)
+  }
+}
+
 #' @title Return the file path where the cache is stored,
 #' if applicable.
 #' @export
@@ -46,6 +54,7 @@ force_cache_path <- function(cache = NULL){
 #' @return A drake/storr cache in a folder called `.drake/`,
 #'   if available. `NULL` otherwise.
 #' @inheritParams cached
+#' @inheritParams drake_config
 #' @param force logical, whether to load the cache
 #'   despite any back compatibility issues with the
 #'   running version of drake.
@@ -59,7 +68,7 @@ force_cache_path <- function(cache = NULL){
 #' clean(destroy = TRUE)
 #' # No cache is available.
 #' get_cache() # NULL
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build the targets.
 #' x <- get_cache() # Now, there is a cache.
 #' # List the objects readable from the cache with readd().
@@ -71,7 +80,8 @@ get_cache <- function(
   search = TRUE,
   verbose = drake::default_verbose(),
   force = FALSE,
-  fetch_cache = NULL
+  fetch_cache = NULL,
+  console_log_file = NULL
 ){
   if (search){
     path <- find_cache(path = path)
@@ -80,7 +90,7 @@ get_cache <- function(
   }
   this_cache(
     path = path, force = force, verbose = verbose,
-    fetch_cache = fetch_cache
+    fetch_cache = fetch_cache, console_log_file = console_log_file
   )
 }
 
@@ -90,20 +100,17 @@ get_cache <- function(
 #' in-memory caches such as `storr_environment()`.
 #' @return A drake/storr cache at the specified path, if it exists.
 #' @inheritParams cached
+#' @inheritParams drake_config
 #' @param path file path of the cache
 #' @param force logical, whether to load the cache
 #'   despite any back compatibility issues with the
 #'   running version of drake.
-#' @param fetch_cache character vector containing lines of code.
-#'   The purpose of this code is to fetch the `storr` cache
-#'   with a command like [storr_rds()] or [storr_dbi()],
-#'   but customized. This feature is experimental.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' clean(destroy = TRUE)
 #' try(x <- this_cache(), silent = FALSE) # The cache does not exist yet.
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build the targets.
 #' y <- this_cache() # Now, there is a cache.
 #' z <- this_cache(".drake") # Same as above.
@@ -114,14 +121,21 @@ get_cache <- function(
 this_cache <- function(
   path = drake::default_cache_path(), force = FALSE,
   verbose = drake::default_verbose(),
-  fetch_cache = NULL
+  fetch_cache = NULL,
+  console_log_file = NULL
 ){
   usual_path_missing <- is.null(path) || !file.exists(path)
   if (usual_path_missing & is.null(fetch_cache)){
     return(NULL)
   }
   if (!is.null(path)){
-    console_cache(path = path, verbose = verbose)
+    console_cache(
+      config = list(
+        cache_path = path,
+        verbose = verbose,
+        console_log_file = console_log_file
+      )
+    )
   }
   fetch_cache <- as.character(fetch_cache)
   if (length(fetch_cache) && nzchar(fetch_cache)){
@@ -132,7 +146,8 @@ this_cache <- function(
   configure_cache(
     cache = cache,
     long_hash_algo = "md5",
-    overwrite_hash_algos = FALSE
+    overwrite_hash_algos = FALSE,
+    init_common_values = FALSE
   )
   if (!force){
     assert_compatible_cache(cache = cache)
@@ -159,6 +174,7 @@ drake_fetch_rds <- function(path){
 #' @export
 #' @return A newly created drake cache as a storr object.
 #' @inheritParams cached
+#' @inheritParams drake_config
 #' @seealso [default_short_hash_algo()],
 #'   [default_long_hash_algo()],
 #'   [make()]
@@ -189,12 +205,14 @@ new_cache <- function(
   type = NULL,
   short_hash_algo = drake::default_short_hash_algo(),
   long_hash_algo = drake::default_long_hash_algo(),
-  ...
+  ...,
+  console_log_file = NULL
 ){
   if (!is.null(type)){
     warning(
       "The 'type' argument of new_cache() is deprecated. ",
-      "Please see the storage vignette for the new cache interface."
+      "Please see the storage guide in the manual for the new cache API:",
+      "https://ropenscilabs.github.io/drake-manual/store.html"
     )
   }
   cache <- storr::storr_rds(
@@ -210,9 +228,16 @@ new_cache <- function(
     cache = cache,
     short_hash_algo = short_hash_algo,
     long_hash_algo = long_hash_algo,
-    overwrite_hash_algos = FALSE
+    overwrite_hash_algos = FALSE,
+    init_common_values = TRUE
   )
-  console_cache(path = cache_path(cache), verbose = verbose)
+  console_cache(
+    config = list(
+      cache_path = cache_path(cache),
+      verbose = verbose,
+      console_log_file = console_log_file
+    )
+  )
   cache
 }
 
@@ -226,6 +251,7 @@ new_cache <- function(
 #' in-memory caches such as [storr_environment()].
 #' @return A drake/storr cache.
 #' @inheritParams cached
+#' @inheritParams drake_config
 #' @param path file path of the cache
 #' @param short_hash_algo short hash algorithm for the cache.
 #'   See [default_short_hash_algo()] and
@@ -236,15 +262,11 @@ new_cache <- function(
 #' @param force logical, whether to load the cache
 #'   despite any back compatibility issues with the
 #'   running version of drake.
-#' @param fetch_cache character vector containing lines of code.
-#'   The purpose of this code is to fetch the `storr` cache
-#'   with a command like [storr_rds()] or [storr_dbi()],
-#'   but customized.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' clean(destroy = TRUE)
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build all the targets.
 #' x <- recover_cache(".drake") # Recover the project's storr cache.
 #' })
@@ -255,11 +277,12 @@ recover_cache <- function(
   long_hash_algo = drake::default_long_hash_algo(),
   force = FALSE,
   verbose = drake::default_verbose(),
-  fetch_cache = NULL
+  fetch_cache = NULL,
+  console_log_file = NULL
 ){
   cache <- this_cache(
     path = path, force = force, verbose = verbose,
-    fetch_cache = fetch_cache
+    fetch_cache = fetch_cache, console_log_file = console_log_file
   )
   if (is.null(cache)){
     cache <- new_cache(
@@ -267,7 +290,8 @@ recover_cache <- function(
       verbose = verbose,
       short_hash_algo = short_hash_algo,
       long_hash_algo = long_hash_algo,
-      fetch_cache = fetch_cache
+      fetch_cache = fetch_cache,
+      console_log_file = console_log_file
     )
   }
   cache
@@ -319,11 +343,16 @@ default_cache_path <- function(){
 #'
 #' @param jobs number of jobs for parallel processing
 #'
+#' @param init_common_values logical, whether to set the initial `drake`
+#'   version in the cache and other common values.
+#'   Not always a thread safe operation, so should only be `TRUE`
+#'   on the master process
+#'
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' clean(destroy = TRUE)
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- make(my_plan) # Run the project, build all the targets.
 #' # Locate the drake/storr cache of the project
 #' # inside the master internal configuration list.
@@ -346,7 +375,8 @@ configure_cache <- function(
   log_progress = FALSE,
   overwrite_hash_algos = FALSE,
   verbose = drake::default_verbose(),
-  jobs = 1
+  jobs = 1,
+  init_common_values = FALSE
 ){
   short_hash_algo <- match.arg(short_hash_algo,
     choices = available_hash_algos())
@@ -376,18 +406,32 @@ configure_cache <- function(
   }
   chosen_algo <- short_hash(cache)
   check_storr_short_hash(cache = cache, chosen_algo = chosen_algo)
-  set_initial_drake_version(cache)
+  if (init_common_values){
+    init_common_values(cache)
+  }
   cache
 }
 
-clear_progress <- function(cache, jobs){
+# Pre-set the values to avoid https://github.com/richfitz/storr/issues/80.
+init_common_values <- function(cache){
+  set_initial_drake_version(cache)
+  common_values <- list(TRUE, FALSE, "finished", "in progress", "failed")
+  cache$mset(
+    key = as.character(common_values),
+    value = common_values,
+    namespace = "common"
+  )
+}
+
+clear_tmp_namespace <- function(cache, jobs, namespace){
   lightly_parallelize(
     X = cache$list(),
     FUN = function(target){
-      cache$del(key = target, namespace = "progress")
+      cache$del(key = target, namespace = namespace)
     },
     jobs = jobs
   )
+  cache$clear(namespace = namespace)
   invisible()
 }
 
@@ -424,12 +468,25 @@ drake_version <- function(session_info = NULL){ # nolint
   all_pkgs$drake$Version # nolint
 }
 
+is_default_cache <- function(cache){
+  "driver_rds" %in% class(cache$driver) &&
+    identical(cache$driver$mangle_key, TRUE)
+}
+
 safe_get <- function(key, namespace, config){
-  if (config$cache$exists(key = key, namespace = namespace)){
-    config$cache$get(key = key, namespace = namespace)
-  } else {
-    NA
+  out <- just_try(config$cache$get(key = key, namespace = namespace))
+  if (inherits(out, "try-error")){
+    out <- NA
   }
+  out
+}
+
+safe_get_hash <- function(key, namespace, config){
+  out <- just_try(config$cache$get_hash(key = key, namespace = namespace))
+  if (inherits(out, "try-error")){
+    out <- NA
+  }
+  out
 }
 
 kernel_exists <- function(target, config){

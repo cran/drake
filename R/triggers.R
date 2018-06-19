@@ -47,7 +47,7 @@
 #' triggers()
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Load drake's canonical example.
+#' load_mtcars_example() # Load drake's canonical example.
 #' my_plan[["trigger"]] <- "command"
 #' # You can have different triggers for different targets.
 #' my_plan[["trigger"]][1] <- "file"
@@ -170,18 +170,13 @@ file_trigger <- function(target, meta, config){
   )
 }
 
-should_build <- function(target, meta_list, config){
-  if (meta_list[[target]]$imported) {
+should_build_target <- function(target, meta = NULL, config){
+  if (is.null(meta)){
+    meta <- drake_meta(target = target, config = config)
+  }
+  if (meta$imported) {
     return(TRUE)
   }
-  should_build_target(
-    target = target,
-    meta = meta_list[[target]],
-    config = config
-  )
-}
-
-should_build_target <- function(target, meta, config){
   if (meta$missing){
     return(TRUE)
   }

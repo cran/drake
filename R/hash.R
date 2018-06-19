@@ -1,7 +1,7 @@
 #' @title List the available hash algorithms for drake caches.
 #' @export
 #' @description See the advanced storage tutorial
-#' at <https://github.com/ropensci/drake/blob/master/vignettes/storage.Rmd>
+#' at <https://ropenscilabs.github.io/drake-manual/store.html>
 #' for details.
 #' @return A character vector of names of available hash algorithms.
 #' @examples
@@ -15,14 +15,14 @@ available_hash_algos <- function(){
 #' @seealso [default_short_hash_algo()],
 #'   [default_long_hash_algo()]
 #' @description  See the advanced storage tutorial
-#' at <https://github.com/ropensci/drake/blob/master/vignettes/storage.Rmd>
+#' at <https://ropenscilabs.github.io/drake-manual/store.html>
 #' for details.
 #' @return A character vector naming a hash algorithm.
 #' @inheritParams cached
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Run the project and return the internal master configuration list.
 #' config <- make(my_plan)
 #' # Locate the storr cache.
@@ -46,14 +46,14 @@ long_hash <- function(
 #' @seealso [default_short_hash_algo()],
 #'   [default_long_hash_algo()]
 #' @description See the advanced storage tutorial
-#' at <https://github.com/ropensci/drake/blob/master/vignettes/storage.Rmd>
+#' at <https://ropenscilabs.github.io/drake-manual/store.html>
 #' for details.
 #' @return A character vector naming a hash algorithm.
 #' @inheritParams cached
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Run the project and return the internal master configuration list.
 #' config <- make(my_plan)
 #' # Locate the storr cache.
@@ -78,7 +78,7 @@ short_hash <- function(
 #' @export
 #' @seealso [make()], [available_hash_algos()]
 #' @description See the advanced storage tutorial
-#' at <https://github.com/ropensci/drake/blob/master/vignettes/storage.Rmd>
+#' at <https://ropenscilabs.github.io/drake-manual/store.html>
 #' for details.
 #' @details
 #' The short algorithm must be among \code{\link{available_hash_algos}{}},
@@ -116,7 +116,7 @@ short_hash <- function(
 #' default_short_hash_algo()
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Run the project and return the internal master configuration list.
 #' config <- make(my_plan)
 #' # Locate the storr cache.
@@ -146,7 +146,7 @@ default_short_hash_algo <- function(cache = NULL) {
 #' @export
 #' @seealso [make()], [available_hash_algos()]
 #' @description See the advanced storage tutorial
-#' at <https://github.com/ropensci/drake/blob/master/vignettes/storage.Rmd>
+#' at <https://ropenscilabs.github.io/drake-manual/store.html>
 #' for details.
 #' @details
 #' The long algorithm must be among \code{\link{available_hash_algos}{}},
@@ -184,7 +184,7 @@ default_short_hash_algo <- function(cache = NULL) {
 #' default_long_hash_algo()
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' load_basic_example() # Get the code with drake_example("basic").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Run the project and return the internal master configuration list.
 #' config <- make(my_plan)
 #' # Locate the storr cache.

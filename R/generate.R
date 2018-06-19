@@ -63,6 +63,11 @@ dataset_wildcard <- function(){
 #'   is replaced with the next entry in the `values` vector,
 #'   and the values are recycled.
 #'
+#' @param always_rename logical. If `TRUE`, always rename
+#'   targets according to the wildcard values, regardless of the
+#'   value of `expand`. If `FALSE`, only rename targets if
+#'   `expand` is `TRUE`.
+#'
 #' @examples
 #' # Create the part of the workflow plan for the datasets.
 #' datasets <- drake_plan(
@@ -95,10 +100,18 @@ evaluate_plan <- function(
   rules = NULL,
   wildcard = NULL,
   values = NULL,
-  expand = TRUE
+  expand = TRUE,
+  always_rename = FALSE
 ){
   if (!is.null(rules)){
-    return(evaluations(plan = plan, rules = rules, expand = expand))
+    return(
+      evaluations(
+        plan = plan,
+        rules = rules,
+        expand = expand,
+        always_rename = always_rename
+      )
+    )
   }
   if (is.null(wildcard) | is.null(values)){
     return(plan)
@@ -115,6 +128,8 @@ evaluate_plan <- function(
   matching <- plan[matches, ]
   if (expand){
     matching <- expand_plan(matching, values)
+  } else if (always_rename){
+    matching$target <- paste(matching$target, values, sep = "_")
   }
   values <- rep(values, length.out = nrow(matching))
   matching$command <- Vectorize(
@@ -130,13 +145,14 @@ evaluate_plan <- function(
   out[[minor]] <- NULL
   out[[major]] <- NULL
   rownames(out) <- NULL
-  sanitize_plan(out)
+  sanitize_plan(out, allow_duplicated_targets = TRUE)
 }
 
 evaluations <- function(
   plan,
   rules = NULL,
-  expand = TRUE
+  expand = TRUE,
+  always_rename = FALSE
   ){
   if (is.null(rules)){
     return(plan)
@@ -147,8 +163,9 @@ evaluations <- function(
       plan,
       wildcard = names(rules)[index],
       values = rules[[index]],
-      expand = expand
-      )
+      expand = expand,
+      always_rename = always_rename
+    )
   }
   return(plan)
 }
@@ -181,7 +198,7 @@ expand_plan <- function(plan, values = NULL){
   values <- rep(values, times = nrows)
   plan$target <- paste(plan$target, values, sep = "_")
   rownames(plan) <- NULL
-  sanitize_plan(plan)
+  sanitize_plan(plan, allow_duplicated_targets = TRUE)
 }
 
 #' @title Write commands to combine several targets into one
@@ -452,21 +469,20 @@ plan_summaries <- function(
   if (!(length(gather) == dim(plan)[1])){
     stop("gather must be NULL or have length 1 or nrow(plan)")
   }
-  gathered <- ddply(
-    out,
-    group,
-    function(summary_group){
-      summary_type <- summary_group[[group]][1]
+  . <- group_sym <- as.symbol(group)
+  gathered <- group_by(out, !!!group_sym) %>%
+    do({
+      summary_type <- .[[group]][1]
       gather_plan(
-        summary_group,
+        .,
         target = summary_type,
-        gather = gather[which(summary_type == plan$target)])
-    }
-  ) %>%
-    as_tibble
-  out[[group]] <- NULL
-  gathered[[group]] <- NULL
-  return(rbind(gathered, out))
+        gather = gather[which(summary_type == plan$target)]
+      )
+    })
+  target <- command <- NULL
+  bind_rows(gathered, out) %>%
+    ungroup %>%
+    select(target, command)
 }
 
 with_analyses_only <- function(plan){

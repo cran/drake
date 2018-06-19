@@ -8,7 +8,7 @@ loadd(..., list = character(0), imported_only = FALSE, path = getwd(),
   search = TRUE, cache = drake::get_cache(path = path, search = search,
   verbose = verbose), namespace = NULL, envir = parent.frame(), jobs = 1,
   verbose = drake::default_verbose(), deps = FALSE, lazy = "eager",
-  graph = NULL, replace = TRUE)
+  graph = NULL, replace = TRUE, show_source = FALSE)
 }
 \arguments{
 \item{...}{targets to load from the cache: as names (symbols),
@@ -90,6 +90,10 @@ it will be read from the cache.}
 \item{replace}{logical. If \code{FALSE},
 items already in your environment
 will not be replaced.}
+
+\item{show_source}{logical, option to show the command
+that produced the target or indicate that the object
+was imported (using \code{\link[=show_source]{show_source()}}).}
 }
 \value{
 \code{NULL}
@@ -109,7 +113,7 @@ To get these objects, use \code{\link[=readd]{readd()}}.
 \examples{
 \dontrun{
 test_with_dir("Quarantine side effects.", {
-load_basic_example() # Get the code with drake_example("basic").
+load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Run the projects, build the targets.
 loadd(small) # Load target 'small' into your workspace.
 small

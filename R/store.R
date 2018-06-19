@@ -54,15 +54,15 @@ finalize_storage <- function(target, value, meta, config){
 }
 
 store_object <- function(target, value, meta, config) {
-  hash <- config$cache$set(
+  config$cache$set(
     key = target,
-    value = value,
-    namespace = config$cache$default_namespace
+    value = value
   )
-  config$cache$driver$set_hash(
-    key = target,
-    namespace = "kernels",
-    hash = hash
+  config$cache$duplicate(
+    key_src = target,
+    key_dest = target,
+    namespace_src = config$cache$default_namespace,
+    namespace_dest = "kernels"
   )
 }
 
@@ -95,13 +95,12 @@ store_failure <- function(target, meta, config){
     value = "failed",
     config = config
   )
-  for (field in c("messages", "warnings", "error")){
-    set_in_subspace(
-      key = target,
-      value = meta[[field]],
-      subspace = field,
-      namespace = "meta",
-      cache = config$cache
-    )
-  }
+  subspaces <- intersect(c("messages", "warnings", "error"), names(meta))
+  set_in_subspaces(
+    key = target,
+    values = meta[subspaces],
+    subspaces = subspaces,
+    namespace = "meta",
+    cache = config$cache
+  )
 }

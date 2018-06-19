@@ -6,7 +6,8 @@ run_parallel_backend <- function(config){
 }
 
 parallel_filter <- function(x, f, jobs = 1, ...){
-  index <- lightly_parallelize(X = x, FUN = f, jobs = jobs, ...)
+  index <- lightly_parallelize(X = x, FUN = f, jobs = jobs, ...) %>%
+    unlist
   x[as.logical(index)]
 }
 
@@ -27,21 +28,21 @@ lightly_parallelize_atomic <- function(X, FUN, jobs = 1, ...){
   values[index]
 }
 
-jobs_imports <- function(jobs){
-  check_jobs(jobs)
-  if (length(jobs) < 2){
-    jobs
+# x is parallelism or jobs
+imports_setting <- function(x){
+  if (length(x) < 2){
+    x
   } else {
-    unname(jobs["imports"])
+    unname(x["imports"])
   }
 }
 
-jobs_targets <- function(jobs){
-  check_jobs(jobs)
-  if (length(jobs) < 2){
-    jobs
+# x is parallelism or jobs
+targets_setting <- function(x){
+  if (length(x) < 2){
+    x
   } else {
-    unname(jobs["targets"])
+    unname(x["targets"])
   }
 }
 
@@ -51,7 +52,7 @@ safe_jobs <- function(jobs){
 }
 
 safe_jobs_imports <- function(jobs){
-  ifelse(on_windows(), 1, jobs_imports(jobs = jobs))
+  ifelse(on_windows(), 1, imports_setting(jobs))
 }
 
 on_windows <- function(){
@@ -70,15 +71,4 @@ parallelism_warnings <- function(config){
     jobs = config$jobs,
     os = this_os()
   )
-}
-
-use_default_parallelism <- function(parallelism){
-  parallelism <- match.arg(
-    parallelism,
-    choices = parallelism_choices(distributed_only = FALSE)
-  )
-  if (parallelism %in% parallelism_choices(distributed_only = TRUE)){
-    parallelism <- default_parallelism()
-  }
-  parallelism
 }

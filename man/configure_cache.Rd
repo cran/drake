@@ -8,7 +8,8 @@ configure_cache(cache = drake::get_cache(verbose = verbose),
   short_hash_algo = drake::default_short_hash_algo(cache = cache),
   long_hash_algo = drake::default_long_hash_algo(cache = cache),
   log_progress = FALSE, overwrite_hash_algos = FALSE,
-  verbose = drake::default_verbose(), jobs = 1)
+  verbose = drake::default_verbose(), jobs = 1,
+  init_common_values = FALSE)
 }
 \arguments{
 \item{cache}{cache to configure}
@@ -46,6 +47,11 @@ for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
 }}
 
 \item{jobs}{number of jobs for parallel processing}
+
+\item{init_common_values}{logical, whether to set the initial \code{drake}
+version in the cache and other common values.
+Not always a thread safe operation, so should only be \code{TRUE}
+on the master process}
 }
 \value{
 A drake/storr cache.
@@ -58,7 +64,7 @@ to prepare the cache to be called from \code{\link[=make]{make()}}.
 \dontrun{
 test_with_dir("Quarantine side effects.", {
 clean(destroy = TRUE)
-load_basic_example() # Get the code with drake_example("basic").
+load_mtcars_example() # Get the code with drake_example("mtcars").
 config <- make(my_plan) # Run the project, build all the targets.
 # Locate the drake/storr cache of the project
 # inside the master internal configuration list.

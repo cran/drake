@@ -6,7 +6,8 @@
 \usage{
 build_drake_graph(plan = read_drake_plan(),
   targets = drake::possible_targets(plan), envir = parent.frame(),
-  verbose = drake::default_verbose(), jobs = 1, sanitize_plan = TRUE)
+  verbose = drake::default_verbose(), jobs = 1, sanitize_plan = TRUE,
+  console_log_file = NULL)
 }
 \arguments{
 \item{plan}{workflow plan data frame.
@@ -84,6 +85,12 @@ most 4 jobs for targets, run
 \code{make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")}.}
 
 \item{sanitize_plan}{logical, whether to sanitize the workflow plan first.}
+
+\item{console_log_file}{character scalar or \code{NULL}.
+If \code{NULL}, console output will be printed
+to the R console using \code{message()}.
+Otherwise, \code{console_log_file} should be the name of a flat file.
+Console output will be appended to that file.}
 }
 \value{
 An igraph object representing
@@ -100,7 +107,7 @@ to \code{\link[=plot.igraph]{plot.igraph()}} on your graph, or just use
 \examples{
 \dontrun{
 test_with_dir("Quarantine side effects.", {
-load_basic_example() # Get the code with drake_example("basic").
+load_mtcars_example() # Get the code with drake_example("mtcars").
 # Make the igraph network connecting all the targets and imports.
 g <- build_drake_graph(my_plan)
 class(g) # "igraph"
