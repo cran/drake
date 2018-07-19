@@ -119,7 +119,7 @@ backend <- function(...){
 #' # See ?as_drake_filename for examples.
 build_graph <- function(
   plan = read_drake_plan(),
-  targets = drake::possible_targets(plan),
+  targets = plan$target,
   envir = parent.frame(),
   verbose = 1,
   jobs = 1
@@ -155,7 +155,7 @@ build_graph <- function(
 #' # See ?check_plan for examples.
 check <- function(
   plan = read_drake_plan(),
-  targets = drake::possible_targets(plan),
+  targets = plan$target,
   envir = parent.frame(),
   cache = drake::get_cache(verbose = verbose),
   verbose = TRUE
@@ -213,7 +213,7 @@ check <- function(
 #' # See ?drake_config for the examples.
 config <- function(
   plan = read_drake_plan(),
-  targets = drake::possible_targets(plan),
+  targets = plan$target,
   envir = parent.frame(),
   verbose = 1,
   hook = default_hook,
@@ -272,6 +272,67 @@ config <- function(
     graph = graph,
     trigger = trigger,
     skip_imports = skip_imports
+  )
+}
+
+#' @title Deprecated function `dataframes_graph`
+#' @description Use [drake_graph_info()] instead.
+#' @details Deprecated on 2018-06-27.
+#' @export
+#' @keywords internal
+#' @return `args` for \code{\link{system2}(command, args)}
+#' @param config deprecated
+#' @param from deprecated
+#' @param mode deprecated
+#' @param order deprecated
+#' @param subset deprecated
+#' @param build_times deprecated
+#' @param digits deprecated
+#' @param targets_only deprecated
+#' @param split_columns deprecated
+#' @param font_size deprecated
+#' @param from_scratch deprecated
+#' @param make_imports deprecated
+#' @param full_legend deprecated
+#' @examples
+#' # See ?drake_graph_info for examples.
+dataframes_graph <- function(
+  config = drake::read_drake_config(),
+  from = NULL,
+  mode = c("out", "in", "all"),
+  order = NULL,
+  subset = NULL,
+  build_times = "build",
+  digits = 3,
+  targets_only = FALSE,
+  split_columns = NULL,
+  font_size = 20,
+  from_scratch = FALSE,
+  make_imports = TRUE,
+  full_legend = TRUE
+) {
+  .Deprecated(
+    "dataframes_graph",
+    package = "drake",
+    msg = paste(
+      "dataframes_graph() is deprecated.",
+      "Use drake_graph_info() instead."
+    )
+  )
+  drake_graph_info(
+    config = config,
+    from = from,
+    mode = mode,
+    order = order,
+    subset = subset,
+    build_times = build_times,
+    digits = digits,
+    targets_only = targets_only,
+    split_columns = split_columns,
+    font_size = font_size,
+    from_scratch = from_scratch,
+    make_imports = make_imports,
+    full_legend = full_legend
   )
 }
 
@@ -390,6 +451,31 @@ doc_of_function_call <- function(expr){
     input_index <- min(unnamed)
     as.character(args[[input_index]])
   }
+}
+
+#' @title Deprecated. Get a template file for execution on a cluster.
+#' @description Deprecated. Use [drake_hpc_template_file()] instead.
+#' @details Deprecated on 2018-06-27.
+#' @export
+#' @keywords internal
+#' @inheritParams drake_hpc_template_file
+#' @param example name of template file
+#' @examples
+#' # See drake_hpc_template_file() for examples.
+drake_batchtools_tmpl_file <- function(
+  example = drake::drake_hpc_template_files(),
+  to = getwd(),
+  overwrite = FALSE
+){
+  .Deprecated(
+    "drake_batchtools_tmpl_file",
+    package = "drake",
+    msg = paste(
+      "drake_batchtools_tmpl_file() is deprecated. ",
+      "Use drake_hpc_template_file() instead."
+    )
+  )
+  drake_hpc_template_file(file = example, to = to, overwrite = overwrite)
 }
 
 #' @title Deprecated function `evaluate`
@@ -619,12 +705,8 @@ load_basic_example <- function(
   )
   load_mtcars_example(
     envir = envir,
-    seed = seed,
-    cache = cache,
     report_file = report_file,
     overwrite = overwrite,
-    to = to,
-    verbose = verbose,
     force = force
   )
 }
@@ -672,7 +754,7 @@ max_useful_jobs <- function(
   )
   # nocov start
   imports <- match.arg(imports)
-  nodes <- dataframes_graph(config, from_scratch = from_scratch)$nodes
+  nodes <- drake_graph_info(config, from_scratch = from_scratch)$nodes
   if (imports == "none"){
     nodes <- nodes[nodes$status != "imported", ]
   } else if (imports == "files"){
@@ -691,7 +773,33 @@ max_useful_jobs <- function(
   # nocov end
 }
 
-
+#' @title Deprecated: reconfigure an old project (built with drake <= 4.4.0)
+#'   to be compatible with later versions of drake.
+#' @export
+#' @keywords internal
+#' @seealso [rescue_cache()], [make()]
+#' @param path Full path to the cache.
+#' @param jobs number of jobs for light parallelism.
+#' @description Deprecated on May 4, 2018.
+#' This function was intended to migrate a project/cache from
+#' drake 4.4.0 or earlier
+#' to be compatible with the version of drake on your system.
+#' @examples
+#' \dontrun{
+#' # This function is deprecated.
+#' }
+migrate_drake_project <- function(
+  path = drake::default_cache_path(), jobs = 1
+){
+  .Deprecated(
+    package = "drake",
+    msg = c(
+      "migrate_drake_project() is deprecated. Please run ",
+      "make() again on projects built with drake version <= 4.4.0"
+    )
+  )
+}
+  
 #' @title Deprecated function `plan`
 #' @description Use [drake_plan()] instead.
 #' @details Deprecated on 2017-10.
@@ -810,42 +918,41 @@ plan_drake <- function(
 #' @title Deprecated function `plot_graph`
 #' @description Use [vis_drake_graph()] instead.
 #' @details Deprecated on 2017-10.
-#' @seealso [vis_drake_graph()]
 #' @export
 #' @keywords internal
-#' @return Same as for [vis_drake_graph()].
-#' @param plan Same as for [vis_drake_graph()].
-#' @param envir Same as for [vis_drake_graph()].
-#' @param hook Same as for [vis_drake_graph()].
-#' @param cache Same as for [vis_drake_graph()].
-#' @param jobs Same as for [vis_drake_graph()].
-#' @param packages Same as for [vis_drake_graph()].
-#' @param prework Same as for [vis_drake_graph()].
-#' @param verbose Same as for [vis_drake_graph()].
-#' @param config Same as for [vis_drake_graph()].
-#' @param file Same as for [vis_drake_graph()].
-#' @param build_times Same as for [vis_drake_graph()].
-#' @param digits Same as for [vis_drake_graph()].
-#' @param targets_only Same as for [vis_drake_graph()].
-#' @param split_columns Same as for [vis_drake_graph()].
-#' @param font_size Same as for [vis_drake_graph()].
-#' @param layout Same as for [vis_drake_graph()].
-#' @param main Same as for [vis_drake_graph()].
-#' @param direction Same as for [vis_drake_graph()].
-#' @param hover Same as for [vis_drake_graph()].
-#' @param navigationButtons Same as for [vis_drake_graph()]. # nolint
-#' @param from Same as for [vis_drake_graph()].
-#' @param mode Same as for [vis_drake_graph()].
-#' @param order Same as for [vis_drake_graph()].
-#' @param subset Same as for [vis_drake_graph()].
-#' @param ncol_legend Same as for [vis_drake_graph()].
-#' @param make_imports Same as for [vis_drake_graph()].
-#' @param from_scratch Same as for [vis_drake_graph()].
-#' @param ... Same as for [vis_drake_graph()].
+#' @return a `visNetwork` graph
+#' @param plan deprecated
+#' @param envir deprecated
+#' @param hook deprecated
+#' @param cache deprecated
+#' @param jobs deprecated
+#' @param packages deprecated
+#' @param prework deprecated
+#' @param verbose deprecated
+#' @param config deprecated
+#' @param file deprecated
+#' @param build_times deprecated
+#' @param digits deprecated
+#' @param targets_only deprecated
+#' @param split_columns deprecated
+#' @param font_size deprecated
+#' @param layout deprecated
+#' @param main deprecated
+#' @param direction deprecated
+#' @param hover deprecated
+#' @param navigationButtons deprecated
+#' @param from deprecated
+#' @param mode deprecated
+#' @param order deprecated
+#' @param subset deprecated
+#' @param ncol_legend deprecated
+#' @param make_imports deprecated
+#' @param from_scratch deprecated
+#' @param ... deprecated
 #' @examples
 #' # See ?vis_drake_graph for examples.
 plot_graph <- function(
-  plan = read_drake_plan(), targets = drake::possible_targets(plan),
+  plan = read_drake_plan(), targets = plan$target,
   envir = parent.frame(), verbose = 1,
   hook = default_hook,
   cache = drake::get_cache(verbose = verbose),
@@ -1144,29 +1251,28 @@ read_plan <- function(
 #' @title Deprecated function `render_graph`
 #' @description Use [render_drake_graph()] instead.
 #' @details Deprecated on 2017-10.
-#' @seealso [render_drake_graph()]
 #' @export
 #' @keywords internal
-#' @return Same as for [render_drake_graph()].
-#' @param graph_dataframes Same as for [render_drake_graph()].
-#' @param file Same as for [render_drake_graph()].
-#' @param layout Same as for [render_drake_graph()].
-#' @param direction Same as for [render_drake_graph()].
-#' @param hover Same as for [render_drake_graph()].
-#' @param main Same as for [render_drake_graph()].
-#' @param selfcontained Same as for [render_drake_graph()].
-#' @param navigationButtons Same as for [render_drake_graph()]. # nolint
-#' @param ncol_legend Same as for [render_drake_graph()].
-#' @param ... Same as for [render_drake_graph()].
+#' @return a `visNetwork` graph.
+#' @param graph_info deprecated
+#' @param file deprecated
+#' @param layout deprecated
+#' @param direction deprecated
+#' @param hover deprecated
+#' @param main deprecated
+#' @param selfcontained deprecated
+#' @param navigationButtons deprecated
+#' @param ncol_legend deprecated
+#' @param ... deprecated
 #' @examples
 #' # See ?render_drake_graph for examples.
 render_graph <- function(
-  graph_dataframes,
+  graph_info,
   file = character(0),
   layout = "layout_with_sugiyama",
   direction = "LR",
   hover = TRUE,
-  main = graph_dataframes$default_title,
+  main = graph_info$default_title,
   selfcontained = FALSE,
   navigationButtons = TRUE, # nolint
   ncol_legend = 1,
@@ -1182,7 +1288,7 @@ render_graph <- function(
     )
   )
   render_drake_graph(
-    graph_dataframes = graph_dataframes,
+    graph_info = graph_info,
     file = file,
     layout = layout,
     direction = direction,

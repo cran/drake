@@ -1,8 +1,8 @@
 #' @title Create the internal runtime parameter list
 #'   used internally in [make()].
 #' @description This configuration list
-#' is also required for functions such as [outdated()] and
-#' [vis_drake_graph()]. It is meant to be specific to
+#' is also required for functions such as [outdated()].
+#' It is meant to be specific to
 #' a single call to [make()], and you should not modify
 #' it by hand afterwards. If you later plan to call [make()]
 #' with different arguments (especially `targets`),
@@ -16,8 +16,7 @@
 #' [outdated()]
 #' @export
 #' @return The master internal configuration list of a project.
-#' @seealso [make_with_config()], [make()],
-#'   [drake_plan()], [vis_drake_graph()]
+#' @seealso [make()], [drake_plan()], [vis_drake_graph()]
 #' @param plan workflow plan data frame.
 #'   A workflow plan data frame is a data frame
 #'   with a `target` column and a `command` column.
@@ -72,8 +71,8 @@
 #'   For your own custom hooks, treat the first argument as the code
 #'   that builds a target, and make sure this argument is actually evaluated.
 #'   Otherwise, the code will not run and none of your targets will build.
-#'   For example, \code{function(code){force(code)}} is a good hook
-#'   and \code{function(code){message("Avoiding the code")}} is a bad hook.
+#'   For example, `function(code){force(code)}` is a good hook
+#'   and `function(code){message("Avoiding the code")}` is a bad hook.
 #'
 #' @param skip_targets logical, whether to skip building the targets
 #'   in `plan` and just import objects and files.
@@ -87,7 +86,7 @@
 #'   of the user manual.
 #'
 #' @param jobs number of parallel processes or jobs to run.
-#'   See [max_useful_jobs()] or [vis_drake_graph()]
+#'   See [predict_runtime()]
 #'   to help figure out what the number of jobs should be.
 #'   Windows users should not set `jobs > 1` if
 #'   `parallelism` is `"mclapply"` because
@@ -99,17 +98,6 @@
 #'   have different parallelism needs. To use at most 2 jobs at a time
 #'   for imports and at most 4 jobs at a time for targets, call
 #'   `make(..., jobs = c(imports = 2, targets = 4))`.
-#'
-#'   For `"future_lapply"` parallelism, `jobs`
-#'   only applies to the imports.
-#'   To set the max number of jobs for `"future_lapply"`
-#'   parallelism, set the `workers`
-#'   argument where it exists: for example, call
-#'   `future::plan(multisession(workers = 4))`,
-#'   then call \code{\link{make}(your_plan, parallelism = "future_lapply")}.
-#'   You might also try `options(mc.cores = jobs)`,
-#'   or see `future::.options`
-#'   for environment variables that set the max number of jobs.
 #'
 #'   If `parallelism` is `"Makefile"`,  Makefile-level parallelism is
 #'   only used for targets in your workflow plan data frame, not imports.  To
@@ -160,7 +148,7 @@
 #'   but it could also be
 #'   `"lsmake"` on supporting systems, for example.
 #'   `command` and `args` are executed via
-#'   \code{\link{system2}(command, args)} to run the Makefile.
+#'   `system2(command, args)` to run the Makefile.
 #'   If `args` has something like `"--jobs=2"`, or if
 #'   `jobs >= 2` and `args` is left alone, targets
 #'   will be distributed over independent parallel R sessions
@@ -171,7 +159,7 @@
 #'   `jobs` and `verbose` are overwritten as they apply to the
 #'   Makefile.
 #'   `command` and `args` are executed via
-#'   \code{\link{system2}(command, args)} to run the Makefile.
+#'   `system2(command, args)` to run the Makefile.
 #'   If `args` has something like `"--jobs=2"`, or if
 #'   `jobs >= 2` and `args` is left alone, targets
 #'   will be distributed over independent parallel R sessions
@@ -190,8 +178,7 @@
 #'   will no longer work if you do that.
 #'
 #' @param cache drake cache as created by [new_cache()].
-#'   See also [get_cache()], [this_cache()],
-#'   and [recover_cache()]
+#'   See also [get_cache()] and [this_cache()].
 #'
 #' @param fetch_cache character vector containing lines of code.
 #'   The purpose of this code is to fetch the `storr` cache
@@ -228,7 +215,7 @@
 #' @param graph An `igraph` object from the previous `make()`.
 #'   Supplying a pre-built graph could save time.
 #'   The graph is constructed by [build_drake_graph()].
-#'   You can also get one from \code{\link{config}(my_plan)$graph}.
+#'   You can also get one from `drake_config(my_plan)$graph`.
 #'   Overrides `skip_imports`.
 #'
 #' @param trigger Name of the trigger to apply to all targets.
@@ -306,6 +293,18 @@
 #'   use `clean(destroy = TRUE)`.
 #'
 #' @param caching character string, only applies to `"future"` parallelism.
+#'   Can be either `"master"` or `"worker"`.
+#'   - `"master"`: Targets are built by remote workers and sent back to
+#'     the master process. Then, the master process saves them to the
+#'     cache (`config$cache`, usually a file system `storr`).
+#'     Appropriate if remote workers do not have access to the file system
+#'     of the calling R session. Targets are cached one at a time,
+#'     which may be slow in some situations.
+#'   - `"worker"`: Remote workers not only build the targets, but also
+#'     save them to the cache. Here, caching happens in parallel.
+#'     However, remote workers need to have access to the file system
+#'     of the calling R session. Transferring target data across
+#'     a network can be slow.
 #'
 #' @param keep_going logical, whether to still keep running [make()]
 #'   if targets fail.
@@ -321,18 +320,22 @@
 #'   but it causes [make()] to populate your workspace/environment
 #'   with the last few targets it builds.
 #'
-#' @param pruning_strategy Character scalar, either `"speed"` (default)
-#'   or `"memory"`. These are alternative approaches to how `drake`
-#'   keeps non-import dependencies in memory when it builds a target.
-#'   If `pruning_strategy` is `"memory"`, `drake` removes all targets
-#'   from memory (i.e. `config$envir`) except the direct dependencies
-#'   of the target is about to build. This is suitable for data so large
-#'   that the optimal strategy is to minimize memory consumption.
-#'   If `pruning_strategy` is `"speed"`, `drake` loads all the dependencies
-#'   and keeps in memory everything that will eventually be a
-#'   dependency of a downstream target. This strategy consumes more
-#'   memory, but does more to minimize the number of times data is
-#'   read from storage/disk.
+#' @param pruning_strategy Character scalar, name of the
+#'   approach that `drake` takes regarding when to unload targets
+#'   from memory. Choices:
+#'   - `"lookahead"` (default): keep loaded targets in memory until they are
+#'     no longer needed as dependencies in downstream build steps.
+#'     Then, unload them from the environment. This step avoids
+#'     keeping unneeded data in memory and minimizes expensive
+#'     reads from the cache. However, it requires looking ahead
+#'     in the dependency graph, which could add overhead for every
+#'     target of projects with lots of targets.
+#'   - `"speed"`: Once a target is loaded in memory, just keep it there.
+#'     Maximizes speed, but hogs memory.
+#'   - `"memory"`: For each target, unload everything from memory
+#'     except the target's direct dependencies. Conserves memory,
+#'     but sacrifices speed because each new target needs to reload
+#'     any previously unloaded targets from the cache.
 #'
 #' @param makefile_path Path to the `Makefile` for
 #'   `make(parallelism = "Makefile")`. If you set this argument to a
@@ -355,27 +358,25 @@
 #'   (`make(parallelism = x)`, where `x` could be `"mclapply"`,
 #'   `"parLapply"`, or `"future_lapply"`).
 #'
+#' @param garbage_collection logical, whether to call `gc()` each time
+#'   a target is built during [make()].
+#'
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Construct the master internal configuration list.
 #' con <- drake_config(my_plan)
+#' vis_drake_graph(config)
 #' # These functions are faster than otherwise
 #' # because they use the configuration list.
 #' outdated(config = con) # Which targets are out of date?
 #' missed(config = con) # Which imports are missing?
-#' # In make(..., jobs = n), it would be silly to set `n` higher than this:
-#' max_useful_jobs(config = con)
-#' # Show a visNetwork graph
-#' vis_drake_graph(config = con)
-#' # Get the underlying node/edge data frames of the graph.
-#' dataframes_graph(config = con)
 #' })
 #' }
 drake_config <- function(
   plan = read_drake_plan(),
-  targets = drake::possible_targets(plan),
+  targets = NULL,
   envir = parent.frame(),
   verbose = drake::default_verbose(),
   hook = default_hook,
@@ -412,10 +413,11 @@ drake_config <- function(
   keep_going = FALSE,
   session = NULL,
   imports_only = NULL,
-  pruning_strategy = c("speed", "memory"),
+  pruning_strategy = c("lookahead", "speed", "memory"),
   makefile_path = "Makefile",
   console_log_file = NULL,
-  ensure_workers = TRUE
+  ensure_workers = TRUE,
+  garbage_collection = FALSE
 ){
   force(envir)
   unlink(console_log_file)
@@ -426,7 +428,11 @@ drake_config <- function(
     ) # May 4, 2018
   }
   plan <- sanitize_plan(plan)
-  targets <- sanitize_targets(plan, targets)
+  if (is.null(targets)){
+    targets <- plan$target
+  } else {
+    targets <- sanitize_targets(plan, targets)
+  }
   parallelism <- parse_parallelism(parallelism)
   jobs <- parse_jobs(jobs)
   prework <- add_packages_to_prework(
@@ -460,32 +466,61 @@ drake_config <- function(
   } else {
     graph <- prune_drake_graph(graph = graph, to = targets, jobs = jobs)
   }
+  all_targets <- intersect(igraph::V(graph)$name, plan$target)
+  all_imports <- setdiff(igraph::V(graph)$name, all_targets)
   cache_path <- force_cache_path(cache)
   lazy_load <- parse_lazy_arg(lazy_load)
   pruning_strategy <- match.arg(pruning_strategy)
   list(
-    plan = plan, targets = targets, envir = envir,
-    cache = cache, cache_path = cache_path, fetch_cache = fetch_cache,
-    parallelism = parallelism, jobs = jobs, verbose = verbose, hook = hook,
-    prepend = prepend, prework = prework, command = command,
-    args = args, recipe_command = recipe_command, graph = graph,
+    plan = plan,
+    targets = targets,
+    envir = envir,
+    cache = cache,
+    cache_path = cache_path,
+    fetch_cache = fetch_cache,
+    parallelism = parallelism,
+    jobs = jobs,
+    jobs_imports = jobs["imports"],
+    jobs_targets = jobs["targets"],
+    verbose = verbose,
+    hook = hook,
+    prepend = prepend,
+    prework = prework,
+    command = command,
+    args = args,
+    recipe_command = recipe_command,
+    graph = graph,
     short_hash_algo = cache$get("short_hash_algo", namespace = "config"),
     long_hash_algo = cache$get("long_hash_algo", namespace = "config"),
-    seed = seed, trigger = trigger,
-    timeout = timeout, cpu = cpu, elapsed = elapsed, retries = retries,
-    skip_targets = skip_targets, skip_imports = skip_imports,
-    skip_safety_checks = skip_safety_checks, log_progress = log_progress,
-    lazy_load = lazy_load, session_info = session_info,
-    cache_log_file = cache_log_file, caching = match.arg(caching),
-    evaluator = future::plan("next"), keep_going = keep_going,
-    session = session, pruning_strategy = pruning_strategy,
-    makefile_path = makefile_path, console_log_file = console_log_file,
-    ensure_workers = ensure_workers
+    seed = seed,
+    trigger = trigger,
+    timeout = timeout,
+    cpu = cpu,
+    elapsed = elapsed,
+    retries = retries,
+    skip_targets = skip_targets,
+    skip_imports = skip_imports,
+    skip_safety_checks = skip_safety_checks,
+    log_progress = log_progress,
+    lazy_load = lazy_load,
+    session_info = session_info,
+    cache_log_file = cache_log_file,
+    caching = match.arg(caching),
+    evaluator = future::plan("next"),
+    keep_going = keep_going,
+    session = session,
+    pruning_strategy = pruning_strategy,
+    makefile_path = makefile_path,
+    console_log_file = console_log_file,
+    ensure_workers = ensure_workers,
+    all_targets = all_targets,
+    all_imports = all_imports,
+    garbage_collection = garbage_collection
   )
 }
 
 add_packages_to_prework <- function(packages, prework) {
-  packages <- unique(c("methods", packages))
+  packages <- unique(c("methods", "drake", packages))
   paste0("if(!R.utils::isPackageLoaded(\"", packages, "\")) require(",
     packages, ")", sep = "") %>% c(prework)
 }
@@ -521,29 +556,6 @@ do_prework <- function(config, verbose_packages) {
   for (code in config$prework) wrapper(eval(parse(text = code),
     envir = config$envir))
   invisible()
-}
-
-#' @title List the possible targets for the `targets`
-#'   argument to [make()], given a workflow plan
-#'   data frame.
-#' @description Intended for internal use only.
-#' @seealso [make()]
-#' @keywords internal
-#' @export
-#' @return Character vector of possible targets given the workflow plan.
-#' @param plan workflow plan data frame
-#' @examples
-#' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
-#' load_mtcars_example() # Get the code with drake_example("mtcars").
-#' # List the possible targets you could choose for the
-#' # `targets` argument to make(). You may choose any subset.
-#' possible_targets(my_plan)
-#' })
-#' }
-possible_targets <- function(plan = read_drake_plan()) {
-  plan <- sanitize_plan(plan)
-  as.character(plan$target)
 }
 
 #' @title Store an internal configuration list

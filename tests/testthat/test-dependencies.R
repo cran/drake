@@ -1,30 +1,27 @@
 drake_context("dependencies")
 
-test_with_dir("safe_find_globals", {
-  expect_warning(
-    safe_find_globals(new.env()),
-    regexp = "implicit dependencies"
-  )
-})
-
 test_with_dir("unparsable commands are handled correctly", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- "bluh$"
   expect_false(is_parsable(x))
   expect_error(deps_code(x))
 })
 
 test_with_dir("magrittr dot is ignored", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_equal(
-    sort(deps_code("sqrt(x + y + .)")),
+    sort(clean_dependency_list(deps_code("sqrt(x + y + .)"))),
     sort(c("sqrt", "x", "y"))
   )
   expect_equal(
-    sort(deps_code("dplyr::filter(complete.cases(.))")),
+    sort(clean_dependency_list(
+      deps_code("dplyr::filter(complete.cases(.))"))),
     sort(c("complete.cases", "dplyr::filter"))
   )
 })
 
 test_with_dir("file_out() and knitr_in(): commands vs imports", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   cmd <- "file_in(\"x\"); file_out(\"y\"); knitr_in(\"report.Rmd\")"
   f <- function(){
     file_in("x")
@@ -39,25 +36,30 @@ test_with_dir("file_out() and knitr_in(): commands vs imports", {
     mustWork = TRUE
   )
   file.copy(from = path, to = getwd(), overwrite = TRUE)
-  x <- commands_edges("\"y\"", cmd)
-  y <- imports_edges("f", f)
-  expect_equal(
-    sort(x$from),
-    sort(
-      c("coef_regression2_small", "large",
-        "\"report.Rmd\"", "small", "\"x\""
-      )
-    )
+  x <- command_dependencies(cmd)
+  x0 <- list(
+    file_in = "\"x\"", file_out = "\"y\"", loadd = "large",
+    readd = c("small", "coef_regression2_small"),
+    knitr_in = "\"report.Rmd\"")
+  expect_equal(length(x), length(x0))
+  for (i in names(x)){
+    expect_equal(sort(x[[i]]), sort(x0[[i]]) )
+  }
+  y <- import_dependencies(f)
+  y0 <- list(
+    file_in = "\"x\"",
+    knitr_in = "\"report.Rmd\"",
+    loadd = "large",
+    readd = c("small", "coef_regression2_small")
   )
-  expect_equal(x$to, rep("\"y\"", 5))
+  expect_equal(length(y), length(y0))
+  for (i in names(y)){
+    expect_equal(sort(y[[i]]), sort(y0[[i]]) )
+  }
   expect_equal(
-    sort(y$from),
-    sort(c("\"report.Rmd\"", "\"x\""))
-  )
-  expect_equal(y$to, rep("f", 2))
-  expect_equal(sort(deps_code(f)), sort(c("\"report.Rmd\"", "\"x\"")))
+    sort(clean_dependency_list(deps_code(f))), sort(unname(unlist(y))))
   expect_equal(
-    sort(deps_code(cmd)),
+    sort(clean_dependency_list(deps_code(cmd))),
     sort(
       c("coef_regression2_small", "large",
         "\"report.Rmd\"", "small", "\"x\"", "\"y\""
@@ -68,20 +70,22 @@ test_with_dir("file_out() and knitr_in(): commands vs imports", {
 
 test_with_dir(
   "deps_code() correctly reports dependencies of functions and commands", {
-  expect_equal(deps_code(""), character(0))
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  expect_equal(length(deps_code("")), 0)
   expect_equal(length(command_dependencies(NA)), 0)
   expect_equal(length(command_dependencies(NULL)), 0)
   expect_equal(length(command_dependencies(character(0))), 0)
-  expect_equal(deps_code(base::c), character(0))
-  expect_equal(deps_code(base::list), character(0))
-  expect_equal(deps_code(NA), character(0))
+  expect_equal(clean_dependency_list(deps_code(base::c)), character(0))
+  expect_equal(clean_dependency_list(deps_code(base::list)), character(0))
+  expect_equal(clean_dependency_list(deps_code(NA)), character(0))
   f <- function(x, y) {
     out <- x + y + g(x)
     saveRDS(out, "out.rds")
   }
   expect_false(is_vectorized(f))
   expect_false(is_vectorized("char"))
-  expect_equal(sort(deps_code(f)), sort(c("g", "saveRDS")))
+  expect_equal(
+    sort(clean_dependency_list(deps_code(f))), sort(c("g", "saveRDS")))
   my_plan <- drake_plan(
     x = 1 + some_object,
     my_target = x + readRDS(file_in("tracked_input_file.rds")),
@@ -90,32 +94,34 @@ test_with_dir(
     meta = read.table(file_in("file_in")),
     strings_in_dots = "literals"
   )
-  expect_equal(deps_code(my_plan$command[1]), "some_object")
-  expect_equal(sort(deps_code(my_plan$command[2])),
+  expect_equal(
+    clean_dependency_list(deps_code(my_plan$command[1])), "some_object")
+  expect_equal(sort(
+    clean_dependency_list(deps_code(my_plan$command[2]))),
     sort(c("\"tracked_input_file.rds\"", "readRDS", "x")))
-  expect_equal(sort(deps_code(my_plan$command[3])), sort(c("f", "g", "w",
+  expect_equal(sort(
+    clean_dependency_list(deps_code(my_plan$command[3]))), sort(c("f", "g", "w",
     "x", "y", "z")))
-  expect_equal(sort(deps_code(my_plan$command[4])), sort(c("read.csv")))
-  expect_equal(sort(deps_code(my_plan$command[5])),
+  expect_equal(sort(
+    clean_dependency_list(deps_code(my_plan$command[4]))), sort(c("read.csv")))
+  expect_equal(
+    sort(clean_dependency_list(deps_code(my_plan$command[5]))),
     sort(c("read.table", "\"file_in\"")))
 })
 
 test_with_dir("tracked() works", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- dbug()
-  x <- sort(
-    tracked(plan = config$plan, envir = config$envir, verbose = FALSE))
-  y <- sort(c("\"intermediatefile.rds\"",
+  x <- sort(tracked(config))
+  y <- sort(c("\"intermediatefile.rds\"", "drake_target_1",
     "yourinput", "nextone",
     "combined", "myinput", "final", "j", "i", "h", "g", "f",
     "c", "b", "a", "saveRDS", "\"input.rds\"", "readRDS"))
   expect_equal(x, y)
-  x <- sort(tracked(plan = config$plan, targets = "myinput",
-    envir = config$envir, verbose = FALSE))
-  y <- sort(c("myinput", "\"input.rds\"", "readRDS"))
-  expect_equal(x, y)
 })
 
 test_with_dir("missing files via check_plan()", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- dbug()
   expect_silent(check_plan(config$plan, envir = config$envir))
   expect_silent(tmp <- missing_input_files(config))
@@ -126,6 +132,7 @@ test_with_dir("missing files via check_plan()", {
 })
 
 test_with_dir("Vectorized nested functions work", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   e <- new.env(parent = globalenv())
   eval(parse(text = "f <- Vectorize(function(x) g(x), \"x\")"),
        envir = e)
@@ -135,8 +142,8 @@ test_with_dir("Vectorized nested functions work", {
   config$envir <- e
   config$plan <- drake_plan(a = f(1:10))
   config$targets <- "a"
-  expect_equal(deps_code(e$f), "g")
-  expect_equal(deps_code(e$g), "y")
+  expect_equal(clean_dependency_list(deps_code(e$f)), "g")
+  expect_equal(clean_dependency_list(deps_code(e$g)), "y")
 
   config <- testrun(config)
   if ("a" %in% ls(config$envir)){
@@ -163,10 +170,11 @@ test_with_dir("Vectorized nested functions work", {
 })
 
 test_with_dir("deps_targets()", {
-  load_mtcars_example(cache = storr::storr_environment())
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  load_mtcars_example()
   config <- drake_config(my_plan, cache = storr::storr_environment())
   expect_equal(
-    sort(deps_targets(file_store("report.md"), config = config)),
+    sort(deps_targets("report", config = config)),
     sort(
       c(
         "coef_regression2_small", "knit", "large",
@@ -183,7 +191,14 @@ test_with_dir("deps_targets()", {
     sort(c(
       "regression1_large", "regression1_small",
       "regression2_large", "regression2_small",
-      file_store("report.md")
+      "report"
     ))
   )
+  config <- dbug()
+  deps <- sort(deps_targets(config$targets, config))
+  truth <- sort(c(
+    "combined", "saveRDS", "f", "g", "myinput",
+    "nextone", "yourinput", "\"input.rds\"", "readRDS", "drake_target_1"
+  ))
+  expect_equal(deps, truth)
 })

@@ -49,7 +49,7 @@ force_cache_path <- function(cache = NULL){
 #' @description Only works if the cache
 #' is in a folder called `.drake/`.
 #' @seealso [this_cache()], [new_cache()],
-#'   [recover_cache()], [config()]
+#'   [recover_cache()], [drake_config()]
 #' @export
 #' @return A drake/storr cache in a folder called `.drake/`,
 #'   if available. `NULL` otherwise.
@@ -328,7 +328,7 @@ default_cache_path <- function(){
 #'   See [default_short_hash_algo()] for more.
 #'
 #' @param long_hash_algo long hash algorithm for drake.
-#'   The long algorithm must be among \code{\link{available_hash_algos}{}},
+#'   The long algorithm must be among [available_hash_algos()],
 #'   which is just the collection of algorithms available to the `algo`
 #'   argument in `digest::digest()`.
 #'   See [default_long_hash_algo()] for more.
@@ -494,3 +494,28 @@ kernel_exists <- function(target, config){
 }
 
 target_exists <- kernel_exists
+
+assert_compatible_cache <- function(cache){
+  if (is.null(cache)){
+    return()
+  }
+  err <- try(
+    old <- drake_version(session_info = drake_session(cache = cache)), # nolint
+    silent = TRUE
+  )
+  if (inherits(err, "try-error")){
+    return(invisible())
+  }
+  comparison <- compareVersion(old, "4.4.0")
+  if (comparison > 0){
+    return(invisible())
+  }
+  current <- packageVersion("drake")
+  path <- cache$driver$path
+  stop(
+    "The project at '", path, "' was previously built by drake ", old, ". ",
+    "You are running drake ", current, ", which is not back-compatible. ",
+    "Run make(..., force = TRUE) to update.",
+    call. = FALSE
+  )
+}

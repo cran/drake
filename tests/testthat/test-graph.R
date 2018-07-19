@@ -1,6 +1,7 @@
 drake_context("graph")
 
 test_with_dir("Recursive functions are okay", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   factorial <- function(n){
     if (n == 0){
       1
@@ -14,26 +15,18 @@ test_with_dir("Recursive functions are okay", {
 })
 
 test_with_dir("Supplied graph is not an igraph.", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_error(prune_drake_graph(12345, to = "node"))
 })
 
-test_with_dir("graph does not fail if input file is binary", {
-  x <- drake_plan(
-    y = readRDS(file_in("input.rds")),
-    strings_in_dots = "literals"
-  )
-  saveRDS(as.list(mtcars), "input.rds")
-  con <- drake_config(x, verbose = FALSE)
-  expect_silent(out <- vis_drake_graph(con))
-  unlink("input.rds", force = TRUE)
-})
-
 test_with_dir("null graph", {
-  x <- dataframes_graph(config = list(graph = igraph::make_empty_graph()))
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  x <- drake_graph_info(config = list(graph = igraph::make_empty_graph()))
   expect_equal(x, null_graph())
 })
 
 test_with_dir("circular non-DAG drake_plans quit in error", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- drake_plan(a = b, b = c, c = a)
   expect_error(tmp <- capture.output(check_plan(x)))
   expect_error(
@@ -52,6 +45,7 @@ test_with_dir("circular non-DAG drake_plans quit in error", {
 })
 
 test_with_dir("Supplied graph disagrees with the workflow plan", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   con <- dbug()
   con2 <- drake_config(drake_plan(a = 1), verbose = FALSE)
   expect_warning(
@@ -65,21 +59,15 @@ test_with_dir("Supplied graph disagrees with the workflow plan", {
   )
 })
 
-test_with_dir("graph functions work", {
+test_with_dir("build_drake_graph() works", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- dbug()
   expect_equal(
     class(build_drake_graph(config$plan, verbose = FALSE)), "igraph")
-  pdf(NULL)
-  tmp <- vis_drake_graph(config)
-  dev.off()
-  pdf(NULL)
-  tmp <- vis_drake_graph(config, full_legend = FALSE)
-  dev.off()
-  unlink("Rplots.pdf", force = TRUE)
-  expect_true(is.character(default_graph_title()))
 })
 
 test_with_dir("Supplied graph is pruned.", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   load_mtcars_example()
   graph <- build_drake_graph(my_plan)
   con <- drake_config(my_plan, targets = c("small", "large"), graph = graph)
@@ -90,52 +78,42 @@ test_with_dir("Supplied graph is pruned.", {
   expect_false(any(exclude %in% vertices))
 })
 
-test_with_dir("graphing args are not ignored (mtcars example)", {
-  skip_on_cran() # too slow for CRAN
-  scenario <- get_testing_scenario()
-  e <- eval(parse(text = scenario$envir))
-  jobs <- scenario$jobs
-  parallelism <- scenario$parallelism
+test_with_dir("we can generate different visNetwork dependency graphs", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("lubridate")
+  load_mtcars_example()
+  config <- drake_config(my_plan)
 
-  load_mtcars_example(envir = e)
-  my_plan <- e$my_plan
-  config <- drake_config(my_plan, envir = e,
-                         jobs = jobs, parallelism = parallelism,
-                         verbose = FALSE)
-
-  tmp <- vis_drake_graph(config = config)
-  expect_false(file.exists("Makefile"))
-
-  # Different graph configurations should be checked manually.
+  # Different graph configurations should be checked visually.
   expect_warning(
-    tmp <- dataframes_graph(
+    tmp <- drake_graph_info(
       config = config, build_times = FALSE, from_scratch = TRUE))
   expect_warning(
-    tmp <- dataframes_graph(config = config, split_columns = TRUE))
+    tmp <- drake_graph_info(config = config, split_columns = TRUE))
   expect_warning(
-    tmp <- dataframes_graph(config = config, build_times = FALSE))
-  tmpcopy <- dataframes_graph(config = config,
+    tmp <- drake_graph_info(config = config, build_times = FALSE))
+  tmpcopy <- drake_graph_info(config = config,
     make_imports = FALSE, build_times = "none")
-  tmp0 <- dataframes_graph(config = config, build_times = "none",
+  tmp0 <- drake_graph_info(config = config, build_times = "none",
     subset = c("small", "regression2_large"))
-  tmp1 <- dataframes_graph(config = config, build_times = "none",
+  tmp1 <- drake_graph_info(config = config, build_times = "none",
     from = "small")
-  tmp2 <- dataframes_graph(config = config, build_times = "none",
+  tmp2 <- drake_graph_info(config = config, build_times = "none",
     from = "small", targets_only = TRUE)
-  tmp3 <- dataframes_graph(config = config, build_times = "none",
+  tmp3 <- drake_graph_info(config = config, build_times = "none",
     targets_only = TRUE)
-  tmp4 <- dataframes_graph(config = config, build_times = "none",
+  tmp4 <- drake_graph_info(config = config, build_times = "none",
     targets_only = TRUE)
-  tmp5 <- dataframes_graph(config = config, build_times = "build",
+  tmp5 <- drake_graph_info(config = config, build_times = "build",
     targets_only = TRUE)
-  tmp6 <- dataframes_graph(config = config, build_times = "build",
+  tmp6 <- drake_graph_info(config = config, build_times = "build",
     targets_only = TRUE, from_scratch = FALSE)
   expect_warning(
-    tmp7 <- dataframes_graph(config = config, build_times = "none",
+    tmp7 <- drake_graph_info(config = config, build_times = "none",
                              from = c("small", "not_found"))
   )
   expect_error(
-    tmp8 <- dataframes_graph(config = config, build_times = "none",
+    tmp8 <- drake_graph_info(config = config, build_times = "none",
                              from = "not_found")
   )
   expect_equal(nrow(tmp0$nodes), 2)
@@ -153,9 +131,118 @@ test_with_dir("graphing args are not ignored (mtcars example)", {
   expect_equal(sort(outdated(config = config)),
                sort(c(config$plan$target)))
   expect_false(file.exists("Makefile"))
+})
 
-  file <- "graph.html"
-  expect_false(file.exists(file))
-  vis_drake_graph(config = config, file = file)
-  expect_true(file.exists(file))
+test_with_dir("clusters", {
+  skip_on_cran()
+  plan <- drake_plan(x = rnorm(n__), y = rexp(n__))
+  plan <- evaluate_plan(plan, wildcard = "n__", values = 1:2, trace = TRUE)
+  cache <- storr::storr_environment()
+  config <- drake_config(plan, cache = cache)
+  o1 <- drake_graph_info(config)
+  o1$nodes$level <- as.integer(o1$nodes$level)
+  o2 <- drake_graph_info(config, group = "n__", clusters = "asdfae")
+  o3 <- drake_graph_info(config, group = "n__")
+  o4 <- drake_graph_info(config, group = "adfe")
+  o1$nodes$label <- o2$nodes$label <- o3$nodes$label <- o4$nodes$label <-
+    NULL
+  expect_equal(o1$nodes, o2$nodes)
+  expect_equal(o1$nodes, o3$nodes)
+  expect_equal(o1$nodes, o4$nodes)
+  o <- drake_graph_info(config, group = "n__", clusters = "1")
+  expect_equal(nrow(o$nodes), 5)
+  expect_equal(
+    sort(o$nodes$id),
+    sort(c("rexp", "rnorm", "x_2", "y_2", "n__: 1"))
+  )
+  node <- o$nodes[o$nodes$id == "n__: 1", ]
+  expect_equal(node$id, "n__: 1")
+  expect_equal(node$type, "cluster")
+  expect_equal(node$shape, unname(shape_of("cluster")))
+  o <- drake_graph_info(config, group = "n__", clusters = c("1", "2", "bla"))
+  expect_equal(nrow(o$nodes), 4)
+  expect_equal(
+    sort(o$nodes$id),
+    sort(c("rexp", "rnorm", "n__: 1", "n__: 2"))
+  )
+  for (x in c("n__: 1", "n__: 2")){
+    node <- o$nodes[o$nodes$id == x, ]
+    expect_equal(node$id, x)
+    expect_equal(node$type, "cluster")
+    expect_equal(node$shape, unname(shape_of("cluster")))
+  }
+  make(plan, targets = c("x_1", "y_2"), cache = cache, session_info = FALSE)
+  o <- drake_graph_info(config, group = "status", clusters = "up to date")
+  expect_equal(nrow(o$nodes), 5)
+  expect_equal(
+    sort(o$nodes$id),
+    sort(c("rexp", "rnorm", "x_2", "y_1", "status: up to date"))
+  )
+  node <- o$nodes[o$nodes$id == "status: up to date", ]
+  expect_equal(node$id, "status: up to date")
+  expect_equal(node$type, "cluster")
+  expect_equal(node$shape, unname(shape_of("cluster")))
+})
+
+test_with_dir("can get the graph info when a file is missing", {
+  skip_on_cran()
+  load_mtcars_example()
+  unlink("report.Rmd")
+  expect_warning(
+    config <- drake_config(
+      my_plan,
+      cache = storr::storr_environment(),
+      session_info = FALSE
+    )
+  )
+  suppressWarnings(o <- drake_graph_info(config))
+  expect_true("missing" %in% o$nodes$status)
+})
+
+test_with_dir("misc graph utils", {
+  expect_true(is.character(default_graph_title()))
+})
+
+test_with_dir("file_out()/file_in() connections", {
+  plan <- drake_plan(
+    out1 = saver1,
+    saver1 = file_out("a", "b", "c"),
+    reader3 = file_in("b", "d"),
+    saver2 = file_out("d"),
+    out2 = reader2,
+    reader1 = file_in("c", "d"),
+    reader2 = file_in("a", "b"),
+    strings_in_dots = "literals"
+  )
+  config <- drake_config(
+    plan,
+    session_info = FALSE,
+    cache = storr::storr_environment()
+  )
+  expect_equal(dependencies("out1", config), "saver1")
+  expect_equal(dependencies("saver1", config), character(0))
+  expect_equal(
+    sort(dependencies("reader3", config)),
+    sort(c("saver1", "saver2"))
+  )
+  expect_equal(dependencies("saver2", config), character(0))
+  expect_equal(dependencies("out2", config), "reader2")
+  expect_equal(
+    sort(dependencies("reader1", config)),
+    sort(c("saver1", "saver2"))
+  )
+  expect_equal(dependencies("reader2", config), "saver1")
+  expect_equal(dependencies("out1", config, reverse = TRUE), character(0))
+  expect_equal(
+    sort(dependencies("saver1", config, reverse = TRUE)),
+    sort(c("out1", "reader1", "reader2", "reader3"))
+  )
+  expect_equal(dependencies("reader3", config, reverse = TRUE), character(0))
+  expect_equal(
+    sort(dependencies("saver2", config, reverse = TRUE)),
+    sort(c("reader1", "reader3"))
+  )
+  expect_equal(dependencies("out2", config, reverse = TRUE), character(0))
+  expect_equal(dependencies("reader1", config, reverse = TRUE), character(0))
+  expect_equal(dependencies("reader2", config, reverse = TRUE), "out2")
 })

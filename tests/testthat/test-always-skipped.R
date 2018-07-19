@@ -3,6 +3,7 @@ if (FALSE){
 drake_context("always skipped")
 
 test_with_dir("make() uses the worker column of the plan", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time restrictions).
   future::plan(future::sequential)
   envir <- new.env(parent = globalenv())
   load_mtcars_example(envir = envir)
@@ -25,6 +26,56 @@ test_with_dir("make() uses the worker column of the plan", {
   expect_true(length(intersect(q2$log()$title, my_plan$target)) > 1)
   expect_false(length(intersect(q3$log()$title, my_plan$target)) > 1)
   expect_true(length(intersect(q4$log()$title, my_plan$target)) > 1)
+})
+
+# Always skipped due to the obtrusive error messages.
+test_with_dir("failed mclapply workers terminate gracefully", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  plan <- drake_plan(
+    a = stop(123),
+    b = a + 1
+  )
+  make(plan, jobs = 2, session_info = FALSE, verbose = FALSE)
+  expect_false(any(c("a", "b") %in% cached()))
+  plan <- drake_plan(
+    a = 123,
+    b = a + 1
+  )
+  make(plan, jobs = 2, session_info = FALSE)
+  expect_equal(readd(b), 124)
+})
+
+# Always skipped due to the obtrusive error messages.
+test_with_dir("failed future_lapply workers terminate gracefully", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  plan <- drake_plan(
+    a = stop(123),
+    b = a + 1
+  )
+  future::plan(future::sequential)
+  make(
+    plan, jobs = 1, parallelism = "future_lapply",
+    session_info = FALSE, verbose = FALSE
+  )
+  expect_false(any(c("a", "b") %in% cached()))
+  plan <- drake_plan(
+    a = 123,
+    b = a + 1
+  )
+  make(plan, jobs = 2, session_info = FALSE)
+  expect_equal(readd(b), 124)
+})
+
+test_with_dir("can keep going in parallel", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  plan <- drake_plan(
+    a = stop(123),
+    b = a + 1
+  )
+  make(
+    plan, jobs = 2, session_info = FALSE, keep_going = TRUE, verbose = FALSE)
+  expect_error(readd(a))
+  expect_equal(readd(b), numeric(0))
 })
 
 }

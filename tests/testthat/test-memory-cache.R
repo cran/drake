@@ -1,6 +1,7 @@
 drake_context("memory cache")
 
 test_with_dir("storr_environment is usable", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- storr_environment(hash_algorithm = "murmur32") %>%
     configure_cache(
       long_hash_algo = "sha1",
@@ -19,12 +20,14 @@ test_with_dir("storr_environment is usable", {
 })
 
 test_with_dir("arbitrary storr in-memory cache", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("lubridate")
   expect_false(file.exists(default_cache_path()))
   parallelism <- default_parallelism()
   jobs <- 1
   envir <- eval(parse(text = get_testing_scenario()$envir))
   cache <- storr::storr_environment(hash_algorithm = "murmur32")
-  load_mtcars_example(envir = envir, cache = cache)
+  load_mtcars_example(envir = envir)
   my_plan <- envir$my_plan
   con <- make(
     my_plan,
@@ -65,9 +68,6 @@ test_with_dir("arbitrary storr in-memory cache", {
 
   o1 <- outdated(con)
   expect_equal(length(o1), 7)
-  expect_false(file.exists(default_cache_path()))
-
-  p <- vis_drake_graph(con, file = "graph.html")
   expect_false(file.exists(default_cache_path()))
 
   p1 <- progress(verbose = FALSE)

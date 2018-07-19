@@ -1,4 +1,4 @@
-drake_context("workflow plan")
+drake_context("plan")
 
 test_with_dir("duplicated targets", {
   expect_error(
@@ -46,6 +46,7 @@ test_with_dir("duplicated targets", {
 })
 
 test_with_dir("warn about <- and -> in drake_plan()", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_silent(tmp <- drake_plan())
   expect_silent(tmp <- drake_plan(a = 1, b = 2))
   expect_silent(
@@ -83,29 +84,28 @@ test_with_dir("warn about <- and -> in drake_plan()", {
 })
 
 test_with_dir("File functions handle input", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_equal(
     file_in(1, "x", "y"), c("1", "x", "y")
   )
   expect_equal(
     knitr_in(1, "x", "y"), c("1", "x", "y")
   )
-  expect_warning(expect_equal(file_out(c(1, "x", "y")), "1"))
-  expect_error(file_out(1, "x", "y"))
+  expect_equal(
+    file_out(1, "x", "y"), c("1", "x", "y")
+  )
   expect_equal(
     code_dependencies(quote(file_out(c("file1", "file2")))),
     list(file_out = drake_quotes(c("file1", "file2"), single = FALSE))
   )
-  expect_error(
-    single_file_out(""),
-    regexp = "found an empty"
-  )
 })
 
 test_with_dir("edge cases for plans", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   # empty plan
   expect_equal(
     drake_plan(),
-    tibble(
+    tibble::tibble(
       target = character(0),
       command = character(0)
     )
@@ -113,7 +113,7 @@ test_with_dir("edge cases for plans", {
   # no target names
   expect_equal(
     drake_plan(a, b),
-    tibble(
+    tibble::tibble(
       target = c("drake_target_1", "drake_target_2"),
       command = c("a", "b")
     )
@@ -125,7 +125,7 @@ test_with_dir("edge cases for plans", {
   # incomplete target names
   expect_equal(
     drake_plan(a = 1, b),
-    tibble(
+    tibble::tibble(
       target = c("a", "drake_target_1"),
       command = c("1", "b")
     )
@@ -133,39 +133,22 @@ test_with_dir("edge cases for plans", {
   # too many file outputs
   expect_warning(expect_equal(
     drake_plan(a = file_out("file1", "file2")),
-    tibble(
-      target = c("\"file1\""),
+    tibble::tibble(
+      target = "a",
       command = "file_out('file1', 'file2')"
     )
   ))
   expect_warning(expect_equal(
     drake_plan(a = file_out(c("file1", "file2"))),
-    tibble(
-      target = c("\"file1\""),
+    tibble::tibble(
+      target = "a",
       command = "file_out(c('file1', 'file2'))"
     )
   ))
 })
 
-test_with_dir("plan set 1", {
-  for (tidy_evaluation in c(TRUE, FALSE)){
-    expect_warning(x <- drake_plan(
-      a = c,
-      b = "c",
-      list = c(c = "d", d = "readRDS('e')"),
-      tidy_evaluation = tidy_evaluation,
-      strings_in_dots = "filenames"
-    ))
-    y <- tibble(
-      target = letters[1:4],
-      command = c("c", "'c'",
-      "d", "readRDS('e')"))
-    expect_equal(x, y)
-    expect_warning(check_plan(x))
-  }
-})
-
 test_with_dir("plan set 2", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   for (tidy_evaluation in c(TRUE, FALSE)){
     x <- drake_plan(
       a = c,
@@ -183,6 +166,7 @@ test_with_dir("plan set 2", {
 })
 
 test_with_dir("plan set 3", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   for (tidy_evaluation in c(TRUE, FALSE)){
   expect_warning(x <- drake_plan(
     a = c,
@@ -191,13 +175,14 @@ test_with_dir("plan set 3", {
     strings_in_dots = "literals", file_targets = TRUE,
     tidy_evaluation = tidy_evaluation))
   y <- tibble::tibble(
-    target = drake::drake_quotes(letters[1:4], single = FALSE),
+    target = drake::drake_quotes(letters[1:4], single = TRUE),
     command = c("c", "\"c\"", "d", "readRDS('e')"))
   expect_equal(x, y)
   }
 })
 
 test_with_dir("drake_plan() trims outer whitespace in target names", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   for (tidy_evaluation in c(TRUE, FALSE)){
     x <- drake_plan(list = c(` a` = 1, `b \t\n` = 2),
                     tidy_evaluation = tidy_evaluation)
@@ -206,7 +191,9 @@ test_with_dir("drake_plan() trims outer whitespace in target names", {
   }
 })
 
-test_with_dir("make() and check_plan() trim outer whitespace in target names", {
+test_with_dir(
+  "make() and check_plan() trim outer whitespace in target names", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- tibble(target = c("a\n", "  b", "c ", "\t  d   "),
                   command = 1)
   expect_silent(make(x, verbose = FALSE, session_info = FALSE))
@@ -214,7 +201,6 @@ test_with_dir("make() and check_plan() trim outer whitespace in target names", {
   stat <- c(a = "finished", b = "finished", c = "finished",
             d = "finished")
   expect_equal(progress(), stat)
-
   expect_warning(
     con <- make(
       x,
@@ -228,6 +214,7 @@ test_with_dir("make() and check_plan() trim outer whitespace in target names", {
 })
 
 test_with_dir("make() plays nicely with tibbles", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("pillar")
   skip_if_not_installed("tibble")
   x <- tibble::tribble(~target, ~command, "nothing", 1)
@@ -236,6 +223,7 @@ test_with_dir("make() plays nicely with tibbles", {
 })
 
 test_with_dir("check_plan() finds bad symbols", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- tibble(
     target = c("gotcha", "b", "\"targs\"", "a'x'", "b'x'"),
     command = 1)
@@ -251,6 +239,7 @@ test_with_dir("check_plan() finds bad symbols", {
 })
 
 test_with_dir("illegal target names get fixed", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   pl <- tibble(
     target = c("_a", "a^", "a*", "a-"),
     command = 1
@@ -268,6 +257,7 @@ test_with_dir("illegal target names get fixed", {
 })
 
 test_with_dir("issue 187 on Github (from Kendon Bell)", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   test <- drake_plan(test = run_it(wc__))
   out <- expect_warning(
     evaluate_plan(test, rules = list(wc__ = list(1:4, 5:8, 9:12)))
@@ -280,6 +270,7 @@ test_with_dir("issue 187 on Github (from Kendon Bell)", {
 })
 
 test_with_dir("file names with weird characters do not get mangled", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   out <- tibble(
     target = c("\"is:a:file\"", "not:a:file"),
     command = as.character(1:2)
@@ -295,6 +286,7 @@ test_with_dir("file names with weird characters do not get mangled", {
 })
 
 test_with_dir("can use semicolons for multi-line commands", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   plan <- drake_plan(list = c(x = "a<-1; a", y = "b<-2\nb"))
   make(plan, verbose = FALSE, session_info = FALSE)
   expect_false(any(c("a", "b") %in% ls()))
@@ -303,6 +295,7 @@ test_with_dir("can use semicolons for multi-line commands", {
 })
 
 test_with_dir("can use braces for multi-line commands", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   small_plan <- drake_plan(
     small_target = {
       local_object <- 1 + 1
@@ -317,6 +310,7 @@ test_with_dir("can use braces for multi-line commands", {
 })
 
 test_with_dir("ignore() suppresses updates", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   cache <- storr::storr_environment()
   envir <- new.env(parent = globalenv())
   envir$arg <- 4
@@ -350,12 +344,14 @@ test_with_dir("ignore() suppresses updates", {
 })
 
 test_with_dir("ignore() works on its own", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_equal(ignore(), NULL)
   expect_equal(ignore(1234), 1234)
   expect_identical(ignore_ignore(digest::digest), digest::digest)
 })
 
 test_with_dir("standardized commands with ignore()", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_equal(standardize_command("sqrt(arg)"), "{\n sqrt(arg) \n}")
   expect_equal(
     standardize_command("f(sqrt( ignore(fun(arg) + 7) + 123))"),
@@ -388,6 +384,7 @@ test_with_dir("standardized commands with ignore()", {
 })
 
 test_with_dir("ignore() in imported functions", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   f <- function(x){
     (sqrt( ignore(sqrt(x) + 7) + 123))
   }
@@ -413,6 +410,7 @@ test_with_dir("ignore() in imported functions", {
 })
 
 test_with_dir("custom column interface", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   tidyvar <- 2
   plan <- drake_plan(
     x = target(
@@ -442,6 +440,7 @@ test_with_dir("custom column interface", {
 })
 
 test_with_dir("bind_plans()", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   plan1 <- drake_plan(x = 1, y = 2)
   plan2 <- drake_plan(
     z = target(
@@ -460,15 +459,32 @@ test_with_dir("bind_plans()", {
 })
 
 test_with_dir("spaces in target names are replaced only when appropriate", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_warning(
     pl <- drake_plan(a = x__, file_out("x__")) %>%
       evaluate_plan(wildcard = "x__", values = c("b  \n  x y", "a x"))
   )
   pl2 <- tibble::tibble(
-    target = c("a_b_x_y", "a_a_x", "\"b  \n  x y\"", "\"a x\""),
+    target = c(
+      "a_b_x_y", "a_a_x", "drake_target_1_b_x_y", "drake_target_1_a_x"),
     command = c(
       "b  \n  x y", "a x", "file_out(\"b  \n  x y\")", "file_out(\"a x\")"
     )
   )
   expect_equal(pl, pl2)
+})
+
+test_with_dir("conflicts in wildcard names/values", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  plan <- drake_plan(a = 1, b = 2)
+  rules1 <- list(plant = 1:2, seed = 3:4, plantseed = 5:6)
+  rules2 <- list(
+    plant = c("grow", "tall"),
+    bean = c("legume", "stalk"),
+    example = c("bean", "stalk")
+  )
+  expect_error(
+    evaluate_plan(plan, rules = rules1), regexp = "wildcard name")
+  expect_error(
+    evaluate_plan(plan, rules = rules2), regexp = "replacement value")
 })

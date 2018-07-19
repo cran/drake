@@ -63,10 +63,14 @@ dataset_wildcard <- function(){
 #'   is replaced with the next entry in the `values` vector,
 #'   and the values are recycled.
 #'
-#' @param always_rename logical. If `TRUE`, always rename
-#'   targets according to the wildcard values, regardless of the
-#'   value of `expand`. If `FALSE`, only rename targets if
-#'   `expand` is `TRUE`.
+#' @param rename logical, whether to rename the targets
+#'   based on the values supplied for the wildcards
+#'   (based on `values` or `rules`).
+#'
+#' @param trace logical, whether to add columns that
+#'   trace the wildcard expansion process. These new
+#'   columns indicate which targets were evaluated with which
+#'   wildcards.
 #'
 #' @examples
 #' # Create the part of the workflow plan for the datasets.
@@ -95,40 +99,74 @@ dataset_wildcard <- function(){
 #' # Except when expand is FALSE.
 #' x <- drake_plan(draws = rnorm(mean = Mean, sd = Sd))
 #' evaluate_plan(x, rules = list(Mean = 1:3, Sd = c(1, 10)))
+#' # With the `trace` argument,
+#' # you can generate columns that show how the wildcards
+#' # were evaluated.
+#' plan <- drake_plan(x = rnorm(n__), y = rexp(n__))
+#' plan <- evaluate_plan(plan, wildcard = "n__", values = 1:2, trace = TRUE)
+#' print(plan)
+#' # With the `trace` argument,
+#' # you can generate columns that show how the wildcards
+#' # were evaluated. Then you can visualize the wildcard groups
+#' # as clusters.
+#' plan <- drake_plan(x = rnorm(n__), y = rexp(n__))
+#' plan <- evaluate_plan(plan, wildcard = "n__", values = 1:2, trace = TRUE)
+#' print(plan)
+#' cache <- storr::storr_environment()
+#' config <- drake_config(plan, cache = cache)
+#' vis_drake_graph(config, group = "n__", clusters = "1")
+#' vis_drake_graph(config, group = "n__", clusters = c("1", "2"))
+#' make(plan, targets = c("x_1", "y_2"), cache = cache)
+#' # Optionally cluster on columns supplied by `drake_graph_info()$nodes`.
+#' vis_drake_graph(config, group = "status", clusters = "up to date")
 evaluate_plan <- function(
   plan,
   rules = NULL,
   wildcard = NULL,
   values = NULL,
   expand = TRUE,
-  always_rename = FALSE
+  rename = expand,
+  trace = FALSE
 ){
   if (!is.null(rules)){
-    return(
-      evaluations(
-        plan = plan,
-        rules = rules,
-        expand = expand,
-        always_rename = always_rename
-      )
+    check_wildcard_rules(rules)
+    evaluate_wildcard_rules(
+      plan = plan,
+      rules = rules,
+      expand = expand,
+      rename = rename,
+      trace = trace
     )
+  } else if (!is.null(wildcard) && !is.null(values)){
+    evaluate_single_wildcard(
+      plan = plan,
+      wildcard = wildcard,
+      values = values,
+      expand = expand,
+      rename = rename,
+      trace = trace
+    )
+  } else {
+    plan
   }
-  if (is.null(wildcard) | is.null(values)){
-    return(plan)
-  }
+}
+
+evaluate_single_wildcard <- function(
+  plan, wildcard, values, expand, rename, trace
+){
   values <- as.character(values)
   matches <- grepl(wildcard, plan$command, fixed = TRUE)
   if (!any(matches)){
     return(plan)
   }
-  major <- unique_random_string(exclude = colnames(plan))
-  minor <- unique_random_string(exclude = c(colnames(plan), major))
-  plan[[minor]] <- seq_len(nrow(plan))
-  plan[[major]] <- plan[[minor]]
+  major <- digest::digest(tempfile())
+  minor <- digest::digest(tempfile())
+  plan[[major]] <- seq_len(nrow(plan))
+  plan[[minor]] <- plan[[major]]
   matching <- plan[matches, ]
   if (expand){
-    matching <- expand_plan(matching, values)
-  } else if (always_rename){
+    matching <- expand_plan(matching, values, rename = rename)
+  } else if (rename){
     matching$target <- paste(matching$target, values, sep = "_")
   }
   values <- rep(values, length.out = nrow(matching))
@@ -136,38 +174,68 @@ evaluate_plan <- function(
     function(value, command){
       gsub(wildcard, value, command, fixed = TRUE)
     }
-    )(values, matching$command)
+  )(values, matching$command)
+  if (trace){
+    matching[[wildcard]] <- values
+  }
   rownames(matching) <- NULL
   rownames(plan) <- NULL
   matching[[minor]] <- seq_len(nrow(matching))
-  out <- rbind(matching, plan[!matches, ])
+  out <- dplyr::bind_rows(matching, plan[!matches, ])
   out <- out[order(out[[major]], out[[minor]]), ]
   out[[minor]] <- NULL
   out[[major]] <- NULL
   rownames(out) <- NULL
+  if (trace){
+    out <- structure(
+      out,
+      wildcards = base::union(attr(plan, "wildcards"), wildcard)
+    )
+  }
   sanitize_plan(out, allow_duplicated_targets = TRUE)
 }
 
-evaluations <- function(
-  plan,
-  rules = NULL,
-  expand = TRUE,
-  always_rename = FALSE
-  ){
-  if (is.null(rules)){
-    return(plan)
-  }
-  stopifnot(is.list(rules))
+evaluate_wildcard_rules <- function(
+  plan, rules, expand, rename, trace
+){
   for (index in seq_len(length(rules))){
-    plan <- evaluate_plan(
+    plan <- evaluate_single_wildcard(
       plan,
       wildcard = names(rules)[index],
       values = rules[[index]],
       expand = expand,
-      always_rename = always_rename
+      rename = rename,
+      trace = trace
     )
   }
-  return(plan)
+  plan
+}
+
+check_wildcard_rules <- function(rules){
+  stopifnot(is.list(rules))
+  wildcards <- names(rules)
+  all_values <- unlist(rules)
+  for (i in seq_along(wildcards)){
+    matches <- grep(wildcards[i], all_values, value = TRUE)
+    if (length(matches)){
+      stop(
+        "No wildcard name can match the name of any replacement value. ",
+        "Conflicts: \"", wildcards[i], "\" with:\n",
+        multiline_message(paste0("\"", matches, "\"")),
+        call. = FALSE
+      )
+    }
+    matches <- grep(wildcards[i], wildcards[-i], value = TRUE)
+    if (length(matches)){
+      stop(
+        "The name of a wildcard cannot be a substring ",
+        "of any other wildcard name. ",
+        "Conflicts: \"", wildcards[i], "\" with:\n",
+        multiline_message(paste0("\"", matches, "\"")),
+        call. = FALSE
+      )
+    }
+  }
 }
 
 #' @title Create replicates of targets.
@@ -179,6 +247,8 @@ evaluations <- function(
 #' @param plan workflow plan data frame
 #' @param values values to expand over. These will be appended to
 #'   the names of the new targets.
+#' @param rename logical, whether to rename the targets
+#'   based on the `values`. See the examples for a demo.
 #' @examples
 #' # Create the part of the workflow plan for the datasets.
 #' datasets <- drake_plan(
@@ -187,7 +257,10 @@ evaluations <- function(
 #' # Create replicates. If you want repeat targets,
 #' # this is convenient.
 #' expand_plan(datasets, values = c("rep1", "rep2", "rep3"))
-expand_plan <- function(plan, values = NULL){
+#' # Choose whether to rename the targets based on the values.
+#' expand_plan(datasets, values = 1:3, rename = TRUE)
+#' expand_plan(datasets, values = 1:3, rename = FALSE)
+expand_plan <- function(plan, values = NULL, rename = TRUE){
   if (!length(values)){
     return(plan)
   }
@@ -196,7 +269,9 @@ expand_plan <- function(plan, values = NULL){
   plan <- plan[repeat_targets, ]
   values <- as.character(values)
   values <- rep(values, times = nrows)
-  plan$target <- paste(plan$target, values, sep = "_")
+  if (rename){
+    plan$target <- paste(plan$target, values, sep = "_")
+  }
   rownames(plan) <- NULL
   sanitize_plan(plan, allow_duplicated_targets = TRUE)
 }
@@ -212,8 +287,7 @@ expand_plan <- function(plan, values = NULL){
 #' @param plan workflow plan data frame of prespecified targets
 #' @param target name of the new aggregated target
 #' @param gather function used to gather the targets. Should be
-#'   one of \code{\link{list}(...)}, \code{\link{c}(...)},
-#'   \code{\link{rbind}(...)}, or similar.
+#'   one of `list(...)`, `c(...)`, `rbind(...)`, or similar.
 #' @examples
 #' # Workflow plan for datasets:
 #' datasets <- drake_plan(
@@ -256,7 +330,7 @@ gather_plan <- function(
 #' @param end character, code to place at the end
 #'   of each step in the reduction
 #' @param pairwise logical, whether to create multiple
-#'   new targets, one for each pair/step in the reduction (`TRUE`), 
+#'   new targets, one for each pair/step in the reduction (`TRUE`),
 #'   or to do the reduction all in one command.
 #' @examples
 #' # Workflow plan for datasets:
@@ -390,13 +464,13 @@ plan_analyses <- function(plan, datasets){
 #'   analyses of multiple datasets in multiple ways.
 #' @param plan workflow plan data frame with commands for the summaries.
 #'   Use the `analysis__` and `dataset__` wildcards
-#'   just like the `dataset__` wildcard in [analyses()].
+#'   just like the `dataset__` wildcard in [plan_analyses()].
 #' @param analyses workflow plan data frame of analysis instructions
 #' @param datasets workflow plan data frame with instructions to make
 #'   or import the datasets.
 #' @param gather Character vector, names of functions to gather the
 #'   summaries. If not `NULL`, the length must be the number of
-#'   rows in the `plan`. See the [gather()] function
+#'   rows in the `plan`. See the [gather_plan()] function
 #'   for more.
 #' @examples
 #' # Create the part of the workflow plan data frame for the datasets.
@@ -497,16 +571,4 @@ with_analyses_only <- function(plan){
     )
   }
   return(plan[has_analysis, ])
-}
-
-unique_random_string <- function(n = 30, exclude = NULL){
-  if (!length(exclude)){
-    return(stri_rand_strings(1, n))
-  }
-  out <- exclude[1]
-  while (out %in% exclude){
-    out <- stri_rand_strings(1, n)
-    next
-  }
-  make.names(out)
 }

@@ -7,15 +7,16 @@
 #' for an overview of the documentation.
 #' @seealso 
 #'   [drake_plan()],
+#'   [drake_config()],
 #'   [vis_drake_graph()],
+#'   [evaluate_plan()],
+#'   [outdated()],
 #'   [parallelism_choices()],
-#'   [max_useful_jobs()],
-#'   [triggers()],
-#'   [make_with_config()]
+#'   [triggers()]
 #' @export
 #' @return The master internal configuration list, mostly
 #'   containing arguments to `make()` and important objects
-#'   constructed along the way. See [config()]
+#'   constructed along the way. See [drake_config()]
 #'   for more details.
 #' @inheritParams drake_config
 #' @param config Master configuration list produced by both
@@ -30,7 +31,6 @@
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan)
 #' outdated(config) # Which targets need to be (re)built?
-#' my_jobs = max_useful_jobs(config) # Depends on what is up to date.
 #' make(my_plan, jobs = 2) # Build what needs to be built.
 #' outdated(config) # Everything is up to date.
 #' # Change one of your imported function dependencies.
@@ -39,9 +39,9 @@
 #'   lm(y ~ x3, data = d)
 #' }
 #' outdated(config) # Some targets depend on reg2().
-#' vis_drake_graph(config) # See how they fit in an interactive graph.
 #' make(my_plan) # Rebuild just the outdated targets.
 #' outdated(config) # Everything is up to date again.
+#' vis_drake_graph(config) # See how they fit in an interactive graph.
 #' make(my_plan, cache_log_file = TRUE) # Write a text log file this time.
 #' vis_drake_graph(config) # The colors changed in the graph.
 #' clean() # Start from scratch.
@@ -71,7 +71,7 @@
 #' }
 make <- function(
   plan = read_drake_plan(),
-  targets = drake::possible_targets(plan),
+  targets = NULL,
   envir = parent.frame(),
   verbose = drake::default_verbose(),
   hook = default_hook,
@@ -110,10 +110,11 @@ make <- function(
   keep_going = FALSE,
   session = NULL,
   imports_only = NULL,
-  pruning_strategy = c("speed", "memory"),
+  pruning_strategy = c("lookahead", "speed", "memory"),
   makefile_path = "Makefile",
   console_log_file = NULL,
-  ensure_workers = TRUE
+  ensure_workers = TRUE,
+  garbage_collection = FALSE
 ){
   force(envir)
   if (!is.null(return_config)){
@@ -162,7 +163,8 @@ make <- function(
       pruning_strategy = pruning_strategy,
       makefile_path = makefile_path,
       console_log_file = console_log_file,
-      ensure_workers = ensure_workers
+      ensure_workers = ensure_workers,
+      garbage_collection = garbage_collection
     )
   }
   make_with_config(config = config)
@@ -244,7 +246,8 @@ make_with_schedules <- function(config){
   } else if (config$skip_imports){
     make_targets(config = config)
   } else if (
-    length(unique(config$parallelism)) > 1
+    (length(unique(config$parallelism)) > 1) ||
+    (length(unique(config$jobs)) > 1)
   ){
     make_imports(config = config)
     make_targets(config = config)
@@ -272,11 +275,11 @@ make_with_schedules <- function(config){
 #' See <https://github.com/ropensci/drake/blob/master/README.md#documentation>
 #' for an overview of the documentation.
 #' @export
-#' @seealso [make()], [config()],
+#' @seealso [make()], [drake_config()],
 #'   [make_targets()]
 #' @return The master internal configuration list
 #'   used by [make()].
-#' @param config a configuration list returned by [config()]
+#' @param config a configuration list returned by [drake_config()]
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -316,11 +319,11 @@ make_imports <- function(config = drake::read_drake_config()){
 #' See <https://github.com/ropensci/drake/blob/master/README.md#documentation>
 #' for an overview of the documentation.
 #' @export
-#' @seealso [make()], [config()],
+#' @seealso [make()], [drake_config()],
 #'   [make_imports()]
 #' @return The master internal configuration list
 #'   used by [make()].
-#' @param config a configuration list returned by [config()]
+#' @param config a configuration list returned by [drake_config()]
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -334,7 +337,10 @@ make_imports <- function(config = drake::read_drake_config()){
 #' })
 #' }
 make_targets <- function(config = drake::read_drake_config()){
-  config$schedule <- targets_graph(config = config)
+  up_to_date <- outdated(config, do_prework = FALSE, make_imports = FALSE) %>%
+    setdiff(x = config$all_targets)
+  config$schedule <- targets_graph(config = config) %>%
+    igraph::delete_vertices(v = up_to_date)
   config$jobs <- targets_setting(config$jobs)
   config$parallelism <- targets_setting(config$parallelism)
   run_parallel_backend(config = config)

@@ -1,9 +1,6 @@
 #' @title Build/process a single target or import.
 #' @export
-#' @description For internal use only.
-#' the only reason this function is exported
-#' is to set up parallel socket (PSOCK) clusters
-#' without much of a fuss.
+#' @description Also load the target's dependencies beforehand.
 #' @return The value of the target right after it is built.
 #' @param target name of the target
 #' @param meta list of metadata that tell which
@@ -139,26 +136,29 @@ announce_build <- function(target, meta, config){
 }
 
 conclude_build <- function(target, value, meta, config){
-  check_processed_file(target, config)
+  assert_output_files(target = target, meta = meta, config = config)
   handle_build_exceptions(target = target, meta = meta, config = config)
-  store_target(target = target, value = value, meta = meta, config = config)
+  store_outputs(target = target, value = value, meta = meta, config = config)
   invisible(value)
 }
 
-check_processed_file <- function(target, config){
-  if (!is_file(target)){
-    return()
-  }
-  if (!file.exists(drake::drake_unquote(target))){
+assert_output_files <- function(target, meta, config){
+  missing_files <- Filter(x = meta$output_files, f = function(x){
+    !file.exists(drake::drake_unquote(x))
+  })
+  if (length(missing_files)){
     drake_warning(
-      "File ", target, " was built or processed,\n",
-      "but the file itself does not exist.",
+      "Missing files for target ", target, ":\n",
+      multiline_message(missing_files),
       config = config
     )
   }
 }
 
 build_target <- function(target, meta, config){
+  if (identical(config$garbage_collection, TRUE)){
+    on.exit(gc())
+  }
   retries <- 0
   max_retries <- drake_plan_override(
     target = target,

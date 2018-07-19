@@ -22,7 +22,7 @@ of the workflow.
 \description{
 \code{igraph} objects are used
 internally to represent the dependency network of your workflow.
-See \code{\link{config}(my_plan)$graph} from the mtcars example.
+See \code{drake_config(my_plan)$graph} from the mtcars example.
 }
 \details{
 For a supplied graph, take the subgraph of all combined
@@ -38,15 +38,15 @@ load_mtcars_example() # Get the code with drake_example("mtcars").
 graph <- build_drake_graph(my_plan)
 # The default plotting is not the greatest,
 # but you will get the idea.
-plot(graph)
+# plot(graph) # nolint
 # Prune the graph: that is, remove the nodes downstream
 # from 'small' and 'large'
 pruned <- prune_drake_graph(graph = graph, to = c("small", "large"))
-plot(pruned)
+# plot(pruned) # nolint
 })
 }
 }
 \seealso{
-\code{\link[=build_drake_graph]{build_drake_graph()}}, \code{\link[=config]{config()}},
+\code{\link[=build_drake_graph]{build_drake_graph()}}, \code{\link[=drake_config]{drake_config()}},
 \code{\link[=make]{make()}}
 }

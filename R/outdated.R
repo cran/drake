@@ -37,11 +37,10 @@ first_outdated <- function(config) {
 #' If needed, rerun [drake_config()] early and often.
 #' See the details in the help file for [drake_config()].
 #' @export
-#' @seealso [missed()], [drake_plan()],
-#'   [make()], [vis_drake_graph()]
+#' @seealso [drake_config()], [missed()], [drake_plan()],
+#'   [make()]
 #' @return Character vector of the names of outdated targets.
-#' @param config option internal runtime parameter list of
-#'   \code{\link{make}(...)},
+#' @param config option internal runtime parameter list
 #'   produced with [drake_config()].
 #'   You must use a fresh `config` argument with an up-to-date
 #'   `config$targets` element that was never modified by hand.
@@ -49,6 +48,8 @@ first_outdated <- function(config) {
 #'   See the details in the help file for [drake_config()].
 #' @param make_imports logical, whether to make the imports first.
 #'   Set to `FALSE` to save some time and risk obsolete output.
+#' @param do_prework, whether to do the `prework`
+#'   normally supplied to [make()].
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -68,9 +69,12 @@ first_outdated <- function(config) {
 #' }
 outdated <-  function(
   config = drake::read_drake_config(),
-  make_imports = TRUE
+  make_imports = TRUE,
+  do_prework = TRUE
 ){
-  do_prework(config = config, verbose_packages = config$verbose)
+  if (do_prework){
+    do_prework(config = config, verbose_packages = config$verbose)
+  }
   if (make_imports){
     make_imports(config = config)
   }
@@ -94,14 +98,14 @@ outdated <-  function(
 #' @seealso [outdated()]
 #' @return Character vector of names of missing objects and files.
 #'
-#' @param config internal runtime parameter list of
-#'   \code{\link{make}(...)},
+#' @param config internal runtime parameter list
 #'   produced by both [drake_config()] and [make()].
 #'
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' config <- load_mtcars_example() # Get the code with drake_example("mtcars").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
+#' config <- drake_config(my_plan)
 #' missed(config) # All the imported files and objects should be present.
 #' rm(reg1) # Remove an import dependency from you workspace.
 #' missed(config) # Should report that reg1 is missing.

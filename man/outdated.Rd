@@ -4,11 +4,11 @@
 \alias{outdated}
 \title{List the targets that are out of date.}
 \usage{
-outdated(config = drake::read_drake_config(), make_imports = TRUE)
+outdated(config = drake::read_drake_config(), make_imports = TRUE,
+  do_prework = TRUE)
 }
 \arguments{
-\item{config}{option internal runtime parameter list of
-\code{\link{make}(...)},
+\item{config}{option internal runtime parameter list
 produced with \code{\link[=drake_config]{drake_config()}}.
 You must use a fresh \code{config} argument with an up-to-date
 \code{config$targets} element that was never modified by hand.
@@ -17,6 +17,9 @@ See the details in the help file for \code{\link[=drake_config]{drake_config()}}
 
 \item{make_imports}{logical, whether to make the imports first.
 Set to \code{FALSE} to save some time and risk obsolete output.}
+
+\item{do_prework, }{whether to do the \code{prework}
+normally supplied to \code{\link[=make]{make()}}.}
 }
 \value{
 Character vector of the names of outdated targets.
@@ -56,6 +59,6 @@ outdated(config = config)
 }
 }
 \seealso{
-\code{\link[=missed]{missed()}}, \code{\link[=drake_plan]{drake_plan()}},
-\code{\link[=make]{make()}}, \code{\link[=vis_drake_graph]{vis_drake_graph()}}
+\code{\link[=drake_config]{drake_config()}}, \code{\link[=missed]{missed()}}, \code{\link[=drake_plan]{drake_plan()}},
+\code{\link[=make]{make()}}
 }

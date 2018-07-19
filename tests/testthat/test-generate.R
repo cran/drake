@@ -3,7 +3,7 @@ drake_context("generate")
 test_with_dir("empty generative args", {
   x <- drake_plan(a = 1, b = FUNCTION())
   expect_equal(evaluate_plan(x), x)
-  expect_equal(evaluations(x), x)
+  expect_equal(evaluate_wildcard_rules(x, rules = NULL), x)
   expect_equal(expand_plan(x), x)
 })
 
@@ -15,14 +15,23 @@ test_with_dir("evaluate, expand, and gather", {
   expect_equal(m1, df)
 
   x <- expand_plan(df, values = c("rep1", "rep2"))
-  y <- tibble(
+  y <- tibble::tibble(
     target = c("data_rep1", "data_rep2"),
     command = rep("simulate(center = MU, scale = SIGMA)", 2)
   )
   expect_equal(x, y)
 
+  x1 <- expand_plan(df, values = c("rep1", "rep2"), rename = TRUE)
+  x2 <- expand_plan(df, values = c("rep1", "rep2"), rename = FALSE)
+  y2 <- tibble::tibble(
+    target = c("data", "data"),
+    command = rep("simulate(center = MU, scale = SIGMA)", 2)
+  )
+  expect_equal(x1, y)
+  expect_equal(x2, y2)
+
   x2 <- evaluate_plan(x, wildcard = "MU", values = 1:2)
-  y <- tibble(
+  y <- tibble::tibble(
     target = c("data_rep1_1", "data_rep1_2", "data_rep2_1", "data_rep2_2"),
     command = c(
       "simulate(center = 1, scale = SIGMA)",
@@ -35,7 +44,7 @@ test_with_dir("evaluate, expand, and gather", {
 
   x3 <- evaluate_plan(x2, wildcard = "SIGMA", values = letters[1:2],
     expand = FALSE)
-  y <- tibble(
+  y <- tibble::tibble(
     target = c("data_rep1_1", "data_rep1_2", "data_rep2_1", "data_rep2_2"),
     command = c(
       "simulate(center = 1, scale = a)",
@@ -46,9 +55,23 @@ test_with_dir("evaluate, expand, and gather", {
   )
   expect_equal(x3, y)
 
+  x3a <- evaluate_plan(x2, wildcard = "SIGMA", values = letters[1:2],
+                      expand = FALSE, rename = TRUE)
+  y <- tibble::tibble(
+    target = c(
+      "data_rep1_1_a", "data_rep1_2_b", "data_rep2_1_a", "data_rep2_2_b"),
+    command = c(
+      "simulate(center = 1, scale = a)",
+      "simulate(center = 2, scale = b)",
+      "simulate(center = 1, scale = a)",
+      "simulate(center = 2, scale = b)"
+    )
+  )
+  expect_equal(x3a, y)
+
   x4 <- evaluate_plan(x, rules = list(MU = 1:2, SIGMA = c(0.1, 1)),
     expand = FALSE)
-  y <- tibble(
+  y <- tibble::tibble(
     target = c("data_rep1", "data_rep2"),
     command = c(
       "simulate(center = 1, scale = 0.1)",
@@ -63,14 +86,14 @@ test_with_dir("evaluate, expand, and gather", {
   expect_equal(6, length(unique(x5$command)))
 
   x6 <- gather_plan(x)
-  y <- tibble(
+  y <- tibble::tibble(
     target = "target",
     command = "list(data_rep1 = data_rep1, data_rep2 = data_rep2)"
   )
   expect_equal(x6, y)
 
   x7 <- gather_plan(x, target = "my_summaries", gather = "rbind")
-  y <- tibble(
+  y <- tibble::tibble(
     target = "my_summaries",
     command = "rbind(data_rep1 = data_rep1, data_rep2 = data_rep2)"
   )
@@ -207,6 +230,7 @@ test_with_dir("analyses and summaries", {
 })
 
 test_with_dir("reduce_plan()", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   # Non-pairwise reduce
   x_plan <- evaluate_plan(
     drake_plan(x = VALUE),
@@ -315,43 +339,164 @@ test_with_dir("reduce_plan()", {
   expect_equal(readd(x_sum), out)
 })
 
-test_with_dir("non-expanded grid, issue 235", {
-  rules_grid <- tibble::tibble(
-    school_ =  c("schoolA", "schoolB", "schoolC"),
-    funding_ = c("public", "public", "private")
-  )
-  rules_grid <- tidyr::crossing(
-    rules_grid, cohort_ = c("2012", "2013", "2014", "2015"))
-  rules_grid <- dplyr::filter(
-    rules_grid, !(school_ == "schoolB" & cohort_ %in% c("2012", "2013")))
-
+test_with_dir("evaluate_plan() and trace", {
   plan <- drake_plan(
-    credits = check_credit_hours("school_", "funding_", "cohort_"),
-    students = check_students("school_", "funding_", "cohort_"),
-    grads = check_graduations("school_", "funding_", "cohort_"),
-    public_funds = check_public_funding("school_", "funding_", "cohort_"),
-    strings_in_dots = "literals"
-  )[c(rep(1, 4), rep(2, 2), rep(3, 4)), ]
+    top = 3,
+    data = simulate(center = MU, scale = SIGMA),
+    mus = c(MU, x),
+    simple = 1,
+    sigmas = c(SIGMA, y),
+    cheap = 2
+  )
+
+  x <- evaluate_plan(
+    plan, trace = TRUE, wildcard = "MU", values = 1:2, expand = FALSE)
+  y <- tibble::tibble(
+    target = c(
+      "top",
+      "data",
+      "mus",
+      "simple",
+      "sigmas",
+      "cheap"
+    ),
+    command = c(
+      3,
+      "simulate(center = 1, scale = SIGMA)",
+      "c(2, x)",
+      1,
+      "c(SIGMA, y)",
+      2
+    ),
+    MU = as.character(c(NA, 1, 2, NA, NA, NA))
+  )
+  expect_equal(x, y)
+  expect_equal(attr(x, "wildcards"), "MU")
+  expect_silent(assert_standard_columns(list(plan = x)))
+
+  x <- evaluate_plan(
+    plan, trace = TRUE, wildcard = "SIGMA", values = 1:2, expand = FALSE)
+  y <- tibble::tibble(
+    target = c(
+      "top",
+      "data",
+      "mus",
+      "simple",
+      "sigmas",
+      "cheap"
+    ),
+    command = c(
+      3,
+      "simulate(center = MU, scale = 1)",
+      "c(MU, x)",
+      1,
+      "c(2, y)",
+      2
+    ),
+    SIGMA = as.character(c(NA, 1, NA, NA, 2, NA))
+  )
+  expect_equal(x, y)
+  expect_equal(attr(x, "wildcards"), "SIGMA")
+
+  x <- evaluate_plan(plan, trace = TRUE, wildcard = "MU", values = 1:2)
+  y <- tibble::tibble(
+    target = c(
+      "top",
+      "data_1",
+      "data_2",
+      "mus_1",
+      "mus_2",
+      "simple",
+      "sigmas",
+      "cheap"
+    ),
+    command = c(
+      3,
+      "simulate(center = 1, scale = SIGMA)",
+      "simulate(center = 2, scale = SIGMA)",
+      "c(1, x)",
+      "c(2, x)",
+      1,
+      "c(SIGMA, y)",
+      2
+    ),
+    MU = as.character(c(NA, 1, 2, 1, 2, NA, NA, NA))
+  )
+  expect_equal(x, y)
+  expect_equal(attr(x, "wildcards"), "MU")
+
+  x <- evaluate_plan(
+    plan, trace = TRUE, rules = list(MU = 1:2, SIGMA = 3:4), expand = FALSE)
+  y <- tibble::tibble(
+    target = c(
+      "top",
+      "data",
+      "mus",
+      "simple",
+      "sigmas",
+      "cheap"
+    ),
+    command = c(
+      3,
+      "simulate(center = 1, scale = 3)",
+      "c(2, x)",
+      1,
+      "c(4, y)",
+      2
+    ),
+    MU = as.character(c(NA, 1, 2, NA, NA, NA)),
+    SIGMA = as.character(c(NA, 3, NA, NA, 4, NA))
+  )
+  expect_equal(x, y)
+  expect_equal(attr(x, "wildcards"), c("MU", "SIGMA"))
+
+  x <- evaluate_plan(plan, trace = TRUE, rules = list(MU = 1:2, SIGMA = 3:4))
+  y <- tibble::tibble(
+    target = c(
+      "top",
+      "data_1_3",
+      "data_1_4",
+      "data_2_3",
+      "data_2_4",
+      "mus_1",
+      "mus_2",
+      "simple",
+      "sigmas_3",
+      "sigmas_4",
+      "cheap"
+    ),
+    command = c(
+      3,
+      "simulate(center = 1, scale = 3)",
+      "simulate(center = 1, scale = 4)",
+      "simulate(center = 2, scale = 3)",
+      "simulate(center = 2, scale = 4)",
+      "c(1, x)",
+      "c(2, x)",
+      1,
+      "c(3, y)",
+      "c(4, y)",
+      2
+    ),
+    MU = as.character(c(NA, 1, 1, 2, 2, 1, 2, NA, NA, NA, NA)),
+    SIGMA = as.character(c(NA, 3, 4, 3, 4, NA, NA, NA, 3, 4, NA))
+  )
+  expect_equal(x, y)
+  expect_equal(attr(x, "wildcards"), c("MU", "SIGMA"))
+})
+
+test_with_dir("make() with wildcard columns", {
   plan <- evaluate_plan(
-    plan,
-    rules = rules_grid,
-    expand = FALSE,
-    always_rename = TRUE
+    drake_plan(x = rnorm(n__)),
+    wildcard = "n__",
+    values = 1:2,
+    trace = TRUE
   )
-  expect_equal(nrow(plan), 10)
-  expect_equal(
-    plan$target,
-    c(
-      "credits_schoolA_public_2012",
-      "credits_schoolA_public_2013",
-      "credits_schoolA_public_2014",
-      "credits_schoolA_public_2015",
-      "students_schoolB_public_2014",
-      "students_schoolB_public_2015",
-      "grads_schoolC_private_2012",
-      "grads_schoolC_private_2013",
-      "grads_schoolC_private_2014",
-      "grads_schoolC_private_2015"
-    )
-  )
+  expect_equal(nrow(plan), 2)
+  expect_true("n__" %in% colnames(plan))
+  con <- make(plan, cache = storr::storr_environment(), session_info = FALSE)
+  expect_true(all(plan$target %in% cached(cache = con$cache)))
+  expect_identical(con$plan, plan)
+  expect_equal(attr(plan, "wildcards"), "n__")
+  expect_equal(attr(con$plan, "wildcards"), "n__")
 })

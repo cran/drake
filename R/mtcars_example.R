@@ -7,7 +7,7 @@
 #' and then analyze them with regression models.
 #' Finally, we summarize the regression models
 #' to see if there is an association.
-#' @details Use \code{\link{drake_example}("mtcars")} to get the code
+#' @details Use `drake_example("mtcars")` to get the code
 #' for the mtcars example. The included R script is a detailed,
 #' heavily-commented walkthrough. The chapter of the user manual at
 #' <https://ropenscilabs.github.io/drake-manual/mtcars.html> # nolint
@@ -21,25 +21,7 @@
 #'   Defaults to your workspace.
 #'   For an insulated workspace,
 #'   set `envir = new.env(parent = globalenv())`.
-#' @param seed integer, the root pseudo-random seed to use for your project.
-#'   To ensure reproducibility across different R sessions,
-#'   `set.seed()` and `.Random.seed` are ignored and have no affect on
-#'   `drake` workflows. Conversely, [make()] does not change `.Random.seed`,
-#'   even when pseudo-random numbers are generated.
-#'
-#'   On the first call to [make()] or [drake_config()], `drake`
-#'   uses the random number generator seed from the `seed` argument.
-#'   Here, if the `seed` is `NULL` (default), `drake` uses a `seed` of `0`.
-#'   On subsequent [make()]s for existing projects, the project's
-#'   cached seed will be used in order to ensure reproducibility.
-#'   Thus, the `seed` argument must either be `NULL` or the same
-#'   seed from the project's cache (usually the `.drake/` folder).
-#'   To reset the random number generator seed for a project,
-#'   use `clean(destroy = TRUE)`.
-#' @param cache Optional `storr` cache to use.
 #' @param report_file where to write the report file `report.Rmd`.
-#' @param to deprecated, where to write the dynamic report source file
-#'   `report.Rmd`
 #' @param overwrite logical, whether to overwrite an
 #'   existing file `report.Rmd`
 #' @param force logical, whether to force the loading of a
@@ -56,9 +38,10 @@
 #' deps_code(my_plan$command[4])
 #' # Plot the interactive network visualization of the workflow.
 #' config <- drake_config(my_plan)
-#' vis_drake_graph(config)
+#' outdated(config) # Which targets are out of date?
 #' # Run the workflow to build all the targets in the plan.
 #' make(my_plan)
+#' outdated(config) # Everything should be up to date.
 #' # For the reg2() model on the small dataset,
 #' # the p-value is so small that there may be an association
 #' # between weight and fuel efficiency after all.
@@ -71,21 +54,10 @@
 #' }
 load_mtcars_example <- function(
   envir = parent.frame(),
-  seed = NULL,
-  cache = NULL,
   report_file = "report.Rmd",
   overwrite = FALSE,
-  to = report_file,
-  verbose = drake::default_verbose(),
   force = FALSE
 ){
-  if (to != report_file){
-    warning(
-      "In load_mtcars_example(), argument 'to' is deprecated. ",
-      "Use 'report_file' instead."
-    )
-  }
-
   eval(parse(text = "base::require(drake, quietly = TRUE)"))
   eval(parse(text = "base::require(knitr, quietly = TRUE)"))
   mtcars <- get("mtcars")
@@ -159,8 +131,8 @@ load_mtcars_example <- function(
   results <- plan_summaries(summary_types, analyses, datasets, gather = NULL)
 
   report <- tibble(
-    target = "",
-    command = 'knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)', # nolint  
+    target = "report",
+    command = 'knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)' # nolint  
   )
 
   # Row order doesn't matter in the drake_plan my_plan.
@@ -177,12 +149,5 @@ load_mtcars_example <- function(
     warning("Overwriting file 'report.Rmd'.")
   }
   file.copy(from = report, to = report_file, overwrite = overwrite)
-  invisible(drake_config(
-    plan = envir$my_plan,
-    envir = envir,
-    seed = seed,
-    cache = cache,
-    force = force,
-    verbose = verbose
-  ))
+  invisible()
 }

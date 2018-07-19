@@ -8,8 +8,7 @@ plan but missing from your workspace.}
 missed(config = drake::read_drake_config())
 }
 \arguments{
-\item{config}{internal runtime parameter list of
-\code{\link{make}(...)},
+\item{config}{internal runtime parameter list
 produced by both \code{\link[=drake_config]{drake_config()}} and \code{\link[=make]{make()}}.}
 }
 \value{
@@ -22,7 +21,8 @@ file system.
 \examples{
 \dontrun{
 test_with_dir("Quarantine side effects.", {
-config <- load_mtcars_example() # Get the code with drake_example("mtcars").
+load_mtcars_example() # Get the code with drake_example("mtcars").
+config <- drake_config(my_plan)
 missed(config) # All the imported files and objects should be present.
 rm(reg1) # Remove an import dependency from you workspace.
 missed(config) # Should report that reg1 is missing.

@@ -1,7 +1,8 @@
 drake_context("Makefile")
 
 test_with_dir("Makefile path and conflicts", {
-  load_mtcars_example(cache = storr::storr_environment())
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  load_mtcars_example()
   file <- "non_standard_makefile"
   config <- drake_config(
     my_plan,
@@ -21,6 +22,7 @@ test_with_dir("Makefile path and conflicts", {
 })
 
 test_with_dir("recipe commands", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_message(Makefile_recipe())
   expect_message(Makefile_recipe(recipe_command = "R -e 'R_RECIPE' -q"))
   my_plan <- drake_plan(y = 1)
@@ -39,6 +41,7 @@ test_with_dir("recipe commands", {
 })
 
 test_with_dir("no Makefile for make_imports()", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_equal(cached(), character(0))
   x <- drake_plan(a = ls())
   expect_false(file.exists("Makefile"))
@@ -53,6 +56,7 @@ test_with_dir("no Makefile for make_imports()", {
 })
 
 test_with_dir("prepend arg works", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- dbug()
   config$verbose <- FALSE
   store_drake_config(config = config)
@@ -66,32 +70,8 @@ test_with_dir("prepend arg works", {
   expect_true(any(grepl("# add", lines, fixed = TRUE)))
 })
 
-test_with_dir("files inside directories can be timestamped", {
-  plan <- drake_plan({
-    dir.create("t1"); saveRDS(1, file_out("t1/t2"))
-  })
-  file <- plan$target[1]
-  config <- drake_config(plan = plan, targets = plan$target[1],
-    parallelism = "parLapply", verbose = FALSE,
-    envir = new.env(), cache = NULL)
-  path <- cache_path(config$cache)
-  store_drake_config(config = config)
-  run_Makefile(config, run = FALSE)
-  prepare_distributed(config = config)
-  expect_silent(mk(config$plan$target[1], cache_path = path))
-  expect_true(file.exists("t1"))
-  expect_true(file.exists(drake::drake_unquote(file)))
-  unlink("t1", recursive = TRUE, force = TRUE)
-  expect_false(file.exists("t1"))
-
-  expect_silent(make(config$plan, verbose = FALSE, session_info = FALSE))
-  expect_true(file.exists("t1"))
-  expect_true(file.exists(drake::drake_unquote(file)))
-  unlink("t1", recursive = TRUE, force = TRUE)
-  expect_false(file.exists("t1"))
-})
-
-test_with_dir("mtcars Makefile stuff works", {
+test_with_dir("basic Makefile stuff works", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- dbug()
   make(config$plan, targets = "combined", envir = config$envir,
     verbose = FALSE, session_info = FALSE)
@@ -125,12 +105,12 @@ test_with_dir("mtcars Makefile stuff works", {
   ))
   expect_equal(stamps, stamps2)
 
-  targ <- "\"intermediatefile.rds\""
-  expect_false(file.exists(drake::drake_unquote(targ)))
+  targ <- "drake_target_1"
+  expect_false(file.exists("intermediatefile.rds"))
   config$cache$del(key = targ, namespace = "progress")
   mk(targ, cache_path = cache_path)
   expect_equal(unname(progress(list = targ)), "finished")
-  expect_true(file.exists(drake::drake_unquote(targ)))
+  expect_true(file.exists("intermediatefile.rds"))
   config$cache$del(key = targ, namespace = "progress")
   mk(targ, cache_path = cache_path) # Verify behavior when target is current
   expect_equal(unname(progress(list = targ)), "not built or imported")
@@ -141,6 +121,7 @@ test_with_dir("mtcars Makefile stuff works", {
 })
 
 test_with_dir("Makefile stuff in globalenv()", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   targ <- "drake_TESTGLOBAL_target"
   drake_TESTGLOBAL_plan <- data.frame(target = targ, command = 1)
   drake_TESTGLOBAL_config <- make(
@@ -172,6 +153,7 @@ test_with_dir("Makefile stuff in globalenv()", {
 })
 
 test_with_dir("packages are loaded in prework", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("abind")
   skip_if_not_installed("MASS")
 
@@ -185,7 +167,8 @@ test_with_dir("packages are loaded in prework", {
   }
   if (R.utils::isPackageLoaded("MASS")){
     # Suppress goodpractice::gp(): legitimate need for detach(). # nolint
-    eval(parse(text = "detach('package:MASS', unload = TRUE)"))
+    suppressWarnings(
+      eval(parse(text = "detach('package:MASS', unload = TRUE)")))
   }
   expect_error(abind(1))
   expect_error(deparse(body(lda)))
@@ -216,7 +199,8 @@ test_with_dir("packages are loaded in prework", {
   }
   if (R.utils::isPackageLoaded("MASS")){
     # Suppress goodpractice::gp(): legitimate need for detach()
-    eval(parse(text = "detach('package:MASS', unload = TRUE)"))
+    suppressWarnings(
+      eval(parse(text = "detach('package:MASS', unload = TRUE)")))
   }
   expect_error(abind(1))
   expect_error(deparse(body(lda)))

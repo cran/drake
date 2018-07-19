@@ -6,7 +6,7 @@
 workflow plan data frame from a template data frame.}
 \usage{
 evaluate_plan(plan, rules = NULL, wildcard = NULL, values = NULL,
-  expand = TRUE, always_rename = FALSE)
+  expand = TRUE, rename = expand, trace = FALSE)
 }
 \arguments{
 \item{plan}{workflow plan data frame, similar to one produced by
@@ -33,10 +33,14 @@ If \code{FALSE}, each occurrence of the wildcard
 is replaced with the next entry in the \code{values} vector,
 and the values are recycled.}
 
-\item{always_rename}{logical. If \code{TRUE}, always rename
-targets according to the wildcard values, regardless of the
-value of \code{expand}. If \code{FALSE}, only rename targets if
-\code{expand} is \code{TRUE}.}
+\item{rename}{logical, whether to rename the targets
+based on the values supplied for the wildcards
+(based on \code{values} or \code{rules}).}
+
+\item{trace}{logical, whether to add columns that
+trace the wildcard expansion process. These new
+columns indicate which targets were evaluated with which
+wildcards.}
 }
 \value{
 A workflow plan data frame with the wildcards evaluated.
@@ -83,4 +87,24 @@ my_plan
 # Except when expand is FALSE.
 x <- drake_plan(draws = rnorm(mean = Mean, sd = Sd))
 evaluate_plan(x, rules = list(Mean = 1:3, Sd = c(1, 10)))
+# With the `trace` argument,
+# you can generate columns that show how the wildcards
+# were evaluated.
+plan <- drake_plan(x = rnorm(n__), y = rexp(n__))
+plan <- evaluate_plan(plan, wildcard = "n__", values = 1:2, trace = TRUE)
+print(plan)
+# With the `trace` argument,
+# you can generate columns that show how the wildcards
+# were evaluated. Then you can visualize the wildcard groups
+# as clusters.
+plan <- drake_plan(x = rnorm(n__), y = rexp(n__))
+plan <- evaluate_plan(plan, wildcard = "n__", values = 1:2, trace = TRUE)
+print(plan)
+cache <- storr::storr_environment()
+config <- drake_config(plan, cache = cache)
+vis_drake_graph(config, group = "n__", clusters = "1")
+vis_drake_graph(config, group = "n__", clusters = c("1", "2"))
+make(plan, targets = c("x_1", "y_2"), cache = cache)
+# Optionally cluster on columns supplied by `drake_graph_info()$nodes`.
+vis_drake_graph(config, group = "status", clusters = "up to date")
 }

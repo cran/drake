@@ -4,9 +4,8 @@
 \alias{check_plan}
 \title{Check a workflow plan data frame for obvious errors.}
 \usage{
-check_plan(plan = read_drake_plan(),
-  targets = drake::possible_targets(plan), envir = parent.frame(),
-  cache = drake::get_cache(verbose = verbose),
+check_plan(plan = read_drake_plan(), targets = NULL,
+  envir = parent.frame(), cache = drake::get_cache(verbose = verbose),
   verbose = drake::default_verbose(), jobs = 1)
 }
 \arguments{
@@ -54,5 +53,5 @@ suppressWarnings(check_plan(my_plan))
 }
 }
 \seealso{
-\code{ink{drake_plan}}, \code{\link[=make]{make()}}
+\code{\link[=drake_plan]{drake_plan()}}, \code{\link[=make]{make()}}
 }

@@ -58,21 +58,16 @@ error_tibble_times <- function(e){
   )
 }
 
-warning_process <- function(e, id, config){
+error_process <- function(e, id, config){
   stack <- sys.calls()
-  drake_message("Warning: ", e$message, config = config)
-  drake_message("Call: ", e$call, config = config)
+  drake_warning("Error: ", e$message, config = config)
+  drake_warning("Call: ", e$call, config = config)
   config$cache$set(
     key = id,
     value = list(error = e, stack = stack),
-    namespace = "mc_fail"
+    namespace = "mc_error"
   )
-}
-
-error_process <- function(e, id, config){
   set_attempt_flag(key = id, config = config)
-  warning_process(e, id, config)
-  drake_error("make() failed.", config = config)
 }
 
 # Should be used as sparingly as possible.

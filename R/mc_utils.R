@@ -1,5 +1,6 @@
 mc_init_worker_cache <- function(config){
-  namespaces <- c("mc_protect", "mc_ready_db", "mc_done_db")
+  namespaces <- c(
+    "mc_protect", "mc_ready_db", "mc_done_db", "mc_error")
   for (namespace in namespaces){
     config$cache$clear(namespace = namespace)
   }
@@ -172,13 +173,29 @@ mc_get_checksum <- function(target, config){
     safe_get_hash(key = target, namespace = "kernels", config = config),
     safe_get_hash(key = target, namespace = "meta", config = config),
     safe_get_hash(key = target, namespace = "attempt", config = config),
+    mc_output_file_checksum(target, config),
     sep = " "
   )
 }
 
+mc_output_file_checksum <- function(target, config){
+  files <- unlist(igraph::vertex_attr(
+    graph = config$graph,
+    name = "output_files",
+    index = target
+  ))
+  vapply(
+    X = sort(files),
+    FUN = rehash_file,
+    FUN.VALUE = character(1),
+    config = config
+  ) %>%
+    digest::digest(algo = config$long_hash_algo)
+}
+
 mc_is_good_checksum <- function(target, checksum, config){
-  stamp <- mc_get_checksum(target = target, config = config)
-  if (!identical(stamp, checksum)){
+  local_checksum <- mc_get_checksum(target = target, config = config)
+  if (!identical(local_checksum, checksum)){
     return(FALSE)
   }
   if (identical("failed", get_progress_single(target, cache = config$cache))){
@@ -186,7 +203,7 @@ mc_is_good_checksum <- function(target, checksum, config){
   }
   all(
     vapply(
-      X = unlist(strsplit(stamp, " "))[1:3], # Exclude attempt flag (often NA).
+      X = unlist(strsplit(local_checksum, " "))[1:3], # Exclude attempt flag (often NA). # nolint
       config$cache$exists_object,
       FUN.VALUE = logical(1)
     )
@@ -208,6 +225,38 @@ mc_wait_checksum <- function(target, checksum, config, timeout = 300){
     "network file system. Checksum verification timed out after about ",
     timeout, " seconds.", config = config
   )
+}
+
+mc_wait_outfile_checksum <- function(target, checksum, config, timeout = 300){
+  i <- 0
+  while (i < timeout / mc_wait){
+    local_checksum <- mc_output_file_checksum(target, config)
+    if (identical(local_checksum, checksum)){
+      return()
+    } else {
+      Sys.sleep(mc_wait)
+    }
+    i <- i + 1
+  }
+  drake_error(
+    "Target `", target, "` did not download from your ",
+    "network file system. Checksum verification timed out after about ",
+    timeout, " seconds.", config = config
+  )
+}
+
+mc_abort_with_errored_workers <- function(config){
+  if (length(failed_workers <- config$cache$list("mc_error"))){
+    if (!identical(config$keep_going, TRUE)){
+      warning(
+        "failed workers:\n",
+        multiline_message(failed_workers),
+        call. = FALSE
+      )
+      return(TRUE)
+    }
+  }
+  FALSE
 }
 
 mc_wait <- 0.01

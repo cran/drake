@@ -1,13 +1,14 @@
 drake_context("triggers")
 
 test_with_dir("empty triggers return logical", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_identical(depends_trigger("x", list(), list()), FALSE)
   expect_identical(command_trigger("x", list(), list()), FALSE)
   expect_identical(file_trigger("x", list(), list()), FALSE)
 })
 
 test_with_dir("triggers work as expected", {
-  skip_on_cran() # too slow for CRAN
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   con <- dbug()
   con$plan$trigger <- "missing"
   con <- testrun(config = con)
@@ -29,7 +30,7 @@ test_with_dir("triggers work as expected", {
   for (trigger in triggers_with_command()){
     con$plan$trigger[con$plan$target == "combined"] <- trigger
     expect_equal(sort(outdated(config = con)),
-      sort(c("combined", "final", "\"intermediatefile.rds\"")))
+      sort(c("combined", "final", "drake_target_1")))
   }
   con$plan$command[con$plan$target == "combined"] <- cmd
 
@@ -41,9 +42,9 @@ test_with_dir("triggers work as expected", {
       expect_equal(outdated(config = con), character(0))
     }
     for (trigger in triggers_with_file()){
-      con$plan$trigger[con$plan$target == "\"intermediatefile.rds\""] <- trigger
+      con$plan$trigger[con$plan$target == "drake_target_1"] <- trigger
       expect_equal(sort(outdated(config = con)),
-        sort(c("final", "\"intermediatefile.rds\"")))
+        sort(c("final", "drake_target_1")))
     }
   }
   check_file(con)
@@ -92,6 +93,7 @@ test_with_dir("triggers work as expected", {
 })
 
 test_with_dir("all triggers bring targets up to date", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   for (trigger in triggers()){
     clean(destroy = TRUE)
     con <- dbug()
@@ -109,6 +111,7 @@ test_with_dir("all triggers bring targets up to date", {
 
 # Similar enough to the triggers to include here:
 test_with_dir("make(..., skip_imports = TRUE) works", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   con <- dbug()
   verbose <- max(con$jobs) < 2 &&
     targets_setting(con$parallelism) == "parLapply"
@@ -121,7 +124,10 @@ test_with_dir("make(..., skip_imports = TRUE) works", {
       session_info = FALSE
     )
   )
-  expect_equal(sort(cached()), sort(con$plan$target))
+  expect_equal(
+    sort(cached()),
+    sort(c("\"intermediatefile.rds\"", con$plan$target))
+  )
 
   # If the imports are already cached, the targets built with
   # skip_imports = TRUE should be up to date.

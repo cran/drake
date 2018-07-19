@@ -69,15 +69,27 @@
 #'   are printed in the legend. If `FALSE`, only the
 #'   node types used are printed in the legend.
 #'
+#' @param group optional character scalar, name of the column used to
+#'   group nodes into columns. All the columns names of your `config$plan`
+#'   are choices. The other choices (such as `"status"`) are column names
+#'   in the `nodes` . To group nodes into clusters in the graph,
+#'   you must also supply the `clusters` argument.
+#'
+#' @param clusters optional character vector of values to cluster on.
+#'   These values must be elements of the column of the `nodes` data frame
+#'   that you specify in the `group` argument to `drake_graph_info()`.
+#'
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
-#' config <- load_mtcars_example() # Get the code with drake_example("mtcars").
+#' load_mtcars_example() # Get the code with drake_example("mtcars").
+#' config <- drake_config(my_plan) # my_plan loaded with load_mtcars_example()
+#' vis_drake_graph(config) # Jump straight to the interactive graph.
 #' # Get a list of data frames representing the nodes, edges,
 #' # and legend nodes of the visNetwork graph from vis_drake_graph().
-#' raw_graph <- dataframes_graph(config = config)
+#' raw_graph <- drake_graph_info(config = config)
 #' # Choose a subset of the graph.
-#' smaller_raw_graph <- dataframes_graph(
+#' smaller_raw_graph <- drake_graph_info(
 #'   config = config,
 #'   from = c("small", "reg2"),
 #'   mode = "in"
@@ -91,9 +103,21 @@
 #' library(visNetwork)
 #' visNetwork(nodes = raw_graph$nodes, edges = raw_graph$edges) %>%
 #'   visHierarchicalLayout(direction = 'UD')
+#' # Optionally visualize clusters.
+#' config$plan$large_data <- grepl("large", config$plan$target)
+#' graph <- drake_graph_info(
+#'   config, group = "large_data", clusters = c(TRUE, FALSE))
+#' tail(graph$nodes)
+#' render_drake_graph(graph)
+#' # You can even use clusters given to you for free in the `graph$nodes`
+#' # data frame.
+#' graph <- drake_graph_info(
+#'   config, group = "status", clusters = "imported")
+#' tail(graph$nodes)
+#' render_drake_graph(graph)
 #' })
 #' }
-dataframes_graph <- function(
+drake_graph_info <- function(
   config = drake::read_drake_config(),
   from = NULL,
   mode = c("out", "in", "all"),
@@ -106,7 +130,9 @@ dataframes_graph <- function(
   font_size = 20,
   from_scratch = FALSE,
   make_imports = TRUE,
-  full_legend = TRUE
+  full_legend = FALSE,
+  group = NULL,
+  clusters = NULL
 ) {
   if (!length(V(config$graph)$name)){
     return(null_graph())
@@ -119,6 +145,8 @@ dataframes_graph <- function(
   config$font_size <- font_size
   config$from_scratch <- from_scratch
   config$make_imports <- make_imports
+  config$group <- group
+  config$clusters <- clusters
   config <- get_raw_node_category_data(config)
   config$graph <- get_neighborhood(
     graph = config$graph,
@@ -134,12 +162,21 @@ dataframes_graph <- function(
     )
   }
   network_data <- visNetwork::toVisNetworkData(config$graph)
-  config$nodes <- network_data$nodes
+  config$nodes <- merge(
+    x = network_data$nodes,
+    y = config$plan,
+    by.x = "id",
+    by.y = "target",
+    all.x = TRUE
+  )
   config <- trim_node_categories(config)
   config$nodes <- configure_nodes(config = config)
   config$edges <- network_data$edges
   if (nrow(config$edges)){
     config$edges$arrows <- "to"
+  }
+  if (length(config$group)){
+    config <- cluster_nodes(config)
   }
   list(
     nodes = as_tibble(config$nodes),

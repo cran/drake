@@ -2,7 +2,7 @@
 #' @description Possible obvious errors include
 #' circular dependencies and
 #' missing input files.
-#' @seealso \code{ink{drake_plan}}, [make()]
+#' @seealso [drake_plan()], [make()]
 #' @export
 #' @return Invisibly return `plan`.
 #' @inheritParams cached
@@ -24,7 +24,7 @@
 #' }
 check_plan <- function(
   plan = read_drake_plan(),
-  targets = drake::possible_targets(plan),
+  targets = NULL,
   envir = parent.frame(),
   cache = drake::get_cache(verbose = verbose),
   verbose = drake::default_verbose(),
@@ -64,7 +64,10 @@ check_drake_config <- function(config) {
 }
 
 assert_standard_columns <- function(config){
-  x <- setdiff(colnames(config$plan), drake_plan_columns())
+  x <- setdiff(
+    colnames(config$plan),
+    c(drake_plan_columns(), attr(config$plan, "wildcards"))
+  )
   if (length(x)){
     warning(
       "Non-standard columns in workflow plan:\n",

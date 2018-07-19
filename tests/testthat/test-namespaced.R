@@ -1,10 +1,12 @@
 drake_context("namespaced")
 
 test_with_dir("function_dependencies() works on :: and :::", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_false("g" %in% ls())
   crazy <- function(x, y) {
     z <- g(x) + y
     k <- "local"
+    j <- TRUE
     h <- function(x) {
       digest::digest(x)
     }
@@ -26,10 +28,10 @@ test_with_dir("function_dependencies() works on :: and :::", {
   expect_equal(sort(find_namespaced_functions(crazy)), ns)
   expect_equal(
     unname(sort(unlist(code_dependencies(crazy)))),
-    sort(c(ns, "g", "runif", "sqrt"))
+    sort(c(ns, "g", "runif", "sqrt", "local"))
   )
   command <- "digest::digest(stats::rnorm(runif(stats::rpois(100))))"
-  d <- sort(deps_code(command))
+  d <- sort(clean_dependency_list(deps_code(command)))
   expect_equal(
     d,
     sort(
@@ -44,6 +46,7 @@ test_with_dir("function_dependencies() works on :: and :::", {
 })
 
 test_with_dir("namespaced drake_plan works", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   scenarios <- get_testing_scenario()
   envir <- dbug()$envir
   rm(list = ls(envir), envir = envir)

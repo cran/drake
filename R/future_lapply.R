@@ -1,4 +1,5 @@
 run_future_lapply <- function(config){
+  assert_pkgs(c("future", "future.apply"))
   prepare_distributed(config = config)
   mc_init_worker_cache(config)
   console_persistent_workers(config)
@@ -44,9 +45,6 @@ fl_worker <- function(worker, cache_path){
     },
     error = function(e){
       error_process(e = e, id = worker, config = config) # nocov
-    },
-    warning = function(e){
-      warning_process(e = e, id = worker, config = config) # nocov
     }
   )
 }

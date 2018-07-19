@@ -1,6 +1,7 @@
 drake_context("envir")
 
 test_with_dir("prune_envir() warns if loading missing deps", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   con <- drake_config(drake_plan(a = 1, b = a))
   expect_warning(
     prune_envir(targets = "b", config = con),
@@ -9,6 +10,7 @@ test_with_dir("prune_envir() warns if loading missing deps", {
 })
 
 test_with_dir("prune_envir in full build", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   # drake_plan with lots of nested deps This will fail if
   # prune_envir() doesn't work.
   datasets <- drake_plan(x = 1, y = 2, z = 3)
@@ -48,7 +50,7 @@ test_with_dir("prune_envir in full build", {
   testrun(config)
   expect_true(all(plan$target %in% cached()))
 
-  # Check that the right things are loaded and the right things
+  # Check that the right targets are loaded and the right targets
   # are discarded
   remove(list = ls(config$envir), envir = config$envir)
   expect_equal(ls(config$envir), character(0))
@@ -65,11 +67,14 @@ test_with_dir("prune_envir in full build", {
   )
 })
 
-test_with_dir("alt strategy for pruning", {
-  envir <- new.env(parent = globalenv())
-  cache <- storr::storr_environment()
-  load_mtcars_example(envir = envir, cache = cache)
-  make(envir$my_plan, envir = envir, cache = cache,
-       session_info = FALSE, pruning_strategy = "memory")
-  expect_true(file_store("report.md") %in% cache$list())
+test_with_dir("all pruning strategies work", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  for (pruning_strategy in c("lookahead", "speed", "memory")){
+    envir <- new.env(parent = globalenv())
+    cache <- storr::storr_environment()
+    load_mtcars_example(envir = envir)
+    make(envir$my_plan, envir = envir, cache = cache,
+         session_info = FALSE, pruning_strategy = pruning_strategy)
+    expect_true(file_store("report.md") %in% cache$list())
+  }
 })

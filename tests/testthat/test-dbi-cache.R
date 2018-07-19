@@ -1,7 +1,7 @@
 drake_context("dbi cache")
 
 test_with_dir("storr_dbi is usable", {
-  skip_on_cran() # low priority
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("DBI")
   skip_if_not_installed("RSQLite")
 
@@ -36,7 +36,8 @@ test_with_dir("storr_dbi is usable", {
   # parallelism <- scenario$parallelism # nolint
   # jobs <- scenario$jobs # nolint
 
-  con <- load_mtcars_example(envir = e)
+  load_mtcars_example(envir = e)
+  con <- drake_config(e$my_plan, envir = e)
   con$cache$destroy()
 
   # Need to fix richfitz/storr#60 before using the full workflow plan.
@@ -60,6 +61,9 @@ test_with_dir("storr_dbi is usable", {
 
   expect_equal(short_hash(cache), "murmur32")
   expect_equal(long_hash(cache), "sha1")
-  expect_equal(sort(built(cache = cache)), sort(config$plan$target))
+  expect_equal(
+    sort(built(cache = cache)),
+    sort(c("\"report.md\"", config$plan$target))
+  )
   expect_equal(outdated(config), character(0))
 })

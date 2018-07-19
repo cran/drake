@@ -48,8 +48,9 @@
 # To skip to the "CHECK AND DEBUG WORKFLOW PLAN" section, just
 # call load_mtcars_example().
 
-library(knitr) # Drake knows you loaded knitr.
+library(knitr) # drake knows you loaded knitr.
 library(drake)
+pkgconfig::set_config("drake::strings_in_dots" = "literals")
 
 clean() # remove any previous drake output
 
@@ -146,7 +147,7 @@ results <- plan_summaries(
 # Drake knows to put report.md in the "target" column when it comes
 # time to make().
 report <- drake_plan(
-  knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)
+  report = knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE)
 )
 
 # Row order doesn't matter in the workflow my_plan.
@@ -182,11 +183,6 @@ drake_plan(
 ### CHECK AND DEBUG WORKFLOW PLAN ###
 #####################################
 
-# Graph the dependency structure of your workflow
-# config <- drake_config(my_plan) # nolint
-# vis_drake_graph(config) # plots an interactive web app via visNetwork. #nolint optional
-workflow_graph <- build_drake_graph(my_plan) # igraph object
-
 # Check for circularities, missing input files, etc.
 check_plan(my_plan)
 
@@ -195,12 +191,6 @@ check_plan(my_plan)
 deps_code(reg1)
 deps_code(my_plan$command[1])
 deps_code(my_plan$command[nrow(my_plan)])
-
-# List objects that are reproducibly tracked.
-"small" %in% tracked(my_plan)
-tracked(my_plan, targets = "small")
-tracked(my_plan)
-
 
 ################################
 ### SINGLE PROCESS EXECUTION ###
@@ -219,7 +209,7 @@ outdated(config)
 missed(config) # Nothing should be missing from your workspace.
 
 # Run your project.
-config <- make(my_plan) # Return an updated config list
+make(my_plan) # Return an updated config list
 # The non-file dependencies of your last target are already loaded
 # in your workspace.
 
@@ -304,9 +294,6 @@ drake_gc() # Also consider clean(garbage_collection = TRUE)
 ### ONE R SESSION WITH 2 PARALLEL PROCESSES ###
 ###############################################
 
-# How many parallel jobs might be useful?
-# At what point would it be ridiculous to add more jobs?
-max_useful_jobs(config)
 clean()
 
 config <- make(my_plan, jobs = 2) # parallelism == "parLapply" for Windows

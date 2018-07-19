@@ -2,15 +2,18 @@
 #' @description This function returns an igraph object representing how
 #' the targets in your workflow plan data frame
 #' depend on each other.
-#' (`help(package = "igraph")`). To plot the graph, call
-#' to [plot.igraph()] on your graph, or just use
-#' [vis_drake_graph()] from the start.
-#' @seealso [vis_drake_graph()]
+#' (`help(package = "igraph")`). To plot this graph, call
+#' to [plot.igraph()] on your graph. See the online manual
+#' for enhanced graph visualization functionality.
 #' @export
 #' @return An igraph object representing
 #'   the workflow plan dependency network.
 #' @inheritParams drake_config
-#' @param sanitize_plan logical, whether to sanitize the workflow plan first.
+#' @param sanitize_plan logical, deprecated. If you must,
+#'   call `drake:::sanitize_plan()` to sanitize the plan
+#'   and/or `drake:::sanitize_targets()` to sanitize the targets
+#'   (or just get `plan` and `targets` and `graph` from
+#'   [drake_config()]).
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -22,18 +25,20 @@
 #' }
 build_drake_graph <- function(
   plan = read_drake_plan(),
-  targets = drake::possible_targets(plan),
+  targets = plan$target,
   envir = parent.frame(),
   verbose = drake::default_verbose(),
   jobs = 1,
-  sanitize_plan = TRUE,
+  sanitize_plan = FALSE,
   console_log_file = NULL
 ){
   force(envir)
   if (sanitize_plan){
-    plan <- sanitize_plan(plan)
+    warning(
+      "The `sanitize_plan` argument to `build_drake_graph()` is deprecated.",
+      call. = FALSE
+    )
   }
-  targets <- sanitize_targets(plan, targets)
   imports <- as.list(envir)
   unload_conflicts(
     imports = names(imports),
@@ -56,30 +61,53 @@ build_drake_graph <- function(
       imports_edges(name = import_names[[i]], value = imports[[i]])
     },
     jobs = jobs
-  )
+  ) %>%
+    do.call(what = dplyr::bind_rows)
   console_many_targets(
     targets = plan$target,
     pattern = "connect",
     type = "target",
     config = config
   )
-  commands_edges <- lightly_parallelize(
+  commands_deps <- lightly_parallelize(
     X = seq_len(nrow(plan)),
     FUN = function(i){
-      commands_edges(target = plan$target[i], command = plan$command[i])
+      command_dependencies(command = plan$command[i])
     },
     jobs = jobs
   )
-  c(imports_edges, commands_edges) %>%
-    do.call(what = rbind) %>%
-    igraph::graph_from_data_frame() %>%
-    prune_drake_graph(to = targets, jobs = jobs) %>%
+  commands_edges <- lightly_parallelize(
+    X = seq_len(nrow(plan)),
+    FUN = function(i){
+      code_deps_to_edges(target = plan$target[i], deps = commands_deps[[i]])
+    },
+    jobs = jobs
+  ) %>%
+    do.call(what = dplyr::bind_rows)
+  output_files <- deps_to_igraph_attr(plan, commands_deps, "file_out", jobs)
+  input_files <- deps_to_igraph_attr(
+    plan, commands_deps, c("file_in", "knitr_in"), jobs)
+  commands_edges <- connect_output_files(commands_edges, output_files)
+  graph <- dplyr::bind_rows(imports_edges, commands_edges) %>%
+    igraph::graph_from_data_frame()
+  if (length(output_files)){
+    graph <- igraph::set_vertex_attr(
+      graph = graph,
+      name = "output_files",
+      index = names(output_files),
+      value = output_files
+    )
+  }
+  if (length(input_files)){
+    graph <- igraph::set_vertex_attr(
+      graph = graph,
+      name = "input_files",
+      index = names(input_files),
+      value = input_files
+    )
+  }
+  prune_drake_graph(graph = graph, to = targets, jobs = jobs) %>%
     igraph::simplify(remove.multiple = TRUE, remove.loops = TRUE)
-}
-
-commands_edges <- function(target, command){
-  deps <- command_dependencies(command)
-  code_deps_to_edges(target = target, deps = deps)
 }
 
 imports_edges <- function(name, value){
@@ -98,13 +126,25 @@ code_deps_to_edges <- function(target, deps){
   }
 }
 
+deps_to_igraph_attr <- function(plan, commands_deps, fields, jobs){
+  lightly_parallelize(
+    X = seq_len(nrow(plan)),
+    FUN = function(i){
+      unlist(commands_deps[[i]][fields])
+    },
+    jobs = jobs
+  ) %>%
+    setNames(nm = plan$target) %>%
+    select_nonempty
+}
+
 #' @title Prune the dependency network of your project.
 #' @export
-#' @seealso [build_drake_graph()], [config()],
+#' @seealso [build_drake_graph()], [drake_config()],
 #'   [make()]
 #' @description `igraph` objects are used
 #' internally to represent the dependency network of your workflow.
-#' See \code{\link{config}(my_plan)$graph} from the mtcars example.
+#' See `drake_config(my_plan)$graph` from the mtcars example.
 #' @details For a supplied graph, take the subgraph of all combined
 #' incoming paths to the vertices in `to`. In other words,
 #' remove the vertices after `to` from the graph.
@@ -124,11 +164,11 @@ code_deps_to_edges <- function(target, deps){
 #' graph <- build_drake_graph(my_plan)
 #' # The default plotting is not the greatest,
 #' # but you will get the idea.
-#' plot(graph)
+#' # plot(graph) # nolint
 #' # Prune the graph: that is, remove the nodes downstream
 #' # from 'small' and 'large'
 #' pruned <- prune_drake_graph(graph = graph, to = c("small", "large"))
-#' plot(pruned)
+#' # plot(pruned) # nolint
 #' })
 #' }
 prune_drake_graph <- function(
@@ -159,7 +199,7 @@ prune_drake_graph <- function(
   ignore <- lightly_parallelize(
     X = to,
     FUN = function(vertex){
-      subcomponent(graph = graph, v = vertex, mode = "in")$name
+      drake_subcomponent(graph = graph, v = vertex, mode = "in")$name
     },
     jobs = jobs
   ) %>%
@@ -204,7 +244,7 @@ downstream_nodes <- function(from, graph, jobs){
   lightly_parallelize(
     X = from,
     FUN = function(node){
-      subcomponent(graph, v = node, mode = "out")$name
+      drake_subcomponent(graph, v = node, mode = "out")$name
     },
     jobs = jobs
   ) %>%
@@ -240,4 +280,22 @@ imports_graph <- function(config){
 targets_graph <- function(config){
   delete_these <- setdiff(V(config$graph)$name, config$plan$target)
   delete_vertices(config$graph, v = delete_these)
+}
+
+connect_output_files <- function(commands_edges, output_files){
+  if (!length(output_files)){
+    return(commands_edges)
+  }
+  output_files <- utils::stack(output_files)
+  output_files$ind <- as.character(output_files$ind)
+  index <- match(commands_edges$from, table = output_files$values)
+  commands_edges$from[is.finite(index)] <- output_files$ind[na.omit(index)]
+  commands_edges
+}
+
+drake_subcomponent <- function(...){
+  opt <- igraph::igraph_opt("return.vs.es")
+  on.exit(igraph::igraph_options(return.vs.es = opt))
+  igraph::igraph_options(return.vs.es = TRUE)
+  igraph::subcomponent(...)
 }

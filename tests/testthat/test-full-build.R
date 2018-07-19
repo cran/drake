@@ -33,7 +33,7 @@ test_with_dir("scratch build with custom filesystem cache.", {
 
   # take this opportunity to test clean() and prune()
   all <- sort(c("\"input.rds\"",
-    "\"intermediatefile.rds\"", "a",
+    "\"intermediatefile.rds\"", "drake_target_1", "a",
     "b", "c", "combined", "f", "final", "g", "h", "i", "j",
     "myinput", "nextone", "readRDS", "saveRDS", "yourinput"))
   expect_equal(config$cache$list(), all)
@@ -47,8 +47,13 @@ test_with_dir("scratch build with custom filesystem cache.", {
     cache = cache)
   expect_false(file.exists("intermediatefile.rds"))
   expect_true(file.exists("input.rds"))
-  expect_equal(config$cache$list(),
-    setdiff(all, c("b", "c", "\"intermediatefile.rds\"", "nextone")))
+  expect_equal(
+    sort(config$cache$list()),
+    sort(setdiff(
+      all,
+      c("b", "c", "\"intermediatefile.rds\"", "nextone")
+    ))
+  )
 
   # clean does not remove imported files
   expect_true(file.exists("input.rds"))
@@ -83,6 +88,7 @@ test_with_dir("scratch build with custom filesystem cache.", {
 })
 
 test_with_dir("clean in full build.", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- dbug()
   make(config$plan, envir = config$envir, verbose = FALSE)
   expect_true("final" %in% config$cache$list())

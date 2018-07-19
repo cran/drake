@@ -22,20 +22,13 @@ test_with_dir("mtcars example works", {
     target = "small", config = con)))
   expect_equal(parallelism == "Makefile", file.exists("Makefile"))
 
-  # Should probably check the actual build times in the labels.
-  tmp1 <- dataframes_graph(config = config,
-    make_imports = FALSE)
-  tmp2 <- dataframes_graph(config = config)
-  expect_true(is.data.frame(tmp1$nodes))
-  expect_true(is.data.frame(tmp2$nodes))
-
   expect_equal(sort(justbuilt(con)), sort(dats))
   remove_these <- intersect(dats, ls(config$envir))
   rm(list = remove_these, envir = config$envir)
   config$targets <- config$plan$target
   con <- testrun(config)
   jb <- justbuilt(con)
-  expect_true("\"report.md\"" %in% jb)
+  expect_true("report" %in% jb)
   expect_false(any(dats %in% jb))
 
   # Check that file is not rehashed.
@@ -55,7 +48,7 @@ test_with_dir("mtcars example works", {
     verbose = FALSE)
   expect_equal(
     sort(outdated(config = config)),
-    sort(c("\"report.md\"", "coef_regression2_large",
+    sort(c("report", "coef_regression2_large",
       "coef_regression2_small", "regression2_large", "regression2_small",
       "summ_regression2_large", "summ_regression2_small")))
   testrun(config)
@@ -74,6 +67,7 @@ test_with_dir("mtcars example works", {
   expect_equal(sort(ls(envir = e)), coefs)
 
   # build_times() # nolint
+  skip_if_not_installed("lubridate")
   all_times <- build_times()
   expect_true(nrow(all_times) >= nrow(config$plan))
   some_times <- build_times(starts_with("coef"))
@@ -100,10 +94,10 @@ test_with_dir("mtcars example works", {
     strings_in_dots = "literals"
   )
   suppressWarnings(con <- drake_config(plan = x))
-  for (target in c("a", "d")){
+  for (target in c("a")){
     expect_true("small" %in% dependencies(targets = target, config = con))
   }
-  for (target in c("b", "c", "e", "f")){
+  for (target in c("b", "c")){
     expect_false("small" %in% dependencies(targets = target, config = con))
   }
 })

@@ -4,10 +4,9 @@
 \alias{build_drake_graph}
 \title{Create the \code{igraph} dependency network of your project.}
 \usage{
-build_drake_graph(plan = read_drake_plan(),
-  targets = drake::possible_targets(plan), envir = parent.frame(),
-  verbose = drake::default_verbose(), jobs = 1, sanitize_plan = TRUE,
-  console_log_file = NULL)
+build_drake_graph(plan = read_drake_plan(), targets = plan$target,
+  envir = parent.frame(), verbose = drake::default_verbose(), jobs = 1,
+  sanitize_plan = FALSE, console_log_file = NULL)
 }
 \arguments{
 \item{plan}{workflow plan data frame.
@@ -51,7 +50,7 @@ for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
 }}
 
 \item{jobs}{number of parallel processes or jobs to run.
-See \code{\link[=max_useful_jobs]{max_useful_jobs()}} or \code{\link[=vis_drake_graph]{vis_drake_graph()}}
+See \code{\link[=predict_runtime]{predict_runtime()}}
 to help figure out what the number of jobs should be.
 Windows users should not set \code{jobs > 1} if
 \code{parallelism} is \code{"mclapply"} because
@@ -64,17 +63,6 @@ have different parallelism needs. To use at most 2 jobs at a time
 for imports and at most 4 jobs at a time for targets, call
 \code{make(..., jobs = c(imports = 2, targets = 4))}.
 
-For \code{"future_lapply"} parallelism, \code{jobs}
-only applies to the imports.
-To set the max number of jobs for \code{"future_lapply"}
-parallelism, set the \code{workers}
-argument where it exists: for example, call
-\code{future::plan(multisession(workers = 4))},
-then call \code{\link{make}(your_plan, parallelism = "future_lapply")}.
-You might also try \code{options(mc.cores = jobs)},
-or see \code{future::.options}
-for environment variables that set the max number of jobs.
-
 If \code{parallelism} is \code{"Makefile"},  Makefile-level parallelism is
 only used for targets in your workflow plan data frame, not imports.  To
 process imported objects and files, drake selects the best parallel backend
@@ -84,7 +72,11 @@ most 4 jobs for targets, run
 \code{make(..., parallelism = "Makefile", jobs = c(imports = 2, targets = 4))} or
 \code{make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")}.}
 
-\item{sanitize_plan}{logical, whether to sanitize the workflow plan first.}
+\item{sanitize_plan}{logical, deprecated. If you must,
+call \code{drake:::sanitize_plan()} to sanitize the plan
+and/or \code{drake:::sanitize_targets()} to sanitize the targets
+(or just get \code{plan} and \code{targets} and \code{graph} from
+\code{\link[=drake_config]{drake_config()}}).}
 
 \item{console_log_file}{character scalar or \code{NULL}.
 If \code{NULL}, console output will be printed
@@ -100,9 +92,9 @@ the workflow plan dependency network.
 This function returns an igraph object representing how
 the targets in your workflow plan data frame
 depend on each other.
-(\code{help(package = "igraph")}). To plot the graph, call
-to \code{\link[=plot.igraph]{plot.igraph()}} on your graph, or just use
-\code{\link[=vis_drake_graph]{vis_drake_graph()}} from the start.
+(\code{help(package = "igraph")}). To plot this graph, call
+to \code{\link[=plot.igraph]{plot.igraph()}} on your graph. See the online manual
+for enhanced graph visualization functionality.
 }
 \examples{
 \dontrun{
@@ -113,7 +105,4 @@ g <- build_drake_graph(my_plan)
 class(g) # "igraph"
 })
 }
-}
-\seealso{
-\code{\link[=vis_drake_graph]{vis_drake_graph()}}
 }

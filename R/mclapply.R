@@ -1,4 +1,5 @@
 run_mclapply <- function(config){
+  assert_pkgs("txtq")
   if (config$jobs < 2 && !length(config$debug)) {
     return(run_loop(config = config))
   }
@@ -35,9 +36,6 @@ mc_process <- function(id, config){
     },
     error = function(e){
       error_process(e = e, id = id, config = config) # nocov
-    },
-    warning = function(e){
-      warning_process(e = e, id = id, config = config) # nocov
     }
   )
   invisible()
@@ -55,6 +53,7 @@ mc_process <- function(id, config){
 #' @param config `drake_config()` list
 #' @return nothing important
 mc_master <- function(config){
+  assert_pkgs("txtq")
   on.exit(mc_conclude_workers(config))
   config$queue <- new_priority_queue(config = config)
   if (!identical(config$ensure_workers, FALSE)){
@@ -63,12 +62,16 @@ mc_master <- function(config){
   while (mc_work_remains(config)){
     config <- mc_refresh_queue_lists(config)
     mc_conclude_done_targets(config)
+    if (mc_abort_with_errored_workers(config)){
+      return() # tested in "test-always-skipped.R" # nocov
+    }
     mc_assign_ready_targets(config)
     Sys.sleep(mc_wait)
   }
 }
 
 mc_worker <- function(worker, config){
+  assert_pkgs("txtq")
   ready_queue <- mc_get_ready_queue(worker, config)
   done_queue <- mc_get_done_queue(worker, config)
   while (TRUE){
@@ -80,12 +83,26 @@ mc_worker <- function(worker, config){
       return()
     }
     target <- msg$title
-    build_check_store(
-      target = target,
-      config = config,
-      downstream = config$cache$list(namespace = "mc_protect"),
-      flag_attempt = TRUE
+    out <- try(
+      build_check_store(
+        target = target,
+        config = config,
+        downstream = config$cache$list(namespace = "mc_protect"),
+        flag_attempt = TRUE
+      )
     )
+    # Tested in test-always-skipped.R (multi-process error msgs are annoying).
+    # nocov start
+    if (inherits(out, "try-error")){
+      config$cache$set(
+        key = worker,
+        value = paste0(worker, " failed building target ", target, "."),
+        namespace = "mc_error"
+      )
+      set_attempt_flag(key = worker, config = config)
+      return()
+    }
+    # nocov end
     ready_queue$pop(1)
     message <- mc_get_checksum(target = target, config = config)
     done_queue$push(title = target, message = message)

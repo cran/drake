@@ -1,3 +1,15 @@
+assert_pkgs <- function(pkgs){
+  for (pkg in pkgs){
+    if (!requireNamespace(pkg, quietly = TRUE)){
+      stop(
+        "package ", pkg, " not installed. ",
+        "Install with install.packages(\"", pkg, "\").",
+        call. = FALSE
+      )
+    }
+  }
+}
+
 safe_grepl <- function(pattern, x, ...){
   tryCatch(grepl(pattern, x, ...), error = error_false)
 }
@@ -11,13 +23,11 @@ standardize_filename <- function(text){
   text
 }
 
-is_existing_file <- function(x){
-  is_file(x) & file.exists(drake_unquote(x))
-}
-
 is_not_file <- function(x){
   !is_file(x)
 }
+
+rehash_file_size_cutoff <- 1e5
 
 braces <- function(x) {
   paste("{\n", x, "\n}")
@@ -65,4 +75,21 @@ clean_dependency_list <- function(x){
     as.character() %>%
     unique() %>%
     sort()
+}
+
+padded_scale <- function(x){
+  r <- range(x)
+  pad <- 0.2 * (r[2] - r[1])
+  c(r[1] - pad, r[2] + pad)
+}
+
+select_nonempty <- function(x){
+  index <- vapply(
+    X = x,
+    FUN = function(y){
+      length(y) > 0
+    },
+    FUN.VALUE = logical(1)
+  )
+  x[index]
 }

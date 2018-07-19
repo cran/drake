@@ -4,34 +4,34 @@
 \alias{render_graph}
 \title{Deprecated function \code{render_graph}}
 \usage{
-render_graph(graph_dataframes, file = character(0),
+render_graph(graph_info, file = character(0),
   layout = "layout_with_sugiyama", direction = "LR", hover = TRUE,
-  main = graph_dataframes$default_title, selfcontained = FALSE,
+  main = graph_info$default_title, selfcontained = FALSE,
   navigationButtons = TRUE, ncol_legend = 1, ...)
 }
 \arguments{
-\item{graph_dataframes}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.}
+\item{graph_info}{deprecated}
 
-\item{file}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.}
+\item{file}{deprecated}
 
-\item{layout}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.}
+\item{layout}{deprecated}
 
-\item{direction}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.}
+\item{direction}{deprecated}
 
-\item{hover}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.}
+\item{hover}{deprecated}
 
-\item{main}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.}
+\item{main}{deprecated}
 
-\item{selfcontained}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.}
+\item{selfcontained}{deprecated}
 
-\item{navigationButtons}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}. # nolint}
+\item{navigationButtons}{deprecated}
 
-\item{ncol_legend}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.}
+\item{ncol_legend}{deprecated}
 
-\item{...}{Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.}
+\item{...}{deprecated}
 }
 \value{
-Same as for \code{\link[=render_drake_graph]{render_drake_graph()}}.
+a \code{visNetwork} graph.
 }
 \description{
 Use \code{\link[=render_drake_graph]{render_drake_graph()}} instead.
@@ -41,8 +41,5 @@ Deprecated on 2017-10.
 }
 \examples{
 # See ?render_drake_graph for examples.
-}
-\seealso{
-\code{\link[=render_drake_graph]{render_drake_graph()}}
 }
 \keyword{internal}

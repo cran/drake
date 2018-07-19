@@ -1,4 +1,5 @@
 run_future <- function(config){
+  assert_pkgs("future")
   queue <- new_priority_queue(config = config)
   workers <- initialize_workers(config)
   # While any targets are queued or running...
@@ -45,17 +46,13 @@ run_future <- function(config){
 #' @param config [drake_config()] list
 #' @param protect Names of targets that still need their
 #' dependencies available in `config$envir`.
-drake_future_task <- function(target, meta, config, protect){
-  config$hook({
-    do_prework(config = config, verbose_packages = FALSE)
-    prune_envir(
-      targets = target, config = config, downstream = protect)
-  })
+drake_future_task <- function(target, meta, config){
+  do_prework(config = config, verbose_packages = FALSE)
   if (config$caching == "worker"){
     build_and_store(
       target = target, meta = meta, config = config, announce = FALSE)
   } else {
-    config$hook(just_build(target = target, meta = meta, config = config))
+    just_build(target = target, meta = meta, config = config)
   }
 }
 
@@ -68,18 +65,42 @@ new_worker <- function(id, target, config, protect){
   )){
     return(empty_worker(target = target))
   }
+  prune_envir(targets = target, config = config, downstream = protect)
   meta$start <- proc.time()
   config$cache$flush_cache() # Less data to pass this way.
   DRAKE_GLOBALS__ <- NULL # Fixes warning about undefined globals.
   # Avoid potential name conflicts with other globals.
   # When we solve #296, the need for such a clumsy workaround
   # should go away.
+  globals <- future_globals(target = target, meta = meta, config = config)
+  evaluator <- drake_plan_override(
+    target = target,
+    field = "evaluator",
+    config = config
+  ) %||%
+    future::plan("next")
+  announce_build(target = target, meta = meta, config = config)
+  structure(
+    future::future(
+      expr = drake_future_task(
+        target = DRAKE_GLOBALS__$target,
+        meta = DRAKE_GLOBALS__$meta,
+        config = DRAKE_GLOBALS__$config
+      ),
+      packages = "drake",
+      globals = globals,
+      evaluator = evaluator
+    ),
+    target = target
+  )
+}
+
+future_globals <- function(target, meta, config){
   globals <- list(
     DRAKE_GLOBALS__ = list(
       target = target,
       meta = meta,
-      config = config,
-      protect = protect
+      config = config
     )
   )
   if (identical(config$envir, globalenv())){
@@ -93,27 +114,7 @@ new_worker <- function(id, target, config, protect){
     } # nocov
     globals <- c(globals, as.list(config$envir, all.names = TRUE)) # nocov
   }
-  evaluator <- drake_plan_override(
-    target = target,
-    field = "evaluator",
-    config = config
-  ) %||%
-    future::plan("next")
-  announce_build(target = target, meta = meta, config = config)
-  structure(
-    future::future(
-      expr = drake_future_task(
-        target = DRAKE_GLOBALS__$target,
-        meta = DRAKE_GLOBALS__$meta,
-        config = DRAKE_GLOBALS__$config,
-        protect = DRAKE_GLOBALS__$protect
-      ),
-      packages = "drake",
-      globals = globals,
-      evaluator = evaluator
-    ),
-    target = target
-  )
+  globals
 }
 
 empty_worker <- function(target){
@@ -210,14 +211,12 @@ conclude_worker <- function(worker, config, queue){
   if (config$caching == "worker"){
     return(out)
   }
-  config$hook({
-    conclude_build(
-      target = build$target,
-      value = build$value,
-      meta = build$meta,
-      config = config
-    )
-  })
+  conclude_build(
+    target = build$target,
+    value = build$value,
+    meta = build$meta,
+    config = config
+  )
   out
 }
 

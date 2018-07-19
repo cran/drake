@@ -4,10 +4,10 @@
 \alias{make}
 \title{Run your project (build the outdated targets).}
 \usage{
-make(plan = read_drake_plan(), targets = drake::possible_targets(plan),
-  envir = parent.frame(), verbose = drake::default_verbose(),
-  hook = default_hook, cache = drake::get_cache(verbose = verbose, force =
-  force, console_log_file = console_log_file), fetch_cache = NULL,
+make(plan = read_drake_plan(), targets = NULL, envir = parent.frame(),
+  verbose = drake::default_verbose(), hook = default_hook,
+  cache = drake::get_cache(verbose = verbose, force = force, console_log_file
+  = console_log_file), fetch_cache = NULL,
   parallelism = drake::default_parallelism(), jobs = 1,
   packages = rev(.packages()), prework = character(0),
   prepend = character(0), command = drake::default_Makefile_command(),
@@ -19,9 +19,9 @@ make(plan = read_drake_plan(), targets = drake::possible_targets(plan),
   skip_safety_checks = FALSE, config = NULL, lazy_load = "eager",
   session_info = TRUE, cache_log_file = NULL, seed = NULL,
   caching = "worker", keep_going = FALSE, session = NULL,
-  imports_only = NULL, pruning_strategy = c("speed", "memory"),
+  imports_only = NULL, pruning_strategy = c("lookahead", "speed", "memory"),
   makefile_path = "Makefile", console_log_file = NULL,
-  ensure_workers = TRUE)
+  ensure_workers = TRUE, garbage_collection = FALSE)
 }
 \arguments{
 \item{plan}{workflow plan data frame.
@@ -82,8 +82,7 @@ For example, \code{function(code){force(code)}} is a good hook
 and \code{function(code){message("Avoiding the code")}} is a bad hook.}
 
 \item{cache}{drake cache as created by \code{\link[=new_cache]{new_cache()}}.
-See also \code{\link[=get_cache]{get_cache()}}, \code{\link[=this_cache]{this_cache()}},
-and \code{\link[=recover_cache]{recover_cache()}}}
+See also \code{\link[=get_cache]{get_cache()}} and \code{\link[=this_cache]{this_cache()}}.}
 
 \item{fetch_cache}{character vector containing lines of code.
 The purpose of this code is to fetch the \code{storr} cache
@@ -101,7 +100,7 @@ For detailed explanations, see the
 of the user manual.}
 
 \item{jobs}{number of parallel processes or jobs to run.
-See \code{\link[=max_useful_jobs]{max_useful_jobs()}} or \code{\link[=vis_drake_graph]{vis_drake_graph()}}
+See \code{\link[=predict_runtime]{predict_runtime()}}
 to help figure out what the number of jobs should be.
 Windows users should not set \code{jobs > 1} if
 \code{parallelism} is \code{"mclapply"} because
@@ -113,17 +112,6 @@ Imports and targets are processed separately, and they usually
 have different parallelism needs. To use at most 2 jobs at a time
 for imports and at most 4 jobs at a time for targets, call
 \code{make(..., jobs = c(imports = 2, targets = 4))}.
-
-For \code{"future_lapply"} parallelism, \code{jobs}
-only applies to the imports.
-To set the max number of jobs for \code{"future_lapply"}
-parallelism, set the \code{workers}
-argument where it exists: for example, call
-\code{future::plan(multisession(workers = 4))},
-then call \code{\link{make}(your_plan, parallelism = "future_lapply")}.
-You might also try \code{options(mc.cores = jobs)},
-or see \code{future::.options}
-for environment variables that set the max number of jobs.
 
 If \code{parallelism} is \code{"Makefile"},  Makefile-level parallelism is
 only used for targets in your workflow plan data frame, not imports.  To
@@ -174,7 +162,7 @@ Defaults to the usual \code{"make"}
 but it could also be
 \code{"lsmake"} on supporting systems, for example.
 \code{command} and \code{args} are executed via
-\code{\link{system2}(command, args)} to run the Makefile.
+\code{system2(command, args)} to run the Makefile.
 If \code{args} has something like \code{"--jobs=2"}, or if
 \code{jobs >= 2} and \code{args} is left alone, targets
 will be distributed over independent parallel R sessions
@@ -185,7 +173,7 @@ distributed computing. For advanced users only. If set,
 \code{jobs} and \code{verbose} are overwritten as they apply to the
 Makefile.
 \code{command} and \code{args} are executed via
-\code{\link{system2}(command, args)} to run the Makefile.
+\code{system2(command, args)} to run the Makefile.
 If \code{args} has something like \code{"--jobs=2"}, or if
 \code{jobs >= 2} and \code{args} is left alone, targets
 will be distributed over independent parallel R sessions
@@ -237,7 +225,7 @@ is always invisibly returned.}
 \item{graph}{An \code{igraph} object from the previous \code{make()}.
 Supplying a pre-built graph could save time.
 The graph is constructed by \code{\link[=build_drake_graph]{build_drake_graph()}}.
-You can also get one from \code{\link{config}(my_plan)$graph}.
+You can also get one from \code{drake_config(my_plan)$graph}.
 Overrides \code{skip_imports}.}
 
 \item{trigger}{Name of the trigger to apply to all targets.
@@ -319,7 +307,21 @@ seed from the project's cache (usually the \code{.drake/} folder).
 To reset the random number generator seed for a project,
 use \code{clean(destroy = TRUE)}.}
 
-\item{caching}{character string, only applies to \code{"future"} parallelism.}
+\item{caching}{character string, only applies to \code{"future"} parallelism.
+Can be either \code{"master"} or \code{"worker"}.
+\itemize{
+\item \code{"master"}: Targets are built by remote workers and sent back to
+the master process. Then, the master process saves them to the
+cache (\code{config$cache}, usually a file system \code{storr}).
+Appropriate if remote workers do not have access to the file system
+of the calling R session. Targets are cached one at a time,
+which may be slow in some situations.
+\item \code{"worker"}: Remote workers not only build the targets, but also
+save them to the cache. Here, caching happens in parallel.
+However, remote workers need to have access to the file system
+of the calling R session. Transferring target data across
+a network can be slow.
+}}
 
 \item{keep_going}{logical, whether to still keep running \code{\link[=make]{make()}}
 if targets fail.}
@@ -337,18 +339,24 @@ with the last few targets it builds.}
 
 \item{imports_only}{deprecated. Use \code{skip_targets} instead.}
 
-\item{pruning_strategy}{Character scalar, either \code{"speed"} (default)
-or \code{"memory"}. These are alternative approaches to how \code{drake}
-keeps non-import dependencies in memory when it builds a target.
-If \code{pruning_strategy} is \code{"memory"}, \code{drake} removes all targets
-from memory (i.e. \code{config$envir}) except the direct dependencies
-of the target is about to build. This is suitable for data so large
-that the optimal strategy is to minimize memory consumption.
-If \code{pruning_strategy} is \code{"speed"}, \code{drake} loads all the dependencies
-and keeps in memory everything that will eventually be a
-dependency of a downstream target. This strategy consumes more
-memory, but does more to minimize the number of times data is
-read from storage/disk.}
+\item{pruning_strategy}{Character scalar, name of the
+approach that \code{drake} takes regarding when to unload targets
+from memory. Choices:
+\itemize{
+\item \code{"lookahead"} (default): keep loaded targets in memory until they are
+no longer needed as dependencies in downstream build steps.
+Then, unload them from the environment. This step avoids
+keeping unneeded data in memory and minimizes expensive
+reads from the cache. However, it requires looking ahead
+in the dependency graph, which could add overhead for every
+target of projects with lots of targets.
+\item \code{"speed"}: Once a target is loaded in memory, just keep it there.
+Maximizes speed, but hogs memory.
+\item \code{"memory"}: For each target, unload everything from memory
+except the target's direct dependencies. Conserves memory,
+but sacrifices speed because each new target needs to reload
+any previously unloaded targets from the cache.
+}}
 
 \item{makefile_path}{Path to the \code{Makefile} for
 \code{make(parallelism = "Makefile")}. If you set this argument to a
@@ -370,11 +378,14 @@ for \code{make(parallelism = "future_lapply", jobs = n)}
 This argument only applies to parallel computing with persistent workers
 (\code{make(parallelism = x)}, where \code{x} could be \code{"mclapply"},
 \code{"parLapply"}, or \code{"future_lapply"}).}
+
+\item{garbage_collection}{logical, whether to call \code{gc()} each time
+a target is built during \code{\link[=make]{make()}}.}
 }
 \value{
 The master internal configuration list, mostly
 containing arguments to \code{make()} and important objects
-constructed along the way. See \code{\link[=config]{config()}}
+constructed along the way. See \code{\link[=drake_config]{drake_config()}}
 for more details.
 }
 \description{
@@ -391,7 +402,6 @@ test_with_dir("Quarantine side effects.", {
 load_mtcars_example() # Get the code with drake_example("mtcars").
 config <- drake_config(my_plan)
 outdated(config) # Which targets need to be (re)built?
-my_jobs = max_useful_jobs(config) # Depends on what is up to date.
 make(my_plan, jobs = 2) # Build what needs to be built.
 outdated(config) # Everything is up to date.
 # Change one of your imported function dependencies.
@@ -400,9 +410,9 @@ reg2 = function(d){
   lm(y ~ x3, data = d)
 }
 outdated(config) # Some targets depend on reg2().
-vis_drake_graph(config) # See how they fit in an interactive graph.
 make(my_plan) # Rebuild just the outdated targets.
 outdated(config) # Everything is up to date again.
+vis_drake_graph(config) # See how they fit in an interactive graph.
 make(my_plan, cache_log_file = TRUE) # Write a text log file this time.
 vis_drake_graph(config) # The colors changed in the graph.
 clean() # Start from scratch.
@@ -433,9 +443,10 @@ readd(letter) # "b"
 }
 \seealso{
 \code{\link[=drake_plan]{drake_plan()}},
+\code{\link[=drake_config]{drake_config()}},
 \code{\link[=vis_drake_graph]{vis_drake_graph()}},
+\code{\link[=evaluate_plan]{evaluate_plan()}},
+\code{\link[=outdated]{outdated()}},
 \code{\link[=parallelism_choices]{parallelism_choices()}},
-\code{\link[=max_useful_jobs]{max_useful_jobs()}},
-\code{\link[=triggers]{triggers()}},
-\code{\link[=make_with_config]{make_with_config()}}
+\code{\link[=triggers]{triggers()}}
 }

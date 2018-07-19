@@ -25,13 +25,11 @@
 #'   this conflict and runs as expected. In other words, [make()]
 #'   automatically removes all self-referential loops in the dependency
 #'   network.
-#' @seealso deps_targets make drake_plan drake_config
+#' @seealso deps_targets deps_files make drake_plan drake_config
 #' @export
 #' @param x a language object (code), character string (code as text),
 #'   or imported function to analyze for dependencies.
-#' @return A character vector, names of dependencies.
-#'   Files wrapped in escaped double quotes.
-#'   The other names listed are functions or generic R objects.
+#' @return Names of dependencies listed by type (object, input file, etc).
 #' @examples
 #' # Your workflow likely depends on functions in your workspace.
 #' f <- function(x, y){
@@ -67,31 +65,25 @@
 #' }
 deps_code <- function(x){
   if (is.function(x)){
-    out <- import_dependencies(x)
+    import_dependencies(x)
   } else if (is_file(x) && file.exists(drake_unquote(x))){
-    out <- knitr_deps(drake_unquote(x))
+    knitr_deps(drake_unquote(x))
   } else if (is.character(x)){
-    out <- command_dependencies(x)
+    command_dependencies(x)
   } else{
-    out <- code_dependencies(x)
+    code_dependencies(x)
   }
-  clean_dependency_list(out)
 }
 
 #' @title List the dependencies of one or more targets
-#' @description Intended for debugging and checking your project.
-#'   The dependency structure of the components of your analysis
-#'   decides which targets are built and when.
-#' @details Unlike [deps_code()], `deps_targets()` allows you to
-#'   specify a set of targets and get their dependencies. This assumes
-#'   you have an output list from [drake_config()]. which resolves
-#'   the dependency graph.
-#' @seealso deps_code make drake_plan drake_config
+#' @description Unlike [deps_code()], `deps_targets()` just lists
+#'   the jobs that lie upstream of the `targets` on the workflow
+#'   graph, and `file_out()` files are not included.
 #' @export
 #' @param targets a character vector of target names
 #' @param config an output list from [drake_config()]
 #' @param reverse logical, whether to compute reverse dependencies
-#'   (targets immediately downstream) instead of ordinary dependencies. 
+#'   (targets immediately downstream) instead of ordinary dependencies.
 #' @return A character vector, names of dependencies.
 #'   Files wrapped in escaped double quotes.
 #'   The other names listed are functions or generic R objects.
@@ -125,12 +117,12 @@ deps_targets <- function(
 #' @return A list of information that drake takes into account
 #'   when examining the dependencies of the target.
 #' @export
-#' @seealso [read_drake_meta()],
+#' @seealso [diagnose()],
 #'   [deps_code()], [make()],
-#'   [config()]
+#'   [drake_config()]
 #' @param target name of the target
 #' @param config configuration list output by
-#'   [config()] or [make()]
+#'   [drake_config()] or [make()]
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -162,9 +154,10 @@ dependency_profile <- function(target, config = drake::read_drake_config()){
     current_file_modification_time = suppressWarnings(
       file.mtime(drake::drake_unquote(target))
     ),
-    cached_file_hash = meta$file,
-    current_file_hash = file_hash(target = target, config = config),
-    cached_dependency_hash = meta$depends,
+    cached_file_dependency_hash = meta$file_dependency_hash,
+    current_file_dependency_hash = file_dependency_hash(
+      target = target, config = config),
+    cached_dependency_hash = meta$dependency_hash,
     current_dependency_hash = current_dependency_hash,
     hashes_of_dependencies = hashes_of_dependencies
   )
@@ -177,47 +170,40 @@ dependency_profile <- function(target, config = drake::read_drake_config()){
 #' in your project's dependency network.
 #' @export
 #' @return A character vector with the names of reproducibly-tracked targets.
-#' @inheritParams cached
-#' @param plan workflow plan data frame, same as for function
-#'   [make()].
-#' @param targets names of targets to build, same as for function
-#'   [make()].
-#' @param envir environment to import from, same as for function
-#'   [make()].
+#' @param config An output list from [drake_config()].
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' load_mtcars_example() # Load the canonical example for drake.
 #' # List all the targets/imports that are reproducibly tracked.
-#' tracked(my_plan)
+#' config <- drake_config(my_plan)
+#' tracked(config)
 #' })
 #' }
-tracked <- function(
-  plan = read_drake_plan(),
-  targets = drake::possible_targets(plan),
-  envir = parent.frame(),
-  jobs = 1,
-  verbose = drake::default_verbose()
-){
-  force(envir)
-  graph <- build_drake_graph(
-    plan = plan, targets = targets, envir = envir,
-    jobs = jobs, verbose = verbose
-  )
-  V(graph)$name
+tracked <- function(config){
+  c(
+    V(config$graph)$name,
+    V(config$graph)$input_files,
+    V(config$graph)$output_files
+  ) %>%
+    clean_dependency_list
 }
 
 dependencies <- function(targets, config, reverse = FALSE){
   if (!length(targets)){
     return(character(0))
   }
-  adjacent_vertices(
+  opt <- igraph::igraph_opt("return.vs.es")
+  on.exit(igraph::igraph_options(return.vs.es = opt))
+  igraph::igraph_options(return.vs.es = FALSE)
+  index <- adjacent_vertices(
     graph = config$graph,
     v = targets,
     mode = ifelse(reverse, "out", "in")
   ) %>%
-    lapply(FUN = names) %>%
-    clean_dependency_list()
+    unlist %>%
+    unique
+  igraph::V(config$graph)$name[index + 1]
 }
 
 nonfile_target_dependencies <- function(targets, config, jobs = 1){
@@ -231,7 +217,7 @@ import_dependencies <- function(expr){
   # Imported functions can't have file_out() deps # nolint
   # or target dependencies from knitr code chunks.
   # However, file_in()s are totally fine. # nolint
-  deps$file_out <- deps$loadd <- deps$readd <- NULL
+  deps$file_out <- deps$strings <- NULL
   deps
 }
 
@@ -244,9 +230,11 @@ command_dependencies <- function(command){
   }
   command <- as.character(command)
   deps <- code_dependencies(parse(text = command))
+  deps$strings <- NULL
 
   # TODO: this block can go away when `drake`
   # stops supporting single-quoted file names.
+
   use_new_file_api <- identical(
     pkgconfig::get_config("drake::strings_in_dots"),
     "literals"
@@ -357,10 +345,11 @@ code_dependencies <- function(expr){
         expr <- function(){} # nolint: curly braces are necessary
       }
       walk(body(expr))
-    } else if (is.name(expr) || is.atomic(expr)) {
-      new_globals <- setdiff(
-        x = wide_deparse(expr), y = drake_fn_patterns)
+    } else if (is.name(expr)) {
+      new_globals <- setdiff(x = wide_deparse(expr), y = drake_fn_patterns)
       results$globals <<- c(results$globals, new_globals)
+    } else if (is.character(expr)) {
+      results$strings <<- c(results$strings, expr)
     } else if (is.language(expr) && (is.call(expr) || is.recursive(expr))) {
       new_results <- list()
       if (is_loadd_call(expr)){
@@ -386,97 +375,62 @@ code_dependencies <- function(expr){
     }
   }
   walk(expr)
-  results$globals <- intersect(results$globals, safe_find_globals(expr))
+  results$globals <- intersect(results$globals, find_globals(expr))
   results[purrr::map_int(results, length) > 0]
 }
 
-safe_find_globals <- function(expr){
-  tryCatch(
-    find_globals(expr),
-    error = function(e){
-      warning(
-        "could not resolve implicit dependencies of code: ",
-        head(deparse(expr)),
-        call. = FALSE
-      )
-      character(0)
-    }
-  )
-}
-
-quiet_get_inputs <- function(expr){
-  # Warning: In collector$results(reset = reset) :
-  #  partial argument match of 'reset' to 'resetState'
-  suppressWarnings(CodeDepends::getInputs(expr))
-}
-
-find_globals <- function(expr){
-  if (is.function(expr)){
-    expr <- unwrap_function(expr)
-    formals <- names(formals(expr))
-    expr <- body(expr)
-  } else {
-    formals <- character(0)
+find_globals <- function(fun){
+  if (!is.function(fun)){
+    f <- function(){} # nolint
+    body(f) <- as.call(append(as.list(body(f)), fun))
+    fun <- f
   }
-  inputs <- quiet_get_inputs(expr)
-  base::union(
-    inputs@inputs,
-    names(inputs@functions)
-  ) %>%
-    base::union(inputs@nsevalVars) %>%
-    setdiff(y = c(formals, drake_fn_patterns, ".")) %>%
+  if (typeof(fun) != "closure"){
+    return(character(0))
+  }
+  codetools::findGlobals(fun = unwrap_function(fun), merge = TRUE) %>%
+    setdiff(y = c(drake_fn_patterns, ".")) %>%
     Filter(f = is_parsable)
 }
 
 analyze_loadd <- function(expr){
   expr <- match.call(drake::loadd, as.call(expr))
-  args <- parse_loadd_arg_list(expr)
-  out <- c(unnamed_in_list(args), args[["list"]])
+  expr <- expr[-1]
+  unnamed <- code_dependencies(expr[which_unnamed(expr)])
+  out <- c(
+    unnamed$globals,
+    unnamed$strings,
+    code_dependencies(expr["list"])$strings
+  )
   list(loadd = setdiff(out, drake_fn_patterns))
 }
 
 analyze_readd <- function(expr){
   expr <- match.call(drake::readd, as.call(expr))
-  args <- parse_loadd_arg_list(expr)
-  list(readd = setdiff(args[["target"]], drake_fn_patterns))
+  deps <- unlist(code_dependencies(expr["target"])[c("globals", "strings")])
+  list(readd = setdiff(deps, drake_fn_patterns))
 }
 
 analyze_file_in <- function(expr){
-  inputs <- quiet_get_inputs(expr)
-  deps <- drake_quotes(c(inputs@strings, inputs@files), single = FALSE)
+  expr <- expr[-1]
+  deps <- drake_quotes(code_dependencies(expr)$strings, single = FALSE)
   list(file_in = deps)
 }
 
 analyze_file_out <- function(expr){
-  inputs <- quiet_get_inputs(expr)
-  deps <- drake_quotes(c(inputs@strings, inputs@files), single = FALSE)
+  expr <- expr[-1]
+  deps <- drake_quotes(code_dependencies(expr)$strings, single = FALSE)
   list(file_out = deps)
 }
 
 analyze_knitr_in <- function(expr){
-  inputs <- quiet_get_inputs(expr)
-  files <- c(inputs@strings, inputs@files)
+  expr <- expr[-1]
+  files <- code_dependencies(expr)$strings
   out <- lapply(files, knitr_deps_list) %>%
     Reduce(f = merge_lists)
   files <- drake_quotes(files, single = FALSE)
   out$knitr_in <- base::union(out$knitr_in, files)
   out
-}
-
-parse_loadd_arg_list <- function(expr){
-  lapply(as.list(expr)[-1], function(arg){
-    inputs <- quiet_get_inputs(arg)
-    c(inputs@strings, inputs@inputs)
-  })
-}
-
-unnamed_in_list <- function(x){
-  if (!length(names(x))){
-    out <- x
-  } else {
-    out <- x[!nzchar(names(x))]
-  }
-  unlist(out)
 }
 
 ignore_ignore <- function(expr){
@@ -497,6 +451,14 @@ recurse_ignore <- function(x) {
     }
   }
   x
+}
+
+which_unnamed <- function(x){
+  if (!length(names(x))){
+    rep(TRUE, length(x))
+  } else {
+    !nzchar(names(x))
+  }
 }
 
 is_callish <- function(x){
