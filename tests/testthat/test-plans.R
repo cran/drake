@@ -1,4 +1,4 @@
-drake_context("plan")
+drake_context("plans")
 
 test_with_dir("duplicated targets", {
   expect_error(
@@ -130,21 +130,27 @@ test_with_dir("edge cases for plans", {
       command = c("1", "b")
     )
   )
-  # too many file outputs
-  expect_warning(expect_equal(
-    drake_plan(a = file_out("file1", "file2")),
+  # multiple file outputs are okay
+  expect_equal(
+    drake_plan(
+      a = file_out("file1", "file2"),
+      strings_in_dots = "literals"
+    ),
     tibble::tibble(
       target = "a",
-      command = "file_out('file1', 'file2')"
+      command = "file_out(\"file1\", \"file2\")"
     )
-  ))
-  expect_warning(expect_equal(
-    drake_plan(a = file_out(c("file1", "file2"))),
+  )
+  expect_equal(
+    drake_plan(
+      a = file_out(c("file1", "file2")),
+      strings_in_dots = "literals"
+    ),
     tibble::tibble(
       target = "a",
-      command = "file_out(c('file1', 'file2'))"
+      command = "file_out(c(\"file1\", \"file2\"))"
     )
-  ))
+  )
 })
 
 test_with_dir("plan set 2", {
@@ -222,48 +228,21 @@ test_with_dir("make() plays nicely with tibbles", {
   expect_silent(make(x, verbose = FALSE, session_info = FALSE))
 })
 
-test_with_dir("check_plan() finds bad symbols", {
+test_with_dir("plans can have bad symbols", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  x <- tibble(
-    target = c("gotcha", "b", "\"targs\"", "a'x'", "b'x'"),
+  x <- tibble::tibble(
+    target = c("a'x'", "b'x'", "_a", "a^", "a*", "a-"),
     command = 1)
-  expect_warning(o <- check_plan(x, verbose = FALSE))
-  x <- tibble(
-    target = c("\"targs\""),
-    command = 1)
-  expect_silent(o <- check_plan(x, verbose = FALSE))
-  x <- tibble(
-    target = c("gotcha", "b", "targs"),
-    command = 1)
-  expect_silent(o <- check_plan(x, verbose = FALSE))
-})
-
-test_with_dir("illegal target names get fixed", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  pl <- tibble(
-    target = c("_a", "a^", "a*", "a-"),
-    command = 1
-  )
-  cache <- storr::storr_environment()
-  expect_warning(
-    con <- make(pl, cache = cache, session_info = FALSE)
-  )
-  expect_equal(
-    sort(con$plan$target),
-    sort(con$targets),
-    sort(cached(cache = cache)),
-    sort(c("a", "a_", "a__1", "a__2"))
-  )
+  y <- drake_config(x)
+  expect_equal(y$plan$target, c("a.x.", "b.x.", "X_a", "a."))
 })
 
 test_with_dir("issue 187 on Github (from Kendon Bell)", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   test <- drake_plan(test = run_it(wc__))
-  out <- expect_warning(
-    evaluate_plan(test, rules = list(wc__ = list(1:4, 5:8, 9:12)))
-  )
-  out2 <- tibble(
-    target = c("test_1_4", "test_5_8", "test_9_12"),
+  out <- evaluate_plan(test, rules = list(wc__ = list(1:4, 5:8, 9:12)))
+  out2 <- tibble::tibble(
+    target = c("test_1.4", "test_5.8", "test_9.12"),
     command = c("run_it(1:4)", "run_it(5:8)", "run_it(9:12)")
   )
   expect_equal(out, out2)
@@ -271,13 +250,13 @@ test_with_dir("issue 187 on Github (from Kendon Bell)", {
 
 test_with_dir("file names with weird characters do not get mangled", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  out <- tibble(
+  out <- tibble::tibble(
     target = c("\"is:a:file\"", "not:a:file"),
     command = as.character(1:2)
   )
-  out2 <- expect_warning(sanitize_plan(out))
-  out3 <- tibble(
-    target = c("\"is:a:file\"", "not_a_file"),
+  out2 <- sanitize_plan(out)
+  out3 <- tibble::tibble(
+    target = c("\"is:a:file\"", "not.a.file"),
     command = as.character(1:2)
   )
   expect_equal(out[1, ], out2[1, ])
@@ -412,10 +391,31 @@ test_with_dir("ignore() in imported functions", {
 test_with_dir("custom column interface", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   tidyvar <- 2
+  x <- target(
+    stop(!!tidyvar), worker = !!tidyvar, cpu = 4, custom = stop(), c2 = 5)
+  y <- tibble::tibble(
+    command = "stop(2)",
+    worker = 2,
+    cpu = 4,
+    custom = "stop()",
+    c2 = 5
+  )
+  expect_equal(x, y)
+  x <- drake_plan(x = target(
+    stop(!!tidyvar), worker = !!tidyvar, cpu = 4, custom = stop(), c2 = 5))
+  y <- tibble::tibble(
+    target = "x",
+    command = "stop(2)",
+    worker = 2,
+    cpu = 4,
+    custom = "stop()",
+    c2 = 5
+  )
+  expect_equal(x, y)
   plan <- drake_plan(
     x = target(
       command = 1 + !!tidyvar,
-      trigger = "always",
+      trigger = trigger(condition = TRUE),
       user_column_1 = 1,
       user_column_2 = "some text"
     ),
@@ -429,7 +429,7 @@ test_with_dir("custom column interface", {
   plan0 <- tibble::tibble(
     target = c("x", "y", "z"),
     command = c("1 + 2", "Sys.sleep(\"not a number\")", "rnorm(10)"),
-    trigger = c("always", "any", "any"),
+    trigger = c("trigger(condition = TRUE)", NA, NA),
     user_column_1 = c(1, NA, NA),
     user_column_2 = c("some text", NA, NA),
     col3 = c(NA, "some text", NA)
@@ -445,7 +445,7 @@ test_with_dir("bind_plans()", {
   plan2 <- drake_plan(
     z = target(
       command = download_data(),
-      trigger = "always"
+      trigger = trigger(condition = TRUE)
     ),
     strings_in_dots = "literals"
   )
@@ -453,20 +453,19 @@ test_with_dir("bind_plans()", {
   plan4 <- tibble::tibble(
     target = c("x", "y", "z"),
     command = c("1", "2", "download_data()"),
-    trigger = c("any", "any", "always")
+    trigger = c(NA, NA, "trigger(condition = TRUE)")
   )
   expect_equal(plan3, plan4)
 })
 
 test_with_dir("spaces in target names are replaced only when appropriate", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_warning(
-    pl <- drake_plan(a = x__, file_out("x__")) %>%
-      evaluate_plan(wildcard = "x__", values = c("b  \n  x y", "a x"))
-  )
+  pl <- drake_plan(a = x__, file_out("x__")) %>%
+    evaluate_plan(wildcard = "x__", values = c("b  \n  x y", "a x"))
   pl2 <- tibble::tibble(
     target = c(
-      "a_b_x_y", "a_a_x", "drake_target_1_b_x_y", "drake_target_1_a_x"),
+      "a_b.....x.y", "a_a.x",
+      "drake_target_1_b.....x.y", "drake_target_1_a.x"),
     command = c(
       "b  \n  x y", "a x", "file_out(\"b  \n  x y\")", "file_out(\"a x\")"
     )
@@ -487,4 +486,112 @@ test_with_dir("conflicts in wildcard names/values", {
     evaluate_plan(plan, rules = rules1), regexp = "wildcard name")
   expect_error(
     evaluate_plan(plan, rules = rules2), regexp = "replacement value")
+})
+
+test_with_dir("bad 'columns' argument to evaluate_plan()", {
+  plan <- drake_plan(
+    x = target("always", cpu = "any"),
+    y = target("any", cpu = "always"),
+    z = target("any", cpu = "any"),
+    strings_in_dots = "literals"
+  )
+  expect_error(
+    evaluate_plan(plan, wildcard = "any", values = 1:2, columns = "target"),
+    regexp = "argument of evaluate_plan"
+  )
+  expect_error(
+    evaluate_plan(plan, wildcard = "any", values = 1:2, columns = "nobodyhere"),
+    regexp = "not in the plan"
+  )
+  expect_equal(
+    plan,
+    evaluate_plan(plan, wildcard = "any", values = 1:2, columns = NULL)
+  )
+})
+
+test_with_dir("'columns' argument to evaluate_plan()", {
+  plan <- drake_plan(
+    x = target("always", cpu = "any"),
+    y = target("any", cpu = "always"),
+    z = target("any", cpu = "any"),
+    strings_in_dots = "literals"
+  )
+  out <- tibble::tibble(
+    target = c("x_1", "x_2", "y_1", "y_2", "z"),
+    command = c(1, 2, rep("any", 3)),
+    cpu = c("any", "any", 1, 2, "any")
+  )
+  expect_equal(
+    evaluate_plan(
+      plan, wildcard = "always", values = 1:2, columns = c("command", "cpu")
+    ),
+    out
+  )
+  out <- tibble::tibble(
+    target = c("x", "y_1", "y_2", "z"),
+    command = c("always", rep("any", 3)),
+    cpu = c("any", 1, 2, "any")
+  )
+  expect_equal(
+    evaluate_plan(
+      plan, wildcard = "always", values = 1:2, columns = "cpu"
+    ),
+    out
+  )
+  out <- tibble::tibble(
+    target = c("x", "y", "z"),
+    command = c(1, rep("any", 2)),
+    cpu = c("any", 2, "any")
+  )
+  expect_equal(
+    evaluate_plan(
+      plan, wildcard = "always", values = 1:2, columns = c("command", "cpu"),
+      expand = FALSE
+    ),
+    out
+  )
+  rules <- list(always = 1:2, any = 3:4)
+  out <- tibble::tibble(
+    target = c(
+      "x_1_3", "x_1_4", "x_2_3", "x_2_4", "y_1_3",
+      "y_1_4", "y_2_3", "y_2_4", "z_3", "z_4"
+    ),
+    command = as.character(c(1, 1, 2, 2, 3, 4, 3, 4, 3, 4)),
+    cpu = as.character(c(3, 4, 3, 4, 1, 1, 2, 2, 3, 4))
+  )
+  expect_equal(
+    evaluate_plan(plan, rules = rules, columns = c("command", "cpu")),
+    out
+  )
+})
+
+test_with_dir("drake_plan_call() produces the correct calls", {
+  skip_on_cran()
+  load_mtcars_example()
+  my_plan$trigger <- NA
+  my_plan$trigger[4] <- "trigger(condition = is_tuesday(), file = FALSE)"
+  my_plan$non_standard_column <- 1234
+  pkgconfig::set_config("drake::strings_in_dots" = "literals")
+  new_plan <- eval(drake_plan_call(my_plan))
+  expected <- my_plan[, c("target", "command", "trigger")]
+  expect_equal(new_plan, expected)
+})
+
+test_with_dir("drake_plan class", {
+  skip_on_cran()
+  expect_true(inherits(as_drake_plan(list(a = 1, b = 2)), "drake_plan"))
+  expect_true(inherits(as_drake_plan(list(a = 1, b = 2)), "drake_plan"))
+  expect_true(inherits(as_drake_plan(list(a = 1, b = 2)), "drake_plan"))
+  load_mtcars_example()
+  expect_true(inherits(my_plan, "drake_plan"))
+})
+
+test_with_dir("printing plans", {
+  skip_on_cran()
+  skip_if_not_installed("styler")
+  load_mtcars_example()
+  o <- capture.output(print_drake_plan(my_plan))
+  o <- paste0(o, collapse = "\n")
+  expect_true(grepl("^drake_plan", o))
+  tmp <- capture.output(print(my_plan))
 })

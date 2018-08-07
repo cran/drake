@@ -4,22 +4,23 @@
 \alias{make}
 \title{Run your project (build the outdated targets).}
 \usage{
-make(plan = read_drake_plan(), targets = NULL, envir = parent.frame(),
-  verbose = drake::default_verbose(), hook = default_hook,
-  cache = drake::get_cache(verbose = verbose, force = force, console_log_file
-  = console_log_file), fetch_cache = NULL,
-  parallelism = drake::default_parallelism(), jobs = 1,
-  packages = rev(.packages()), prework = character(0),
+make(plan = read_drake_plan(), targets = NULL,
+  envir = parent.frame(), verbose = drake::default_verbose(),
+  hook = default_hook, cache = drake::get_cache(verbose = verbose,
+  force = force, console_log_file = console_log_file),
+  fetch_cache = NULL, parallelism = drake::default_parallelism(),
+  jobs = 1, packages = rev(.packages()), prework = character(0),
   prepend = character(0), command = drake::default_Makefile_command(),
   args = drake::default_Makefile_args(jobs = jobs, verbose = verbose),
-  recipe_command = drake::default_recipe_command(), log_progress = TRUE,
-  skip_targets = FALSE, timeout = Inf, cpu = NULL, elapsed = NULL,
-  retries = 0, force = FALSE, return_config = NULL, graph = NULL,
-  trigger = drake::default_trigger(), skip_imports = FALSE,
-  skip_safety_checks = FALSE, config = NULL, lazy_load = "eager",
-  session_info = TRUE, cache_log_file = NULL, seed = NULL,
-  caching = "worker", keep_going = FALSE, session = NULL,
-  imports_only = NULL, pruning_strategy = c("lookahead", "speed", "memory"),
+  recipe_command = drake::default_recipe_command(),
+  log_progress = TRUE, skip_targets = FALSE, timeout = Inf,
+  cpu = NULL, elapsed = NULL, retries = 0, force = FALSE,
+  return_config = NULL, graph = NULL, trigger = drake::trigger(),
+  skip_imports = FALSE, skip_safety_checks = FALSE, config = NULL,
+  lazy_load = "eager", session_info = TRUE, cache_log_file = NULL,
+  seed = NULL, caching = "worker", keep_going = FALSE,
+  session = NULL, imports_only = NULL,
+  pruning_strategy = c("lookahead", "speed", "memory"),
   makefile_path = "Makefile", console_log_file = NULL,
   ensure_workers = TRUE, garbage_collection = FALSE)
 }
@@ -230,8 +231,7 @@ Overrides \code{skip_imports}.}
 
 \item{trigger}{Name of the trigger to apply to all targets.
 Ignored if \code{plan} has a \code{trigger} column.
-Must be in \code{\link[=triggers]{triggers()}}.
-See \link{triggers} for explanations of the choices.}
+See \code{\link[=trigger]{trigger()}} for details.}
 
 \item{skip_imports}{logical, whether to totally neglect to
 process the imports and jump straight to the targets. This can be useful

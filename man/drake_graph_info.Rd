@@ -10,7 +10,7 @@ drake_graph_info(config = drake::read_drake_config(), from = NULL,
   build_times = "build", digits = 3, targets_only = FALSE,
   split_columns = NULL, font_size = 20, from_scratch = FALSE,
   make_imports = TRUE, full_legend = FALSE, group = NULL,
-  clusters = NULL)
+  clusters = NULL, show_output_files = TRUE)
 }
 \arguments{
 \item{config}{a \code{\link[=drake_config]{drake_config()}} configuration list.
@@ -31,12 +31,17 @@ and \code{"all"} to go both ways and disregard
 edge direction altogether.}
 
 \item{order}{How far to branch out to create
-a neighborhood around \code{from} (measured
-in the number of nodes). Defaults to
-as far as possible.}
+a neighborhood around \code{from}. Defaults to
+as far as possible. If a target is in the neighborhood, then
+so are all of its custom \code{\link[=file_out]{file_out()}} files if
+\code{show_output_files} is \code{TRUE}.
+That means the actual graph order may be slightly greater than
+you might expect, but this ensures consistency
+between \code{show_output_files = TRUE} and
+\code{show_output_files = FALSE}.}
 
-\item{subset}{Optional character vector of of target/import names.
-Subset of nodes to display in the graph.
+\item{subset}{Optional character vector.
+Subset of targets/imports to display in the graph.
 Applied after \code{from}, \code{mode}, and \code{order}.
 Be advised: edges are only kept for adjacent nodes in \code{subset}.
 If you do not select all the intermediate nodes,
@@ -83,6 +88,9 @@ you must also supply the \code{clusters} argument.}
 \item{clusters}{optional character vector of values to cluster on.
 These values must be elements of the column of the \code{nodes} data frame
 that you specify in the \code{group} argument to \code{drake_graph_info()}.}
+
+\item{show_output_files}{logical, whether to include
+\code{\link[=file_out]{file_out()}} files in the graph.}
 }
 \value{
 A list of three data frames: one for nodes,

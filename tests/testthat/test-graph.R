@@ -144,8 +144,13 @@ test_with_dir("clusters", {
   o2 <- drake_graph_info(config, group = "n__", clusters = "asdfae")
   o3 <- drake_graph_info(config, group = "n__")
   o4 <- drake_graph_info(config, group = "adfe")
-  o1$nodes$label <- o2$nodes$label <- o3$nodes$label <- o4$nodes$label <-
-    NULL
+  for (col in c("label", "deps", "trigger")){
+    o1$nodes[[col]] <-
+      o2$nodes[[col]] <-
+      o3$nodes[[col]] <-
+      o4$nodes[[col]] <-
+      NULL
+  }
   expect_equal(o1$nodes, o2$nodes)
   expect_equal(o1$nodes, o3$nodes)
   expect_equal(o1$nodes, o4$nodes)
@@ -245,4 +250,177 @@ test_with_dir("file_out()/file_in() connections", {
   expect_equal(dependencies("out2", config, reverse = TRUE), character(0))
   expect_equal(dependencies("reader1", config, reverse = TRUE), character(0))
   expect_equal(dependencies("reader2", config, reverse = TRUE), "out2")
+})
+
+# GitHub issue 486
+test_with_dir("show_output_files", {
+  skip_on_cran()
+  plan <- drake_plan(
+    target1 = {
+      file_in("in1.txt", "in2.txt")
+      file_out("out1.txt", "out2.txt")
+      fs::file_create("out1.txt")
+      fs::file_create("out2.txt")
+    },
+    target2 = {
+      file_in("out1.txt", "out2.txt")
+      file_out("out3.txt", "out4.txt")
+      fs::file_create("out3.txt")
+      fs::file_create("out4.txt")
+    },
+    strings_in_dots = "literals"
+  )
+  writeLines("in1", "in1.txt")
+  writeLines("in2", "in2.txt")
+  config <- make(
+    plan,
+    cache = storr::storr_environment(),
+    session_info = FALSE
+  )
+  writeLines("abcdefg", "out3.txt")
+  expect_equal(outdated(config), "target2")
+  info <- drake_graph_info(
+    config,
+    show_output_files = TRUE,
+    targets_only = TRUE
+  )
+  expect_equal(
+    sort(info$nodes$id),
+    sort(c(plan$target, file_store(paste0("out", 1:4, ".txt"))))
+  )
+  for (file in paste0("out", 1:2, ".txt")){
+    expect_equal(
+      info$nodes[info$nodes$id == file_store(file), ]$status,
+      "up to date"
+    )
+  }
+  for (file in paste0("out", 3:4, ".txt")){
+    expect_equal(
+      info$nodes[info$nodes$id == file_store(file), ]$status,
+      "outdated"
+    )
+  }
+  e <- dplyr::arrange(info$edges, from, to)
+  expect_equal(
+    e$from,
+    c(
+      file_store(paste0("out", 1:2, ".txt")),
+      paste0("target", rep(1:2, each = 2))
+    )
+  )
+  expect_equal(
+    e$to,
+    c(
+      rep("target2", 2),
+      file_store(paste0("out", 1:4, ".txt"))
+    )
+  )
+  info <- drake_graph_info(
+    config,
+    show_output_files = FALSE,
+    targets_only = TRUE
+  )
+  expect_equal(sort(info$nodes$id), sort(paste0("target", 1:2)))
+  expect_equal(info$edges$from, "target1")
+  expect_equal(info$edges$to, "target2")
+  info <- drake_graph_info(
+    config,
+    show_output_files = TRUE,
+    targets_only = TRUE,
+    group = "status",
+    clusters = "up to date"
+  )
+  expect_equal(
+    sort(info$nodes$id),
+    sort(c(file_store(
+      paste0("out", 3:4, ".txt")), "status: up to date", "target2"))
+  )
+})
+
+# GitHub issue 486
+test_with_dir("same, but with an extra edge not due to files", {
+  skip_on_cran()
+  plan <- drake_plan(
+    target1 = {
+      file_in("in1.txt", "in2.txt")
+      file_out("out1.txt", "out2.txt")
+      fs::file_create("out1.txt")
+      fs::file_create("out2.txt")
+    },
+    target2 = {
+      file_in("out1.txt", "out2.txt")
+      file_out("out3.txt", "out4.txt")
+      fs::file_create("out3.txt")
+      fs::file_create("out4.txt")
+      target1
+    },
+    strings_in_dots = "literals"
+  )
+  writeLines("in1", "in1.txt")
+  writeLines("in2", "in2.txt")
+  config <- make(
+    plan,
+    cache = storr::storr_environment(),
+    session_info = FALSE
+  )
+  writeLines("abcdefg", "out3.txt")
+  expect_equal(outdated(config), "target2")
+  info <- drake_graph_info(
+    config,
+    show_output_files = TRUE,
+    targets_only = TRUE
+  )
+  expect_equal(
+    sort(info$nodes$id),
+    sort(c(plan$target, file_store(paste0("out", 1:4, ".txt"))))
+  )
+  for (file in paste0("out", 1:2, ".txt")){
+    expect_equal(
+      info$nodes[info$nodes$id == file_store(file), ]$status,
+      "up to date"
+    )
+  }
+  for (file in paste0("out", 3:4, ".txt")){
+    expect_equal(
+      info$nodes[info$nodes$id == file_store(file), ]$status,
+      "outdated"
+    )
+  }
+  e <- dplyr::arrange(info$edges, from, to)
+  expect_equal(
+    e$from,
+    c(
+      file_store(paste0("out", 1:2, ".txt")),
+      paste0("target", c(1, rep(1:2, each = 2)))
+    )
+  )
+  expect_equal(
+    e$to,
+    c(
+      rep("target2", 2),
+      file_store(paste0("out", 1:2, ".txt")),
+      "target2",
+      file_store(paste0("out", 3:4, ".txt"))
+    )
+  )
+  info <- drake_graph_info(
+    config,
+    show_output_files = FALSE,
+    targets_only = TRUE
+  )
+  expect_equal(sort(info$nodes$id), sort(paste0("target", 1:2)))
+  expect_equal(info$edges$from, "target1")
+  expect_equal(info$edges$to, "target2")
+    info <- drake_graph_info(
+    config,
+    show_output_files = TRUE,
+    targets_only = TRUE,
+    group = "status",
+    clusters = "up to date"
+  )
+  expect_equal(
+    sort(info$nodes$id),
+    sort(c(file_store(
+      paste0("out", 3:4, ".txt")), "status: up to date", "target2"))
+  )
 })

@@ -64,6 +64,7 @@ test_with_dir("drake_plan deprecation", {
   expect_warning(drake::workflow(x = y, file_targets = TRUE))
   expect_warning(drake::workplan(x = y, file_targets = TRUE))
   expect_warning(check(drake_plan(a = 1)))
+  expect_warning(drake_plan(a = 'file', strings_in_dots = NULL)) # nolint
 })
 
 test_with_dir("drake version checks in previous caches", {
@@ -102,17 +103,22 @@ test_with_dir("generative templating deprecation", {
 
 test_with_dir("deprecated graphing functions", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  pl <- drake_plan(a = 1)
+  pl <- drake_plan(a = 1, b = 2)
   expect_warning(build_graph(pl))
   expect_warning(build_drake_graph(pl, sanitize_plan = TRUE))
   con <- drake_config(plan = pl)
   expect_warning(out <- plot_graph(config = con))
+  expect_warning(out <- static_drake_graph(config = con))
+  expect_true(inherits(out, "gg"))
   df <- drake_graph_info(config = con)
   expect_warning(out <- render_graph(df))
+  expect_warning(out <- render_static_drake_graph(df))
+  expect_true(inherits(out, "gg"))
 })
 
 test_with_dir("deprecated example(s)_drake functions", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("downloader")
   expect_warning(example_drake())
   expect_warning(examples_drake())
 })
@@ -150,6 +156,11 @@ test_with_dir("deprecated arguments", {
 
 test_with_dir("old file API", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  old_strings_in_dots <- pkgconfig::get_config("drake::strings_in_dots")
+  on.exit(
+    pkgconfig::set_config("drake::strings_in_dots" = old_strings_in_dots)
+  )
+  pkgconfig::set_config("drake::strings_in_dots" = "filenames")
   expect_warning(x <- drake_plan(
     file.csv = write.csv(mtcars, file = "file.csv"),
     strings_in_dots = "literals",
@@ -166,6 +177,7 @@ test_with_dir("old file API", {
 })
 
 test_with_dir("example template files (deprecated)", {
+  skip_on_cran()
   expect_false(file.exists("slurm_batchtools.tmpl"))
   expect_warning(
     drake_batchtools_tmpl_file("slurm_batchtools.tmpl"),
@@ -176,6 +188,11 @@ test_with_dir("example template files (deprecated)", {
 
 test_with_dir("plan set 1", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  old_strings_in_dots <- pkgconfig::get_config("drake::strings_in_dots")
+  on.exit(
+    pkgconfig::set_config("drake::strings_in_dots" = old_strings_in_dots)
+  )
+  pkgconfig::set_config("drake::strings_in_dots" = "filenames")
   for (tidy_evaluation in c(TRUE, FALSE)){
     expect_warning(x <- drake_plan(
       a = c,
@@ -217,4 +234,40 @@ test_with_dir("force loading a non-back-compatible cache", {
   expect_true(length(cached()) > 0)
   clean()
   expect_true(length(cached()) == 0)
+})
+
+test_with_dir("old trigger interface", {
+  skip_on_cran()
+  for (old_trigger in suppressWarnings(triggers())){
+    plan <- drake_plan(x = 1)
+    plan$trigger <- old_trigger
+    clean()
+    expect_warning(
+      config <- make(
+        plan,
+        session_info = FALSE,
+        cache = storr::storr_environment()
+      ),
+      regexp = "old trigger interface is deprecated"
+    )
+    trigger <- diagnose(x, cache = config$cache)$trigger
+    expect_true(is.list(trigger))
+    if (identical(trigger$condition, TRUE)){
+      expect_equal(old_trigger, "always")
+    } else {
+      expect_false(old_trigger == "always")
+    }
+    expect_equal(
+      trigger$command,
+      old_trigger %in% c("always", "any", "command")
+    )
+    expect_equal(
+      trigger$file,
+      old_trigger %in% c("always", "any", "file")
+    )
+    expect_equal(
+      trigger$depend,
+      old_trigger %in% c("always", "any", "depends")
+    )
+  }
 })

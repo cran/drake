@@ -137,11 +137,11 @@ load_mtcars_example <- function(
 
   # Row order doesn't matter in the drake_plan my_plan.
   envir$my_plan <- rbind(report, datasets, analyses, results) %>%
-    tibble::as_tibble()
+    as_drake_plan()
 
   # Write the R Markdown source for a dynamic knitr report
   report <- system.file(
-    file.path("examples", "mtcars", "report.Rmd"),
+    file.path("rmarkdown", "mtcars.Rmd"),
     package = "drake",
     mustWork = TRUE
   )

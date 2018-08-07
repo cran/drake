@@ -37,35 +37,29 @@
 #' })
 #' }
 #' @references <https://github.com/ropensci/drake>
-#' @importFrom bindr populate_env
 #' @importFrom codetools findGlobals
-#' @importFrom crayon make_style
 #' @importFrom digest digest
 #' @importFrom dplyr bind_rows do group_by mutate n select ungroup
 #' @importFrom evaluate try_capture_stack
 #' @importFrom formatR tidy_source
-#' @importFrom fs dir_create file_create
-#' @importFrom grDevices col2rgb rgb
+#' @importFrom fs dir_create file_create path_ext path_ext_remove
 #' @importFrom igraph adjacent_vertices components delete_vertices
 #'   degree edge edges igraph_opt igraph_options induced_subgraph is_dag
 #'   make_empty_graph plot.igraph set_vertex_attr simplify subcomponent
 #'   topo_sort V vertex vertex_attr
-#' @importFrom knitr knit
 #' @importFrom magrittr %>%
 #' @importFrom parallel clusterCall clusterExport makePSOCKcluster
 #'   mclapply parLapply stopCluster
 #' @importFrom pkgconfig get_config
-#' @importFrom purrr map_int
+#' @importFrom purrr map_int pmap
 #' @importFrom R6 R6Class
 #' @importFrom R.utils countLines isPackageLoaded withTimeout
-#' @importFrom rlang expr exprs
-#' @importFrom rprojroot find_root
+#' @importFrom rlang expr expr_text exprs
 #' @importFrom stats coef complete.cases lm na.omit rnorm rpois runif setNames
 #' @importFrom storr storr_environment storr_rds
 #' @importFrom stringi stri_extract_all_regex
 #'   stri_split_fixed stri_trim_both
-#' @importFrom testthat context expect_false expect_true test_dir test_that
-#' @importFrom tibble as_tibble tibble
+#' @importFrom tibble as_tibble new_tibble tibble
 #' @importFrom tidyselect vars_select
 #' @importFrom utils capture.output compareVersion head installed.packages
 #'   packageVersion read.csv sessionInfo stack type.convert unzip write.table

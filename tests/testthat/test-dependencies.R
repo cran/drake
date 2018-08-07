@@ -31,11 +31,12 @@ test_with_dir("file_out() and knitr_in(): commands vs imports", {
   file.create("x")
   file.create("y")
   path <- system.file(
-    file.path("examples", "mtcars", "report.Rmd"),
+    file.path("rmarkdown", "mtcars.Rmd"),
     package = "drake",
     mustWork = TRUE
   )
-  file.copy(from = path, to = getwd(), overwrite = TRUE)
+  file.copy(
+    from = path, to = file.path(getwd(), "report.Rmd"), overwrite = TRUE)
   x <- command_dependencies(cmd)
   x0 <- list(
     file_in = "\"x\"", file_out = "\"y\"", loadd = "large",
@@ -178,7 +179,7 @@ test_with_dir("deps_targets()", {
     sort(
       c(
         "coef_regression2_small", "knit", "large",
-        file_store("report.Rmd"), "small"
+        "small", file_store("report.Rmd")
       )
     )
   )
@@ -197,8 +198,8 @@ test_with_dir("deps_targets()", {
   config <- dbug()
   deps <- sort(deps_targets(config$targets, config))
   truth <- sort(c(
-    "combined", "saveRDS", "f", "g", "myinput",
-    "nextone", "yourinput", "\"input.rds\"", "readRDS", "drake_target_1"
+    "combined", "saveRDS", "f", "g", "myinput", file_store("input.rds"),
+    "nextone", "yourinput", "readRDS", "drake_target_1"
   ))
   expect_equal(deps, truth)
 })

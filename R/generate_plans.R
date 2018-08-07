@@ -71,6 +71,9 @@ dataset_wildcard <- function(){
 #'   trace the wildcard expansion process. These new
 #'   columns indicate which targets were evaluated with which
 #'   wildcards.
+#'   
+#' @param columns character vector of names of columns
+#'   to look for and evaluate the wildcards.
 #'
 #' @examples
 #' # Create the part of the workflow plan for the datasets.
@@ -99,6 +102,17 @@ dataset_wildcard <- function(){
 #' # Except when expand is FALSE.
 #' x <- drake_plan(draws = rnorm(mean = Mean, sd = Sd))
 #' evaluate_plan(x, rules = list(Mean = 1:3, Sd = c(1, 10)))
+#' # You can use wildcards on columns other than "command"
+#' evaluate_plan(
+#'   drake_plan(
+#'     x = target("always", cpu = "any"),
+#'     y = target("any", cpu = "always"),
+#'     z = target("any", cpu = "any"),
+#'     strings_in_dots = "literals"
+#'   ),
+#'   rules = list(always = 1:2),
+#'   columns = c("command", "cpu")
+#' )
 #' # With the `trace` argument,
 #' # you can generate columns that show how the wildcards
 #' # were evaluated.
@@ -126,7 +140,8 @@ evaluate_plan <- function(
   values = NULL,
   expand = TRUE,
   rename = expand,
-  trace = FALSE
+  trace = FALSE,
+  columns = "command"
 ){
   if (!is.null(rules)){
     check_wildcard_rules(rules)
@@ -135,7 +150,8 @@ evaluate_plan <- function(
       rules = rules,
       expand = expand,
       rename = rename,
-      trace = trace
+      trace = trace,
+      columns = columns
     )
   } else if (!is.null(wildcard) && !is.null(values)){
     evaluate_single_wildcard(
@@ -144,18 +160,39 @@ evaluate_plan <- function(
       values = values,
       expand = expand,
       rename = rename,
-      trace = trace
+      trace = trace,
+      columns = columns
     )
   } else {
-    plan
+    as_drake_plan(plan)
   }
 }
 
 evaluate_single_wildcard <- function(
-  plan, wildcard, values, expand, rename, trace
+  plan, wildcard, values, expand, rename, trace, columns
 ){
+  if (!length(columns)){
+    return(plan)
+  }
+  if ("target" %in% columns){
+    stop(
+      "'target' cannot be in the `columns` argument of evaluate_plan().",
+      call = FALSE
+    )
+  }
+  missing_cols <- setdiff(columns, colnames(plan))
+  if (length(missing_cols)){
+    stop(
+      "some columns you selected for evaluate_plan() are not in the plan:\n",
+      multiline_message(missing_cols),
+      call. = FALSE
+    )
+  }
   values <- as.character(values)
-  matches <- grepl(wildcard, plan$command, fixed = TRUE)
+  matches <- rep(FALSE, nrow(plan))
+  for (col in columns){
+    matches <- matches | grepl(wildcard, plan[[col]], fixed = TRUE)
+  }
   if (!any(matches)){
     return(plan)
   }
@@ -170,11 +207,13 @@ evaluate_single_wildcard <- function(
     matching$target <- paste(matching$target, values, sep = "_")
   }
   values <- rep(values, length.out = nrow(matching))
-  matching$command <- Vectorize(
-    function(value, command){
-      gsub(wildcard, value, command, fixed = TRUE)
-    }
-  )(values, matching$command)
+  for (col in columns){
+    matching[[col]] <- Vectorize(
+      function(value, command){
+        gsub(wildcard, value, command, fixed = TRUE)
+      }
+    )(values, matching[[col]])
+  }
   if (trace){
     matching[[wildcard]] <- values
   }
@@ -196,7 +235,7 @@ evaluate_single_wildcard <- function(
 }
 
 evaluate_wildcard_rules <- function(
-  plan, rules, expand, rename, trace
+  plan, rules, expand, rename, trace, columns
 ){
   for (index in seq_len(length(rules))){
     plan <- evaluate_single_wildcard(
@@ -205,10 +244,11 @@ evaluate_wildcard_rules <- function(
       values = rules[[index]],
       expand = expand,
       rename = rename,
-      trace = trace
+      trace = trace,
+      columns = columns
     )
   }
-  plan
+  as_drake_plan(plan)
 }
 
 check_wildcard_rules <- function(rules){
@@ -262,7 +302,7 @@ check_wildcard_rules <- function(rules){
 #' expand_plan(datasets, values = 1:3, rename = FALSE)
 expand_plan <- function(plan, values = NULL, rename = TRUE){
   if (!length(values)){
-    return(plan)
+    return(as_drake_plan(plan))
   }
   nrows <- nrow(plan)
   repeat_targets <- rep(seq_len(nrows), each = length(values))
@@ -312,7 +352,8 @@ gather_plan <- function(
   command <- paste(plan$target, "=", plan$target)
   command <- paste(command, collapse = ", ")
   command <- paste0(gather, "(", command, ")")
-  tibble(target = target, command = command)
+  tibble(target = target, command = command) %>%
+    as_drake_plan()
 }
 
 #' @title Write commands to reduce several targets down to one.
@@ -373,7 +414,8 @@ reduce_plan <- function(
     tibble(
       target = pairs$names,
       command = paste0(begin, pairs$odds, op, pairs$evens, end)
-    )
+    ) %>%
+      as_drake_plan()
   } else {
     command <- Reduce(
       x = plan$target,
@@ -381,7 +423,8 @@ reduce_plan <- function(
         paste0(begin, x, op, y, end)
       }
     )
-    tibble(target = target, command = command)
+    tibble(target = target, command = command) %>%
+      as_drake_plan()
   }
 }
 
@@ -554,9 +597,10 @@ plan_summaries <- function(
       )
     })
   target <- command <- NULL
-  bind_rows(gathered, out) %>%
+  dplyr::bind_rows(gathered, out) %>%
     ungroup %>%
-    select(target, command)
+    select(target, command) %>%
+    as_drake_plan()
 }
 
 with_analyses_only <- function(plan){

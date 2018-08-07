@@ -7,7 +7,7 @@ colors <- c(
   missing = "darkorchid3",
   cache = "skyblue1",
   check = "skyblue1",
-  connect = "skyblue1",
+  analyze = "skyblue1",
   launch = "#ff9933",
   load = "#ff9933",
   unload = "#ff7221",
@@ -58,7 +58,7 @@ drake_palette <- function(){
 }
 
 color <- function(x, color) {
-  if (is.null(color)){
+  if (is.null(color) || !requireNamespace("crayon", quietly = TRUE)){
     x
   } else {
     crayon::make_style(color)(x)
@@ -85,6 +85,7 @@ color_grep <- function(text, pattern, color){
 
 # copied from the gtools package
 col2hex <- function(cname){
+  assert_pkgs("grDevices")
   col_mat <- grDevices::col2rgb(cname)
   grDevices::rgb(
     red = col_mat[1, ] / 255,

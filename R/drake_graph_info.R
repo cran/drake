@@ -26,12 +26,17 @@
 #'   edge direction altogether.
 #'
 #' @param order How far to branch out to create
-#'   a neighborhood around `from` (measured
-#'   in the number of nodes). Defaults to
-#'   as far as possible.
+#'   a neighborhood around `from`. Defaults to
+#'   as far as possible. If a target is in the neighborhood, then
+#'   so are all of its custom [file_out()] files if
+#'   `show_output_files` is `TRUE`.
+#'   That means the actual graph order may be slightly greater than
+#'   you might expect, but this ensures consistency
+#'   between `show_output_files = TRUE` and
+#'   `show_output_files = FALSE`.
 #'
-#' @param subset Optional character vector of of target/import names.
-#'   Subset of nodes to display in the graph.
+#' @param subset Optional character vector.
+#'   Subset of targets/imports to display in the graph.
 #'   Applied after `from`, `mode`, and `order`.
 #'   Be advised: edges are only kept for adjacent nodes in `subset`.
 #'   If you do not select all the intermediate nodes,
@@ -78,6 +83,9 @@
 #' @param clusters optional character vector of values to cluster on.
 #'   These values must be elements of the column of the `nodes` data frame
 #'   that you specify in the `group` argument to `drake_graph_info()`.
+#'
+#' @param show_output_files logical, whether to include
+#'   [file_out()] files in the graph.
 #'
 #' @examples
 #' \dontrun{
@@ -132,7 +140,8 @@ drake_graph_info <- function(
   make_imports = TRUE,
   full_legend = FALSE,
   group = NULL,
-  clusters = NULL
+  clusters = NULL,
+  show_output_files = TRUE
 ) {
   if (!length(V(config$graph)$name)){
     return(null_graph())
@@ -172,6 +181,9 @@ drake_graph_info <- function(
   config <- trim_node_categories(config)
   config$nodes <- configure_nodes(config = config)
   config$edges <- network_data$edges
+  if (show_output_files){
+    config <- insert_file_outs(config)
+  }
   if (nrow(config$edges)){
     config$edges$arrows <- "to"
   }

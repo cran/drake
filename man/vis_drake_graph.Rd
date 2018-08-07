@@ -5,28 +5,39 @@
 \title{Show an interactive visual network representation
 of your drake project.}
 \usage{
-vis_drake_graph(config = drake::read_drake_config(), file = character(0),
-  selfcontained = FALSE, build_times = "build", digits = 3,
-  targets_only = FALSE, split_columns = NULL, font_size = 20,
-  layout = "layout_with_sugiyama", main = NULL, direction = "LR",
-  hover = TRUE, navigationButtons = TRUE, from = NULL, mode = c("out",
-  "in", "all"), order = NULL, subset = NULL, ncol_legend = 1,
-  full_legend = FALSE, make_imports = TRUE, from_scratch = FALSE,
-  group = NULL, clusters = NULL, ...)
+vis_drake_graph(config = drake::read_drake_config(),
+  file = character(0), selfcontained = FALSE, build_times = "build",
+  digits = 3, targets_only = FALSE, split_columns = NULL,
+  font_size = 20, layout = "layout_with_sugiyama", main = NULL,
+  direction = "LR", hover = TRUE, navigationButtons = TRUE,
+  from = NULL, mode = c("out", "in", "all"), order = NULL,
+  subset = NULL, ncol_legend = 1, full_legend = FALSE,
+  make_imports = TRUE, from_scratch = FALSE, group = NULL,
+  clusters = NULL, show_output_files = TRUE, ...)
 }
 \arguments{
 \item{config}{a \code{\link[=drake_config]{drake_config()}} configuration list.
 You can get one as a return value from \code{\link[=make]{make()}} as well.}
 
-\item{file}{Name of HTML file to save the graph.
-If \code{NULL} or \code{character(0)},
-no file is saved and the graph is rendered and displayed within R.}
+\item{file}{Name of a file to save the graph.
+If \code{NULL} or \code{character(0)}, no file is saved and
+the graph is rendered and displayed within R.
+If the file ends in a \code{.png}, \code{.jpg}, \code{.jpeg}, or \code{.pdf} extension,
+then a static image will be saved. In this case,
+the webshot package and PhantomJS are required:
+\code{install.packages("webshot"); webshot::install_phantomjs()}.
+If the file does not end in a \code{.png}, \code{.jpg}, \code{.jpeg}, or \code{.pdf}
+extension, an HTML file will be saved, and you can open the
+interactive graph using a web browser.}
 
 \item{selfcontained}{logical, whether
 to save the \code{file} as a self-contained
 HTML file (with external resources base64 encoded) or a file with
 external resources placed in an adjacent directory. If \code{TRUE},
-pandoc is required.}
+pandoc is required. The \code{selfcontained} argument only applies
+to HTML files. In other words, if \code{file} is a
+PNG, PDF, or JPEG file, for instance,
+the point is moot.}
 
 \item{build_times}{character string or logical.
 If character, the choices are
@@ -84,12 +95,17 @@ and \code{"all"} to go both ways and disregard
 edge direction altogether.}
 
 \item{order}{How far to branch out to create
-a neighborhood around \code{from} (measured
-in the number of nodes). Defaults to
-as far as possible.}
+a neighborhood around \code{from}. Defaults to
+as far as possible. If a target is in the neighborhood, then
+so are all of its custom \code{\link[=file_out]{file_out()}} files if
+\code{show_output_files} is \code{TRUE}.
+That means the actual graph order may be slightly greater than
+you might expect, but this ensures consistency
+between \code{show_output_files = TRUE} and
+\code{show_output_files = FALSE}.}
 
-\item{subset}{Optional character vector of of target/import names.
-Subset of nodes to display in the graph.
+\item{subset}{Optional character vector.
+Subset of targets/imports to display in the graph.
 Applied after \code{from}, \code{mode}, and \code{order}.
 Be advised: edges are only kept for adjacent nodes in \code{subset}.
 If you do not select all the intermediate nodes,
@@ -119,6 +135,9 @@ you must also supply the \code{clusters} argument.}
 \item{clusters}{optional character vector of values to cluster on.
 These values must be elements of the column of the \code{nodes} data frame
 that you specify in the \code{group} argument to \code{drake_graph_info()}.}
+
+\item{show_output_files}{logical, whether to include
+\code{\link[=file_out]{file_out()}} files in the graph.}
 
 \item{...}{arguments passed to \code{visNetwork()}.}
 }
@@ -158,5 +177,5 @@ vis_drake_graph(
 }
 \seealso{
 \code{\link[=render_drake_graph]{render_drake_graph()}}, \code{\link[=sankey_drake_graph]{sankey_drake_graph()}},
-\code{\link[=static_drake_graph]{static_drake_graph()}}
+\code{\link[=drake_ggraph]{drake_ggraph()}}
 }

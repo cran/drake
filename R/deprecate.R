@@ -529,7 +529,7 @@ evaluate <- function(
 #' @examples
 #' # See ?drake_example for examples.
 example_drake <- function(
-  example = drake::drake_examples(),
+  example = "main",
   destination = getwd()
 ){
   .Deprecated(
@@ -1301,6 +1301,33 @@ render_graph <- function(
   )
 }
 
+#' @title Deprecated: render a `ggraph`/`ggplot2` representation
+#'   of your drake project.
+#' @description Use [render_drake_ggraph()] instead.
+#' @details Deprecated on 2018-25-07.
+#' @export
+#' @keywords internal
+#' @seealso [render_drake_ggraph()]
+#' @return A `ggplot2` object, which you can modify with more layers,
+#'   show with `plot()`, or save as a file with `ggsave()`.
+#' @inheritParams render_drake_ggraph
+#' @examples
+#' # See render_drake_ggraph()
+render_static_drake_graph <- function(
+  graph_info,
+  main = graph_info$default_title
+){
+  .Deprecated(
+    "render_static_drake_graph",
+    package = "drake",
+    msg = paste(
+      "render_static_drake_graph() is deprecated.",
+      "Use render_drake_ggraph() instead."
+    )
+  )
+  render_drake_ggraph(graph_info = graph_info, main = main)
+}
+
 #' @title Deprecated function `session`
 #' @description Use [drake_session()] instead
 #' @details Deprecated on 2017-11-12.
@@ -1368,6 +1395,62 @@ parallel_stages <- function(
   )
 }
 
+#' @title Deprecated: show a `ggraph`/`ggplot2` representation
+#'   of your drake project.
+#' @description Use [drake_ggraph()] instead.
+#' @details Deprecated on 2018-25-07.
+#' @export
+#' @keywords internal
+#' @seealso [drake_ggraph()]
+#' @return A `ggplot2` object, which you can modify with more layers,
+#'   show with `plot()`, or save as a file with `ggsave()`.
+#' @inheritParams drake_ggraph
+#' @examples
+#' # See drake_ggraph()
+static_drake_graph <- function(
+  config = drake::read_drake_config(),
+  build_times = "build",
+  digits = 3,
+  targets_only = FALSE,
+  split_columns = NULL,
+  main = NULL,
+  from = NULL,
+  mode = c("out", "in", "all"),
+  order = NULL,
+  subset = NULL,
+  make_imports = TRUE,
+  from_scratch = FALSE,
+  full_legend = FALSE,
+  group = NULL,
+  clusters = NULL
+){
+  .Deprecated(
+    "static_drake_graph",
+    package = "drake",
+    msg = paste(
+      "static_drake_graph() is deprecated",
+      "Use drake_ggraph() instead."
+    )
+  )
+  drake_ggraph(
+    config = config,
+    build_times = build_times,
+    digits = digits,
+    targets_only = targets_only,
+    split_columns = split_columns,
+    main = main,
+    from = from,
+    mode = mode,
+    order = order,
+    subset = subset,
+    make_imports = make_imports,
+    from_scratch = from_scratch,
+    full_legend = full_legend,
+    group = group,
+    clusters = clusters
+  )
+}
+
 #' @title Deprecated function `summaries`
 #' @description Use [summaries()] instead
 #' @details Deprecated on 2017-11-12.
@@ -1402,6 +1485,66 @@ summaries <- function(
     datasets = datasets,
     gather = gather
   )
+}
+
+#' @title Deprecated. List the old drake triggers.
+#' @export
+#' @keywords internal
+#' @seealso [drake_plan()], [make()]
+#' @description Triggers are target-level rules
+#' that tell [make()] how to know if a target
+#' is outdated or up to date.
+#' @details Deprecated on 2018-07-22.
+#' @return A character vector with the names of the old triggers.
+#' @examples
+#' # Deprecated. See the trigger() function instead (singular).
+triggers <- function(){
+  .Deprecated(
+    "triggers",
+    package = "drake",
+    msg = paste(
+      "drake::triggers() is deprecated",
+      "and the trigger interface has changed.",
+      "See trigger() (singular) for details."
+    )
+  )
+  c(
+    "any",
+    "always",
+    "command",
+    "depends",
+    "file",
+    "missing"
+  ) %>%
+    sort
+}
+
+convert_old_trigger <- function(x){
+  if (!is.character(x)){
+    return(x)
+  }
+  if (!(x %in% suppressWarnings(triggers()))){
+    return(x)
+  }
+  warning(
+    "The old trigger interface is deprecated. ",
+    "See the trigger() function (singular) ",
+    "to learn about the new trigger interface.",
+    call. = FALSE
+  )
+  if (identical(x, "any")){
+    "trigger()"
+  } else if (identical(x, "always")){
+    "trigger(condition = TRUE)"
+  } else if (identical(x, "command")){
+    "trigger(command = TRUE, depend = FALSE, file = FALSE)"
+  } else if (identical(x, "depends")){
+    "trigger(command = FALSE, depend = TRUE, file = FALSE)"
+  } else if (identical(x, "file")){
+    "trigger(command = FALSE, depend = FALSE, file = TRUE)"
+  } else if (identical(x, "missing")){
+    "trigger(command = FALSE, depend = FALSE, file = FALSE)"
+  }
 }
 
 #' @title Deprecated function `workflow`

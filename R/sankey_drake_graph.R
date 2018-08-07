@@ -9,7 +9,7 @@
 #' `visNetwork::visNetwork(drake::legend_nodes())`.
 #' @export
 #' @seealso [render_sankey_drake_graph()], [vis_drake_graph()],
-#'   [static_drake_graph()]
+#'   [drake_ggraph()]
 #' @return A `visNetwork` graph.
 #' @inheritParams drake_graph_info
 #' @inheritParams render_sankey_drake_graph
@@ -51,6 +51,7 @@ sankey_drake_graph <- function(
   from_scratch = FALSE,
   group = NULL,
   clusters = NULL,
+  show_output_files = TRUE,
   ...
 ){
   assert_pkgs("networkD3")
@@ -66,7 +67,8 @@ sankey_drake_graph <- function(
     make_imports = make_imports,
     from_scratch = from_scratch,
     group = group,
-    clusters = clusters
+    clusters = clusters,
+    show_output_files = show_output_files
   )
   render_sankey_drake_graph(
     graph_info,
@@ -86,7 +88,7 @@ sankey_drake_graph <- function(
 #' `visNetwork::visNetwork(drake::legend_nodes())`.
 #' @export
 #' @seealso [sankey_drake_graph()], [vis_drake_graph()],
-#'   [static_drake_graph()]
+#'   [drake_ggraph()]
 #' @return A `visNetwork` graph.
 #'
 #' @inheritParams drake_graph_info
@@ -96,9 +98,16 @@ sankey_drake_graph <- function(
 #'   There should be 3 data frames: `nodes`, `edges`,
 #'   and `legend_nodes`.
 #'
-#' @param file Name of HTML file to save the graph.
-#'   If `NULL` or `character(0)`,
-#'   no file is saved and the graph is rendered and displayed within R.
+#' @param file Name of a file to save the graph.
+#'   If `NULL` or `character(0)`, no file is saved and
+#'   the graph is rendered and displayed within R.
+#'   If the file ends in a `.png`, `.jpg`, `.jpeg`, or `.pdf` extension,
+#'   then a static image will be saved. In this case,
+#'   the webshot package and PhantomJS are required:
+#'   `install.packages("webshot"); webshot::install_phantomjs()`.
+#'   If the file does not end in a `.png`, `.jpg`, `.jpeg`, or `.pdf`
+#'   extension, an HTML file will be saved, and you can open the
+#'   interactive graph using a web browser.
 #'
 #' @param selfcontained logical, whether
 #'   to save the `file` as a self-contained
@@ -174,13 +183,23 @@ render_sankey_drake_graph <- function(
     ... = ...
   )
   if (length(file)) {
-    invisible(
+    if (is_image_filename(file)){
+      assert_pkgs("webshot")
+      url <- file.path(fs::dir_create(tempfile()), "tmp.html")
+      networkD3::saveNetwork(
+        network = sankey,
+        file = url,
+        selfcontained = FALSE
+      )
+      webshot::webshot(url = url, file = file)
+    } else {
       networkD3::saveNetwork(
         network = sankey,
         file = file,
         selfcontained = selfcontained
       )
-    )
+    }
+    invisible()
   } else {
     sankey
   }

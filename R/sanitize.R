@@ -1,6 +1,6 @@
 sanitize_plan <- function(plan, allow_duplicated_targets = FALSE){
   wildcards <- attr(plan, "wildcards")
-  plan <- as_tibble(plan)
+  plan <- as_drake_plan(plan)
   for (field in drake_plan_non_factors()){
     if (!is.null(plan[[field]])){
       if (is.factor(plan[[field]])){
@@ -11,12 +11,8 @@ sanitize_plan <- function(plan, allow_duplicated_targets = FALSE){
       }
     }
   }
-  if ("trigger" %in% colnames(plan)){
-    plan$trigger <- parse_triggers(plan$trigger)
-  }
   plan$target <- repair_target_names(plan$target)
   plan <- plan[nzchar(plan$target), ]
-  plan$command[is.na(plan$command)] <- ""
   first <- c("target", "command")
   cols <- c(first, setdiff(colnames(plan), first))
   if (!allow_duplicated_targets) {
@@ -73,27 +69,14 @@ sanitize_nodes <- function(nodes, choices){
 }
 
 repair_target_names <- function(x){
-  x <- stringi::stri_trim_both(x)
-  illegals <- c(
-    ":", "\\+", "\\-", "\\*", "\\^",
-    "\\(", "\\)", "\\[", "\\]", "^_",
-    "\\\"", "\\s+"
-  ) %>%
-    paste(collapse = "|")
-  non_files <- x[is_not_file(x)]
-  if (any(grepl(illegals, non_files))){
-    warning("replacing illegal symbols in target names with '_'.")
-  } else {
-    return(x)
-  }
-  x[is_not_file(x)] <- gsub(illegals, "_", x[is_not_file(x)])
-  x <- gsub("^_", "", x)
-  x[!nzchar(x)] <- "X"
-  make.unique(x, sep = "_")
+  x[!is_file(x)] <- make.names(x[!is_file(x)], unique = FALSE)
+  x
 }
 
-parse_triggers <- function(x){
-  x[is.na(x) | !nzchar(x)] <- "any"
-  assert_legal_triggers(x)
-  x
+sanitize_cmd_type <- function(x){
+  if (!is.language(x) && !is.expression(x) && !is.character(x)){
+    wide_deparse(x)
+  } else {
+    x
+  }
 }

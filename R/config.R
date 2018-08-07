@@ -220,8 +220,7 @@
 #'
 #' @param trigger Name of the trigger to apply to all targets.
 #'   Ignored if `plan` has a `trigger` column.
-#'   Must be in [triggers()].
-#'   See [triggers] for explanations of the choices.
+#'   See [trigger()] for details.
 #'
 #' @param skip_imports logical, whether to totally neglect to
 #'   process the imports and jump straight to the targets. This can be useful
@@ -366,12 +365,13 @@
 #' test_with_dir("Quarantine side effects.", {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Construct the master internal configuration list.
-#' con <- drake_config(my_plan)
-#' vis_drake_graph(config)
+#' config <- drake_config(my_plan)
+#' vis_drake_graph(config) # See the dependency graph.
+#' sankey_drake_graph(config) # See the dependency graph.
 #' # These functions are faster than otherwise
 #' # because they use the configuration list.
-#' outdated(config = con) # Which targets are out of date?
-#' missed(config = con) # Which imports are missing?
+#' outdated(config) # Which targets are out of date?
+#' missed(config) # Which imports are missing?
 #' })
 #' }
 drake_config <- function(
@@ -401,7 +401,7 @@ drake_config <- function(
   force = FALSE,
   log_progress = FALSE,
   graph = NULL,
-  trigger = drake::default_trigger(),
+  trigger = drake::trigger(),
   skip_targets = FALSE,
   skip_imports = FALSE,
   skip_safety_checks = FALSE,
@@ -458,11 +458,18 @@ drake_config <- function(
     init_common_values = TRUE
   )
   seed <- choose_seed(supplied = seed, cache = cache)
-  trigger <- match.arg(arg = trigger, choices = triggers())
+  trigger <- convert_old_trigger(trigger)
   if (is.null(graph)){
-    graph <- build_drake_graph(plan = plan, targets = targets,
-      envir = envir, verbose = verbose, jobs = jobs,
-      sanitize_plan = FALSE, console_log_file = console_log_file)
+    graph <- build_drake_graph(
+      plan = plan,
+      targets = targets,
+      envir = envir,
+      verbose = verbose,
+      jobs = jobs,
+      sanitize_plan = FALSE,
+      console_log_file = console_log_file,
+      trigger = trigger
+    )
   } else {
     graph <- prune_drake_graph(graph = graph, to = targets, jobs = jobs)
   }

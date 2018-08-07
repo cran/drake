@@ -14,6 +14,10 @@ safe_grepl <- function(pattern, x, ...){
   tryCatch(grepl(pattern, x, ...), error = error_false)
 }
 
+safe_is_na <- function(x){
+  tryCatch(is.na(x), error = error_false, warning = error_false)
+}
+
 is_file <- function(x){
   safe_grepl(pattern = quotes_regex, x = x)
 }
@@ -92,4 +96,19 @@ select_nonempty <- function(x){
     FUN.VALUE = logical(1)
   )
   x[index]
+}
+
+select_valid <- function(x){
+  index <- vapply(
+    X = x,
+    FUN = function(y){
+      length(y) > 0 && !is.na(y)
+    },
+    FUN.VALUE = logical(1)
+  )
+  x[index]
+}
+
+is_image_filename <- function(x){
+  tolower(fs::path_ext(x)) %in% c("jpg", "jpeg", "pdf", "png")
 }

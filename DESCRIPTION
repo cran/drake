@@ -10,7 +10,7 @@ Description: A general-purpose computational engine for data analysis,
   to practical examples and more, is available at the reference website
   <https://ropensci.github.io/drake/> and the online manual
   <https://ropenscilabs.github.io/drake-manual/>.
-Version: 5.3.0
+Version: 5.4.0
 License: GPL-3
 URL: https://github.com/ropensci/drake
 BugReports: https://github.com/ropensci/drake/issues
@@ -56,19 +56,19 @@ Authors@R: c(
     role = "cph"
   ))
 Depends: R (>= 3.2.0)
-Imports: bindr, codetools, crayon, evaluate, digest, dplyr, formatR,
-        fs, grDevices, igraph, knitr, magrittr, parallel, pkgconfig,
-        purrr, R6, R.utils, rlang (>= 0.2.0), rprojroot, stats, storr
-        (>= 1.1.0), stringi, testthat, tibble, tidyselect (>= 0.2.4),
-        utils, withr
-Suggests: abind, callr, clustermq, DBI, future, future.apply, ggplot2,
-        ggraph, lubridate, MASS, methods, networkD3, RSQLite, txtq,
-        rmarkdown, visNetwork
+Imports: codetools, evaluate, digest, dplyr, formatR, fs, igraph,
+        magrittr, parallel, pkgconfig, purrr, R6, R.utils, rlang (>=
+        0.2.0), stats, storr (>= 1.1.0), stringi, tibble, tidyselect
+        (>= 0.2.4), utils, withr
+Suggests: abind, bindr, callr, clustermq, crayon, DBI, downloader,
+        future, future.apply, grDevices, ggplot2, ggraph, knitr,
+        lubridate, MASS, methods, networkD3, RSQLite, rprojroot,
+        testthat, txtq, rmarkdown, styler, visNetwork, webshot
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.0
 NeedsCompilation: no
-Packaged: 2018-07-19 11:49:28 UTC; landau
+Packaged: 2018-08-07 12:08:48 UTC; c240390
 Author: William Michael Landau [aut, cre],
   Alex Axthelm [ctb],
   Jasper Clarkberg [ctb],
@@ -78,4 +78,4 @@ Author: William Michael Landau [aut, cre],
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-07-19 12:10:02 UTC
+Date/Publication: 2018-08-07 12:50:03 UTC

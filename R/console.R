@@ -54,12 +54,6 @@ console_target <- function(target, config){
     text <- paste0("file ", text)
   }
   text <- paste("target", text)
-  trigger <- get_trigger(target = target, config = config)
-  if (trigger != "any"){
-    trigger <- get_trigger(target = target, config = config)
-    trigger_text <- color(x = "trigger", color = color_of("trigger"))
-    text <- paste0(text, ": ", trigger_text, " \"", trigger, "\"")
-  }
   finish_console(text = text, pattern = pattern, config = config)
 }
 
@@ -112,16 +106,17 @@ console_up_to_date <- function(config){
     return(invisible())
   }
   any_attempted <- get_attempt_flag(config = config)
-  default_triggers <- using_default_triggers(config)
-  if (!any_attempted && default_triggers && !config$skip_imports){
+  custom_triggers <- "trigger" %in% colnames(plan) ||
+    !identical(config$trigger, trigger())
+  if (!any_attempted && !custom_triggers && !config$skip_imports){
     console_all_up_to_date(config = config)
     return(invisible())
   }
   if (config$skip_imports){
     console_skipped_imports(config = config)
   }
-  if (!default_triggers){
-    console_nondefault_triggers(config = config)
+  if (custom_triggers){
+    console_custom_triggers(config)
   }
 }
 
@@ -141,7 +136,7 @@ console_skipped_imports <- function(config){
     drake_message(config = config)
 }
 
-console_nondefault_triggers <- function(config){
+console_custom_triggers <- function(config){
   color(
     paste(
       "Used non-default triggers.",
@@ -173,9 +168,13 @@ finish_console <- function(text, pattern, config){
 }
 
 drake_message <- function(..., config){
+  text <- paste0(...)
+  if (requireNamespace("crayon", quietly = TRUE)){
+    text <- crayon::strip_style(text)
+  }
   if (!is.null(config$console_log_file)){
     write(
-      x = crayon::strip_style(paste0(...)),
+      x = text,
       file = config$console_log_file,
       append = TRUE
     )
@@ -184,9 +183,13 @@ drake_message <- function(..., config){
 }
 
 drake_warning <- function(..., config){
+  text <- paste0("Warning: ", ...)
+  if (requireNamespace("crayon", quietly = TRUE)){
+    text <- crayon::strip_style(text)
+  }
   if (!is.null(config$console_log_file)){
     write(
-      x = crayon::strip_style(paste0("Warning: ", ...)),
+      x = text,
       sep = "",
       file = config$console_log_file,
       append = TRUE
@@ -196,9 +199,13 @@ drake_warning <- function(..., config){
 }
 
 drake_error <- function(..., config){
+  text <- paste0("Error: ", ...)
+  if (requireNamespace("crayon", quietly = TRUE)){
+    text <- crayon::strip_style(text)
+  }
   if (!is.null(config$console_log_file)){
     write(
-      x = crayon::strip_style(paste0("Error: ", ...)),
+      x = text,
       sep = "",
       file = config$console_log_file,
       append = TRUE

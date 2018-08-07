@@ -78,7 +78,7 @@ deps_code <- function(x){
 #' @title List the dependencies of one or more targets
 #' @description Unlike [deps_code()], `deps_targets()` just lists
 #'   the jobs that lie upstream of the `targets` on the workflow
-#'   graph, and `file_out()` files are not included.
+#'   dependency graph, and `file_out()` files are not included.
 #' @export
 #' @param targets a character vector of target names
 #' @param config an output list from [drake_config()]
@@ -91,10 +91,7 @@ deps_code <- function(x){
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
-#' # Dependencies of the knitr-generated targets like 'report.md'
-#' # include targets/imports referenced with `readd()` or `loadd()`.
 #' config <- drake_config(my_plan)
-#' deps_targets(file_store("report.md"), config = config)
 #' deps_targets("regression1_small", config = config)
 #' deps_targets(c("small", "large"), config = config, reverse = TRUE)
 #' })
@@ -130,7 +127,7 @@ deps_targets <- function(
 #' con <- make(my_plan) # Run the project, build the targets.
 #' # Get some example dependency profiles of targets.
 #' dependency_profile("small", config = con)
-#' dependency_profile(file_store("report.md"), config = con)
+#' dependency_profile("report", config = con)
 #' })
 #' }
 dependency_profile <- function(target, config = drake::read_drake_config()){
@@ -154,8 +151,11 @@ dependency_profile <- function(target, config = drake::read_drake_config()){
     current_file_modification_time = suppressWarnings(
       file.mtime(drake::drake_unquote(target))
     ),
-    cached_file_dependency_hash = meta$file_dependency_hash,
-    current_file_dependency_hash = file_dependency_hash(
+    cached_input_file_hash = meta$input_file_hash,
+    current_input_file_hash = input_file_hash(
+      target = target, config = config),
+    cached_output_file_hash = meta$output_file_hash,
+    current_output_file_hash = output_file_hash(
       target = target, config = config),
     cached_dependency_hash = meta$dependency_hash,
     current_dependency_hash = current_dependency_hash,
@@ -181,10 +181,19 @@ dependency_profile <- function(target, config = drake::read_drake_config()){
 #' })
 #' }
 tracked <- function(config){
-  c(
-    V(config$graph)$name,
-    V(config$graph)$input_files,
-    V(config$graph)$output_files
+  lightly_parallelize(
+    X = V(config$graph)$name,
+    FUN = function(target){
+      vertex_attr(
+        graph = config$graph,
+        name = "deps",
+        index = target
+      )[[1]] %>%
+        as.list %>%
+        unlist %>%
+        c(target)
+    },
+    jobs = config$jobs
   ) %>%
     clean_dependency_list
 }
@@ -223,9 +232,6 @@ import_dependencies <- function(expr){
 
 command_dependencies <- function(command){
   if (!length(command)){
-    return()
-  }
-  if (is.na(command)){
     return()
   }
   command <- as.character(command)
@@ -477,6 +483,7 @@ loadd_fns <- pair_text(drake_prefix, "loadd")
 readd_fns <- pair_text(drake_prefix, "readd")
 ignore_fns <- pair_text(drake_prefix, "ignore")
 target_fns <- pair_text(drake_prefix, "target")
+trigger_fns <- pair_text(drake_prefix, "trigger")
 drake_fn_patterns <- c(
   knitr_in_fns,
   file_in_fns,
@@ -484,7 +491,8 @@ drake_fn_patterns <- c(
   loadd_fns,
   readd_fns,
   ignore_fns,
-  target_fns
+  target_fns,
+  trigger_fns
 )
 
 is_knitr_in_call <- function(expr){

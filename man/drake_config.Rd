@@ -7,20 +7,22 @@ used internally in \code{\link[=make]{make()}}.}
 \usage{
 drake_config(plan = read_drake_plan(), targets = NULL,
   envir = parent.frame(), verbose = drake::default_verbose(),
-  hook = default_hook, cache = drake::get_cache(verbose = verbose, force =
-  force, console_log_file = console_log_file), fetch_cache = NULL,
-  parallelism = drake::default_parallelism(), jobs = 1,
-  packages = rev(.packages()), prework = character(0),
+  hook = default_hook, cache = drake::get_cache(verbose = verbose,
+  force = force, console_log_file = console_log_file),
+  fetch_cache = NULL, parallelism = drake::default_parallelism(),
+  jobs = 1, packages = rev(.packages()), prework = character(0),
   prepend = character(0), command = drake::default_Makefile_command(),
   args = drake::default_Makefile_args(jobs = jobs, verbose = verbose),
   recipe_command = drake::default_recipe_command(), timeout = Inf,
   cpu = timeout, elapsed = timeout, retries = 0, force = FALSE,
-  log_progress = FALSE, graph = NULL, trigger = drake::default_trigger(),
-  skip_targets = FALSE, skip_imports = FALSE, skip_safety_checks = FALSE,
-  lazy_load = "eager", session_info = TRUE, cache_log_file = NULL,
-  seed = NULL, caching = c("worker", "master"), keep_going = FALSE,
-  session = NULL, imports_only = NULL, pruning_strategy = c("lookahead",
-  "speed", "memory"), makefile_path = "Makefile", console_log_file = NULL,
+  log_progress = FALSE, graph = NULL, trigger = drake::trigger(),
+  skip_targets = FALSE, skip_imports = FALSE,
+  skip_safety_checks = FALSE, lazy_load = "eager",
+  session_info = TRUE, cache_log_file = NULL, seed = NULL,
+  caching = c("worker", "master"), keep_going = FALSE,
+  session = NULL, imports_only = NULL,
+  pruning_strategy = c("lookahead", "speed", "memory"),
+  makefile_path = "Makefile", console_log_file = NULL,
   ensure_workers = TRUE, garbage_collection = FALSE)
 }
 \arguments{
@@ -222,8 +224,7 @@ Overrides \code{skip_imports}.}
 
 \item{trigger}{Name of the trigger to apply to all targets.
 Ignored if \code{plan} has a \code{trigger} column.
-Must be in \code{\link[=triggers]{triggers()}}.
-See \link{triggers} for explanations of the choices.}
+See \code{\link[=trigger]{trigger()}} for details.}
 
 \item{skip_targets}{logical, whether to skip building the targets
 in \code{plan} and just import objects and files.}
@@ -398,12 +399,13 @@ and it could lead to false negative results from
 test_with_dir("Quarantine side effects.", {
 load_mtcars_example() # Get the code with drake_example("mtcars").
 # Construct the master internal configuration list.
-con <- drake_config(my_plan)
-vis_drake_graph(config)
+config <- drake_config(my_plan)
+vis_drake_graph(config) # See the dependency graph.
+sankey_drake_graph(config) # See the dependency graph.
 # These functions are faster than otherwise
 # because they use the configuration list.
-outdated(config = con) # Which targets are out of date?
-missed(config = con) # Which imports are missing?
+outdated(config) # Which targets are out of date?
+missed(config) # Which imports are missing?
 })
 }
 }
