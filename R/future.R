@@ -1,5 +1,5 @@
 run_future <- function(config){
-  assert_pkgs("future")
+  assert_pkg("future")
   queue <- new_priority_queue(config = config)
   workers <- initialize_workers(config)
   # While any targets are queued or running...
@@ -184,7 +184,7 @@ initialize_workers <- function(config){
 
 decrease_revdep_keys <- function(worker, config, queue){
   target <- attr(worker, "target")
-  if (!length(target) || is.na(target) || !is.character(target)){
+  if (!length(target) || safe_is_na(target) || !is.character(target)){
     return()
   }
   revdeps <- dependencies(

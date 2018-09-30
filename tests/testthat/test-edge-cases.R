@@ -206,7 +206,7 @@ test_with_dir("true targets can be functions", {
 })
 
 test_with_dir("GitHub issue 460", {
-  plan <- drake_plan(a = rnorm(1), b = a, c = b)
+  plan <- drake_plan(a = base::sqrt(1), b = a, c = b)
   config <- drake_config(
     plan,
     targets = "b",
@@ -215,15 +215,8 @@ test_with_dir("GitHub issue 460", {
   expect_equal(sort(config$all_targets), sort(letters[1:2]))
   expect_equal(
     intersect(config$all_imports, config$all_targets), character(0))
-  expect_true("rnorm" %in% config$all_imports)
+  expect_true("base::sqrt" %in% config$all_imports)
   make_targets(config)
-})
-
-test_with_dir("assert_pkgs", {
-  skip_on_cran()
-  expect_error(assert_pkgs("_$$$blabla"), regexp = "not installed")
-  expect_error(
-    assert_pkgs(c("digest", "_$$$blabla")), regexp = "not installed")
 })
 
 test_with_dir("warning when file_out() files not produced", {

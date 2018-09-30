@@ -2,11 +2,42 @@ drake_context("cache")
 
 test_with_dir("dependency profile", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  config <- make(drake_plan(a = 1), session_info = FALSE)
-  expect_error(dependency_profile(
-    target = "notfound", config = config))
-  expect_true(is.list(dependency_profile(
-    target = "a", config = config)))
+  b <- 1
+  config <- make(drake_plan(a = b), session_info = FALSE)
+  expect_error(
+    dependency_profile(target = missing, config = config),
+    regexp = "no recorded metadata"
+  )
+  expect_false(any(dependency_profile(target = a, config = config)$changed))
+  b <- 2
+  expect_false(any(dependency_profile(target = a, config = config)$changed))
+  config$skip_targets <- TRUE
+  make(config = config)
+  dp <- dependency_profile(target = a, config = config)
+  expect_true(as.logical(dp[dp$hash == "depend", "changed"]))
+  expect_equal(sum(dp$changed), 1)
+  config$plan$command <- "b + c"
+  dp <- dependency_profile(target = a, config = config)
+  expect_true(as.logical(dp[dp$hash == "command", "changed"]))
+  expect_equal(sum(dp$changed), 2)
+})
+
+test_with_dir("clean() removes the correct files", {
+  cache <- storr::storr_environment()
+  writeLines("123", "a.txt")
+  writeLines("123", "b.txt")
+  plan <- drake_plan(
+    a = file_in("a.txt"),
+    b = knitr_in("b.txt"),
+    c = writeLines("123", file_out("c.rds")),
+    strings_in_dots = "literals"
+  )
+  config <- drake_config(plan, session_info = FALSE)
+  make_imports(config)
+  clean()
+  expect_true(file.exists("a.txt"))
+  expect_true(file.exists("b.txt"))
+  expect_false(file.exists("c.txt"))
 })
 
 test_with_dir("Missing cache", {
@@ -14,6 +45,16 @@ test_with_dir("Missing cache", {
   s <- storr::storr_rds("s")
   unlink(s$driver$path, recursive = TRUE)
   expect_error(assert_cache(s), regexp = "drake cache missing")
+})
+
+test_with_dir("broken cache", {
+  skip_on_cran()
+  make(drake_plan(x = 1), session_info = FALSE)
+  unlink(file.path(".drake", "config"), recursive = TRUE)
+  expect_error(
+    suppressWarnings(make(drake_plan(x = 1), session_info = FALSE)),
+    regexp = "failed to get the storr"
+  )
 })
 
 test_with_dir("Cache namespaces", {
@@ -182,7 +223,7 @@ test_with_dir("cache functions work", {
   # targets and imports
   imports <- sort(c("\"input.rds\"",
     "a", "b", "c", "f", "g",
-    "h", "i", "j", "readRDS", "saveRDS"))
+    "h", "i", "j"))
   builds <- sort(config$plan$target)
   out_files <- "\"intermediatefile.rds\""
   all <- sort(c(builds, imports, out_files))

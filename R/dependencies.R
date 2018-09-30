@@ -3,7 +3,12 @@
 #' @description Intended for debugging and checking your project.
 #'   The dependency structure of the components of your analysis
 #'   decides which targets are built and when.
-#' @details If the argument is a `knitr` report
+#' @details
+#'   The `globals` slot of the output list contains candidate globals only.
+#'   Each global will be treated as an actual dependency if and only if
+#'   it is either a target or an item in the `envir` argument to [make()].
+#'
+#'   If the argument is a `knitr` report
 #'   (for example, `file_store("report.Rmd")` or `"\"report.Rmd\""`)
 #'   the the dependencies of the expected compiled
 #'   output will be given. For example, `deps_code(file_store("report.Rmd"))`
@@ -25,11 +30,14 @@
 #'   this conflict and runs as expected. In other words, [make()]
 #'   automatically removes all self-referential loops in the dependency
 #'   network.
-#' @seealso deps_targets deps_files make drake_plan drake_config
+#' @seealso deps_target deps_files make drake_plan drake_config
 #' @export
 #' @param x a language object (code), character string (code as text),
 #'   or imported function to analyze for dependencies.
 #' @return Names of dependencies listed by type (object, input file, etc).
+#'   The `globals` slot of the output list contains candidate globals only.
+#'   Each global will be treated as an actual dependency if and only if
+#'   it is either a target or an item in the `envir` argument to [make()].
 #' @examples
 #' # Your workflow likely depends on functions in your workspace.
 #' f <- function(x, y){
@@ -76,43 +84,58 @@ deps_code <- function(x){
 }
 
 #' @title List the dependencies of one or more targets
-#' @description Unlike [deps_code()], `deps_targets()` just lists
-#'   the jobs that lie upstream of the `targets` on the workflow
-#'   dependency graph, and `file_out()` files are not included.
+#' @description Intended for debugging and checking your project.
+#'   The dependency structure of the components of your analysis
+#'   decides which targets are built and when.
+#' @seealso deps_code
 #' @export
-#' @param targets a character vector of target names
+#' @param target a symbol denoting a target name, or if `character_only`
+#'   is TRUE, a character scalar denoting a target name.
 #' @param config an output list from [drake_config()]
-#' @param reverse logical, whether to compute reverse dependencies
-#'   (targets immediately downstream) instead of ordinary dependencies.
-#' @return A character vector, names of dependencies.
-#'   Files wrapped in escaped double quotes.
-#'   The other names listed are functions or generic R objects.
+#' @param character_only logical, whether to assume target is a character
+#'   string rather than a symbol.
+#' @return Names of dependencies listed by type (object, input file, etc).
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan)
-#' deps_targets("regression1_small", config = config)
-#' deps_targets(c("small", "large"), config = config, reverse = TRUE)
+#' deps_target("regression1_small", config = config)
+#' deps_target(c("small", "large"), config = config, reverse = TRUE)
 #' })
 #' }
-deps_targets <- function(
-  targets,
+deps_target <- function(
+  target,
   config = read_drake_config(),
-  reverse = FALSE
+  character_only = FALSE
 ){
-  dependencies(targets = targets, config = config, reverse = reverse)
+  if (!character_only){
+    target <- as.character(substitute(target))
+  }
+  vertex_attr(
+    graph = config$graph,
+    name = "deps",
+    index = target
+  )[[1]] %>%
+    as.list()
 }
 
-#' @title Return the detailed dependency profile
-#'   of the target.
-#' @description Useful for debugging.
-#' For up to date targets, like elements
-#' of the returned list should agree: for example,
-#' `cached_dependency_hash` and
-#' `current_dependency_hash`.
-#' @return A list of information that drake takes into account
-#'   when examining the dependencies of the target.
+#' @title Find out why a target is out of date.
+#' @description The dependency profile can give you
+#'   a hint as to why a target is out of date.
+#'   It can tell you if
+#'   - at least one input file changed,
+#'   - at least one output file changed,
+#'   - or a non-file dependency changed. For this last part,
+#'     the imports need to be up to date in the cache,
+#'     which you can do with `outdated()` or
+#'     `make(skip_targets = TRUE)`.
+#'   Unfortunately, `dependency_profile()` does not
+#'   currently get more specific than that.
+#' @return A data frame of the old hashes and
+#'   new hashes of the data frame, along with
+#'   an indication of which hashes changed since
+#'   the last [make()].
 #' @export
 #' @seealso [diagnose()],
 #'   [deps_code()], [make()],
@@ -120,48 +143,68 @@ deps_targets <- function(
 #' @param target name of the target
 #' @param config configuration list output by
 #'   [drake_config()] or [make()]
+#' @param character_only logical, whether to assume `target`
+#'   is a character string rather than a symbol
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
 #' load_mtcars_example() # Load drake's canonical example.
-#' con <- make(my_plan) # Run the project, build the targets.
+#' config <- make(my_plan) # Run the project, build the targets.
 #' # Get some example dependency profiles of targets.
-#' dependency_profile("small", config = con)
-#' dependency_profile("report", config = con)
+#' dependency_profile(small, config = config)
+#' # Change a dependency.
+#' simulate <- function(x){}
+#' # Update the in-memory imports in the cache
+#' # so dependency_profile can detect changes to them.
+#' # Changes to targets are already cached.
+#' make(my_plan, skip_targets = TRUE)
+#' # The dependency hash changed.
+#' dependency_profile(small, config = config)
 #' })
 #' }
-dependency_profile <- function(target, config = drake::read_drake_config()){
+dependency_profile <- function(
+  target,
+  config = drake::read_drake_config(),
+  character_only = FALSE
+){
+  if (!character_only){
+    target <- as.character(substitute(target))
+  }
   if (!config$cache$exists(key = target, namespace = "meta")){
     stop("no recorded metadata for target ", target, ".")
   }
-  config$plan[["trigger"]] <- NULL
   meta <- config$cache$get(
     key = target, namespace = "meta")
   deps <- dependencies(target, config)
-  hashes_of_dependencies <- self_hash(target = deps, config = config)
-  current_dependency_hash <- digest::digest(hashes_of_dependencies,
-                                            algo = config$long_hash_algo)
-  names(hashes_of_dependencies) <- deps
-  out <- list(
-    cached_command = meta$command,
-    current_command = get_standardized_command(
-      target = target, config = config
-    ),
-    cached_file_modification_time = meta$mtime,
-    current_file_modification_time = suppressWarnings(
-      file.mtime(drake::drake_unquote(target))
-    ),
-    cached_input_file_hash = meta$input_file_hash,
-    current_input_file_hash = input_file_hash(
-      target = target, config = config),
-    cached_output_file_hash = meta$output_file_hash,
-    current_output_file_hash = output_file_hash(
-      target = target, config = config),
-    cached_dependency_hash = meta$dependency_hash,
-    current_dependency_hash = current_dependency_hash,
-    hashes_of_dependencies = hashes_of_dependencies
+  old_hashes <- meta[c(
+    "command",
+    "dependency_hash",
+    "input_file_hash",
+    "output_file_hash"
+  )] %>%
+    unlist() %>%
+    unname()
+  old_hashes[1] <- digest::digest(
+    paste(old_hashes[1], collapse = ""),
+    algo = config$long_hash_algo,
+    serialize = FALSE
   )
-  out[!is.na(out)]
+  new_hashes <- c(
+    digest::digest(
+      paste(get_standardized_command(target, config), collapse = ""),
+      algo = config$long_hash_algo,
+      serialize = FALSE
+    ),
+    dependency_hash(target, config),
+    input_file_hash(target, config),
+    output_file_hash(target, config)
+  )
+  tibble::tibble(
+    hash = c("command", "depend", "file_in", "file_out"),
+    changed = old_hashes != new_hashes,
+    old_hash = old_hashes,
+    new_hash = new_hashes
+  )
 }
 
 #' @title List the targets and imports
@@ -221,8 +264,8 @@ nonfile_target_dependencies <- function(targets, config, jobs = 1){
   intersect(out, config$plan$target)
 }
 
-import_dependencies <- function(expr){
-  deps <- code_dependencies(expr)
+import_dependencies <- function(expr, exclude = character(0), globals = NULL){
+  deps <- code_dependencies(expr, exclude = exclude, globals = globals)
   # Imported functions can't have file_out() deps # nolint
   # or target dependencies from knitr code chunks.
   # However, file_in()s are totally fine. # nolint
@@ -230,12 +273,20 @@ import_dependencies <- function(expr){
   deps
 }
 
-command_dependencies <- function(command){
+command_dependencies <- function(
+  command,
+  exclude = character(0),
+  globals = NULL
+){
   if (!length(command)){
     return()
   }
   command <- as.character(command)
-  deps <- code_dependencies(parse(text = command))
+  deps <- code_dependencies(
+    parse(text = command),
+    exclude = exclude,
+    globals = globals
+  )
   deps$strings <- NULL
 
   # TODO: this block can go away when `drake`
@@ -330,7 +381,7 @@ unwrap_function <- function(funct){
   funct
 }
 
-code_dependencies <- function(expr){
+code_dependencies <- function(expr, exclude = character(0), globals = NULL){
   if (
     !is.function(expr) &&
     !is.expression(expr) &&
@@ -352,7 +403,8 @@ code_dependencies <- function(expr){
       }
       walk(body(expr))
     } else if (is.name(expr)) {
-      new_globals <- setdiff(x = wide_deparse(expr), y = drake_fn_patterns)
+      new_globals <- setdiff(x = wide_deparse(expr), y = drake_fn_patterns) %>%
+        Filter(f = is_parsable)
       results$globals <<- c(results$globals, new_globals)
     } else if (is.character(expr)) {
       results$strings <<- c(results$strings, expr)
@@ -382,6 +434,16 @@ code_dependencies <- function(expr){
   }
   walk(expr)
   results$globals <- intersect(results$globals, find_globals(expr))
+  if (!is.null(globals)){
+    results$globals <- intersect(results$globals, globals)
+  }
+  exclude <- base::union(exclude, ".")
+  results <- lapply(
+    X = results,
+    FUN = function(x){
+      setdiff(x, exclude)
+    }
+  )
   results[purrr::map_int(results, length) > 0]
 }
 
@@ -394,7 +456,16 @@ find_globals <- function(fun){
   if (typeof(fun) != "closure"){
     return(character(0))
   }
-  codetools::findGlobals(fun = unwrap_function(fun), merge = TRUE) %>%
+  fun <- unwrap_function(fun)
+  # The tryCatch statement fixes a strange bug in codetools
+  # for R 3.3.3. I do not understand it.
+  tryCatch(
+    codetools::findGlobals(fun = fun, merge = TRUE),
+    error = function(e){
+      fun <- eval(parse(text = rlang::expr_text(fun))) # nocov
+      codetools::findGlobals(fun = fun, merge = TRUE)  # nocov
+    }
+  ) %>%
     setdiff(y = c(drake_fn_patterns, ".")) %>%
     Filter(f = is_parsable)
 }
@@ -402,7 +473,10 @@ find_globals <- function(fun){
 analyze_loadd <- function(expr){
   expr <- match.call(drake::loadd, as.call(expr))
   expr <- expr[-1]
-  unnamed <- code_dependencies(expr[which_unnamed(expr)])
+  unnamed <- list()
+  if (any(is_unnamed <- which_unnamed(expr))){
+    unnamed <- code_dependencies(expr[is_unnamed])
+  }
   out <- c(
     unnamed$globals,
     unnamed$strings,
@@ -522,6 +596,13 @@ is_ignore_call <- function(expr){
 is_target_call <- function(expr){
   tryCatch(
     wide_deparse(expr[[1]]) %in% target_fns,
+    error = error_false
+  )
+}
+
+is_trigger_call <- function(expr){
+  tryCatch(
+    wide_deparse(expr[[1]]) %in% trigger_fns,
     error = error_false
   )
 }

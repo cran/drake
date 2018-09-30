@@ -26,12 +26,13 @@ test_with_dir("deprecation: future", {
   expect_warning(backend())
 })
 
-test_with_dir("deprecation: make() and config()", {
+test_with_dir("deprecation: make() and config() etc.", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_warning(default_system2_args(jobs = 1, verbose = FALSE))
   expect_warning(make(drake_plan(x = 1), return_config = TRUE,
     verbose = FALSE, session_info = FALSE))
-  expect_warning(config(drake_plan(x = 1)))
+  config <- expect_warning(config(drake_plan(x = 1)))
+  expect_warning(deps_targets("x", config), regexp = "deprecated")
 })
 
 test_with_dir("deprecation: cache functions", {
@@ -108,6 +109,7 @@ test_with_dir("deprecated graphing functions", {
   expect_warning(build_drake_graph(pl, sanitize_plan = TRUE))
   con <- drake_config(plan = pl)
   expect_warning(out <- plot_graph(config = con))
+  skip_if_not_installed("ggraph")
   expect_warning(out <- static_drake_graph(config = con))
   expect_true(inherits(out, "gg"))
   df <- drake_graph_info(config = con)
@@ -228,7 +230,13 @@ test_with_dir("force loading a non-back-compatible cache", {
   load_mtcars_example(force = TRUE)
   config <- drake_config(my_plan, force = TRUE)
   expect_true(length(outdated(config)) > 0)
-  expect_error(make(my_plan, verbose = FALSE, session_info = FALSE))
+  expect_error(
+    expect_warning(
+      make(my_plan, verbose = FALSE, session_info = FALSE),
+      regexp = "inconvenience"
+    ),
+    regexp = "force"
+  )
   make(my_plan, verbose = FALSE, force = TRUE)
   expect_equal(outdated(config), character(0))
   expect_true(length(cached()) > 0)

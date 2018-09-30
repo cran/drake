@@ -10,7 +10,7 @@ Description: A general-purpose computational engine for data analysis,
   to practical examples and more, is available at the reference website
   <https://ropensci.github.io/drake/> and the online manual
   <https://ropenscilabs.github.io/drake-manual/>.
-Version: 5.4.0
+Version: 6.0.0
 License: GPL-3
 URL: https://github.com/ropensci/drake
 BugReports: https://github.com/ropensci/drake/issues
@@ -55,20 +55,21 @@ Authors@R: c(
     family = "Eli Lilly and Company",
     role = "cph"
   ))
-Depends: R (>= 3.2.0)
-Imports: codetools, evaluate, digest, dplyr, formatR, fs, igraph,
-        magrittr, parallel, pkgconfig, purrr, R6, R.utils, rlang (>=
-        0.2.0), stats, storr (>= 1.1.0), stringi, tibble, tidyselect
-        (>= 0.2.4), utils, withr
-Suggests: abind, bindr, callr, clustermq, crayon, DBI, downloader,
-        future, future.apply, grDevices, ggplot2, ggraph, knitr,
-        lubridate, MASS, methods, networkD3, RSQLite, rprojroot,
-        testthat, txtq, rmarkdown, styler, visNetwork, webshot
+Depends: R (>= 3.3.0)
+Imports: codetools, digest, dplyr, evaluate, formatR, fs, future,
+        igraph, magrittr, parallel, pkgconfig, purrr, R6, R.utils,
+        rlang (>= 0.2.0), stats, storr (>= 1.1.0), stringi, tibble,
+        tidyselect (>= 0.2.4), utils, withr
+Suggests: abind, bindr, callr, clustermq, CodeDepends, crayon, DBI,
+        downloader, future.apply, grDevices, ggplot2, ggraph, knitr,
+        lubridate, MASS, methods, networkD3, prettycode, RSQLite,
+        rprojroot, testthat, txtq, rmarkdown, styler, visNetwork,
+        webshot
 VignetteBuilder: knitr
 Encoding: UTF-8
 RoxygenNote: 6.1.0
 NeedsCompilation: no
-Packaged: 2018-08-07 12:08:48 UTC; c240390
+Packaged: 2018-09-29 22:21:42 UTC; c240390
 Author: William Michael Landau [aut, cre],
   Alex Axthelm [ctb],
   Jasper Clarkberg [ctb],
@@ -78,4 +79,4 @@ Author: William Michael Landau [aut, cre],
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-08-07 12:50:03 UTC
+Date/Publication: 2018-09-30 04:30:03 UTC

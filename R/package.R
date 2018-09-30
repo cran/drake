@@ -42,7 +42,8 @@
 #' @importFrom dplyr bind_rows do group_by mutate n select ungroup
 #' @importFrom evaluate try_capture_stack
 #' @importFrom formatR tidy_source
-#' @importFrom fs dir_create file_create path_ext path_ext_remove
+#' @importFrom fs dir_create file_create is_file path_ext path_ext_remove
+#' @importFrom future plan
 #' @importFrom igraph adjacent_vertices components delete_vertices
 #'   degree edge edges igraph_opt igraph_options induced_subgraph is_dag
 #'   make_empty_graph plot.igraph set_vertex_attr simplify subcomponent
@@ -51,7 +52,7 @@
 #' @importFrom parallel clusterCall clusterExport makePSOCKcluster
 #'   mclapply parLapply stopCluster
 #' @importFrom pkgconfig get_config
-#' @importFrom purrr map_int pmap
+#' @importFrom purrr map_int pmap pmap_chr
 #' @importFrom R6 R6Class
 #' @importFrom R.utils countLines isPackageLoaded withTimeout
 #' @importFrom rlang expr expr_text exprs
@@ -59,10 +60,10 @@
 #' @importFrom storr storr_environment storr_rds
 #' @importFrom stringi stri_extract_all_regex
 #'   stri_split_fixed stri_trim_both
-#' @importFrom tibble as_tibble new_tibble tibble
+#' @importFrom tibble as_tibble tibble
 #' @importFrom tidyselect vars_select
 #' @importFrom utils capture.output compareVersion head installed.packages
 #'   packageVersion read.csv sessionInfo stack type.convert unzip write.table
 #' @importFrom withr local_dir with_dir with_options with_output_sink
-#'   with_preserve_seed with_seed
+#'   with_seed
 NULL

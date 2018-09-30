@@ -94,6 +94,7 @@ ensure_loaded <- function(targets, config){
   already_loaded <- ls(envir = config$envir, all.names = TRUE) %>%
     intersect(y = config$plan$target)
   setdiff(targets, already_loaded) %>%
+    Filter(f = is_not_file) %>%
     safe_load(config = config)
 }
 
@@ -105,7 +106,7 @@ flexible_get <- function(target, envir) {
   lang <- parsed[[1]]
   is_namespaced <- length(lang) > 1
   if (!is_namespaced){
-    return(get(x = target, envir = envir))
+    return(get(x = target, envir = envir, inherits = FALSE))
   }
   stopifnot(deparse(lang[[1]]) %in% c("::", ":::"))
   pkg <- deparse(lang[[2]])

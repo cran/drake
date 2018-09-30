@@ -141,7 +141,7 @@ this_cache <- function(
   if (length(fetch_cache) && nzchar(fetch_cache)){
     cache <- eval(parse(text = localize(fetch_cache)))
   } else {
-    cache <- drake_fetch_rds(path)
+    cache <- drake_try_fetch_rds(path = path)
   }
   configure_cache(
     cache = cache,
@@ -153,6 +153,21 @@ this_cache <- function(
     assert_compatible_cache(cache = cache)
   }
   cache
+}
+
+drake_try_fetch_rds <- function(path){
+  out <- try(drake_fetch_rds(path = path), silent = TRUE)
+  if (!inherits(out, "try-error")){
+    return(out)
+  }
+  stop(
+    "drake failed to get the storr::storr_rds() cache at ", path, ". ",
+    "Something is wrong with the file system of the cache. ",
+    "If you downloaded it from an online repository, are you sure ",
+    "all the files were downloaded correctly? ",
+    "If all else fails, remove the folder at ", path, "and try again.",
+    call. = FALSE
+  )
 }
 
 drake_fetch_rds <- function(path){
@@ -506,16 +521,37 @@ assert_compatible_cache <- function(cache){
   if (inherits(err, "try-error")){
     return(invisible())
   }
-  comparison <- compareVersion(old, "4.4.0")
-  if (comparison > 0){
-    return(invisible())
+  if (compareVersion(old, "5.4.0") < 0){
+    warning(
+      "The improvements to speed and reproducibility in drake version 6.0.0 ",
+      "put all targets out of date in projects previously built ",
+      "with drake version 5.4.0 or earlier. Sorry for the inconvenience.",
+      call. = FALSE
+    )
   }
-  current <- packageVersion("drake")
-  path <- cache$driver$path
-  stop(
-    "The project at '", path, "' was previously built by drake ", old, ". ",
-    "You are running drake ", current, ", which is not back-compatible. ",
-    "Run make(..., force = TRUE) to update.",
-    call. = FALSE
-  )
+  if (compareVersion(old, "4.4.0") <= 0){
+    stop(
+      "The project at '", cache$driver$path,
+      "' was previously built by drake ", old, ". ",
+      "You are running drake ", packageVersion("drake"),
+      ", which is not back-compatible. ",
+      "Run make(..., force = TRUE) to update.",
+      call. = FALSE
+    )
+  }
+}
+
+# Not true memoization, but still useful in build_drake_graph()
+memo_expr <- function(expr, cache, ...){
+  if (is.null(cache)){
+    return(force(expr))
+  }
+  lang <- match.call(expand.dots = FALSE)$expr
+  key <- digest::digest(list(lang, ...), algo = "sha256")
+  if (cache$exists(key = key, namespace = "memoize")){
+    return(cache$get(key = key, namespace = "memoize"))
+  }
+  value <- force(expr)
+  cache$set(key = key, value = value, namespace = "memoize")
+  value
 }

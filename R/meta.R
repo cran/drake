@@ -57,7 +57,7 @@ drake_meta <- function(target, config = drake::read_drake_config()) {
     imported = !(target %in% config$plan$target),
     foreign = !exists(x = target, envir = config$envir, inherits = FALSE),
     missing = !target_exists(target = target, config = config),
-    seed = seed_from_object(list(seed = config$seed, target = target))
+    seed = seed_from_basic_types(config$seed, target)
   )
   # For imported files.
   if (is_file(target)) {
@@ -108,9 +108,10 @@ dependency_hash <- function(target, config) {
   if (!(target %in% config$plan$target)){
     deps <- c(deps, x$file_in, x$knitr_in)
   }
-  sort(unique(deps)) %>%
+  sort(as.character(unique(deps))) %>%
     self_hash(config = config) %>%
-    digest::digest(algo = config$long_hash_algo)
+    paste(collapse = "") %>%
+    digest::digest(algo = config$long_hash_algo, serialize = FALSE)
 }
 
 input_file_hash <- function(
@@ -123,7 +124,7 @@ input_file_hash <- function(
     name = "deps",
     index = target
   )[[1]]
-  files <- sort(unique(c(deps$file_in, deps$knitr_in)))
+  files <- sort(unique(as.character(c(deps$file_in, deps$knitr_in))))
   vapply(
     X = files,
     FUN = file_hash,
@@ -131,7 +132,8 @@ input_file_hash <- function(
     config = config,
     size_cutoff = size_cutoff
   ) %>%
-    digest::digest(algo = config$long_hash_algo)
+    paste(collapse = "") %>%
+    digest::digest(algo = config$long_hash_algo, serialize = FALSE)
 }
 
 output_file_hash <- function(
@@ -144,7 +146,7 @@ output_file_hash <- function(
     name = "deps",
     index = target
   )[[1]]
-  files <- sort(unique(deps$file_out))
+  files <- sort(unique(as.character(deps$file_out)))
   vapply(
     X = files,
     FUN = file_hash,
@@ -152,7 +154,8 @@ output_file_hash <- function(
     config = config,
     size_cutoff = size_cutoff
   ) %>%
-    digest::digest(algo = config$long_hash_algo)
+    paste(collapse = "") %>%
+    digest::digest(algo = config$long_hash_algo, serialize = FALSE)
 }
 
 self_hash <- Vectorize(function(target, config) {
@@ -166,7 +169,7 @@ self_hash <- Vectorize(function(target, config) {
 
 rehash_file <- function(target, config) {
   file <- drake::drake_unquote(target)
-  if (!file.exists(file)){
+  if (!fs::is_file(file)){
     return(as.character(NA))
   }
   digest::digest(
@@ -188,7 +191,7 @@ safe_rehash_file <- function(target, config){
 should_rehash_file <- function(filename, new_mtime, old_mtime,
   size_cutoff){
   do_rehash <- file.size(filename) < size_cutoff | new_mtime > old_mtime
-  if (is.na(do_rehash)){
+  if (safe_is_na(do_rehash)){
     do_rehash <- TRUE
   }
   do_rehash
