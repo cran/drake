@@ -1,4 +1,4 @@
-#' Drake is a pipeline toolkit
+#' drake is a pipeline toolkit
 #' (<https://github.com/pditommaso/awesome-pipeline>)
 #' and a scalable, R-focused solution for reproducibility
 #' and high-performance computing.
@@ -55,7 +55,7 @@
 #' @importFrom purrr map_int pmap pmap_chr
 #' @importFrom R6 R6Class
 #' @importFrom R.utils countLines isPackageLoaded withTimeout
-#' @importFrom rlang expr expr_text exprs
+#' @importFrom rlang enexpr enexprs enquo expr expr_text exprs
 #' @importFrom stats coef complete.cases lm na.omit rnorm rpois runif setNames
 #' @importFrom storr storr_environment storr_rds
 #' @importFrom stringi stri_extract_all_regex

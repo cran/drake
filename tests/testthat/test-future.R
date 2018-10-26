@@ -19,7 +19,7 @@ test_with_dir("future package functionality", {
       parallelism = backends[i],
       caching = caching[i],
       jobs = 1,
-      verbose = 4,
+      verbose = FALSE,
       session_info = FALSE
     )
     expect_equal(
@@ -78,12 +78,14 @@ test_with_dir("can gracefully conclude a crashed worker", {
     expect_false(is_empty_worker(worker))
     expect_error(future::value(worker))
     expect_error(
-      conclude_worker(
-        worker = worker,
-        config = con,
-        queue = new_priority_queue(config = con)
+      suppressWarnings(
+        conclude_worker(
+          worker = worker,
+          config = con,
+          queue = new_priority_queue(config = con)
+        )
       ),
-      regexp = "failed."
+      regexp = "failed"
     )
     meta <- diagnose(myinput)
     expect_true(

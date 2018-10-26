@@ -21,7 +21,7 @@
 #' drake_hpc_template_files()
 #' # Write a SLURM template file from the SLURM example.
 #' drake_hpc_template_file("slurm_batchtools.tmpl") # Writes slurm_batchtools.tmpl.
-#' library(future.batchtools)
+#' # library(future.batchtools) # nolint
 #' # future::plan(batchtools_slurm, template = "slurm_batchtools.tmpl") # nolint
 #' # make(my_plan, parallelism = "future", jobs = 2) # nolint
 #' })
@@ -61,7 +61,7 @@ drake_hpc_template_file <- function(
 #' drake_hpc_template_files()
 #' # Write a SLURM template file from the SLURM example.
 #' drake_hpc_template_file("slurm_batchtools.tmpl") # Writes slurm_batchtools.tmpl.
-#' library(future.batchtools)
+#' # library(future.batchtools) # nolint
 #' # future::plan(batchtools_slurm, template = "slurm_batchtools.tmpl") # nolint
 #' # make(my_plan, parallelism = "future", jobs = 2) # nolint
 #' })
@@ -110,12 +110,13 @@ parallelism_choices <- function(distributed_only = FALSE) {
     "future",
     "future_lapply",
     "future_lapply_staged",
+    "hasty",
     "Makefile"
   )
   if (distributed_only){
-    distributed
+    sort(distributed)
   } else {
-    c(local, distributed)
+    sort(c(local, distributed))
   }
 }
 

@@ -4,6 +4,9 @@ store_outputs <- function(target, value, meta, config){
   if (inherits(meta$error, "error")){
     return()
   }
+  if (!meta$imported){
+    console_store(target = target, config = config)
+  }
   if (is.null(meta$command)){
     meta$command <- get_standardized_command(target = target, config = config)
   }

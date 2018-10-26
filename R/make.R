@@ -70,11 +70,11 @@
 #' })
 #' }
 make <- function(
-  plan = read_drake_plan(),
+  plan = drake::read_drake_plan(),
   targets = NULL,
   envir = parent.frame(),
   verbose = drake::default_verbose(),
-  hook = default_hook,
+  hook = NULL,
   cache = drake::get_cache(
     verbose = verbose, force = force, console_log_file = console_log_file),
   fetch_cache = NULL,
@@ -106,7 +106,7 @@ make <- function(
   session_info = TRUE,
   cache_log_file = NULL,
   seed = NULL,
-  caching = "worker",
+  caching = "master",
   keep_going = FALSE,
   session = NULL,
   imports_only = NULL,
@@ -115,7 +115,8 @@ make <- function(
   console_log_file = NULL,
   ensure_workers = TRUE,
   garbage_collection = FALSE,
-  template = list()
+  template = list(),
+  sleep = function(i) 0.01
 ){
   force(envir)
   if (!is.null(return_config)){
@@ -166,7 +167,8 @@ make <- function(
       console_log_file = console_log_file,
       ensure_workers = ensure_workers,
       garbage_collection = garbage_collection,
-      template = template
+      template = template,
+      sleep = sleep
     )
   }
   make_with_config(config = config)
@@ -223,12 +225,12 @@ global_imports <- function(config){
 #' @export
 #' @inheritParams make_with_config
 make_session <- function(config){
+  do_prework(config = config, verbose_packages = config$verbose)
   check_drake_config(config = config)
   store_drake_config(config = config)
   initialize_session(config = config)
-  do_prework(config = config, verbose_packages = config$verbose)
   make_with_schedules(config = config)
-  drake_cache_log_file(
+    drake_cache_log_file(
     file = config$cache_log_file,
     cache = config$cache,
     jobs = config$jobs
@@ -339,8 +341,16 @@ make_imports <- function(config = drake::read_drake_config()){
 #' })
 #' }
 make_targets <- function(config = drake::read_drake_config()){
-  up_to_date <- outdated(config, do_prework = FALSE, make_imports = FALSE) %>%
-    setdiff(x = config$all_targets)
+  if ("hasty" %in% config$parallelism){
+    run_hasty(config)
+    return(invisible(config))
+  }
+  outdated <- outdated(config, do_prework = FALSE, make_imports = FALSE)
+  if (!length(outdated)){
+    console_up_to_date(config = config)
+    return(config)
+  }
+  up_to_date <- setdiff(config$all_targets, outdated)
   config$schedule <- targets_graph(config = config) %>%
     igraph::delete_vertices(v = up_to_date)
   config$jobs <- targets_setting(config$jobs)

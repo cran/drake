@@ -24,7 +24,7 @@
 #'   enclosing them in literal double quotes.
 #'   (For example, `file_store("report.Rmd")` is just `"\"report.Rmd\""`.)
 #'
-#'   `Drake` takes special precautions so that a target/import
+#'   `drake` takes special precautions so that a target/import
 #'   does not depend on itself. For example, `deps_code(f)`` might return
 #'   `"f"` if `f()` is a recursive function, but [make()] just ignores
 #'   this conflict and runs as expected. In other words, [make()]
@@ -101,7 +101,6 @@ deps_code <- function(x){
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan)
 #' deps_target("regression1_small", config = config)
-#' deps_target(c("small", "large"), config = config, reverse = TRUE)
 #' })
 #' }
 deps_target <- function(

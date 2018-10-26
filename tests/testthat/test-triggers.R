@@ -5,6 +5,7 @@ test_with_dir("empty triggers return logical", {
   expect_identical(depend_trigger("x", list(), list()), FALSE)
   expect_identical(command_trigger("x", list(), list()), FALSE)
   expect_identical(file_trigger("x", list(), list()), FALSE)
+  expect_identical(condition_trigger("x", list(), list()), FALSE)
   expect_identical(change_trigger("x", list(), list()), FALSE)
 })
 
@@ -20,6 +21,22 @@ test_with_dir("triggers can be expressions", {
     )
     expect_equal(justbuilt(config), "x")
   }
+})
+
+test_with_dir("bad condition trigger", {
+  plan <- drake_plan(x = 1)
+  cache <- storr::storr_environment()
+  make(
+    plan, session_info = FALSE, cache = cache,
+    trigger = trigger(condition = NULL)
+  )
+  expect_error(
+    make(
+      plan, session_info = FALSE, cache = cache,
+      trigger = trigger(condition = NULL)
+    ),
+    regexp = "logical of length 1"
+  )
 })
 
 test_with_dir("triggers in plan override make(trigger = whatever)", {
@@ -78,7 +95,8 @@ test_with_dir("trigger() function works", {
     depend = FALSE,
     file = FALSE,
     condition = quote(1 + 1),
-    change = quote(sqrt(1))
+    change = quote(sqrt(1)),
+    mode = "whitelist"
   )
   expect_equal(y, z)
 })
@@ -86,7 +104,7 @@ test_with_dir("trigger() function works", {
 test_with_dir("can detect trigger deps without reacting to them", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   writeLines("123", "knitr.Rmd")
-  saveRDS(1, "file.rds")
+  saveRDS(0, "file.rds")
   f <- function(x){
     identity(x)
   }
@@ -96,7 +114,7 @@ test_with_dir("can detect trigger deps without reacting to them", {
       trigger = trigger(
         condition = {
           knitr_in("knitr.Rmd")
-          f(FALSE) + readRDS(file_in("file.rds"))
+          f(0) + readRDS(file_in("file.rds"))
         },
         command = FALSE,
         file = FALSE,
@@ -129,7 +147,7 @@ test_with_dir("can detect trigger deps without reacting to them", {
 test_with_dir("same, but with global trigger", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   writeLines("123", "knitr.Rmd")
-  saveRDS(1, "file.rds")
+  saveRDS(0, "file.rds")
   f <- function(x){
     identity(x)
   }
@@ -139,7 +157,7 @@ test_with_dir("same, but with global trigger", {
     log_progress = TRUE, trigger = trigger(
       condition = {
         knitr_in("knitr.Rmd")
-        f(FALSE) + readRDS(file_in("file.rds"))
+        f(0) + readRDS(file_in("file.rds"))
       },
       command = FALSE,
       file = FALSE,
@@ -167,7 +185,7 @@ test_with_dir("same, but with global trigger", {
 test_with_dir("trigger does not block out command deps", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   writeLines("123", "knitr.Rmd")
-  saveRDS(1, "file.rds")
+  saveRDS(0, "file.rds")
   f <- function(x){
     identity(x)
   }
@@ -175,7 +193,7 @@ test_with_dir("trigger does not block out command deps", {
     x = target(
       command = {
         knitr_in("knitr.Rmd")
-        f(FALSE) + readRDS(file_in("file.rds"))
+        f(0) + readRDS(file_in("file.rds"))
       },
       trigger = trigger(
         condition = {
@@ -221,14 +239,14 @@ test_with_dir("trigger does not block out command deps", {
 test_with_dir("same, but with global trigger", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   writeLines("123", "knitr.Rmd")
-  saveRDS(1, "file.rds")
+  saveRDS(0, "file.rds")
   f <- function(x){
     identity(x)
   }
   plan <- drake_plan(
     x = {
       knitr_in("knitr.Rmd")
-      f(FALSE) + readRDS(file_in("file.rds"))
+      f(0) + readRDS(file_in("file.rds"))
     },
     strings_in_dots = "literals"
   )
@@ -488,4 +506,178 @@ test_with_dir("trigger components react appropriately", {
   expect_equal(outdated(config), character(0))
   make(config = simple_config)
   expect_equal(outdated(config), character(0))
+})
+
+test_with_dir("trigger whitelist mode", {
+  skip_on_cran()
+  scenario <- get_testing_scenario()
+  e <- eval(parse(text = scenario$envir))
+  jobs <- scenario$jobs
+  parallelism <- scenario$parallelism
+  caching <- scenario$caching
+  eval(
+    quote(f <- function(x){
+      1 + x
+    }),
+    envir = e
+  )
+  plan <- drake_plan(y = f(1))
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE
+  )
+  expect_equal(justbuilt(config), "y")
+  expect_equal(outdated(config), character(0))
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = FALSE, mode = "whitelist")
+  )
+  expect_equal(justbuilt(config), character(0))
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = TRUE, mode = "whitelist")
+  )
+  expect_equal(justbuilt(config), "y")
+  eval(
+    quote(f <- function(x){
+      2 + x
+    }),
+    envir = e
+  )
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = FALSE, mode = "whitelist")
+  )
+  expect_equal(justbuilt(config), "y")
+  eval(
+    quote(f <- function(x){
+      3 + x
+    }),
+    envir = e
+  )
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = TRUE, mode = "whitelist")
+  )
+  expect_equal(justbuilt(config), "y")
+})
+
+test_with_dir("trigger blacklist mode", {
+  skip_on_cran()
+  scenario <- get_testing_scenario()
+  e <- eval(parse(text = scenario$envir))
+  jobs <- scenario$jobs
+  parallelism <- scenario$parallelism
+  caching <- scenario$caching
+  eval(
+    quote(f <- function(x){
+      1 + x
+    }),
+    envir = e
+  )
+  plan <- drake_plan(y = f(1))
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE
+  )
+  expect_equal(justbuilt(config), "y")
+  expect_equal(outdated(config), character(0))
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = FALSE, mode = "blacklist")
+  )
+  expect_equal(justbuilt(config), character(0))
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = TRUE, mode = "blacklist")
+  )
+  expect_equal(justbuilt(config), character(0))
+  eval(
+    quote(f <- function(x){
+      2 + x
+    }),
+    envir = e
+  )
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = FALSE, mode = "blacklist")
+  )
+  expect_equal(justbuilt(config), character(0))
+  eval(
+    quote(f <- function(x){
+      3 + x
+    }),
+    envir = e
+  )
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = TRUE, mode = "blacklist")
+  )
+  expect_equal(justbuilt(config), "y")
+})
+
+test_with_dir("trigger condition mode", {
+  skip_on_cran()
+  scenario <- get_testing_scenario()
+  e <- eval(parse(text = scenario$envir))
+  jobs <- scenario$jobs
+  parallelism <- scenario$parallelism
+  caching <- scenario$caching
+  eval(
+    quote(f <- function(x){
+      1 + x
+    }),
+    envir = e
+  )
+  plan <- drake_plan(y = f(1))
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE
+  )
+  expect_equal(justbuilt(config), "y")
+  expect_equal(outdated(config), character(0))
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = FALSE, mode = "condition")
+  )
+  expect_equal(justbuilt(config), character(0))
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = TRUE, mode = "condition")
+  )
+  expect_equal(justbuilt(config), "y")
+  eval(
+    quote(f <- function(x){
+      2 + x
+    }),
+    envir = e
+  )
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = FALSE, mode = "condition")
+  )
+  expect_equal(justbuilt(config), character(0))
+  eval(
+    quote(f <- function(x){
+      3 + x
+    }),
+    envir = e
+  )
+  config <- make(
+    plan, envir = e, jobs = jobs, parallelism = parallelism,
+    verbose = 4, caching = caching, session_info = FALSE,
+    trigger = trigger(condition = TRUE, mode = "condition")
+  )
+  expect_equal(justbuilt(config), "y")
 })

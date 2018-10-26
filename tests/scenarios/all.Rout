@@ -1,0 +1,59 @@
+
+R version 3.5.0 (2018-04-23) -- "Joy in Playing"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> devtools::load_all()
+Loading drake
+> for (scenario in testing_scenario_names()){
++   cat(scenario, "\n")
++   system2(
++     command = "R",
++     args = paste0(
++       "CMD BATCH --no-save '--args ",
++       scenario, "' one.R ", scenario, ".out"
++     )
++   )
++ }
+local_parLapply_1 
+local_parLapply_2 
+local_parLapply_staged_2 
+local_mclapply_1 
+local_mclapply_9 
+local_mclapply_staged_2 
+local_clustermq_2__master 
+local_clustermq_staged_9__worker 
+local_Makefile_9 
+local_future_lapply_2_future::multisession 
+local_future_lapply_staged_1_future::multisession 
+local_future_9_future::multisession_worker 
+global_parLapply_1 
+global_parLapply_9 
+global_parLapply_staged_9 
+global_mclapply_1 
+global_mclapply_2 
+global_mclapply_staged_9 
+global_clustermq_9__worker 
+global_clustermq_staged_2__master 
+global_Makefile_2 
+global_future_lapply_1_future::multisession 
+global_future_lapply_staged_2_future::multisession 
+global_future_9_future::multisession_master 
+> 
+> proc.time()
+     user    system   elapsed 
+ 4794.839  1343.185 30832.554 

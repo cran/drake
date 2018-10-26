@@ -1,5 +1,5 @@
 run_clustermq <- function(config){
-  assert_pkg("clustermq", version = "0.8.4.99")
+  assert_pkg("clustermq", version = "0.8.5")
   config$queue <- new_priority_queue(
     config = config,
     jobs = config$jobs_imports
@@ -21,6 +21,7 @@ cmq_set_common_data <- function(config){
   if (identical(config$envir, globalenv())){
     export <- as.list(config$envir, all.names = TRUE) # nocov
   }
+  config$cache$flush_cache()
   export$config <- config
   config$workers$set_common_data(
     export = export,
@@ -69,8 +70,12 @@ cmq_send_target <- function(config){
   # nocov end
   meta$start <- proc.time()
   announce_build(target = target, meta = meta, config = config)
-  prune_envir(targets = target, config = config, jobs = 1)
-  deps <- cmq_deps_list(target = target, config = config)
+  if (identical(config$caching, "master")){
+    prune_envir(targets = target, config = config, jobs = 1)
+    deps <- cmq_deps_list(target = target, config = config)
+  } else {
+    deps <- NULL
+  }
   config$workers$send_call(
     expr = drake::cmq_build(
       target = target,
@@ -108,12 +113,26 @@ cmq_build <- function(target, meta, deps, config){
     gc()
   }
   do_prework(config = config, verbose_packages = FALSE)
-  for (dep in names(deps)){
-    config$envir[[dep]] <- deps[[dep]]
+  if (identical(config$caching, "master")){
+    for (dep in names(deps)){
+      config$envir[[dep]] <- deps[[dep]]
+    }
+  } else {
+    prune_envir(targets = target, config = config, jobs = 1)
   }
   build <- just_build(target = target, meta = meta, config = config)
-  build$checksum <- mc_output_file_checksum(target, config)
-  build
+  if (identical(config$caching, "master")){
+    build$checksum <- mc_get_outfile_checksum(target, config)
+    return(build)
+  }
+  conclude_build(
+    target = build$target,
+    value = build$value,
+    meta = build$meta,
+    config = config
+  )
+  set_attempt_flag(key = build$target, config = config)
+  list(target = target, checksum = mc_get_checksum(target, config))
 }
 
 cmq_conclude_build <- function(msg, config){
@@ -121,7 +140,18 @@ cmq_conclude_build <- function(msg, config){
   if (is.null(build)){
     return()
   }
+  if (inherits(build, "try-error")){
+    stop(attr(build, "condition")$message, call. = FALSE) # nocov
+  }
   cmq_conclude_target(target = build$target, config = config)
+  if (identical(config$caching, "worker")){
+    mc_wait_checksum(
+      target = build$target,
+      checksum = build$checksum,
+      config = config
+    )
+    return()
+  }
   set_attempt_flag(key = build$target, config = config)
   mc_wait_outfile_checksum(
     target = build$target,

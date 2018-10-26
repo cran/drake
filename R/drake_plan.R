@@ -42,6 +42,8 @@
 #'   for each worker in `make(..., parallelism = "future")`.
 #'
 #' @export
+#' @seealso map_plan, reduce_by, gather_by, reduce_plan, gather_plan,
+#'   evaluate_plan, expand_plan
 #' @return A data frame of targets and commands. See the details
 #' for optional columns you can append manually post-hoc.
 #' @param ... A collection of symbols/targets
@@ -320,7 +322,7 @@ drake_plan_override <- function(target, field, config){
 #'   )
 #' )
 #' plan
-#' # Drake knows "\"mtcars.csv\"" is the first target
+#' # drake knows "\"mtcars.csv\"" is the first target
 #' # and a dependency of `contents`. See for yourself:
 #' make(plan)
 #' file.exists("mtcars.csv")
@@ -360,7 +362,7 @@ file_in <- function(...){
 #'   )
 #' )
 #' plan
-#' # Drake knows "\"mtcars.csv\"" is the first target
+#' # drake knows "\"mtcars.csv\"" is the first target
 #' # and a dependency of `contents`. See for yourself:
 #' make(plan)
 #' file.exists("mtcars.csv")

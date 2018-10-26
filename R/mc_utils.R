@@ -37,8 +37,12 @@ mc_ensure_workers <- function(config){
     },
     FUN.VALUE = character(1)
   )
+  i <- 1
   while (!all(file.exists(paths))){
-    Sys.sleep(mc_wait) # nocov
+    # nocov start
+    Sys.sleep(config$sleep(i))
+    i <- i + 1
+    # nocov end
   }
 }
 
@@ -141,8 +145,12 @@ mc_conclude_workers <- function(config){
 }
 
 mc_get_worker_queue <- function(worker, namespace, config){
+  i <- 1
   while (!config$cache$exists(key = worker, namespace = namespace)){
-    Sys.sleep(mc_wait) # nocov
+    # nocov start
+    Sys.sleep(config$sleep(i))
+    i <- i + 1
+    # nocov end
   }
   txtq::txtq(config$cache$get(key = worker, namespace = namespace))
 }
@@ -163,90 +171,6 @@ mc_worker_id <- function(x){
   paste0("worker_", x)
 }
 
-mc_get_checksum <- function(target, config){
-  paste(
-    safe_get_hash(
-      key = target,
-      namespace = config$cache$default_namespace,
-      config = config
-    ),
-    safe_get_hash(key = target, namespace = "kernels", config = config),
-    safe_get_hash(key = target, namespace = "meta", config = config),
-    safe_get_hash(key = target, namespace = "attempt", config = config),
-    mc_output_file_checksum(target, config),
-    sep = " "
-  )
-}
-
-mc_output_file_checksum <- function(target, config){
-  deps <- vertex_attr(
-    graph = config$graph,
-    name = "deps",
-    index = target
-  )[[1]]
-  files <- sort(unique(as.character(deps$file_out)))
-  vapply(
-    X = files,
-    FUN = rehash_file,
-    FUN.VALUE = character(1),
-    config = config
-  ) %>%
-    paste(collapse = "") %>%
-    digest::digest(algo = config$long_hash_algo, serialize = FALSE)
-}
-
-mc_is_good_checksum <- function(target, checksum, config){
-  local_checksum <- mc_get_checksum(target = target, config = config)
-  if (!identical(local_checksum, checksum)){
-    return(FALSE)
-  }
-  if (identical("failed", get_progress_single(target, cache = config$cache))){
-    return(TRUE) # covered with parallel processes # nocov
-  }
-  all(
-    vapply(
-      X = unlist(strsplit(local_checksum, " "))[1:3], # Exclude attempt flag (often NA). # nolint
-      config$cache$exists_object,
-      FUN.VALUE = logical(1)
-    )
-  )
-}
-
-mc_wait_checksum <- function(target, checksum, config, timeout = 300){
-  i <- 0
-  while (i < timeout / mc_wait){
-    if (mc_is_good_checksum(target, checksum, config)){
-      return()
-    } else {
-      Sys.sleep(mc_wait)
-    }
-    i <- i + 1
-  }
-  drake_error(
-    "Target `", target, "` did not download from your ",
-    "network file system. Checksum verification timed out after about ",
-    timeout, " seconds.", config = config
-  )
-}
-
-mc_wait_outfile_checksum <- function(target, checksum, config, timeout = 300){
-  i <- 0
-  while (i < timeout / mc_wait){
-    local_checksum <- mc_output_file_checksum(target, config)
-    if (identical(local_checksum, checksum)){
-      return()
-    } else {
-      Sys.sleep(mc_wait)
-    }
-    i <- i + 1
-  }
-  drake_error(
-    "Target `", target, "` did not download from your ",
-    "network file system. Checksum verification timed out after about ",
-    timeout, " seconds.", config = config
-  )
-}
-
 mc_abort_with_errored_workers <- function(config){
   if (length(failed_workers <- config$cache$list("mc_error"))){
     if (!identical(config$keep_going, TRUE)){
@@ -260,5 +184,3 @@ mc_abort_with_errored_workers <- function(config){
   }
   FALSE
 }
-
-mc_wait <- 0.01

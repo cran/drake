@@ -8,53 +8,37 @@ console <- function(imported, target, config) {
   }
 }
 
-console_missing <- function(target, config){
-  if (config$verbose < 3){
+console_generic <- function(target, config, cutoff = 1, pattern = "target"){
+  if (config$verbose < cutoff){
     return()
   }
-  pattern <- "missing"
   text <- target
   if (is_file(target)){
     text <- paste0("file ", text)
   }
   text <- paste(pattern, text)
   finish_console(text = text, pattern = pattern, config = config)
+
+}
+
+console_missing <- function(target, config){
+  console_generic(target, config, 3, "missing")
 }
 
 console_import <- function(target, config){
-  if (config$verbose < 4){
-    return()
-  }
-  pattern <- "import"
-  text <- target
-  if (is_file(target)){
-    text <- paste0("file ", text)
-  }
-  text <- paste(pattern, text)
-  finish_console(text = text, pattern = pattern, config = config)
+  console_generic(target, config, 4, "import")
 }
 
 console_skip <- function(target, config){
-  if (config$verbose < 4){
-    return()
-  }
-  pattern <- "skip"
-  text <- target
-  if (is_file(target)){
-    text <- paste0("file ", text)
-  }
-  text <- paste(pattern, text)
-  finish_console(text = text, pattern = pattern, config = config)
+  console_generic(target, config, 4, "skip")
+}
+
+console_store <- function(target, config){
+  console_generic(target, config, 4, "store")
 }
 
 console_target <- function(target, config){
-  pattern <- "target"
-  text <- target
-  if (is_file(target)){
-    text <- paste0("file ", text)
-  }
-  text <- paste("target", text)
-  finish_console(text = text, pattern = pattern, config = config)
+  console_generic(target, config, 1, "target")
 }
 
 console_cache <- function(config){
@@ -69,7 +53,7 @@ console_cache <- function(config){
 }
 
 console_preprocess <- function(text, config){
-  if (config$verbose < 2){
+  if (!length(config$verbose) || config$verbose < 2){
     return()
   }
   finish_console(
@@ -272,20 +256,18 @@ default_verbose <- function(){
 #'   `target` as a symbol (`FALSE`) or character vector
 #'   (`TRUE`).
 #' @examples
-#' \dontrun{
 #' plan <- drake_plan(x = rnorm(15))
-#' make(plan)
-#' config <- drake_config(plan)
+#' cache <- storr::storr_environment() # custom in-memory cache
+#' make(plan, cache = cache)
+#' config <- drake_config(plan, cache = cache)
 #' show_source(x, config)
-#' show_source(rnorm, config)
-#' }
 show_source <- function(target, config, character_only = FALSE){
   if (!character_only){
     target <- as.character(substitute(target))
   }
   cache <- config$cache
   meta <- diagnose(target = target, cache = cache, character_only = TRUE)
-  prefix <- ifelse(is_file(target), "File ", "Object ")
+  prefix <- ifelse(is_file(target), "File ", "Target ")
   if (meta$imported){
     message(prefix, target, " was imported.")
   } else {

@@ -1,6 +1,7 @@
 #' @title Build/process a single target or import.
-#' @export
 #' @description Also load the target's dependencies beforehand.
+#' @export
+#' @seealso drake_build
 #' @return The value of the target right after it is built.
 #' @param target name of the target
 #' @param meta list of metadata that tell which
@@ -58,10 +59,10 @@ drake_build <- function(
     jobs = jobs,
     replace = replace
   )
-  build_and_store(target = target, config = config)
+  build_store(target = target, config = config)
 }
 
-build_check_store <- function(
+check_build_store <- function(
   target, config, downstream = NULL, announce = TRUE, flag_attempt = FALSE
 ){
   meta <- drake_meta(target = target, config = config)
@@ -74,50 +75,44 @@ build_check_store <- function(
     return()
   }
   meta$start <- proc.time()
-  config$hook({
-    prune_envir(
-      targets = target,
-      config = config,
-      downstream = downstream
-    )
-  })
-  value <- build_and_store(target = target, meta = meta, config = config)
+  prune_envir(
+    targets = target,
+    config = config,
+    downstream = downstream
+  )
+  value <- build_store(target = target, meta = meta, config = config)
   assign_to_envir(target = target, value = value, config = config)
   if (flag_attempt && target %in% config$plan$target){
     set_attempt_flag(key = target, config = config)
   }
+  invisible()
 }
 
-build_and_store <- function(target, config, meta = NULL, announce = TRUE){
+build_store <- function(target, config, meta = NULL, announce = TRUE){
   # The environment should have been pruned by now.
   # For staged parallelism, this was already done in bulk
   # for the whole stage.
   # Most of these steps require access to the cache.
-  config$hook({
-    if (is.null(meta)){
-      meta <- drake_meta(target = target, config = config)
-    }
-    meta$start <- proc.time()
-    if (announce){
-      announce_build(target = target, meta = meta, config = config)
-    }
-    build <- just_build(target = target, meta = meta, config = config)
-    conclude_build(
-      target = target,
-      value = build$value,
-      meta = build$meta,
-      config = config
-    )
-  })
+  if (is.null(meta)){
+    meta <- drake_meta(target = target, config = config)
+  }
+  meta$start <- proc.time()
+  if (announce){
+    announce_build(target = target, meta = meta, config = config)
+  }
+  build <- just_build(target = target, meta = meta, config = config)
+  conclude_build(
+    target = target,
+    value = build$value,
+    meta = build$meta,
+    config = config
+  )
 }
 
 just_build <- function(target, meta, config){
   if (meta$imported) {
     process_import(target = target, meta = meta, config = config)
   } else {
-    # build_target() does not require access to the cache.
-    # A custom future-based job scheduler could build with different steps
-    # to write the output to the master process before caching it.
     build_target(
       target = target,
       meta = meta,

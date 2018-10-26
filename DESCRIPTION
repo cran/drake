@@ -10,7 +10,7 @@ Description: A general-purpose computational engine for data analysis,
   to practical examples and more, is available at the reference website
   <https://ropensci.github.io/drake/> and the online manual
   <https://ropenscilabs.github.io/drake-manual/>.
-Version: 6.0.0
+Version: 6.1.0
 License: GPL-3
 URL: https://github.com/ropensci/drake
 BugReports: https://github.com/ropensci/drake/issues
@@ -19,7 +19,8 @@ Authors@R: c(
     family = "Landau",
     given = c("William", "Michael"),
     email = "will.landau@gmail.com",
-    role = c("aut", "cre")
+    role = c("aut", "cre"),
+    comment = c(ORCID = "0000-0003-1878-3253")
   ),
   person(
     family = "Axthelm",
@@ -69,8 +70,9 @@ VignetteBuilder: knitr
 Encoding: UTF-8
 RoxygenNote: 6.1.0
 NeedsCompilation: no
-Packaged: 2018-09-29 22:21:42 UTC; c240390
-Author: William Michael Landau [aut, cre],
+Packaged: 2018-10-26 12:35:44 UTC; c240390
+Author: William Michael Landau [aut, cre]
+    (<https://orcid.org/0000-0003-1878-3253>),
   Alex Axthelm [ctb],
   Jasper Clarkberg [ctb],
   Kirill Müller [ctb],
@@ -79,4 +81,4 @@ Author: William Michael Landau [aut, cre],
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-09-30 04:30:03 UTC
+Date/Publication: 2018-10-26 14:10:02 UTC

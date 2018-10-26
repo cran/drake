@@ -1,10 +1,8 @@
 sanitize_plan <- function(plan, allow_duplicated_targets = FALSE){
-  wildcards <- attr(plan, "wildcards")
-  for (field in drake_plan_non_factors()){
+  fields <- intersect(colnames(plan), c("command", "target", "trigger"))
+  for (field in fields){
     if (!is.null(plan[[field]])){
-      if (is.factor(plan[[field]])){
-         plan[[field]] <- as.character(plan[[field]])
-      }
+      plan[[field]] <- factor_to_character(plan[[field]])
       if (is.character(plan[[field]])){
         plan[[field]] <- stringi::stri_trim_both(plan[[field]])
       }
@@ -17,28 +15,7 @@ sanitize_plan <- function(plan, allow_duplicated_targets = FALSE){
   if (!allow_duplicated_targets) {
     plan <- handle_duplicated_targets(plan[, cols])
   }
-  structure(plan, wildcards = wildcards)
-}
-
-drake_plan_non_factors <- function(){
-  c(
-    "command",
-    "target",
-    "trigger"
-  )
-}
-
-drake_plan_columns <- function(){
-  c(
-    drake_plan_non_factors(),
-    "cpu",
-    "elapsed",
-    "evaluator",
-    "priority",
-    "retries",
-    "timeout",
-    "worker"
-  )
+  arrange_plan_cols(plan)
 }
 
 sanitize_targets <- function(plan, targets){
@@ -78,4 +55,10 @@ sanitize_cmd_type <- function(x){
   } else {
     x
   }
+}
+
+arrange_plan_cols <- function(plan){
+  primary <- c("target", "command")
+  others <- setdiff(colnames(plan), primary)
+  plan[, c(primary, others)]
 }

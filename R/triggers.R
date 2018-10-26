@@ -1,14 +1,24 @@
-#' @title Set the trigger of a target.
-#' @description For details, see the chapter on triggers
+#' @title Customize the decision rules for rebuilding targets
+#' @description  Use this function inside a target's command
+#'   in your [drake_plan()] or the `trigger` argument to
+#'   [make()] or [drake_config()].
+#'   For details, see the chapter on triggers
 #'   in the user manual:
 #'   <https://ropenscilabs.github.io/drake-manual>
-#' @details Use this function inside a target's command
-#'   in your [drake_plan()]. The target will rebuild if and only if:
+#' @details
+#'   A target always builds if it has not been built before.
+#'   Triggers allow you to customize the conditions
+#'   under which a pre-existing target *re*builds.
+#'   By default, the target will rebuild if and only if:
 #'   - Any of `command`, `depend`, or `file` is `TRUE`, or
 #'   - `condition` evaluates to `TRUE`, or
 #'   - `change` evaluates to a value different from last time.
-#'   There may be a slight efficiency loss if you set complex
-#'   triggers for `change` and/or `condition` because
+#'   The above steps correspond to the "whitelist" decision rule.
+#'   You can select other decision rules with the `mode` argument
+#'   described in this help file.
+#'   On another note, there may be a slight efficiency loss
+#'   if you set complex triggers
+#'   for `change` and/or `condition` because
 #'   `drake` needs to load any required dependencies
 #'   into memory before evaluating these triggers.
 #' @export
@@ -29,6 +39,20 @@
 #'  that returns any value. The target will rebuild
 #'   if that value is different from last time
 #'   or not already cached.
+#' @param mode a character scalar equal to `"whitelist"` (default) or
+#'   `"blacklist"` or `"condition"`. With the `mode` argument, you can choose
+#'   how the `condition` trigger factors into the decision to build
+#'   or skip the target. Here are the options.
+#'   - `"whitelist"` (default): we *rebuild* the target whenever `condition`
+#'     evaluates to `TRUE`. Otherwise, we defer to the other triggers.
+#'     This behavior is the same as the decision rule described in the
+#'     "Details" section of this help file.
+#'   - `"blacklist"`: we *skip* the target whenever `condition` evaluates
+#'     to `FALSE`. Otherwise, we defer to the other triggers.
+#'   - `"condition"`: here, the `condition` trigger is the only decider,
+#'     and we ignore all the other triggers. We *rebuild* target whenever
+#'     `condition` evaluates to `TRUE` and *skip* it whenever `condition`
+#'     evaluates to `FALSE`.
 #' @examples
 #' # A trigger is just a set of decision rules
 #' # to decide whether to build a target.
@@ -62,8 +86,9 @@ trigger <- function(
   command = TRUE,
   depend = TRUE,
   file = TRUE,
-  condition = NULL,
-  change = NULL
+  condition = FALSE,
+  change = NULL,
+  mode = c("whitelist", "blacklist", "condition")
 ){
   stopifnot(is.logical(command))
   stopifnot(is.logical(depend))
@@ -73,7 +98,8 @@ trigger <- function(
     depend = depend,
     file = file,
     condition = rlang::enexpr(condition),
-    change = rlang::enexpr(change)
+    change = rlang::enexpr(change),
+    mode = match.arg(mode)
   )
 }
 
@@ -141,6 +167,45 @@ file_trigger <- function(target, meta, config){
   FALSE
 }
 
+condition_trigger <- function(target, meta, config){
+  if (!length(target) || !length(config) || !length(meta)){
+    return(FALSE)
+  }
+  if (is.language(meta$trigger$condition)){
+    vertex_attr(
+      graph = config$graph,
+      name = "deps",
+      index = target
+    )[[1]]$condition %>%
+      ensure_loaded(config = config)
+    value <- eval(meta$trigger$condition, envir = config$envir) %>%
+      as.logical()
+  } else {
+    value <- as.logical(meta$trigger$condition)
+  }
+  if (length(value) != 1 || !is.logical(value)){
+    drake_error(
+      "The `condition` trigger must evaluate to a logical of length 1. ",
+      "got `", value, "` for target ", target, ".",
+      config = config
+    )
+  }
+  condition_decision(value = value, mode = meta$trigger$mode)
+}
+
+condition_decision <- function(value, mode){
+  if (identical(mode, "whitelist") && identical(value, TRUE)){
+    return(TRUE)
+  }
+  if (identical(mode, "blacklist") && identical(value, FALSE)){
+    return(FALSE)
+  }
+  if (identical(mode, "condition")){
+    return(value)
+  }
+  "defer"
+}
+
 change_trigger <- function(target, meta, config){
   if (!length(target) || !length(config) || !length(meta)){
     return(FALSE)
@@ -156,14 +221,15 @@ should_build_target <- function(target, meta = NULL, config){
   if (is.null(meta)){
     meta <- drake_meta(target = target, config = config)
   }
-  if (meta$imported) {
+  if (meta$imported){
     return(TRUE)
   }
   if (meta$missing){
     return(TRUE)
   }
-  if (identical(meta$trigger$condition, TRUE)){
-    return(TRUE)
+  condition <- condition_trigger(target = target, meta = meta, config = config)
+  if (is.logical(condition)){
+    return(condition)
   }
   if (identical(meta$trigger$command, TRUE)){
     if (command_trigger(target = target, meta = meta, config = config)){
@@ -177,17 +243,6 @@ should_build_target <- function(target, meta = NULL, config){
   }
   if (identical(meta$trigger$file, TRUE)){
     if (file_trigger(target = target, meta = meta, config = config)){
-      return(TRUE)
-    }
-  }
-  if (!is.null(meta$trigger$condition) && !is.logical(meta$trigger$condition)){
-    vertex_attr(
-      graph = config$graph,
-      name = "deps",
-      index = target
-    )[[1]]$condition %>%
-      ensure_loaded(config = config)
-    if (identical(eval(meta$trigger$condition, envir = config$envir), TRUE)){
       return(TRUE)
     }
   }

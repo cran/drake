@@ -28,9 +28,9 @@ for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
 \describe{
 \item{0 or \code{FALSE}:}{print nothing.}
 \item{1 or \code{TRUE}:}{print only targets to build.}
-\item{2:}{in addition, print checks and cache info.}
-\item{3:}{in addition, print any potentially missing items.}
-\item{4:}{in addition, print imports. Full verbosity.}
+\item{2:}{+ checks and cache info.}
+\item{3:}{+ any potentially missing items.}
+\item{4:}{+ imports and writes to the cache.}
 }}
 }
 \value{
@@ -54,7 +54,7 @@ tmp <- runif(1) # Needed to get a .Random.seed, but not for drake.
 digest::digest(.Random.seed) # Fingerprint of the current R session's seed.
 make(my_plan, cache = cache) # Run the project, build the targets.
 digest::digest(.Random.seed) # Your session's seed did not change.
-# Drake uses a hard-coded seed if you do not supply one.
+# drake uses a hard-coded seed if you do not supply one.
 read_drake_seed(cache = cache)
 readd(target2, cache = cache) # Randomly-generated target data.
 clean(target2, cache = cache) # Oops, I removed the data!

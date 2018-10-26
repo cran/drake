@@ -8,9 +8,22 @@ test_with_dir("Can standardize commands from expr or lang", {
   z <- standardize_command(x)
   w <- standardize_command(x[[1]])
   s <- "{\n f(x + 2) + 2 \n}"
+  debug_char0 <-
   expect_equal(y, s)
   expect_equal(z, s)
   expect_equal(w, s)
+})
+
+test_with_dir("debug_command()", {
+  skip_on_cran()
+  txt <- "    f(x + 2) + 2"
+  txt2 <- "drake::debug_and_run(function() {\n    f(x + 2) + 2\n})"
+  x <- parse(text = txt)
+  out1 <- debug_command(x[[1]])
+  out2 <- debug_command(txt)
+  txt3 <- rlang::expr_text(out1)
+  expect_equal(out2, txt2)
+  expect_equal(out2, txt3)
 })
 
 test_with_dir("build_target() does not need to access cache", {
@@ -121,7 +134,7 @@ test_with_dir("in_progress() works and errors are handled correctly", {
   expect_equal(in_progress(), character(0))
   bad_plan <- drake_plan(x = function_doesnt_exist())
   expect_error(
-    make(bad_plan, verbose = TRUE, session_info = FALSE), hook = silencer_hook)
+    make(bad_plan, verbose = TRUE, session_info = FALSE))
   expect_equal(failed(), "x")
   expect_equal(in_progress(), character(0))
   expect_is(e <- diagnose(x)$error, "error")
@@ -194,7 +207,7 @@ test_with_dir("check_drake_config() via check_plan() and make()", {
   expect_error(suppressWarnings(check_plan(y, envir = config$envir)))
   suppressWarnings(
     expect_error(
-      make(y, envir = config$envir, hook = silencer_hook,
+      make(y, envir = config$envir,
            session_info = FALSE, verbose = FALSE)))
   suppressWarnings(expect_error(
     check_plan(config$plan, targets = character(0), envir = config$envir)))
@@ -204,13 +217,9 @@ test_with_dir("check_drake_config() via check_plan() and make()", {
       targets = character(0),
       envir = config$envir,
       session_info = FALSE,
-      verbose = FALSE,
-      hook = silencer_hook
+      verbose = FALSE
     )
   ))
-  y <- drake_plan(x = 1, y = 2)
-  y$bla <- "bluh"
-  expect_warning(make(y, session_info = FALSE, verbose = FALSE))
 })
 
 test_with_dir("targets can be partially specified", {
@@ -240,7 +249,6 @@ test_with_dir("misc utils", {
   config <- list(plan = data.frame(x = 1, y = 2))
   expect_error(check_drake_config(config), regexp = "columns")
   expect_error(targets_from_dots(123, NULL), regexp = "must contain names")
-  empty_hook()
 })
 
 test_with_dir("make(..., skip_imports = TRUE) works", {
@@ -252,7 +260,6 @@ test_with_dir("make(..., skip_imports = TRUE) works", {
     con <- make(
       con$plan, parallelism = con$parallelism,
       envir = con$envir, jobs = con$jobs, verbose = verbose,
-      hook = silencer_hook,
       skip_imports = TRUE,
       session_info = FALSE
     )
@@ -270,7 +277,6 @@ test_with_dir("make(..., skip_imports = TRUE) works", {
     con <- make(
       con$plan, parallelism = con$parallelism,
       envir = con$envir, jobs = con$jobs, verbose = verbose,
-      hook = silencer_hook,
       skip_imports = TRUE, session_info = FALSE
     )
   )

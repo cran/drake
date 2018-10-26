@@ -11,10 +11,9 @@ code_to_plan(path)
 \item{path}{a file path to an R script or \code{knitr} report.}
 }
 \description{
-In your script or \code{knitr} / R Markdown code chunks,
-you can assign expressions to variables,
-and \code{code_to_plan()} will turn them into commands and targets,
-respectively.
+\code{code_to_plan()}, \code{\link[=plan_to_code]{plan_to_code()}}, and
+\code{\link[=plan_to_notebook]{plan_to_notebook()}} together illustrate the relationships
+between \code{drake} plans, R scripts, and R Markdown documents.
 }
 \details{
 This feature is easy to break, so there are some rules
@@ -33,20 +32,26 @@ The target/command binding should be permanent.
 }
 }
 \examples{
-\dontrun{
-test_with_dir("Quarantine side effects.", {
-drake_example("code_to_plan") # Download some code files to make plans.
-# Read the code and Markdown files in the downloaded "code_to_plan"
-# folder for details.
-plan <- code_to_plan("code_to_plan/script.R")
-plan2 <- code_to_plan("code_to_plan/report.Rmd")
-identical(plan, plan2) # should be TRUE
-print(plan)
-make(plan)
-readd(discrepancy)
-})
+plan <- drake_plan(
+  raw_data = read_excel(file_in("raw_data.xlsx")),
+  data = raw_data \%>\%
+    mutate(Species = fct_inorder(Species)) \%>\%
+    select(-X__1),
+  hist = create_plot(data),
+  fit = lm(Sepal.Width ~ Petal.Width + Species, data),
+  strings_in_dots = "literals"
+)
+file <- tempfile()
+# Turn the plan into an R script a the given file path.
+plan_to_code(plan, file)
+# Here is what the script looks like.
+cat(readLines(file), sep = "\\n")
+# Convert back to a drake plan.
+if (requireNamespace("CodeDepends")){
+  code_to_plan(file)
 }
 }
 \seealso{
-\code{\link[=drake_plan]{drake_plan()}}, \code{\link[=make]{make()}}
+\code{\link[=drake_plan]{drake_plan()}}, \code{\link[=make]{make()}}, \code{\link[=plan_to_code]{plan_to_code()}},
+\code{\link[=plan_to_notebook]{plan_to_notebook()}}
 }

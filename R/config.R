@@ -52,27 +52,14 @@
 #'   \describe{
 #'     \item{0 or `FALSE`:}{print nothing.}
 #'     \item{1 or `TRUE`:}{print only targets to build.}
-#'     \item{2:}{in addition, print checks and cache info.}
-#'     \item{3:}{in addition, print any potentially missing items.}
-#'     \item{4:}{in addition, print imports. Full verbosity.}
+#'     \item{2:}{+ checks and cache info.}
+#'     \item{3:}{+ any potentially missing items.}
+#'     \item{4:}{+ imports and writes to the cache.}
 #'   }
 #'
-#' @param hook function with at least one argument.
-#'   The hook is as a wrapper around the code that drake uses
-#'   to build a target (see the body of `drake:::build_in_hook()`).
-#'   Hooks can control the side effects of build behavior.
-#'   For example, to redirect output and error messages to text files,
-#'   you might use the built-in [silencer_hook()], as in
-#'   `make(my_plan, hook = silencer_hook)`.
-#'   The silencer hook is useful for distributed parallelism,
-#'   where the calling R process does not have control over all the
-#'   error and output streams. See also [output_sink_hook()]
-#'   and [message_sink_hook()].
-#'   For your own custom hooks, treat the first argument as the code
-#'   that builds a target, and make sure this argument is actually evaluated.
-#'   Otherwise, the code will not run and none of your targets will build.
-#'   For example, `function(code){force(code)}` is a good hook
-#'   and `function(code){message("Avoiding the code")}` is a bad hook.
+#' @param hook Deprecated. A future release may support
+#'   individual hooks for specific build phases.
+#'   See <https://github.com/ropensci/drake/issues/558>.
 #'
 #' @param skip_targets logical, whether to skip building the targets
 #'   in `plan` and just import objects and files.
@@ -85,28 +72,22 @@
 #'   [high-performance computing chapter](https://ropenscilabs.github.io/drake-manual/store.html) # nolint
 #'   of the user manual.
 #'
-#' @param jobs number of parallel processes or jobs to run.
-#'   See [predict_runtime()]
-#'   to help figure out what the number of jobs should be.
+#' @param jobs maximum number of parallel workers for processing the targets.
+#'   If you wish to parallelize the imports and preprocessing as well, you can
+#'   use a named numeric vector of length 2, e.g.
+#'   `make(jobs = c(imports = 4, targets = 8))`.
+#'   `make(jobs = 4)` is equivalent to `make(jobs = c(imports = 1, targets = 4))`.
+#'
 #'   Windows users should not set `jobs > 1` if
 #'   `parallelism` is `"mclapply"` because
 #'   [mclapply()] is based on forking. Windows users
 #'   who use `parallelism = "Makefile"` will need to
 #'   download and install Rtools.
 #'
-#'   Imports and targets are processed separately, and they usually
-#'   have different parallelism needs. To use at most 2 jobs at a time
-#'   for imports and at most 4 jobs at a time for targets, call
-#'   `make(..., jobs = c(imports = 2, targets = 4))`.
-#'
-#'   If `parallelism` is `"Makefile"`,  Makefile-level parallelism is
-#'   only used for targets in your workflow plan data frame, not imports.  To
-#'   process imported objects and files, drake selects the best parallel backend
-#'   for your system and uses the number of jobs you give to the `jobs`
-#'   argument to [make()]. To use at most 2 jobs for imports and at
-#'   most 4 jobs for targets, run
-#'   `make(..., parallelism = "Makefile", jobs = c(imports = 2, targets = 4))` or
-#'   `make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")`.
+#'   You can experiment with [predict_runtime()]
+#'   to help decide on an appropriate number of jobs.
+#'   For details, visit
+#'   <https://ropenscilabs.github.io/drake-manual/time.html>.
 #'
 #' @param packages character vector packages to load, in the order
 #'   they should be loaded. Defaults to `rev(.packages())`, so you
@@ -275,11 +256,24 @@
 #'   over time as the rest of your project changes. Hopefully,
 #'   this is a step in the right direction for data reproducibility.
 #'
-#' @param seed integer, the root pseudo-random seed to use for your project.
+#' @param seed integer, the root pseudo-random number generator
+#'   seed to use for your project.
+#'   In [make()], `drake` generates a unique
+#'   local seed for each target using the global seed
+#'   and the target name. That way, different pseudo-random numbers
+#'   are generated for different targets, and this pseudo-randomness
+#'   is reproducible.
+#'
 #'   To ensure reproducibility across different R sessions,
 #'   `set.seed()` and `.Random.seed` are ignored and have no affect on
-#'   `drake` workflows. Conversely, `make()` does not change `.Random.seed`,
+#'   `drake` workflows. Conversely, `make()` does not usually
+#'   change `.Random.seed`,
 #'   even when pseudo-random numbers are generated.
+#'   The exceptions to this last point are
+#'   `make(parallelism = "clustermq")` and
+#'   `make(parallelism = "clustermq_staged")`,
+#'   because the `clustermq` package needs to generate random numbers
+#'   to set up ports and sockets for ZeroMQ.
 #'
 #'   On the first call to `make()` or `drake_config()`, `drake`
 #'   uses the random number generator seed from the `seed` argument.
@@ -291,8 +285,9 @@
 #'   To reset the random number generator seed for a project,
 #'   use `clean(destroy = TRUE)`.
 #'
-#' @param caching character string, only applies to `"future"` parallelism.
-#'   Can be either `"master"` or `"worker"`.
+#' @param caching character string, only applies to
+#'   `"clustermq"`, `"clustermq_staged"`, and `"future"` parallel backends.
+#'   The `caching` argument can be either `"master"` or `"worker"`.
 #'   - `"master"`: Targets are built by remote workers and sent back to
 #'     the master process. Then, the master process saves them to the
 #'     cache (`config$cache`, usually a file system `storr`).
@@ -371,6 +366,29 @@
 #'   Some template placeholders such as `{{ job_name }}` and `{{ n_jobs }}`
 #'   cannot be set this way.
 #'
+#' @param sleep In its parallel processing, `drake` uses
+#'   a central master process to check what the parallel
+#'   workers are doing, and for the affected high-performance
+#'   computing workflows, wait for data to arrive over a network.
+#'   In between loop iterations, the master process sleeps to avoid throttling.
+#'   The `sleep` argument to `make()` and `drake_config()`
+#'   allows you to customize how much time the master process spends
+#'   sleeping.
+#'
+#'   The `sleep` argument is a function that takes an argument
+#'   `i` and returns a numeric scalar, the number of seconds to
+#'   supply to `Sys.sleep()` after iteration `i` of checking.
+#'   (Here, `i` starts at 1.)
+#'   If the checking loop does something other than sleeping
+#'   on iteration `i`, then `i` is reset back to 1.
+#'
+#'   To sleep for the same amount of time between checks,
+#'   you might supply something like `function(i) 0.01`.
+#'   But to avoid consuming too many resources during heavier
+#'   and longer workflows, you might use an exponential
+#'   back-off: say,
+#'   `function(i) { 0.1 + 120 * pexp(i - 1, rate = 0.01) }`.
+#'
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -386,11 +404,11 @@
 #' })
 #' }
 drake_config <- function(
-  plan = read_drake_plan(),
+  plan = drake::read_drake_plan(),
   targets = NULL,
   envir = parent.frame(),
   verbose = drake::default_verbose(),
-  hook = default_hook,
+  hook = NULL,
   cache = drake::get_cache(
     verbose = verbose, force = force, console_log_file = console_log_file),
   fetch_cache = NULL,
@@ -420,7 +438,7 @@ drake_config <- function(
   session_info = TRUE,
   cache_log_file = NULL,
   seed = NULL,
-  caching = c("worker", "master"),
+  caching = c("master", "worker"),
   keep_going = FALSE,
   session = NULL,
   imports_only = NULL,
@@ -429,15 +447,22 @@ drake_config <- function(
   console_log_file = NULL,
   ensure_workers = TRUE,
   garbage_collection = FALSE,
-  template = list()
+  template = list(),
+  sleep = function(i) 0.01
 ){
   force(envir)
   unlink(console_log_file)
   if (!is.null(imports_only)){
     warning(
-      "Argument imports_only is deprecated. Use skip_targets instead.",
+      "Argument `imports_only`` is deprecated. Use `skip_targets`` instead.",
       call. = FALSE
-    ) # May 4, 2018
+    ) # 2018-05-04 # nolint
+  }
+  if (!is.null(hook)){
+    warning(
+      "Argument `hook` is deprecated.",
+      call. = FALSE
+    ) # 2018-10-25 # nolint
   }
   plan <- sanitize_plan(plan)
   if (is.null(targets)){
@@ -536,7 +561,8 @@ drake_config <- function(
     all_targets = all_targets,
     all_imports = all_imports,
     garbage_collection = garbage_collection,
-    template = template
+    template = template,
+    sleep = sleep
   )
 }
 
@@ -615,8 +641,9 @@ store_drake_config <- function(config) {
 
 parse_jobs <- function(jobs){
   check_jobs(jobs)
-  if (length(jobs) < 2){
-    c(imports = jobs, targets = jobs)
+  mode(jobs) <- "integer"
+  if (length(jobs) < 2L){
+    c(imports = 1L, targets = jobs)
   } else {
     jobs
   }

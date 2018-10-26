@@ -4,12 +4,12 @@
 \alias{make}
 \title{Run your project (build the outdated targets).}
 \usage{
-make(plan = read_drake_plan(), targets = NULL,
+make(plan = drake::read_drake_plan(), targets = NULL,
   envir = parent.frame(), verbose = drake::default_verbose(),
-  hook = default_hook, cache = drake::get_cache(verbose = verbose,
-  force = force, console_log_file = console_log_file),
-  fetch_cache = NULL, parallelism = drake::default_parallelism(),
-  jobs = 1, packages = rev(.packages()), prework = character(0),
+  hook = NULL, cache = drake::get_cache(verbose = verbose, force =
+  force, console_log_file = console_log_file), fetch_cache = NULL,
+  parallelism = drake::default_parallelism(), jobs = 1,
+  packages = rev(.packages()), prework = character(0),
   prepend = character(0), command = drake::default_Makefile_command(),
   args = drake::default_Makefile_args(jobs = jobs, verbose = verbose),
   recipe_command = drake::default_recipe_command(),
@@ -18,12 +18,12 @@ make(plan = read_drake_plan(), targets = NULL,
   return_config = NULL, graph = NULL, trigger = drake::trigger(),
   skip_imports = FALSE, skip_safety_checks = FALSE, config = NULL,
   lazy_load = "eager", session_info = TRUE, cache_log_file = NULL,
-  seed = NULL, caching = "worker", keep_going = FALSE,
+  seed = NULL, caching = "master", keep_going = FALSE,
   session = NULL, imports_only = NULL,
   pruning_strategy = c("lookahead", "speed", "memory"),
   makefile_path = "Makefile", console_log_file = NULL,
   ensure_workers = TRUE, garbage_collection = FALSE,
-  template = list())
+  template = list(), sleep = function(i) 0.01)
 }
 \arguments{
 \item{plan}{workflow plan data frame.
@@ -61,27 +61,14 @@ for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
 \describe{
 \item{0 or \code{FALSE}:}{print nothing.}
 \item{1 or \code{TRUE}:}{print only targets to build.}
-\item{2:}{in addition, print checks and cache info.}
-\item{3:}{in addition, print any potentially missing items.}
-\item{4:}{in addition, print imports. Full verbosity.}
+\item{2:}{+ checks and cache info.}
+\item{3:}{+ any potentially missing items.}
+\item{4:}{+ imports and writes to the cache.}
 }}
 
-\item{hook}{function with at least one argument.
-The hook is as a wrapper around the code that drake uses
-to build a target (see the body of \code{drake:::build_in_hook()}).
-Hooks can control the side effects of build behavior.
-For example, to redirect output and error messages to text files,
-you might use the built-in \code{\link[=silencer_hook]{silencer_hook()}}, as in
-\code{make(my_plan, hook = silencer_hook)}.
-The silencer hook is useful for distributed parallelism,
-where the calling R process does not have control over all the
-error and output streams. See also \code{\link[=output_sink_hook]{output_sink_hook()}}
-and \code{\link[=message_sink_hook]{message_sink_hook()}}.
-For your own custom hooks, treat the first argument as the code
-that builds a target, and make sure this argument is actually evaluated.
-Otherwise, the code will not run and none of your targets will build.
-For example, \code{function(code){force(code)}} is a good hook
-and \code{function(code){message("Avoiding the code")}} is a bad hook.}
+\item{hook}{Deprecated. A future release may support
+individual hooks for specific build phases.
+See \url{https://github.com/ropensci/drake/issues/558}.}
 
 \item{cache}{drake cache as created by \code{\link[=new_cache]{new_cache()}}.
 See also \code{\link[=get_cache]{get_cache()}} and \code{\link[=this_cache]{this_cache()}}.}
@@ -101,28 +88,22 @@ For detailed explanations, see the
 \href{https://ropenscilabs.github.io/drake-manual/store.html}{high-performance computing chapter} # nolint
 of the user manual.}
 
-\item{jobs}{number of parallel processes or jobs to run.
-See \code{\link[=predict_runtime]{predict_runtime()}}
-to help figure out what the number of jobs should be.
+\item{jobs}{maximum number of parallel workers for processing the targets.
+If you wish to parallelize the imports and preprocessing as well, you can
+use a named numeric vector of length 2, e.g.
+\code{make(jobs = c(imports = 4, targets = 8))}.
+\code{make(jobs = 4)} is equivalent to \code{make(jobs = c(imports = 1, targets = 4))}.
+
 Windows users should not set \code{jobs > 1} if
 \code{parallelism} is \code{"mclapply"} because
 \code{\link[=mclapply]{mclapply()}} is based on forking. Windows users
 who use \code{parallelism = "Makefile"} will need to
 download and install Rtools.
 
-Imports and targets are processed separately, and they usually
-have different parallelism needs. To use at most 2 jobs at a time
-for imports and at most 4 jobs at a time for targets, call
-\code{make(..., jobs = c(imports = 2, targets = 4))}.
-
-If \code{parallelism} is \code{"Makefile"},  Makefile-level parallelism is
-only used for targets in your workflow plan data frame, not imports.  To
-process imported objects and files, drake selects the best parallel backend
-for your system and uses the number of jobs you give to the \code{jobs}
-argument to \code{\link[=make]{make()}}. To use at most 2 jobs for imports and at
-most 4 jobs for targets, run
-\code{make(..., parallelism = "Makefile", jobs = c(imports = 2, targets = 4))} or
-\code{make(..., parallelism = "Makefile", jobs = 2, args = "--jobs=4")}.}
+You can experiment with \code{\link[=predict_runtime]{predict_runtime()}}
+to help decide on an appropriate number of jobs.
+For details, visit
+\url{https://ropenscilabs.github.io/drake-manual/time.html}.}
 
 \item{packages}{character vector packages to load, in the order
 they should be loaded. Defaults to \code{rev(.packages())}, so you
@@ -292,11 +273,24 @@ will give you an easy representation of how your results change
 over time as the rest of your project changes. Hopefully,
 this is a step in the right direction for data reproducibility.}
 
-\item{seed}{integer, the root pseudo-random seed to use for your project.
+\item{seed}{integer, the root pseudo-random number generator
+seed to use for your project.
+In \code{\link[=make]{make()}}, \code{drake} generates a unique
+local seed for each target using the global seed
+and the target name. That way, different pseudo-random numbers
+are generated for different targets, and this pseudo-randomness
+is reproducible.
+
 To ensure reproducibility across different R sessions,
 \code{set.seed()} and \code{.Random.seed} are ignored and have no affect on
-\code{drake} workflows. Conversely, \code{make()} does not change \code{.Random.seed},
+\code{drake} workflows. Conversely, \code{make()} does not usually
+change \code{.Random.seed},
 even when pseudo-random numbers are generated.
+The exceptions to this last point are
+\code{make(parallelism = "clustermq")} and
+\code{make(parallelism = "clustermq_staged")},
+because the \code{clustermq} package needs to generate random numbers
+to set up ports and sockets for ZeroMQ.
 
 On the first call to \code{make()} or \code{drake_config()}, \code{drake}
 uses the random number generator seed from the \code{seed} argument.
@@ -308,8 +302,9 @@ seed from the project's cache (usually the \code{.drake/} folder).
 To reset the random number generator seed for a project,
 use \code{clean(destroy = TRUE)}.}
 
-\item{caching}{character string, only applies to \code{"future"} parallelism.
-Can be either \code{"master"} or \code{"worker"}.
+\item{caching}{character string, only applies to
+\code{"clustermq"}, \code{"clustermq_staged"}, and \code{"future"} parallel backends.
+The \code{caching} argument can be either \code{"master"} or \code{"worker"}.
 \itemize{
 \item \code{"master"}: Targets are built by remote workers and sent back to
 the master process. Then, the master process saves them to the
@@ -393,6 +388,29 @@ For more information, see the \code{clustermq} package:
 \url{https://github.com/mschubert/clustermq}.
 Some template placeholders such as \code{{{ job_name }}} and \code{{{ n_jobs }}}
 cannot be set this way.}
+
+\item{sleep}{In its parallel processing, \code{drake} uses
+a central master process to check what the parallel
+workers are doing, and for the affected high-performance
+computing workflows, wait for data to arrive over a network.
+In between loop iterations, the master process sleeps to avoid throttling.
+The \code{sleep} argument to \code{make()} and \code{drake_config()}
+allows you to customize how much time the master process spends
+sleeping.
+
+The \code{sleep} argument is a function that takes an argument
+\code{i} and returns a numeric scalar, the number of seconds to
+supply to \code{Sys.sleep()} after iteration \code{i} of checking.
+(Here, \code{i} starts at 1.)
+If the checking loop does something other than sleeping
+on iteration \code{i}, then \code{i} is reset back to 1.
+
+To sleep for the same amount of time between checks,
+you might supply something like \code{function(i) 0.01}.
+But to avoid consuming too many resources during heavier
+and longer workflows, you might use an exponential
+back-off: say,
+\code{function(i) { 0.1 + 120 * pexp(i - 1, rate = 0.01) }}.}
 }
 \value{
 The master internal configuration list, mostly

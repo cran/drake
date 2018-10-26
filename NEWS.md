@@ -1,3 +1,44 @@
+# Version 6.1.0
+
+## New features
+
+- **Add a new `map_plan()` function to easily create a workflow plan data frame to execute a function call over a grid of arguments.**
+- Add a new `plan_to_code()` function to turn `drake` plans into generic R scripts. New users can use this function to better understand the relationship between plans and code, and unsatisfied customers can use it to disentangle their projects from `drake` altogether. Similarly, `plan_to_notebook()` generates an R notebook from a `drake` plan.
+- Add a new `drake_debug()` function to run a target's command in debug mode. Analogous to `drake_build()`.
+- Add a `mode` argument to `trigger()` to control how the `condition` trigger factors into the decision to build or skip a target. See the `?trigger` for details.
+- Add a new `sleep` argument to `make()` and `drake_config()` to help the master process consume fewer resources during parallel processing.
+- Enable the `caching` argument for the `"clustermq"` and `"clustermq_staged"` parallel backends. Now, `make(parallelism = "clustermq", caching = "master")` will do all the caching with the master process, and `make(parallelism = "clustermq", caching = "worker")` will do all the caching with the workers. The same is true for `parallelism = "clustermq_staged"`.
+- Add a new `append` argument to `gather_plan()`, `gather_by()`, `reduce_plan()`, and `reduce_by()`. The `append` argument control whether the output includes the original `plan` in addition to the newly generated rows.
+- Add new functions `load_main_example()`, `clean_main_example()`, and `clean_mtcars_example()`.
+- Add a `filter` argument to `gather_by()` and `reduce_by()` in order to restrict what we gather even when `append` is `TRUE`.
+- Add a hasty mode: `make(parallelism = "hasty")` skips all of `drake`'s expensive caching and checking. All targets run every single time and you are responsible for saving results to custom output files, but almost all the by-target overhead is gone.
+
+## Bug fixes
+
+- Ensure commands in the plan are re-analyzed for dependencies when new imports are added (https://github.com/ropensci/drake/issues/548). Was a bug in version 6.0.0 only.
+- Call `path.expand()` on the `file` argument to `render_drake_graph()` and `render_sankey_drake_graph()`. That way, tildes in file paths no longer interfere with the rendering of static image files. Compensates for https://github.com/wch/webshot.
+- Skip tests and examples if the required "Suggests" packages are not installed.
+- Stop checking for non-standard columns. Previously, warnings about non-standard columns were incorrectly triggered by `evaluate_plan(trace = TRUE)` followed by `expand_plan()`, `gather_plan()`, `reduce_plan()`, `gather_by()`, or `reduce_by()`. The more relaxed behavior also gives users more options about how to construct and maintain their workflow plan data frames.
+- Use checksums in `"future"` parallelism to make sure files travel over network file systems before proceeding to downstream targets.
+- Refactor and clean up checksum code.
+- Skip more tests and checks if the optional `visNetwork` package is not installed.
+
+## Enhancements
+
+- Stop earlier in `make_targets()` if all the targets are already up to date.
+- Improve the documentation of the `seed` argument in `make()` and `drake_config()`.
+- Set the default `caching` argument of `make()` and `drake_config()` to `"master"` rather than `"worker"`. The default option should be the lower-overhead option for small workflows. Users have the option to make a different set of tradeoffs for larger workflows.
+- Allow the `condition` trigger to evaluate to non-logical values as long as those values can be coerced to logicals.
+- Require that the `condition` trigger evaluate to a vector of length 1.
+- Keep non-standard columns in `drake_plan_source()`.
+- `make(verbose = 4)` now prints to the console when a target is stored.
+- `gather_by()` and `reduce_by()` now gather/reduce everything if no columns are specified.
+- Change the default parallelization of the imports. Previously, `make(jobs = 4)` was equivalent to `make(jobs = c(imports = 4, targets = 4))`. Now, `make(jobs = 4)` is equivalent to `make(jobs = c(imports = 1, targets = 4))`. See [issue 553](https://github.com/ropensci/drake/issues/553) for details.
+- Add a console message for building the priority queue when `verbose` is at least 2.
+- Condense `load_mtcars_example()`.
+- Deprecate the `hook` argument of `make()` and `drake_config()`.
+- In `gather_by()` and `reduce_by()`, do not exclude targets with all `NA` gathring variables.
+
 # Version 6.0.0
 
 ## Breaking changes
@@ -233,8 +274,8 @@ across R sessions.
 - Add `"future_lapply"` parallelism: parallel backends supported by the [future](https://github.com/HenrikBengtsson/future) and [future.batchtools](https://github.com/HenrikBengtsson/future.batchtools) packages. See `?backend` for examples and the parallelism vignette for an introductory tutorial. More advanced instruction can be found in the `future` and `future.batchtools` packages themselves.
 - Cache diagnostic information of targets that fail and retrieve diagnostic info with `diagnose()`.
 - Add an optional `hook` argument to `make()` to wrap around `build()`. That way, users can more easily control the side effects of distributed jobs. For example, to redirect error messages to a file in `make(..., parallelism = "Makefile", jobs = 2, hook = my_hook)`, `my_hook` should be something like `function(code){withr::with_message_sink("messages.txt", code)}`.
-- Remove console logging for "parLapply" parallelism. `Drake` was previously using the `outfile` argument for PSOCK clusters to generate output that could not be caught by `capture.output()`. It was a hack that should have been removed before.
-- Remove console logging for "parLapply" parallelism. `Drake` was previously using the `outfile` argument for PSOCK clusters to generate output that could not be caught by `capture.output()`. It was a hack that should have been removed before.
+- Remove console logging for "parLapply" parallelism. `drake` was previously using the `outfile` argument for PSOCK clusters to generate output that could not be caught by `capture.output()`. It was a hack that should have been removed before.
+- Remove console logging for "parLapply" parallelism. `drake` was previously using the `outfile` argument for PSOCK clusters to generate output that could not be caught by `capture.output()`. It was a hack that should have been removed before.
 - If 'verbose' is 'TRUE' and all targets are already up to date (nothing to build), then `make()` and `outdated()` print "All targets are already up to date" to the console.
 - Add new examples in 'inst/examples', most of them demonstrating how to use the `"future_lapply"` backends.
 - New support for timeouts and retries when it comes to building targets.
