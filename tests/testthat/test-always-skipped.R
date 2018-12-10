@@ -1,4 +1,4 @@
-if (FALSE){
+if (FALSE) {
 
 drake_context("always skipped")
 
@@ -90,15 +90,19 @@ test_with_dir("drake_debug()", {
   expect_true(is.data.frame(out))
   my_plan$command <- lapply(
     X = as.list(my_plan$command),
-    FUN = function(x){
+    FUN = function(x) {
       parse(text = x)[[1]]
     }
   )
-  for (i in 1:2){
+  for (i in 1:2) {
     clean(destroy = TRUE)
     load_mtcars_example()
     config <- make(my_plan)
+    expect_true(config$cache$exists("small"))
+    clean(small)
+    expect_false(config$cache$exists("small"))
     out <- drake_debug(small, config = config)
+    expect_false(config$cache$exists("small"))
     expect_true(is.data.frame(out))
   }
 })
@@ -106,7 +110,7 @@ test_with_dir("drake_debug()", {
 test_with_dir("clustermq error messages get back to master", {
   plan <- drake_plan(a = stop(123))
   options(clustermq.scheduler = "multicore")
-  for (caching in c("worker", "master")){
+  for (caching in c("worker", "master")) {
     expect_error(
       make(
         plan,

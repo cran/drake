@@ -1,8 +1,8 @@
-#' drake is a pipeline toolkit
-#' (<https://github.com/pditommaso/awesome-pipeline>)
-#' and a scalable, R-focused solution for reproducibility
-#' and high-performance computing.
+#' drake: A pipeline toolkit for reproducible computation at scale.
 #' @docType package
+#' @description drake is a pipeline toolkit
+#' (<https://github.com/pditommaso/awesome-pipeline>)
+#' and a scalable, R-focused solution for reproducibility and high-performance computing.
 #' @name drake-package
 #' @aliases drake
 #' @author William Michael Landau \email{will.landau@@gmail.com}
@@ -13,7 +13,7 @@
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Build everything.
 #' make(my_plan) # Nothing is done because everything is already up to date.
-#' reg2 = function(d){ # Change one of your functions.
+#' reg2 = function(d) { # Change one of your functions.
 #'   d$x3 = d$x^3
 #'   lm(y ~ x3, data = d)
 #' }
@@ -39,31 +39,16 @@
 #' @references <https://github.com/ropensci/drake>
 #' @importFrom codetools findGlobals
 #' @importFrom digest digest
-#' @importFrom dplyr bind_rows do group_by mutate n select ungroup
-#' @importFrom evaluate try_capture_stack
 #' @importFrom formatR tidy_source
-#' @importFrom fs dir_create file_create is_file path_ext path_ext_remove
-#' @importFrom future plan
 #' @importFrom igraph adjacent_vertices components delete_vertices
-#'   degree edge edges igraph_opt igraph_options induced_subgraph is_dag
-#'   make_empty_graph plot.igraph set_vertex_attr simplify subcomponent
-#'   topo_sort V vertex vertex_attr
-#' @importFrom magrittr %>%
-#' @importFrom parallel clusterCall clusterExport makePSOCKcluster
-#'   mclapply parLapply stopCluster
+#'   degree igraph_opt igraph_options induced_subgraph is_dag
+#'   make_empty_graph set_vertex_attr simplify subcomponent
+#'   topo_sort V vertex_attr
+#' @importFrom methods new setRefClass
 #' @importFrom pkgconfig get_config
-#' @importFrom purrr map_int pmap pmap_chr
-#' @importFrom R6 R6Class
-#' @importFrom R.utils countLines isPackageLoaded withTimeout
-#' @importFrom rlang enexpr enexprs enquo expr expr_text exprs
-#' @importFrom stats coef complete.cases lm na.omit rnorm rpois runif setNames
+#' @importFrom rlang enexpr enexprs enquo eval_tidy expr expr_text exprs
 #' @importFrom storr storr_environment storr_rds
-#' @importFrom stringi stri_extract_all_regex
-#'   stri_split_fixed stri_trim_both
 #' @importFrom tibble as_tibble tibble
-#' @importFrom tidyselect vars_select
-#' @importFrom utils capture.output compareVersion head installed.packages
-#'   packageVersion read.csv sessionInfo stack type.convert unzip write.table
-#' @importFrom withr local_dir with_dir with_options with_output_sink
-#'   with_seed
+#' @importFrom utils capture.output compareVersion head packageVersion
+#'   read.csv sessionInfo stack type.convert unzip write.table
 NULL

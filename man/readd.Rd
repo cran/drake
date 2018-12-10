@@ -15,7 +15,8 @@ loadd(..., list = character(0), imported_only = FALSE,
   path, search = search, verbose = verbose), namespace = NULL,
   envir = parent.frame(), jobs = 1,
   verbose = drake::default_verbose(), deps = FALSE, lazy = "eager",
-  graph = NULL, replace = TRUE, show_source = FALSE)
+  graph = NULL, replace = TRUE, show_source = FALSE,
+  tidyselect = TRUE)
 }
 \arguments{
 \item{target}{If \code{character_only} is \code{TRUE}, then
@@ -47,21 +48,22 @@ name of the \code{storr} namespace to read from.}
 Use \code{pkgconfig} to set the default value of \code{verbose}
 for your R session:
 for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
-\describe{
-\item{0 or \code{FALSE}:}{print nothing.}
-\item{1 or \code{TRUE}:}{print only targets to build.}
-\item{2:}{+ checks and cache info.}
-\item{3:}{+ any potentially missing items.}
-\item{4:}{+ imports and writes to the cache.}
+\itemize{
+\item \code{0} or \code{FALSE}: print nothing.
+\item \code{1} or \code{TRUE}: print only targets to build.
+\item \code{2}: also print checks and cache info.
+\item \code{3}: also print any potentially missing items.
+\item \code{4}: also print imports and writes to the cache.
 }}
 
 \item{show_source}{logical, option to show the command
 that produced the target or indicate that the object
 was imported (using \code{\link[=show_source]{show_source()}}).}
 
-\item{...}{targets to load from the cache: as names (symbols),
-character strings, or \code{dplyr}-style \code{tidyselect}
-commands such as \code{starts_with()}.}
+\item{...}{targets to load from the cache: as names (symbols) or
+character strings. If the \code{tidyselect} package is installed,
+you can also supply \code{dplyr}-style \code{tidyselect}
+commands such as \code{starts_with()}, \code{ends_with()}, and \code{one_of()}.}
 
 \item{list}{character vector naming targets to be loaded from the
 cache. Similar to the \code{list} argument of \code{\link[=remove]{remove()}}.}
@@ -97,7 +99,7 @@ if you set \code{deps} to \code{TRUE}.}
 with \code{\link[=assign]{assign()}}.
 \item \code{"promise"}: lazy loading with \code{\link[=delayedAssign]{delayedAssign()}}
 \item \code{"bind"}: lazy loading with active bindings:
-\code{\link[bindr:populate_env]{bindr::populate_env()}}.
+\code{bindr::populate_env()}.
 \item \code{TRUE}: same as \code{"promise"}.
 \item \code{FALSE}: same as \code{"eager"}.
 }}
@@ -110,11 +112,13 @@ it will be read from the cache.}
 \item{replace}{logical. If \code{FALSE},
 items already in your environment
 will not be replaced.}
+
+\item{tidyselect}{logical, whether to enable
+\code{tidyselect} expressions in \code{...} like
+\code{starts_with("prefix")} and \code{ends_with("suffix")}.}
 }
 \value{
 The cached value of the \code{target}.
-
-\code{NULL}
 }
 \description{
 \code{\link[=readd]{readd()}} returns an object from the cache,
@@ -147,11 +151,13 @@ calls to \code{loadd()} and \code{readd()} in active code chunks,
 and then treat those loaded targets as dependencies.
 That way, \code{\link[=make]{make()}} will automatically (re)run the report if those
 dependencies change.
+}
+}
+\note{
 Please do not put calls to \code{\link[=loadd]{loadd()}} or \code{\link[=readd]{readd()}} inside
 your custom (imported) functions or the commands in your \code{\link[=drake_plan]{drake_plan()}}.
-This create confusion inside \code{\link[=make]{make()}}, which has its own ways of
+This creates confusion inside \code{\link[=make]{make()}}, which has its own ways of
 interacting with the cache.
-}
 }
 \examples{
 \dontrun{
@@ -174,9 +180,6 @@ small
 # For many targets, you can parallelize loadd()
 # using the 'jobs' argument.
 loadd(list = c("small", "large"), jobs = 2)
-ls()
-# How about tidyselect?
-loadd(starts_with("summ"))
 ls()
 # Load the dependencies of the target, coef_regression2_small
 loadd(coef_regression2_small, deps = TRUE)

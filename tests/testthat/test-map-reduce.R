@@ -2,7 +2,7 @@ drake_context("map reduce")
 
 test_with_dir("map_plan()", {
   skip_on_cran()
-  f <- function(a, b){
+  f <- function(a, b) {
     a + b
   }
   args <- expand.grid(a = 1:2, b = 3:5)
@@ -17,7 +17,7 @@ test_with_dir("map_plan()", {
   expect_equal(plan1$command, plan2$command)
   expect_equal(plan2, plan3)
   expect_equal(plan3, plan4)
-  expect_equal(dplyr::bind_cols(plan3, args), plan5)
+  expect_equal(tibble::as_tibble(cbind(plan3, args)), plan5)
   cache <- storr::storr_environment()
   make(plan2, session_info = FALSE, cache = cache)
   expect_equal(
@@ -31,7 +31,7 @@ test_with_dir("map_plan()", {
 
 test_with_dir("map_plan() onto a matrix", {
   skip_on_cran()
-  my_model_fit <- function(x1, x2){
+  my_model_fit <- function(x1, x2) {
     lm(as.formula(paste("mpg ~", x1, "+", x2)), data = mtcars)
   }
   covariates <- setdiff(colnames(mtcars), "mpg")
@@ -41,24 +41,25 @@ test_with_dir("map_plan() onto a matrix", {
   cache <- storr::storr_environment()
   make(plan, cache = cache, session_info = FALSE)
   x <- readd(plan$target[1], character_only = TRUE, cache = cache)
-  expect_true(is.numeric(coefficients(x)))
+  expect_true(is.numeric(stats::coefficients(x)))
 })
 
 test_with_dir("map_plan() with symbols", {
   skip_on_cran()
-  my_model_fit <- function(x1, x2, data){
+  my_model_fit <- function(x1, x2, data) {
     formula <- as.formula(paste("mpg ~", x1, "+", x1))
     lm(formula, data = data)
   }
   covariates <- setdiff(colnames(mtcars), "mpg")
-  args <- tibble::as_tibble(t(combn(covariates, 2)))
+  args <- t(combn(covariates, 2))
   colnames(args) <- c("x1", "x2")
+  args <- tibble::as_tibble(args)
   args$data <- rlang::syms(rep("mtcars", nrow(args)))
   plan <- map_plan(args, my_model_fit)
   cache <- storr::storr_environment()
   make(plan, verbose = FALSE, cache = cache)
   x <- readd(plan$target[1], character_only = TRUE, cache = cache)
-  expect_true(is.numeric(coefficients(x)))
+  expect_true(is.numeric(stats::coefficients(x)))
 })
 
 test_with_dir("gather_plan()", {
@@ -174,7 +175,7 @@ test_with_dir("reduce_plan()", {
     wildcard = "VALUE",
     values = 1:8
   )
-  fun <- function(x, y){
+  fun <- function(x, y) {
     x ^ 2 - 3 * y
   }
   x <- reduce_plan(x_plan, target = "x_sum", pairwise = TRUE,
@@ -221,8 +222,27 @@ test_with_dir("gather_by()", {
     )
   )
   expect_equal(x[, c("target", "command")], y)
+  x <- gather_by(plan, append = TRUE, sep = ".")
+  expect_equal(x[, c("target", "command")], y)
   z <- gather_by(plan, append = FALSE)
   expect_equal(z[, c("target", "command")], y[nrow(y), ])
+  x <- gather_by(
+    plan,
+    n___from,
+    prefix = "xyz",
+    gather = "c",
+    append = TRUE,
+    sep = "."
+  )
+  y <- tibble::tibble(
+    target = c("xyz.y", "xyz.NA"),
+    command = c("c(y_a = y_a, y_b = y_b)", "c(x_1 = x_1, x_2 = x_2, z = z)"),
+    m__ = as.character(NA),
+    m___from = as.character(NA),
+    n__ = NA,
+    n___from = c("y", NA)
+  )
+  expect_equal(x, bind_plans(plan, y))
   x <- gather_by(plan, n___from, prefix = "xyz", gather = "c", append = TRUE)
   y <- tibble::tibble(
     target = c("xyz_y", "xyz_NA"),
@@ -232,7 +252,8 @@ test_with_dir("gather_by()", {
     n__ = NA,
     n___from = c("y", NA)
   )
-  expect_equal(x, bind_plans(plan, y))
+  expected <- bind_plans(plan, y)
+  expect_equal(x[order(x$target), ], expected[order(expected$target), ])
   x <- gather_by(plan, m__, n__, prefix = "xyz", gather = "c", append = TRUE)
   y <- tibble::tibble(
     target = c("xyz_1_NA", "xyz_2_NA", "xyz_NA_a", "xyz_NA_b", "xyz_NA_NA"),
@@ -248,7 +269,8 @@ test_with_dir("gather_by()", {
     n__ = c(NA, NA, "a", "b", NA),
     n___from = as.character(NA)
   )
-  expect_equal(x, bind_plans(plan, y))
+  expected <- bind_plans(plan, y)
+  expect_equal(x[order(x$target), ], expected[order(expected$target), ])
   plan$n___from <- c("x", "x", "y", "y", NA)
   x <- gather_by(
     plan,
@@ -284,7 +306,36 @@ test_with_dir("reduce_by()", {
   z <- reduce_by(plan, pairwise = FALSE, append = FALSE)
   expect_equal(z[, c("target", "command")], y[nrow(y), ])
   x <- reduce_by(
-    plan, m___from, prefix = "xyz", op = ", ", begin = "c(", end = ")",
+    plan, m___from,
+    prefix = "xyz",
+    op = ", ",
+    begin = "c(",
+    end = ")",
+    append = TRUE,
+    sep = "."
+  )
+  y <- tibble::tibble(
+    target = c("xyz.1.x", "xyz.2.x", "xyz.x", "xyz.1.NA", "xyz.NA"),
+    command = c(
+      "c(x_1, x_2)",
+      "c(x_3, x_4)",
+      "c(xyz.1, xyz.2)",
+      "c(y_a, y_b)",
+      "c(z, xyz.1)"
+    ),
+    m__ = as.character(NA),
+    m___from = c(rep("x", 3), rep(NA, 2)),
+    n__ = as.character(NA),
+    n___from = as.character(NA)
+  )
+  expected <- bind_plans(plan, y)
+  expect_equal(x[order(x$target), ], expected[order(expected$target), ])
+  x <- reduce_by(
+    plan, m___from,
+    prefix = "xyz",
+    op = ", ",
+    begin = "c(",
+    end = ")",
     append = TRUE
   )
   y <- tibble::tibble(
@@ -298,7 +349,8 @@ test_with_dir("reduce_by()", {
     n__ = as.character(NA),
     n___from = as.character(NA)
   )
-  expect_equal(x, bind_plans(plan, y))
+  expected <- bind_plans(plan, y)
+  expect_equal(x[order(x$target), ], expected[order(expected$target), ])
   x <- reduce_by(
     plan, m___from, prefix = "xyz", op = ", ", begin = "c(", end = ")",
     pairwise = FALSE, append = TRUE
@@ -311,7 +363,8 @@ test_with_dir("reduce_by()", {
     n__ = as.character(NA),
     n___from = as.character(NA)
   )
-  expect_equal(x, bind_plans(plan, y))
+  expected <- bind_plans(plan, y)
+  expect_equal(x[order(x$target), ], expected[order(expected$target), ])
   x <- reduce_by(plan, m___from, n___from, append = TRUE)
   y <- tibble::tibble(
     target = c(
@@ -331,7 +384,8 @@ test_with_dir("reduce_by()", {
     n__ = as.character(NA),
     n___from = c(rep(NA, 3), "y")
   )
-  expect_equal(x, bind_plans(plan, y))
+  expected <- bind_plans(plan, y)
+  expect_equal(x[order(x$target), ], expected[order(expected$target), ])
   x <- reduce_by(plan, m___from, n___from, pairwise = FALSE, append = TRUE)
   y <- tibble::tibble(
     target = c(
@@ -349,7 +403,8 @@ test_with_dir("reduce_by()", {
     n__ = as.character(NA),
     n___from = c(NA, "y", NA)
   )
-  expect_equal(x, bind_plans(plan, y))
+  expected <- bind_plans(plan, y)
+  expect_equal(x[order(x$target), ], expected[order(expected$target), ])
   plan$from <- c(rep("x", 4), rep("y", 2), NA)
   x <- reduce_by(
     plan,

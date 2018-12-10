@@ -18,8 +18,8 @@ test_with_dir("debug_command()", {
   skip_on_cran()
   txt <- "    f(x + 2) + 2"
   txt2 <- "drake::debug_and_run(function() {\n    f(x + 2) + 2\n})"
-  x <- parse(text = txt)
-  out1 <- debug_command(x[[1]])
+  x <- parse(text = txt)[[1]]
+  out1 <- debug_command(x)
   out2 <- debug_command(txt)
   txt3 <- rlang::expr_text(out1)
   expect_equal(out2, txt2)
@@ -154,7 +154,7 @@ test_with_dir("in_progress() works and errors are handled correctly", {
 test_with_dir("warnings and messages are caught", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_equal(in_progress(), character(0))
-  f <- function(x){
+  f <- function(x) {
     warning("my first warn")
     message("my first mess")
     warning("my second warn")

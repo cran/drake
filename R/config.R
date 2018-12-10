@@ -49,17 +49,14 @@
 #'   Use `pkgconfig` to set the default value of `verbose` 
 #'   for your R session:
 #'   for example, `pkgconfig::set_config("drake::verbose" = 2)`.
-#'   \describe{
-#'     \item{0 or `FALSE`:}{print nothing.}
-#'     \item{1 or `TRUE`:}{print only targets to build.}
-#'     \item{2:}{+ checks and cache info.}
-#'     \item{3:}{+ any potentially missing items.}
-#'     \item{4:}{+ imports and writes to the cache.}
-#'   }
 #'
-#' @param hook Deprecated. A future release may support
-#'   individual hooks for specific build phases.
-#'   See <https://github.com/ropensci/drake/issues/558>.
+#'   - `0` or `FALSE`: print nothing.
+#'   - `1` or `TRUE`: print only targets to build.
+#'   - `2`: also print checks and cache info.
+#'   - `3`: also print any potentially missing items.
+#'   - `4`: also print imports and writes to the cache.
+#'
+#' @param hook Deprecated.
 #'
 #' @param skip_targets logical, whether to skip building the targets
 #'   in `plan` and just import objects and files.
@@ -69,7 +66,7 @@
 #' @param parallelism character, type of parallelism to use.
 #'   To list the options, call [parallelism_choices()].
 #'   For detailed explanations, see the
-#'   [high-performance computing chapter](https://ropenscilabs.github.io/drake-manual/store.html) # nolint
+#'   [high-performance computing chapter](https://ropenscilabs.github.io/drake-manual/hpc.html)
 #'   of the user manual.
 #'
 #' @param jobs maximum number of parallel workers for processing the targets.
@@ -117,9 +114,9 @@
 #'   and then once again for each target right before that target is built.
 #'
 #' @param prepend lines to prepend to the Makefile if `parallelism`
-#'   is `"Makefile"`. See the [high-performance computing guide](https://ropenscilabs.github.io/drake-manual/store.html) # nolint
+#'   is `"Makefile"`. See the [high-performance computing guide](https://ropenscilabs.github.io/drake-manual/store.html)
 #'   to learn how to use `prepend`
-#'   to take advantage of multiple nodes of a supercomputer.
+#'   to distribute work on a cluster.
 #'
 #' @param command character scalar, command to call the Makefile
 #'   generated for distributed computing.
@@ -170,18 +167,15 @@
 #'   or `"Makefile"`) because the distributed R sessions
 #'   need to know how to load the cache.
 #'
-#' @param timeout Seconds of overall time to allow before imposing
-#'   a timeout on a target. Passed to `R.utils::withTimeout()`.
-#'   Assign target-level timeout times with an optional `timeout`
-#'   column in `plan`.
+#' @param timeout `deprecated`. Use `elapsed` and `cpu` instead.
 #'
-#' @param cpu Seconds of cpu time to allow before imposing
-#'   a timeout on a target. Passed to `R.utils::withTimeout()`.
+#' @param cpu Same as the `cpu` argument of `setTimeLimit()`.
+#'   Seconds of cpu time before a target times out.
 #'   Assign target-level cpu timeout times with an optional `cpu`
 #'   column in `plan`.
 #'
-#' @param elapsed Seconds of elapsed time to allow before imposing
-#'   a timeout on a target. Passed to `R.utils::withTimeout()`.
+#' @param elapsed Same as the `elapsed` argument of `setTimeLimit()`.
+#'   Seconds of elapsed time before a target times out.
 #'   Assign target-level elapsed timeout times with an optional `elapsed`
 #'   column in `plan`.
 #'
@@ -189,15 +183,17 @@
 #'   Assign target-level retries with an optional `retries`
 #'   column in `plan`.
 #'
-#' @param force Force `make()` to build your targets even if some
-#'   about your setup is not quite right: for example, if you are using
-#'   a version of drake that is not back compatible with your project's cache.
+#' @param force Logical. If `FALSE` (default) then `drake` will stop you
+#'   if the cache was created with an old
+#'   and incompatible version of drake.
+#'   This gives you an opportunity to
+#'   downgrade `drake` to a compatible version
+#'   rather than rerun all your targets from scratch.
+#'   If `force` is `TRUE`, then `make()` executes your workflow
+#'   regardless of the version of `drake` that last ran `make()` on the cache.
 #'
 #' @param graph An `igraph` object from the previous `make()`.
 #'   Supplying a pre-built graph could save time.
-#'   The graph is constructed by [build_drake_graph()].
-#'   You can also get one from `drake_config(my_plan)$graph`.
-#'   Overrides `skip_imports`.
 #'
 #' @param trigger Name of the trigger to apply to all targets.
 #'   Ignored if `plan` has a `trigger` column.
@@ -217,7 +213,7 @@
 #'     with [assign()].
 #'   - `"promise"`: lazy loading with [delayedAssign()]
 #'   - `"bind"`: lazy loading with active bindings:
-#'     [bindr::populate_env()].
+#'     `bindr::populate_env()`.
 #'   - `TRUE`: same as `"promise"`.
 #'   - `FALSE`: same as `"eager"`.
 #'
@@ -314,9 +310,21 @@
 #'   but it causes [make()] to populate your workspace/environment
 #'   with the last few targets it builds.
 #'
-#' @param pruning_strategy Character scalar, name of the
-#'   approach that `drake` takes regarding when to unload targets
-#'   from memory. Choices:
+#' @param pruning_strategy deprecated. See `memory_strategy`.
+#'
+#' @param memory_strategy Character scalar, name of the
+#'   strategy `drake` uses to manage targets in memory. For more direct
+#'   control over which targets `drake` keeps in memory, see the
+#'   help file examples of [drake_envir()]. The `memory_strategy` argument
+#'   to `make()` and `drake_config()` is an attempt at an automatic
+#'   catch-all solution. These are the choices.
+#'
+#'   - `"speed"`: Once a target is loaded in memory, just keep it there.
+#'     Maximizes speed, but hogs memory.
+#'   - `"memory"`: For each target, unload everything from memory
+#'     except the target's direct dependencies. Conserves memory,
+#'     but sacrifices speed because each new target needs to reload
+#'     any previously unloaded targets from the cache.
 #'   - `"lookahead"` (default): keep loaded targets in memory until they are
 #'     no longer needed as dependencies in downstream build steps.
 #'     Then, unload them from the environment. This step avoids
@@ -324,24 +332,33 @@
 #'     reads from the cache. However, it requires looking ahead
 #'     in the dependency graph, which could add overhead for every
 #'     target of projects with lots of targets.
-#'   - `"speed"`: Once a target is loaded in memory, just keep it there.
-#'     Maximizes speed, but hogs memory.
-#'   - `"memory"`: For each target, unload everything from memory
-#'     except the target's direct dependencies. Conserves memory,
-#'     but sacrifices speed because each new target needs to reload
-#'     any previously unloaded targets from the cache.
+#'
+#' Each strategy has a weakness.
+#' `"speed"` is memory-hungry, `"memory"` wastes time reloading
+#' targets from storage, and `"lookahead"` wastes time
+#' traversing the entire dependency graph on every [make()]. For a better
+#' compromise and more control, see the examples in the help file
+#' of [drake_envir()].
 #'
 #' @param makefile_path Path to the `Makefile` for
 #'   `make(parallelism = "Makefile")`. If you set this argument to a
 #'   non-default value, you are responsible for supplying this same
 #'   path to the `args` argument so `make` knows where to find it.
-#'   Example: `make(parallelism = "Makefile", makefile_path = ".drake/.makefile", command = "make", args = "--file=.drake/.makefile")` # nolint
+#'   Example: `make(parallelism = "Makefile", makefile_path = ".drake/.makefile", command = "make", args = "--file=.drake/.makefile")`
 #'
-#' @param console_log_file character scalar or `NULL`.
+#' @param console_log_file character scalar,
+#'   connection object (such as `stdout()`) or `NULL`.
 #'   If `NULL`, console output will be printed
 #'   to the R console using `message()`.
-#'   Otherwise, `console_log_file` should be the name of a flat file.
-#'   Console output will be appended to that file.
+#'   If a character scalar, `console_log_file`
+#'   should be the name of a flat file, and
+#'   console output will be appended to that file.
+#'   If a connection object (e.g. `stdout()`)
+#'   warnings and messages will be sent to the connection.
+#'   For example, if `console_log_file` is `stdout()`,
+#'   warnings and messages are printed to the console in real time
+#'   (in addition to the usual in-bulk printing
+#'   after each target finishes).
 #'
 #' @param ensure_workers logical, whether the master process
 #'   should wait for the workers to post before assigning them
@@ -389,6 +406,22 @@
 #'   back-off: say,
 #'   `function(i) { 0.1 + 120 * pexp(i - 1, rate = 0.01) }`.
 #'
+#' @param hasty_build a user-defined function.
+#'   In "hasty mode" (`make(parallelism = "hasty")`)
+#'   this is the function that evaluates a target's command
+#'   and returns the resulting value. The `hasty_build` argument
+#'   has no effect if `parallelism` is any value other than "hasty".
+#'
+#'   The function you pass to `hasty_build` must have arguments `target`
+#'   and `config`. Here, `target` is a character scalar naming the
+#'   target being built, and `config` is a configuration list of
+#'   runtime parameters generated by [drake_config()].
+#'
+#' @param layout `config$layout`, where `config` is the return value
+#'   from a prior call to `drake_config()`. If your plan or environment
+#'   have changed since the last `make()`, do not supply a `layout` argument.
+#'   Otherwise, supplying one could save time.
+#'
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -410,7 +443,7 @@ drake_config <- function(
   verbose = drake::default_verbose(),
   hook = NULL,
   cache = drake::get_cache(
-    verbose = verbose, force = force, console_log_file = console_log_file),
+    verbose = verbose, console_log_file = console_log_file),
   fetch_cache = NULL,
   parallelism = drake::default_parallelism(),
   jobs = 1,
@@ -423,9 +456,9 @@ drake_config <- function(
     verbose = verbose
   ),
   recipe_command = drake::default_recipe_command(),
-  timeout = Inf,
-  cpu = timeout,
-  elapsed = timeout,
+  timeout = NULL,
+  cpu = Inf,
+  elapsed = Inf,
   retries = 0,
   force = FALSE,
   log_progress = FALSE,
@@ -442,30 +475,48 @@ drake_config <- function(
   keep_going = FALSE,
   session = NULL,
   imports_only = NULL,
-  pruning_strategy = c("lookahead", "speed", "memory"),
+  pruning_strategy = NULL,
   makefile_path = "Makefile",
   console_log_file = NULL,
   ensure_workers = TRUE,
   garbage_collection = FALSE,
   template = list(),
-  sleep = function(i) 0.01
-){
+  sleep = function(i) 0.01,
+  hasty_build = drake::default_hasty_build,
+  memory_strategy = c("speed", "memory", "lookahead"),
+  layout = NULL
+) {
   force(envir)
   unlink(console_log_file)
-  if (!is.null(imports_only)){
+  if (!is.null(imports_only)) {
     warning(
-      "Argument `imports_only`` is deprecated. Use `skip_targets`` instead.",
+      "Argument `imports_only` is deprecated. Use `skip_targets` instead.",
       call. = FALSE
     ) # 2018-05-04 # nolint
   }
-  if (!is.null(hook)){
+  if (!is.null(hook)) {
     warning(
       "Argument `hook` is deprecated.",
       call. = FALSE
     ) # 2018-10-25 # nolint
   }
+  if (!is.null(pruning_strategy)) {
+    warning(
+      "Argument `pruning_strategy` is deprecated. ",
+      "Use `memory_strategy` instead.",
+      call. = FALSE
+    ) # 2018-11-01 # nolint
+  }
+  if (!is.null(timeout)) {
+    warning(
+      "Argument `timeout` is deprecated. ",
+      "Use `elapsed` and/or `cpu` instead.",
+      call. = FALSE
+      # 2018-12-07 # nolint
+    )
+  }
   plan <- sanitize_plan(plan)
-  if (is.null(targets)){
+  if (is.null(targets)) {
     targets <- plan$target
   } else {
     targets <- sanitize_targets(plan, targets)
@@ -478,15 +529,15 @@ drake_config <- function(
   )
   if (is.null(cache)) {
     cache <- recover_cache(
-      force = force,
       verbose = verbose,
       fetch_cache = fetch_cache,
       console_log_file = console_log_file
     )
   }
-  if (!force){
-    assert_compatible_cache(cache = cache)
+  if (force) {
+    drake_set_session_info(cache = cache)
   }
+  cache_vers_stop(cache)
   # A storr_rds() cache should already have the right hash algorithms.
   cache <- configure_cache(
     cache = cache,
@@ -496,17 +547,26 @@ drake_config <- function(
   )
   seed <- choose_seed(supplied = seed, cache = cache)
   trigger <- convert_old_trigger(trigger)
-  if (is.null(graph)){
-    graph <- build_drake_graph(
+  if (is.null(layout)) {
+    layout <- create_drake_layout(
       plan = plan,
       targets = targets,
       envir = envir,
       verbose = verbose,
       jobs = jobs,
-      sanitize_plan = FALSE,
       console_log_file = console_log_file,
       trigger = trigger,
       cache = cache
+    )
+  }
+  if (is.null(graph)) {
+    graph <- create_drake_graph(
+      layout = layout,
+      targets = targets,
+      cache = cache,
+      jobs = jobs,
+      console_log_file = console_log_file,
+      verbose = verbose
     )
   } else {
     graph <- prune_drake_graph(graph = graph, to = targets, jobs = jobs)
@@ -515,7 +575,7 @@ drake_config <- function(
   all_imports <- setdiff(igraph::V(graph)$name, all_targets)
   cache_path <- force_cache_path(cache)
   lazy_load <- parse_lazy_arg(lazy_load)
-  pruning_strategy <- match.arg(pruning_strategy)
+  memory_strategy <- match.arg(memory_strategy)
   list(
     plan = plan,
     targets = targets,
@@ -534,6 +594,7 @@ drake_config <- function(
     command = command,
     args = args,
     recipe_command = recipe_command,
+    layout = layout,
     graph = graph,
     short_hash_algo = cache$get("short_hash_algo", namespace = "config"),
     long_hash_algo = cache$get("long_hash_algo", namespace = "config"),
@@ -551,10 +612,9 @@ drake_config <- function(
     session_info = session_info,
     cache_log_file = cache_log_file,
     caching = match.arg(caching),
-    evaluator = future::plan("next"),
     keep_going = keep_going,
     session = session,
-    pruning_strategy = pruning_strategy,
+    memory_strategy = memory_strategy,
     makefile_path = makefile_path,
     console_log_file = console_log_file,
     ensure_workers = ensure_workers,
@@ -562,14 +622,14 @@ drake_config <- function(
     all_imports = all_imports,
     garbage_collection = garbage_collection,
     template = template,
-    sleep = sleep
+    sleep = sleep,
+    hasty_build = hasty_build
   )
 }
 
 add_packages_to_prework <- function(packages, prework) {
   packages <- unique(c("methods", "drake", packages))
-  paste0("if(!R.utils::isPackageLoaded(\"", packages, "\")) require(",
-    packages, ")", sep = "") %>% c(prework)
+  c(paste0("require(", packages, ")", sep = ""), prework)
 }
 
 #' @title Do the prework in the `prework`
@@ -627,7 +687,7 @@ store_drake_config <- function(config) {
   save_these <- setdiff(names(config), "envir")  # envir could get massive.
   lightly_parallelize(
     save_these,
-    function(item){
+    function(item) {
       config$cache$set(
         key = item,
         value = config[[item]],
@@ -639,26 +699,26 @@ store_drake_config <- function(config) {
   invisible()
 }
 
-parse_jobs <- function(jobs){
+parse_jobs <- function(jobs) {
   check_jobs(jobs)
   mode(jobs) <- "integer"
-  if (length(jobs) < 2L){
+  if (length(jobs) < 2L) {
     c(imports = 1L, targets = jobs)
   } else {
     jobs
   }
 }
 
-parse_parallelism <- function(parallelism){
+parse_parallelism <- function(parallelism) {
   check_parallelism(parallelism)
-  for (i in seq_along(parallelism)){
+  for (i in seq_along(parallelism)) {
     parallelism[i] <- match.arg(
       arg = parallelism[i],
       choices = parallelism_choices(distributed_only = FALSE)
     )
   }
-  if (length(parallelism) < 2){
-    if (parallelism %in% parallelism_choices(distributed_only = TRUE)){
+  if (length(parallelism) < 2) {
+    if (parallelism %in% parallelism_choices(distributed_only = TRUE)) {
       c(imports = default_parallelism(), targets = parallelism)
     } else {
       c(imports = parallelism, targets = parallelism)

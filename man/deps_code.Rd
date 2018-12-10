@@ -44,14 +44,14 @@ enclosing them in literal double quotes.
 (For example, \code{file_store("report.Rmd")} is just \code{"\"report.Rmd\""}.)
 
 \code{drake} takes special precautions so that a target/import
-does not depend on itself. For example, \code{deps_code(f)`` might return}"f"\code{if}f()` is a recursive function, but \code{\link[=make]{make()}} just ignores
+does not depend on itself. For example, \code{deps_code(f)`` might return }"f"\code{if}f()` is a recursive function, but \code{\link[=make]{make()}} just ignores
 this conflict and runs as expected. In other words, \code{\link[=make]{make()}}
 automatically removes all self-referential loops in the dependency
 network.
 }
 \examples{
 # Your workflow likely depends on functions in your workspace.
-f <- function(x, y){
+f <- function(x, y) {
   out <- x + y + g(x)
   saveRDS(out, "out.rds")
 }
@@ -84,5 +84,5 @@ deps_code(file_store("report.Rmd"))
 }
 }
 \seealso{
-deps_target deps_files make drake_plan drake_config
+\code{\link[=deps_target]{deps_target()}} \code{\link[=make]{make()}} \code{\link[=drake_plan]{drake_plan()}} \code{\link[=drake_config]{drake_config()}}
 }

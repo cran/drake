@@ -57,20 +57,22 @@ drake_cache_log_file <- function(
   verbose = drake::default_verbose(),
   jobs = 1,
   targets_only = FALSE
-){
-  if (!length(file) || identical(file, FALSE)){
+) {
+  if (!length(file) || identical(file, FALSE)) {
     return(invisible())
-  } else if (identical(file, TRUE)){
+  } else if (identical(file, TRUE)) {
     file <- formals(drake_cache_log_file)$file
   }
-  drake_cache_log(
+  out <- drake_cache_log(
     path = path,
     search = search,
     cache = cache,
     verbose = verbose,
     jobs = jobs,
     targets_only = targets_only
-  ) %>% write.table(
+  )
+  write.table(
+    out,
     file = file,
     quote = FALSE,
     row.names = FALSE
@@ -156,8 +158,8 @@ drake_cache_log <- function(
   verbose = drake::default_verbose(),
   jobs = 1,
   targets_only = FALSE
-){
-  if (is.null(cache)){
+) {
+  if (is.null(cache)) {
     return(
       tibble(
         hash = character(0),
@@ -171,16 +173,15 @@ drake_cache_log <- function(
     FUN = single_cache_log,
     jobs = jobs,
     cache = cache
-  ) %>%
-    do.call(what = rbind) %>%
-    as_tibble
-  if (targets_only){
+  )
+  out <- tibble::as_tibble(do.call(rbind, out))
+  if (targets_only) {
     out <- out[out$type == "target", ]
   }
   out
 }
 
-single_cache_log <- function(key, cache){
+single_cache_log <- function(key, cache) {
   hash <- cache$get_hash(key = key, namespace = "kernels")
   imported <- get_from_subspace(
     key = key,

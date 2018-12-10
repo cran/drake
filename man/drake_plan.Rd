@@ -92,20 +92,28 @@ For a walkthrough, see
 \item \code{retries}: number of times to retry a target if it fails
 to build the first time.
 \item \code{timeout}: Seconds of overall time to allow before imposing
-a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+a timeout on a target.
 Assign target-level timeout times with an optional \code{timeout}
 column in \code{plan}.
 \item \code{cpu}: Seconds of cpu time to allow before imposing
-a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+a timeout on a target.
 Assign target-level cpu timeout times with an optional \code{cpu}
 column in \code{plan}.
 \item \code{elapsed}: Seconds of elapsed time to allow before imposing
-a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+a timeout on a target.
 Assign target-level elapsed timeout times with an optional \code{elapsed}
 column in \code{plan}.
-\item \code{evaluator}: An experimental column. Each entry is a function
-passed to the \code{evaluator} argument of \code{future::future()}
-for each worker in \code{make(..., parallelism = "future")}.
+\item \code{resources}: Experimental, no guarantees that this works all the time.
+\code{resources} is a list column. Each element is a named list,
+same as the \code{resources} argument to \code{batchtools_slurm()}
+and related \code{future.bachtools} functions. See also
+\url{https://github.com/HenrikBengtsson/future.batchtools#examples}. # nolint
+\code{resources[[target_name]]} is a list of
+computing resource parameters for the target.
+Each element is a value passed to a \code{brew} placeholder of a
+\code{batchtools} template file.
+The list names of \code{resources[[target_name]]}
+should be the brew patterns.
 }
 }
 \examples{
@@ -157,6 +165,6 @@ drake_plan(
 })
 }
 \seealso{
-map_plan, reduce_by, gather_by, reduce_plan, gather_plan,
-evaluate_plan, expand_plan
+\code{\link[=map_plan]{map_plan()}}, \code{\link[=reduce_by]{reduce_by()}}, \code{\link[=gather_by]{gather_by()}}, \code{\link[=reduce_plan]{reduce_plan()}}, \code{\link[=gather_plan]{gather_plan()}},
+\code{\link[=evaluate_plan]{evaluate_plan()}}, \code{\link[=expand_plan]{expand_plan()}}
 }

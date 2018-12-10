@@ -7,9 +7,10 @@
 #' @export
 #' @return A data frame of times, each from [system.time()].
 #' @inheritParams cached
-#' @param ... targets to load from the cache: as names (symbols),
-#'   character strings, or `dplyr`-style `tidyselect`
-#'   commands such as `starts_with()`.
+#' @param ... targets to load from the cache: as names (symbols) or
+#'   character strings. If the `tidyselect` package is installed,
+#'   you can also supply `dplyr`-style `tidyselect`
+#'   commands such as `starts_with()`, `ends_with()`, and `one_of()`.
 #' @param targets_only logical, whether to only return the
 #'   build times of the targets (exclude the imports).
 #' @param digits How many digits to round the times to.
@@ -24,7 +25,6 @@
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Build all the targets.
 #' build_times() # Show how long it took to build each target.
-#' build_times(starts_with("coef")) # `dplyr`-style `tidyselect`
 #' })
 #' }
 build_times <- function(
@@ -37,13 +37,16 @@ build_times <- function(
   verbose = drake::default_verbose(),
   jobs = 1,
   type = c("build", "command")
-){
+) {
   eval(parse(text = "require(methods, quietly = TRUE)")) # needed for lubridate
-  if (is.null(cache)){
+  if (is.null(cache)) {
     return(empty_times())
   }
-  targets <- drake_select(cache = cache, ..., namespace = "meta")
-  if (!length(targets)){
+  targets <- as.character(match.call(expand.dots = FALSE)$...)
+  if (exists_tidyselect()) {
+    targets <- drake_tidyselect(cache = cache, ..., namespaces = "meta")
+  }
+  if (!length(targets)) {
     targets <- cache$list(namespace = "meta")
   }
   type <- match.arg(type)
@@ -53,15 +56,15 @@ build_times <- function(
     jobs = 1,
     cache = cache,
     type = type
-  ) %>%
-    parallel_filter(f = is.data.frame, jobs = jobs) %>%
-    do.call(what = rbind) %>%
-    rbind(empty_times()) %>%
-    round_times(digits = digits) %>%
-    to_build_duration_df
+  )
+  out <- parallel_filter(out, f = is.data.frame, jobs = jobs)
+  out <- do.call(rbind, out)
+  out <- rbind(out, empty_times())
+  out <- round_times(out, digits = digits)
+  out <- to_build_duration_df(out)
   out <- out[order(out$item), ]
   out$type[is.na(out$type)] <- "target"
-  if (targets_only){
+  if (targets_only) {
     out <- out[out$type == "target", ]
   }
   tryCatch(
@@ -70,23 +73,23 @@ build_times <- function(
   )
 }
 
-fetch_runtime <- function(key, cache, type){
+fetch_runtime <- function(key, cache, type) {
   x <- get_from_subspace(
     key = key,
     subspace = paste0("time_", type),
     namespace = "meta",
     cache = cache
   )
-  if (is_bad_time(x)){
+  if (is_bad_time(x)) {
     return(empty_times())
   }
-  if (inherits(x, "proc_time")){
+  if (inherits(x, "proc_time")) {
     x <- runtime_entry(runtime = x, target = key, imported = NA)
   }
   x
 }
 
-empty_times <- function(){
+empty_times <- function() {
   data.frame(
     item = character(0),
     type = character(0),
@@ -97,14 +100,14 @@ empty_times <- function(){
   )
 }
 
-round_times <- function(times, digits){
-  for (col in time_columns){
+round_times <- function(times, digits) {
+  for (col in time_columns) {
     times[[col]] <- round(times[[col]], digits = digits)
   }
   times
 }
 
-runtime_entry <- function(runtime, target, imported){
+runtime_entry <- function(runtime, target, imported) {
   type <- ifelse(imported, "import", "target")
   data.frame(
     item = target,
@@ -116,9 +119,9 @@ runtime_entry <- function(runtime, target, imported){
   )
 }
 
-to_build_duration_df <- function(times){
+to_build_duration_df <- function(times) {
   eval(parse(text = "require(methods, quietly = TRUE)")) # needed for lubridate
-  for (col in time_columns){
+  for (col in time_columns) {
     times[[col]] <- to_build_duration(times[[col]])
   }
   times
@@ -127,7 +130,7 @@ to_build_duration_df <- function(times){
 # From lubridate issue 472,
 # we need to round to the nearest second
 # for times longer than a minute.
-to_build_duration <- function(x){
+to_build_duration <- function(x) {
   assert_pkg("lubridate")
   round_these <- x >= 60
   x[round_these] <- round(x[round_these], digits = 0)
@@ -136,15 +139,15 @@ to_build_duration <- function(x){
 
 time_columns <- c("elapsed", "user", "system")
 
-finalize_times <- function(target, meta, config){
-  if (!is_bad_time(meta$time_command)){
+finalize_times <- function(target, meta, config) {
+  if (!is_bad_time(meta$time_command)) {
     meta$time_command <- runtime_entry(
       runtime = meta$time_command,
       target = target,
       imported = meta$imported
     )
   }
-  if (!is_bad_time(meta$start)){
+  if (!is_bad_time(meta$start)) {
     meta$time_build <- runtime_entry(
       runtime = proc.time() - meta$start,
       target = target,
@@ -154,6 +157,6 @@ finalize_times <- function(target, meta, config){
   meta
 }
 
-is_bad_time <- function(x){
+is_bad_time <- function(x) {
   !length(x) || is.na(x[1])
 }

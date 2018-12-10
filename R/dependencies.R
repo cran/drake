@@ -30,7 +30,7 @@
 #'   this conflict and runs as expected. In other words, [make()]
 #'   automatically removes all self-referential loops in the dependency
 #'   network.
-#' @seealso deps_target deps_files make drake_plan drake_config
+#' @seealso [deps_target()] [make()] [drake_plan()] [drake_config()]
 #' @export
 #' @param x a language object (code), character string (code as text),
 #'   or imported function to analyze for dependencies.
@@ -40,7 +40,7 @@
 #'   it is either a target or an item in the `envir` argument to [make()].
 #' @examples
 #' # Your workflow likely depends on functions in your workspace.
-#' f <- function(x, y){
+#' f <- function(x, y) {
 #'   out <- x + y + g(x)
 #'   saveRDS(out, "out.rds")
 #' }
@@ -71,12 +71,12 @@
 #' deps_code(file_store("report.Rmd"))
 #' })
 #' }
-deps_code <- function(x){
-  if (is.function(x)){
+deps_code <- function(x) {
+  if (is.function(x)) {
     import_dependencies(x)
-  } else if (is_file(x) && file.exists(drake_unquote(x))){
+  } else if (all(is_file(x)) && all(file.exists(drake_unquote(x)))) {
     knitr_deps(drake_unquote(x))
-  } else if (is.character(x)){
+  } else if (is.character(x)) {
     command_dependencies(x)
   } else{
     code_dependencies(x)
@@ -87,7 +87,7 @@ deps_code <- function(x){
 #' @description Intended for debugging and checking your project.
 #'   The dependency structure of the components of your analysis
 #'   decides which targets are built and when.
-#' @seealso deps_code
+#' @seealso [deps_code()]
 #' @export
 #' @param target a symbol denoting a target name, or if `character_only`
 #'   is TRUE, a character scalar denoting a target name.
@@ -107,16 +107,11 @@ deps_target <- function(
   target,
   config = read_drake_config(),
   character_only = FALSE
-){
-  if (!character_only){
+) {
+  if (!character_only) {
     target <- as.character(substitute(target))
   }
-  vertex_attr(
-    graph = config$graph,
-    name = "deps",
-    index = target
-  )[[1]] %>%
-    as.list()
+  config$layout[[target]]$deps_build
 }
 
 #' @title Find out why a target is out of date.
@@ -152,7 +147,7 @@ deps_target <- function(
 #' # Get some example dependency profiles of targets.
 #' dependency_profile(small, config = config)
 #' # Change a dependency.
-#' simulate <- function(x){}
+#' simulate <- function(x) {}
 #' # Update the in-memory imports in the cache
 #' # so dependency_profile can detect changes to them.
 #' # Changes to targets are already cached.
@@ -165,32 +160,34 @@ dependency_profile <- function(
   target,
   config = drake::read_drake_config(),
   character_only = FALSE
-){
-  if (!character_only){
+) {
+  if (!character_only) {
     target <- as.character(substitute(target))
   }
-  if (!config$cache$exists(key = target, namespace = "meta")){
+  if (!config$cache$exists(key = target, namespace = "meta")) {
     stop("no recorded metadata for target ", target, ".")
   }
-  meta <- config$cache$get(
-    key = target, namespace = "meta")
-  deps <- dependencies(target, config)
+  meta <- config$cache$get(key = target, namespace = "meta")
+  if (!length(meta$command)) {
+    meta$command <- NA
+  }
   old_hashes <- meta[c(
     "command",
     "dependency_hash",
     "input_file_hash",
     "output_file_hash"
-  )] %>%
-    unlist() %>%
-    unname()
+  )]
+  old_hashes <- unlist(old_hashes)
+  old_hashes <- unname(old_hashes)
   old_hashes[1] <- digest::digest(
     paste(old_hashes[1], collapse = ""),
     algo = config$long_hash_algo,
     serialize = FALSE
   )
+  layout <- config$layout[[target]]
   new_hashes <- c(
     digest::digest(
-      paste(get_standardized_command(target, config), collapse = ""),
+      paste(layout$command_standardized, collapse = ""),
       algo = config$long_hash_algo,
       serialize = FALSE
     ),
@@ -208,7 +205,7 @@ dependency_profile <- function(
 
 #' @title List the targets and imports
 #'   that are reproducibly tracked.
-#' @description In other words, list all the nodes
+#' @description In other words, list all the layout
 #' in your project's dependency network.
 #' @export
 #' @return A character vector with the names of reproducibly-tracked targets.
@@ -222,26 +219,22 @@ dependency_profile <- function(
 #' tracked(config)
 #' })
 #' }
-tracked <- function(config){
-  lightly_parallelize(
+tracked <- function(config) {
+  out <- lightly_parallelize(
     X = V(config$graph)$name,
-    FUN = function(target){
-      vertex_attr(
-        graph = config$graph,
-        name = "deps",
-        index = target
-      )[[1]] %>%
-        as.list %>%
-        unlist %>%
-        c(target)
+    FUN = function(target) {
+      out <- config$layout[[target]]$deps_build
+      out <- as.list(out)
+      out <- unlist(out)
+      c(out, target)
     },
     jobs = config$jobs
-  ) %>%
-    clean_dependency_list
+  )
+  clean_dependency_list(out)
 }
 
-dependencies <- function(targets, config, reverse = FALSE){
-  if (!length(targets)){
+dependencies <- function(targets, config, reverse = FALSE) {
+  if (!length(targets)) {
     return(character(0))
   }
   opt <- igraph::igraph_opt("return.vs.es")
@@ -251,19 +244,19 @@ dependencies <- function(targets, config, reverse = FALSE){
     graph = config$graph,
     v = targets,
     mode = ifelse(reverse, "out", "in")
-  ) %>%
-    unlist %>%
-    unique
+  )
+  index <- unlist(index)
+  index <- unique(index)
   igraph::V(config$graph)$name[index + 1]
 }
 
-nonfile_target_dependencies <- function(targets, config, jobs = 1){
+nonfile_target_dependencies <- function(targets, config, jobs = 1) {
   deps <- dependencies(targets = targets, config = config)
   out <- parallel_filter(x = deps, f = is_not_file, jobs = jobs)
   intersect(out, config$plan$target)
 }
 
-import_dependencies <- function(expr, exclude = character(0), globals = NULL){
+import_dependencies <- function(expr, exclude = character(0), globals = NULL) {
   deps <- code_dependencies(expr, exclude = exclude, globals = globals)
   # Imported functions can't have file_out() deps # nolint
   # or target dependencies from knitr code chunks.
@@ -276,13 +269,16 @@ command_dependencies <- function(
   command,
   exclude = character(0),
   globals = NULL
-){
-  if (!length(command)){
+) {
+  if (!length(command)) {
     return()
   }
-  command <- as.character(command)
+  expr <- command
+  if (is.character(command)){
+    expr <- parse(text = command, keep.source = FALSE)
+  }
   deps <- code_dependencies(
-    parse(text = command),
+    expr,
     exclude = exclude,
     globals = globals
   )
@@ -295,14 +291,17 @@ command_dependencies <- function(
     pkgconfig::get_config("drake::strings_in_dots"),
     "literals"
   )
-  if (use_new_file_api){
+  if (use_new_file_api) {
     files <- character(0)
   } else {
+    if (!is.character(command)){
+      command <- wide_deparse(command)
+    }
     files <- extract_filenames(command)
   }
-  if (length(files)){
-    files <- drake_unquote(files) %>%
-      drake_quotes(single = FALSE)
+  if (length(files)) {
+    files <- drake_unquote(files)
+    files <- drake_quotes(files, single = FALSE)
     warn_single_quoted_files(files = files, deps = deps)
     files <- setdiff(files, deps$file_out)
     deps$file_in <- base::union(deps$file_in, files)
@@ -314,25 +313,25 @@ command_dependencies <- function(
   # I know strings_in_dots is not really meant to do this,
   # but pkgconfig is only a temporary solution to manage
   # the deprecation anyway.
-  if (!use_new_file_api){
+  if (!use_new_file_api) {
     deps$loadd <- base::union(
       deps$loadd, knitr_deps(find_knitr_doc(command))
-    ) %>%
-      unique
+    )
+    deps$loadd <- unique(deps$loadd)
   }
 
   # This bit stays the same.
-  deps[purrr::map_int(deps, length) > 0]
+  select_nonempty(deps)
 }
 
 # TODO: this function can go away when drake
 # stops supporting single-quoted file names
-warn_single_quoted_files <- function(files, deps){
+warn_single_quoted_files <- function(files, deps) {
   old_api_files <- drake_unquote(files)
-  new_api_files <- c(deps$file_in, deps$file_out, deps$knitr_in) %>%
-    drake_unquote
+  new_api_files <- c(deps$file_in, deps$file_out, deps$knitr_in)
+  new_api_files <- drake_unquote(new_api_files)
   warn_files <- setdiff(old_api_files, new_api_files)
-  if (!length(warn_files)){
+  if (!length(warn_files)) {
     return()
   }
   warning(
@@ -342,266 +341,5 @@ warn_single_quoted_files <- function(files, deps){
     "Use file_in(), file_out(), and knitr_in() ",
     "in your commands. See `?drake_plan` for examples.",
     call. = FALSE
-  )
-}
-
-# Walk through function f and find `pkg::fun()` and `pkg:::fun()` calls.
-find_namespaced_functions <- function(f, found = character(0)){
-  if (is.function(f)){
-    return(find_namespaced_functions(body(f), found))
-  } else if (is.call(f) && wide_deparse(f[[1]]) %in% c("::", ":::")){
-    found <- c(found, wide_deparse(f))
-  } else if (is.recursive(f)){
-    v <- lapply(as.list(f), find_namespaced_functions, found)
-    found <- unique(c(found, unlist(v)))
-  }
-  found
-}
-
-is_vectorized <- function(funct){
-  if (!is.function(funct)){
-    return(FALSE)
-  }
-  if (!is.environment(environment(funct))){
-    return(FALSE)
-  }
-  vectorized_names <- "FUN" # Chose not to include other names.
-  if (!all(vectorized_names %in% ls(environment(funct)))){
-    return(FALSE)
-  }
-  f <- environment(funct)[["FUN"]]
-  is.function(f)
-}
-
-unwrap_function <- function(funct){
-  if (is_vectorized(funct)) {
-    funct <- environment(funct)[["FUN"]]
-  }
-  funct
-}
-
-code_dependencies <- function(expr, exclude = character(0), globals = NULL){
-  if (
-    !is.function(expr) &&
-    !is.expression(expr) &&
-    !is.language(expr)
-  ){
-    return(list())
-  }
-  results <- list()
-  # `walk()` analyzes `drake`-specific calls
-  # in an expression or function.
-  # It sees `results` in its lexical scope.
-  walk <- function(expr){
-    if (!length(expr)){
-      return()
-    } else if (is.function(expr)) {
-      expr <- unwrap_function(expr)
-      if (typeof(expr) != "closure"){
-        expr <- function(){} # nolint: curly braces are necessary
-      }
-      walk(body(expr))
-    } else if (is.name(expr)) {
-      new_globals <- setdiff(x = wide_deparse(expr), y = drake_fn_patterns) %>%
-        Filter(f = is_parsable)
-      results$globals <<- c(results$globals, new_globals)
-    } else if (is.character(expr)) {
-      results$strings <<- c(results$strings, expr)
-    } else if (is.language(expr) && (is.call(expr) || is.recursive(expr))) {
-      new_results <- list()
-      if (is_loadd_call(expr)){
-        new_results <- analyze_loadd(expr)
-      } else if (is_readd_call(expr)){
-        new_results <- analyze_readd(expr)
-      } else if (is_knitr_in_call(expr)){
-        new_results <- analyze_knitr_in(expr)
-      } else if (is_file_in_call(expr)){
-        new_results <- analyze_file_in(expr)
-      } else if (is_file_out_call(expr)){
-        new_results <- analyze_file_out(expr)
-      } else if (!is_ignore_call(expr)){
-        if (wide_deparse(expr[[1]]) %in% c("::", ":::")){
-          new_results <- list(
-            namespaced = setdiff(wide_deparse(expr), drake_fn_patterns)
-          )
-        } else {
-          lapply(X = expr, FUN = walk)
-        }
-      }
-      results <<- merge_lists(x = results, y = new_results)
-    }
-  }
-  walk(expr)
-  results$globals <- intersect(results$globals, find_globals(expr))
-  if (!is.null(globals)){
-    results$globals <- intersect(results$globals, globals)
-  }
-  exclude <- base::union(exclude, ".")
-  results <- lapply(
-    X = results,
-    FUN = function(x){
-      setdiff(x, exclude)
-    }
-  )
-  results[purrr::map_int(results, length) > 0]
-}
-
-find_globals <- function(fun){
-  if (!is.function(fun)){
-    f <- function(){} # nolint
-    body(f) <- as.call(append(as.list(body(f)), fun))
-    fun <- f
-  }
-  if (typeof(fun) != "closure"){
-    return(character(0))
-  }
-  fun <- unwrap_function(fun)
-  # The tryCatch statement fixes a strange bug in codetools
-  # for R 3.3.3. I do not understand it.
-  tryCatch(
-    codetools::findGlobals(fun = fun, merge = TRUE),
-    error = function(e){
-      fun <- eval(parse(text = rlang::expr_text(fun))) # nocov
-      codetools::findGlobals(fun = fun, merge = TRUE)  # nocov
-    }
-  ) %>%
-    setdiff(y = c(drake_fn_patterns, ".")) %>%
-    Filter(f = is_parsable)
-}
-
-analyze_loadd <- function(expr){
-  expr <- match.call(drake::loadd, as.call(expr))
-  expr <- expr[-1]
-  unnamed <- list()
-  if (any(is_unnamed <- which_unnamed(expr))){
-    unnamed <- code_dependencies(expr[is_unnamed])
-  }
-  out <- c(
-    unnamed$globals,
-    unnamed$strings,
-    code_dependencies(expr["list"])$strings
-  )
-  list(loadd = setdiff(out, drake_fn_patterns))
-}
-
-analyze_readd <- function(expr){
-  expr <- match.call(drake::readd, as.call(expr))
-  deps <- unlist(code_dependencies(expr["target"])[c("globals", "strings")])
-  list(readd = setdiff(deps, drake_fn_patterns))
-}
-
-analyze_file_in <- function(expr){
-  expr <- expr[-1]
-  deps <- drake_quotes(code_dependencies(expr)$strings, single = FALSE)
-  list(file_in = deps)
-}
-
-analyze_file_out <- function(expr){
-  expr <- expr[-1]
-  deps <- drake_quotes(code_dependencies(expr)$strings, single = FALSE)
-  list(file_out = deps)
-}
-
-analyze_knitr_in <- function(expr){
-  expr <- expr[-1]
-  files <- code_dependencies(expr)$strings
-  out <- lapply(files, knitr_deps_list) %>%
-    Reduce(f = merge_lists)
-  files <- drake_quotes(files, single = FALSE)
-  out$knitr_in <- base::union(out$knitr_in, files)
-  out
-}
-
-ignore_ignore <- function(expr){
-  if (is.character(expr)){
-    expr <- parse(text = expr)
-  }
-  recurse_ignore(expr)
-}
-
-recurse_ignore <- function(x) {
-  if (is.function(x) && !is.primitive(x) && !is.null(body(x))){
-    body(x) <- recurse_ignore(body(x))
-  } else if (is_callish(x)){
-    if (is_ignore_call(x)) {
-      x <- quote(ignore())
-    } else {
-      x[] <- purrr::map(as.list(x), recurse_ignore)
-    }
-  }
-  x
-}
-
-which_unnamed <- function(x){
-  if (!length(names(x))){
-    rep(TRUE, length(x))
-  } else {
-    !nzchar(names(x))
-  }
-}
-
-is_callish <- function(x){
-  length(x) > 0 && is.language(x) && (is.call(x) || is.recursive(x))
-}
-
-pair_text <- function(x, y){
-  apply(expand.grid(x, y), 1, paste0, collapse = "")
-}
-
-drake_prefix <- c("", "drake::", "drake:::")
-knitr_in_fns <- pair_text(drake_prefix, c("knitr_in"))
-file_in_fns <- pair_text(drake_prefix, c("file_in"))
-file_out_fns <- pair_text(drake_prefix, c("file_out"))
-loadd_fns <- pair_text(drake_prefix, "loadd")
-readd_fns <- pair_text(drake_prefix, "readd")
-ignore_fns <- pair_text(drake_prefix, "ignore")
-target_fns <- pair_text(drake_prefix, "target")
-trigger_fns <- pair_text(drake_prefix, "trigger")
-drake_fn_patterns <- c(
-  knitr_in_fns,
-  file_in_fns,
-  file_out_fns,
-  loadd_fns,
-  readd_fns,
-  ignore_fns,
-  target_fns,
-  trigger_fns
-)
-
-is_knitr_in_call <- function(expr){
-  wide_deparse(expr[[1]]) %in% c(knitr_in_fns)
-}
-
-is_file_in_call <- function(expr){
-  wide_deparse(expr[[1]]) %in% file_in_fns
-}
-
-is_file_out_call <- function(expr){
-  wide_deparse(expr[[1]]) %in% file_out_fns
-}
-
-is_loadd_call <- function(expr){
-  wide_deparse(expr[[1]]) %in% loadd_fns
-}
-
-is_readd_call <- function(expr){
-  wide_deparse(expr[[1]]) %in% readd_fns
-}
-
-is_ignore_call <- function(expr){
-  wide_deparse(expr[[1]]) %in% ignore_fns
-}
-
-is_target_call <- function(expr){
-  tryCatch(
-    wide_deparse(expr[[1]]) %in% target_fns,
-    error = error_false
-  )
-}
-
-is_trigger_call <- function(expr){
-  tryCatch(
-    wide_deparse(expr[[1]]) %in% trigger_fns,
-    error = error_false
   )
 }

@@ -1,7 +1,6 @@
 #' @title Prune the dependency network of your project.
 #' @export
-#' @seealso [build_drake_graph()], [drake_config()],
-#'   [make()]
+#' @seealso [drake_config()], [make()]
 #' @description `igraph` objects are used
 #' internally to represent the dependency network of your workflow.
 #' See `drake_config(my_plan)$graph` from the mtcars example.
@@ -20,8 +19,7 @@
 #' test_with_dir("Quarantine side effects.", {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Build the igraph object representing the workflow dependency network.
-#' # You could also use drake_config(my_plan)$graph
-#' graph <- build_drake_graph(my_plan)
+#' graph <- drake_config(my_plan)$graph
 #' # The default plotting is not the greatest,
 #' # but you will get the idea.
 #' # plot(graph) # nolint
@@ -33,15 +31,15 @@
 #' }
 prune_drake_graph <- function(
   graph, to = igraph::V(graph)$name, jobs = 1
-){
-  if (!inherits(graph, "igraph")){
+) {
+  if (!inherits(graph, "igraph")) {
     stop(
       "supplied graph must be an igraph object",
       call. = FALSE
     )
   }
   unlisted <- setdiff(to, V(graph)$name)
-  if (length(unlisted)){
+  if (length(unlisted)) {
     warning(
       "supplied targets not in the dependency graph:\n",
       multiline_message(unlisted),
@@ -49,7 +47,7 @@ prune_drake_graph <- function(
     )
     to <- setdiff(to, unlisted)
   }
-  if (!length(to)){
+  if (!length(to)) {
     warning(
       "cannot prune graph: no valid destination vertices supplied",
       call. = FALSE
@@ -58,84 +56,84 @@ prune_drake_graph <- function(
   }
   ignore <- lightly_parallelize(
     X = to,
-    FUN = function(vertex){
+    FUN = function(vertex) {
       drake_subcomponent(graph = graph, v = vertex, mode = "in")$name
     },
     jobs = jobs
-  ) %>%
-    unlist() %>%
-    unique() %>%
-    setdiff(x = igraph::V(graph)$name)
+  )
+  ignore <- unlist(ignore)
+  ignore <- unique(ignore)
+  ignore <- setdiff(igraph::V(graph)$name, ignore)
   delete_vertices(graph = graph, v = ignore)
 }
 
-get_neighborhood <- function(graph, from, mode, order){
-  if (!length(order)){
+get_neighborhood <- function(graph, from, mode, order) {
+  if (!length(order)) {
     order <- length(V(graph))
   }
-  if (length(from)){
+  if (length(from)) {
     from <- sanitize_nodes(nodes = from, choices = V(graph)$name)
-    graph <- igraph::make_ego_graph(
+    egos <- igraph::make_ego_graph(
       graph = graph,
       order = order,
       nodes = from,
       mode = mode
-    ) %>%
-      lapply(FUN = function(graph){
-        igraph::V(graph)$name
-      }) %>%
-      clean_dependency_list %>%
-      subset_graph(graph = graph)
+    )
+    subset <- lapply(
+      X = egos,
+      FUN = function(graph) {
+      igraph::V(graph)$name
+    })
+    subset <- clean_dependency_list(subset)
+    graph <- subset_graph(graph = graph, subset = subset)
   }
   graph
 }
 
-downstream_nodes <- function(from, graph, jobs){
-  if (!length(from)){
+downstream_nodes <- function(from, graph, jobs) {
+  if (!length(from)) {
     return(character(0))
   }
-  lightly_parallelize(
+  out <- lightly_parallelize(
     X = from,
-    FUN = function(node){
+    FUN = function(node) {
       drake_subcomponent(graph, v = node, mode = "out")$name
     },
     jobs = jobs
-  ) %>%
-    unlist() %>%
-    unique() %>%
-    sort()
+  )
+  clean_dependency_list(out)
 }
 
-leaf_nodes <- function(graph){
+leaf_nodes <- function(graph) {
   is_leaf <- igraph::degree(graph, mode = "in") == 0
   V(graph)[is_leaf]$name
 }
 
-filter_upstream <- function(targets, graph){
+filter_upstream <- function(targets, graph) {
   delete_these <- setdiff(V(graph)$name, targets)
   graph <- delete_vertices(graph = graph, v = delete_these)
   leaf_nodes(graph)
 }
 
-subset_graph <- function(graph, subset){
-  if (!length(subset)){
+subset_graph <- function(graph, subset) {
+  if (!length(subset)) {
     return(graph)
   }
   subset <- intersect(subset, V(graph)$name)
   igraph::induced_subgraph(graph = graph, vids = subset)
 }
 
-imports_graph <- function(config){
+imports_graph <- function(config) {
   delete_these <- intersect(config$plan$target, V(config$graph)$name)
   delete_vertices(config$graph, v = delete_these)
 }
 
-targets_graph <- function(config){
+targets_graph <- function(config) {
   delete_these <- setdiff(V(config$graph)$name, config$plan$target)
   delete_vertices(config$graph, v = delete_these)
 }
 
-drake_subcomponent <- function(...){
+drake_subcomponent <- function(...) {
   opt <- igraph::igraph_opt("return.vs.es")
   on.exit(igraph::igraph_options(return.vs.es = opt))
   igraph::igraph_options(return.vs.es = TRUE)

@@ -5,13 +5,12 @@
 \title{Gather multiple groupings of targets}
 \usage{
 gather_by(plan, ..., prefix = "target", gather = "list",
-  append = TRUE, filter = NULL)
+  append = TRUE, filter = NULL, sep = "_")
 }
 \arguments{
 \item{plan}{workflow plan data frame of prespecified targets}
 
-\item{...}{Symbols, columns of \code{plan} to define target groupings
-passed to \code{dplyr::group_by()}.
+\item{...}{Symbols, columns of \code{plan} to define target groupings.
 A \code{\link[=gather_plan]{gather_plan()}} call is applied for each grouping.
 Groupings with all \code{NA}s in the selector variables are ignored.}
 
@@ -34,9 +33,12 @@ Why not just call \code{dplyr::filter()} before \code{gather_by()}?
 Because \code{gather_by(append = TRUE, filter = my_column == "my_value")}
 gathers on some targets while including all the original targets
 in the output. See the examples for a demonstration.}
+
+\item{sep}{character scalar, delimiter for creating the names
+of new targets}
 }
 \value{
-a workflow plan data frame
+A workflow plan data frame.
 }
 \description{
 Perform several calls to \code{\link[=gather_plan]{gather_plan()}}
@@ -51,7 +53,7 @@ plan <- drake_plan(
 )
 plan <- evaluate_plan(plan, rules = list(mu__ = 1:2), trace = TRUE)
 plan
-gather_by(plan, mu___from, gather = "dplyr::bind_rows")
+gather_by(plan, mu___from, gather = "rbind")
 gather_by(plan, mu___from, append = TRUE)
 gather_by(plan, mu___from, append = FALSE)
 gather_by(plan, mu__, mu___from, prefix = "x")
@@ -70,6 +72,6 @@ gather_by(
 )
 }
 \seealso{
-drake_plan, map_plan, reduce_by, reduce_plan,
-gather_plan, evaluate_plan, expand_plan
+\code{\link[=drake_plan]{drake_plan()}}, \code{\link[=map_plan]{map_plan()}}, \code{\link[=reduce_by]{reduce_by()}}, \code{\link[=reduce_plan]{reduce_plan()}},
+\code{\link[=gather_plan]{gather_plan()}}, \code{\link[=evaluate_plan]{evaluate_plan()}}, \code{\link[=expand_plan]{expand_plan()}}
 }

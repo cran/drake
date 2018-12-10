@@ -66,7 +66,6 @@ test_with_dir("build time the same after superfluous make", {
 test_with_dir("runtime predictions", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("lubridate")
-  skip_if_not_installed("txtq")
   con <- dbug()
   expect_warning(p0 <- as.numeric(predict_runtime(con)))
   expect_true(p0 < 1e4)
@@ -82,29 +81,28 @@ test_with_dir("runtime predictions", {
   expect_true(p0 > 4e4 - 10 && p0 < 6e4 + 10)
   testrun(con)
   expect_warning(predict_runtime(con, digits = 1))
-  p1 <- predict_runtime(config = con, jobs = 1) %>%
-    as.numeric
+  p1 <- as.numeric(predict_runtime(config = con, jobs = 1))
   p2 <- predict_runtime(
     config = con,
     jobs = 1,
     default_time = Inf,
     from_scratch = FALSE
-  ) %>%
-    as.numeric
+  )
+  p2 <- as.numeric(p2)
   p3 <- predict_runtime(
     config = con,
     jobs = 1,
     default_time = Inf,
     from_scratch = TRUE
-  ) %>%
-    as.numeric
+  )
+  p3 <- as.numeric(p3)
   p4 <- predict_runtime(
     config = con,
     jobs = 2,
     default_time = Inf,
     from_scratch = TRUE
-  ) %>%
-    as.numeric
+  )
+  p4 <- as.numeric(p4)
   known_times <- c(
     a = 0, b = 0, c = 0, f = 0, g = 0, h = 0, i = 0, j = 0,
     readRDS = 0, saveRDS = 0,
@@ -122,8 +120,8 @@ test_with_dir("runtime predictions", {
     from_scratch = FALSE,
     known_times = known_times,
     targets = targets
-  ) %>%
-    as.numeric
+  )
+  p5 <- as.numeric(p5)
   p6 <- predict_runtime(
     config = con,
     jobs = 1,
@@ -131,8 +129,8 @@ test_with_dir("runtime predictions", {
     from_scratch = TRUE,
     known_times = known_times,
     targets = targets
-  ) %>%
-    as.numeric
+  )
+  p6 <- as.numeric(p6)
   p7 <- predict_runtime(
     config = con,
     jobs = 2,
@@ -140,44 +138,10 @@ test_with_dir("runtime predictions", {
     from_scratch = TRUE,
     known_times = known_times,
     targets = targets
-  ) %>%
-    as.numeric
-  con$plan$worker <- 1
-  p8 <- predict_runtime(
-    config = con,
-    jobs = 2,
-    default_time = Inf,
-    from_scratch = TRUE,
-    known_times = known_times,
-    targets = targets
-  ) %>%
-    as.numeric
+  )
+  p7 <- as.numeric(p7)
   expect_true(all(is.finite(c(p1, p2, p3, p4))))
   expect_equal(p5, 0, tolerance = 1e-6)
   expect_equal(p6, 70, tolerance = 1e-6)
   expect_equal(p7, 43, tolerance = 1e-6)
-  expect_equal(p8, 70, tolerance = 1e-6)
-})
-
-test_with_dir("load balancing with custom worker assignemnts", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  skip_if_not_installed("lubridate")
-  load_mtcars_example()
-  config <- drake_config(my_plan)
-  config$plan$worker <- 1
-  config$plan$worker[grepl("large", config$plan$target)] <- 2
-  suppressWarnings(
-    x <- predict_load_balancing(config, default_time = 2, jobs = 2))
-  expect_false(any(grep("large", x$targets[[1]])))
-  expect_true(any(grep("large", x$targets[[2]])))
-  expect_false(any(grep("small", x$targets[[2]])))
-  expect_true(any(grep("small", x$targets[[1]])))
-  config$plan$worker <- 1
-  config$plan$worker[grepl("small", config$plan$target)] <- 2
-  suppressWarnings(
-    x <- predict_load_balancing(config, default_time = 2, jobs = 2))
-  expect_false(any(grep("large", x$targets[[2]])))
-  expect_true(any(grep("large", x$targets[[1]])))
-  expect_false(any(grep("small", x$targets[[1]])))
-  expect_true(any(grep("small", x$targets[[2]])))
 })

@@ -22,12 +22,9 @@ when you print it.
 }
 \examples{
 plan <- drake::drake_plan(
-  small_data = download_data("https://some_website.com") \%>\%
-    select_my_columns() \%>\%
-    munge(),
+  small_data = download_data("https://some_website.com"),
   large_data_raw = target(
-    command = download_data("https://lots_of_data.com") \%>\%
-      select_top_columns,
+    command = download_data("https://lots_of_data.com"),
     trigger = trigger(
       change = time_last_modified("https://lots_of_data.com"),
       command = FALSE,
@@ -38,7 +35,7 @@ plan <- drake::drake_plan(
   strings_in_dots = "literals"
 )
 print(plan)
-if (requireNamespace("styler", quietly = TRUE)){
+if (requireNamespace("styler", quietly = TRUE)) {
   source <- drake_plan_source(plan)
   print(source) # Install the prettycode package for syntax highlighting.
 }

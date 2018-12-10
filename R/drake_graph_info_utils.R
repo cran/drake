@@ -17,6 +17,21 @@ append_build_times <- function(config) {
   })
 }
 
+append_output_file_nodes <- function(config) {
+  with(config, {
+    cols <- setdiff(colnames(nodes), c("id", "label", "level", "shape"))
+    for (target in intersect(names(file_out), nodes$id)) {
+      files <- intersect(file_out[[target]], nodes$id)
+      if (length(files)){
+        for (col in cols) {
+          nodes[files, col] <- nodes[target, col]
+        }
+      }
+    }
+    nodes
+  })
+}
+
 can_get_function <- function(x, envir) {
   tryCatch({
     is.function(eval(parse(text = x), envir = envir))
@@ -39,11 +54,11 @@ categorize_nodes <- function(config) {
   })
 }
 
-cluster_nodes <- function(config){
-  for (cluster in config$clusters){
+cluster_nodes <- function(config) {
+  for (cluster in config$clusters) {
     index <- config$nodes[[config$group]] == cluster
     index[is.na(index)] <- FALSE
-    if (!any(index)){
+    if (!any(index)) {
       next
     }
     new_node <- config$nodes[index, ]
@@ -56,8 +71,8 @@ cluster_nodes <- function(config){
     new_node$label <- new_node$id <-
       paste0(config$group, ": ", cluster)
     matching <- config$nodes$id[index]
-    new_node$title <- paste(matching, collapse = ", ") %>%
-      crop_text(width = hover_width)
+    new_node$title <- paste(matching, collapse = ", ")
+    new_node$title <- crop_text(new_node$title, width = hover_width)
     config$nodes <- rbind(config$nodes[!index, ], new_node)
     config$edges$from[config$edges$from %in% matching] <- new_node$id
     config$edges$to[config$edges$to %in% matching] <- new_node$id
@@ -68,7 +83,7 @@ cluster_nodes <- function(config){
   config
 }
 
-cluster_status <- function(statuses){
+cluster_status <- function(statuses) {
   precedence <- c(
     "other",
     "imported",
@@ -79,114 +94,47 @@ cluster_status <- function(statuses){
     "failed"
   )
   out <- "other"
-  for (status in precedence){
-    if (status %in% statuses){
+  for (status in precedence) {
+    if (status %in% statuses) {
       out <- status
     }
   }
   out
 }
 
-configure_nodes <- function(config){
+configure_nodes <- function(config) {
   rownames(config$nodes) <- config$nodes$label
   config$nodes <- categorize_nodes(config = config)
   config$nodes <- style_nodes(config = config)
   config$nodes <- resolve_levels(config = config)
-  if (config$build_times != "none"){
+  if (config$build_times != "none") {
     config$nodes <- append_build_times(config = config)
   }
   hover_text(config = config)
-}
-
-insert_file_out_edges <- function(edges, file_in_list, file_out_list){
-  file_in_edges <- file_out_edges <- NULL
-  if (length(file_in_list)){
-    file_in_edges <- utils::stack(file_in_list)
-    file_in_edges$from <- as.character(file_in_edges$values)
-    file_in_edges$to <- as.character(file_in_edges$ind)
-    file_in_edges <- file_in_edges[
-      file_in_edges$from %in% clean_dependency_list(file_out_list), ]
-    file_in_edges$values <- file_in_edges$ind <- NULL
-  }
-  if (length(file_out_list)){
-    file_out_edges <- utils::stack(file_out_list)
-    file_out_edges$from <- as.character(file_out_edges$ind)
-    file_out_edges$to <- as.character(file_out_edges$values)
-    file_out_edges$values <- file_out_edges$ind <- NULL
-  }
-  edges <- edges[edges$file < 0.5, ] %>%
-    dplyr::bind_rows(file_in_edges, file_out_edges)
-  edges[!duplicated(edges), ]
-}
-
-insert_file_out_nodes <- function(nodes, file_out_list){
-  lapply(seq_along(file_out_list), function(index){
-    old_nodes <- nodes[names(file_out_list)[index], ]
-    files <- file_out_list[[index]]
-    new_nodes <- old_nodes[rep(1, length(files)), ]
-    new_nodes$level <- new_nodes$level + 0.5
-    new_nodes$id <- new_nodes$label <- files
-    new_nodes$type <- "file"
-    new_nodes$shape <- shape_of("file")
-    new_nodes
-  }) %>%
-    do.call(what = dplyr::bind_rows) %>%
-    dplyr::bind_rows(nodes)
-}
-
-insert_file_outs <- function(config){
-  within(config, {
-    file_in_list <- lapply(nodes$deps, function(deps){
-      if (is.null(deps)){
-        return(character(0))
-      }
-      c(
-        deps$file_in,
-        deps$knitr_in,
-        Filter(x = deps$change, f = is_file),
-        Filter(x = deps$condition, f = is_file)
-      ) %>%
-        unique()
-    }) %>%
-      setNames(nodes$id) %>%
-      select_nonempty
-    file_out_list <- lapply(nodes$deps, function(deps){
-      if (is.null(deps)){
-        return(character(0))
-      }
-      deps$file_out
-    }) %>%
-      setNames(nodes$id) %>%
-      select_nonempty
-    nodes <- insert_file_out_nodes(nodes, file_out_list)
-    nodes$level <- as.integer(ordered(nodes$level))
-    edges <- insert_file_out_edges(edges, file_in_list, file_out_list)
-    config
-  })
 }
 
 #' @title Return the default title for graph visualizations
 #' @description For internal use only.
 #' @export
 #' @keywords internal
-#' @return a character scalar with the default graph title
+#' @return A character scalar with the default graph title.
 #' @param split_columns deprecated
 #' @examples
 #' default_graph_title()
-default_graph_title <- function(split_columns = FALSE){
+default_graph_title <- function(split_columns = FALSE) {
   "Dependency graph"
 }
 
-file_hover_text <- Vectorize(function(quoted_file, targets){
+file_hover_text <- Vectorize(function(quoted_file, targets) {
   unquoted_file <- drake_unquote(quoted_file)
-  if (quoted_file %in% targets || !file.exists(unquoted_file)){
+  if (quoted_file %in% targets || !file.exists(unquoted_file)) {
     return(quoted_file)
   }
   tryCatch({
-      readLines(unquoted_file, n = 20, warn = FALSE) %>%
-        crop_lines(n = hover_lines) %>%
-        crop_text(width = hover_width) %>%
-        paste0(collapse = "<br>")
+      x <- readLines(unquoted_file, n = 20, warn = FALSE)
+      x <- crop_lines(x, n = hover_lines)
+      x <- crop_text(x, width = hover_width)
+      paste0(x, collapse = "<br>")
     },
     error = function(e) quoted_file,
     warning = function(w) quoted_file
@@ -194,36 +142,36 @@ file_hover_text <- Vectorize(function(quoted_file, targets){
 },
 "quoted_file")
 
-filter_legend_nodes <- function(legend_nodes, all_nodes){
+filter_legend_nodes <- function(legend_nodes, all_nodes) {
   colors <- c(unique(all_nodes$color), color_of("object"))
   shapes <- unique(all_nodes$shape)
   ln <- legend_nodes
   ln[ln$color %in% colors & ln$shape %in% shapes, , drop = FALSE] # nolint
 }
 
-filtered_legend_nodes <- function(all_nodes, full_legend, font_size){
+filtered_legend_nodes <- function(all_nodes, full_legend, font_size) {
   legend_nodes <- legend_nodes(font_size = font_size)
-  if (full_legend){
+  if (full_legend) {
     legend_nodes
   } else {
     filter_legend_nodes(legend_nodes = legend_nodes, all_nodes = all_nodes)
   }
 }
 
-function_hover_text <- Vectorize(function(function_name, envir){
-  tryCatch(
+function_hover_text <- Vectorize(function(function_name, envir) {
+  x <- tryCatch(
     eval(parse(text = function_name), envir = envir),
-    error = function(e) function_name) %>%
-    unwrap_function %>%
-    deparse %>%
-    style_hover_text()
+    error = function(e) function_name
+  )
+  x <- unwrap_function(x)
+  x <- deparse(x)
+  style_hover_text(x)
 },
 "function_name")
 
-get_raw_node_category_data <- function(config){
+get_raw_node_category_data <- function(config) {
   all_labels <- V(config$graph)$name
   config$outdated <- resolve_graph_outdated(config = config)
-  config$imports <- setdiff(all_labels, config$plan$target)
   config$in_progress <- in_progress(cache = config$cache)
   config$failed <- failed(cache = config$cache)
   config$files <- parallel_filter(
@@ -329,22 +277,23 @@ null_graph <- function() {
 # I would use styler for indentation here,
 # but it adds a lot of processing time
 # for large functions.
-style_hover_text <- function(lines){
-  crop_lines(lines, n = hover_lines) %>%
-    crop_text(width = hover_width) %>%
-    gsub(pattern = " ", replacement = "&nbsp;") %>%
-    paste0(collapse = "<br>")
+style_hover_text <- function(lines) {
+  x <- crop_lines(lines, n = hover_lines)
+  x <- crop_text(x, width = hover_width)
+  x <- gsub(pattern = " ", replacement = "&nbsp;", x = x)
+  x <- gsub(pattern = "\n", replacement = "<br>", x = x)
+  paste0(x, collapse = "<br>")
 }
 
-resolve_build_times <- function(build_times){
-  if (is.logical(build_times)){
+resolve_build_times <- function(build_times) {
+  if (is.logical(build_times)) {
     warning(
       "The build_times argument to the visualization functions ",
       "should be a character string: \"build\", \"command\", or \"none\". ",
       "The change will be forced in a later version of `drake`. ",
       "see the `build_times()` function for details."
     )
-    if (build_times){
+    if (build_times) {
       build_times <- "build"
     } else {
       build_times <- "none"
@@ -353,8 +302,8 @@ resolve_build_times <- function(build_times){
   build_times
 }
 
-resolve_graph_outdated <- function(config){
-  if (config$from_scratch){
+resolve_graph_outdated <- function(config) {
+  if (config$from_scratch) {
     config$outdated <- config$plan$target
   } else {
     config$outdated <- outdated(
@@ -364,13 +313,13 @@ resolve_graph_outdated <- function(config){
   }
 }
 
-resolve_levels <- function(config){
+resolve_levels <- function(config) {
   config$nodes$level <- level <- 0
   graph <- config$graph
-  while (length(V(graph))){
+  while (length(V(graph))) {
     level <- level + 1
-    leaves <- leaf_nodes(graph) %>%
-      intersect(y = config$nodes$id)
+    leaves <- leaf_nodes(graph)
+    leaves <- intersect(leaves, config$nodes$id)
     config$nodes[leaves, "level"] <- level
     graph <- igraph::delete_vertices(graph = graph, v = leaves)
   }
@@ -403,12 +352,12 @@ target_hover_text <- function(targets, plan) {
   )
 }
 
-trim_node_categories <- function(config){
+trim_node_categories <- function(config) {
   elts <- c(
     "failed", "files", "functions", "in_progress", "missing",
     "outdated", "targets"
   )
-  for (elt in elts){
+  for (elt in elts) {
     config[[elt]] <- intersect(config[[elt]], config$nodes$id)
   }
   config

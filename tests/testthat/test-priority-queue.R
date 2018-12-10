@@ -4,15 +4,8 @@ test_with_dir("empty queue", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- list(schedule = igraph::make_empty_graph(), verbose = 4)
   q <- new_priority_queue(config)
+  expect_equal(sort(colnames(q$data)), sort(c("target", "ndeps", "priority")))
   expect_equal(nrow(q$data), 0)
-})
-
-test_with_dir("bad queue", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_error(
-    R6_priority_queue$new(1:2, 1:4, 1:3),
-    regexp = "priority queue"
-  )
 })
 
 test_with_dir("the priority queue works", {
@@ -22,25 +15,30 @@ test_with_dir("the priority queue works", {
   priorities <- c(rep(2, 4), rep(1, 4))
   ndeps[4] <- ndeps[7]
   expect_false(identical(ndeps, sort(ndeps, decreasing = TRUE)))
-  expect_error(
-    R6_priority_queue$new(
-      targets = letters[1:2], ndeps = 1:4, priorities = 1:2))
-  x <- R6_priority_queue$new(
-    targets = targets, ndeps = ndeps, priorities = priorities)
+  x <- refclass_priority_queue$new(
+    data = data.frame(
+      target = targets,
+      ndeps = ndeps,
+      priority = priorities,
+      stringsAsFactors = FALSE
+    )
+  )
+  x$sort()
+  expect_equal(sort(colnames(x$data)), sort(c("target", "ndeps", "priority")))
   y <- data.frame(
     target = c("Joe", "bar", "baz", "Amy", "spren", "soup", "Bob", "foo"),
     ndeps = c(1, 2, 3, 4, 5, 7, 7, 8),
     priority = c(1, 2, 2, 1, 1, 1, 2, 2),
     stringsAsFactors = FALSE
   )
-  expect_equal(x$data, y)
+  expect_equivalent(x$data, y)
   expect_null(x$peek0())
   expect_null(x$pop0())
-  expect_equal(x$data, y)
-  for (i in 1:2){
+  expect_equivalent(x$data, y)
+  for (i in 1:2) {
     x$decrease_key(c("bar", "spren"))
   }
-  for (i in 1:3){
+  for (i in 1:3) {
     x$decrease_key("spren")
   }
   y <- data.frame(
@@ -49,27 +47,33 @@ test_with_dir("the priority queue works", {
     priority = c(1, 2, 1, 2, 1, 1, 2, 2),
     stringsAsFactors = FALSE
   )
-  expect_equal(x$data, y)
+  expect_equivalent(x$data, y)
   expect_equal(x$peek0(), "spren")
   expect_equal(sort(x$list0()), sort(c("bar", "spren")))
-  expect_equal(x$data, y)
+  expect_equivalent(x$data, y)
   expect_equal(x$pop0(), "spren")
   expect_equal(x$peek0(), "bar")
-  expect_equal(x$data, y[-1, ])
+  expect_equivalent(x$data, y[-1, ])
   expect_equal(x$pop0(), "bar")
-  expect_equal(x$data, y[-1:-2, ])
+  expect_equivalent(x$data, y[-1:-2, ])
   expect_null(x$peek0())
   expect_null(x$pop0())
-  expect_equal(x$data, y[-1:-2, ])
+  expect_equivalent(x$data, y[-1:-2, ])
 
   priorities[targets == "bar"] <- 1
   priorities[targets == "spren"] <- 2
-  x <- R6_priority_queue$new(
-    targets = targets, ndeps = ndeps, priorities = priorities)
-  for (i in 1:2){
+  x <- refclass_priority_queue$new(
+    data = data.frame(
+      target = targets,
+      ndeps = ndeps,
+      priority = priorities,
+      stringsAsFactors = FALSE
+    )
+  )
+  for (i in 1:2) {
     x$decrease_key(c("bar", "spren"))
   }
-  for (i in 1:3){
+  for (i in 1:3) {
     x$decrease_key("spren")
   }
   y <- data.frame(
@@ -78,17 +82,17 @@ test_with_dir("the priority queue works", {
     priority = c(1, 2, 1, 2, 1, 1, 2, 2),
     stringsAsFactors = FALSE
   )
-  expect_equal(x$data, y)
+  expect_equivalent(x$data, y)
   expect_equal(x$peek0(), "bar")
-  expect_equal(x$data, y)
+  expect_equivalent(x$data, y)
   expect_equal(x$pop0(), "bar")
   expect_equal(x$peek0(), "spren")
-  expect_equal(x$data, y[-1, ])
+  expect_equivalent(x$data, y[-1, ])
   expect_equal(x$pop0(), "spren")
-  expect_equal(x$data, y[-1:-2, ])
+  expect_equivalent(x$data, y[-1:-2, ])
   expect_null(x$peek0())
   expect_null(x$pop0())
-  expect_equal(x$data, y[-1:-2, ])
+  expect_equivalent(x$data, y[-1:-2, ])
 
   expect_null(x$list0())
   z <- y[-1:-2, ]
@@ -97,9 +101,9 @@ test_with_dir("the priority queue works", {
   x$remove(c("soup", "Bob"))
   expect_false(all(c("soup", "Bob") %in% x$data$target))
   expect_equal(nrow(x$data), 4)
-  expect_equal(x$data, z[-4:-5, ])
+  expect_equivalent(x$data, z[-4:-5, ])
   x$remove(c("soup", "Bob"))
-  expect_equal(x$data, z[-4:-5, ])
+  expect_equivalent(x$data, z[-4:-5, ])
 })
 
 test_with_dir("queues with priorities", {

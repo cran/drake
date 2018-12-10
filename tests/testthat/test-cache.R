@@ -1,5 +1,30 @@
 drake_context("cache")
 
+test_with_dir("clean() removes the correct files", {
+  cache <- storr::storr_environment()
+  writeLines("123", "a.txt")
+  writeLines("123", "b.txt")
+  plan <- drake_plan(
+    a = file_in("a.txt"),
+    b = knitr_in("b.txt"),
+    d = writeLines("123", file_out("d.rds")),
+    strings_in_dots = "literals"
+  )
+  config <- drake_config(plan, session_info = FALSE)
+  make_imports(config)
+  clean()
+  expect_true(file.exists("a.txt"))
+  expect_true(file.exists("b.txt"))
+  expect_false(file.exists("d.txt"))
+})
+
+test_with_dir("empty read_drake_plan()", {
+  expect_equal(
+    read_drake_plan(cache = storr::storr_environment()),
+    drake_plan()
+  )
+})
+
 test_with_dir("dependency profile", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   b <- 1
@@ -17,27 +42,28 @@ test_with_dir("dependency profile", {
   expect_true(as.logical(dp[dp$hash == "depend", "changed"]))
   expect_equal(sum(dp$changed), 1)
   config$plan$command <- "b + c"
+  config$layout <- create_drake_layout(
+    plan = config$plan,
+    envir = config$envir,
+    cache = config$cache
+  )
   dp <- dependency_profile(target = a, config = config)
   expect_true(as.logical(dp[dp$hash == "command", "changed"]))
   expect_equal(sum(dp$changed), 2)
-})
-
-test_with_dir("clean() removes the correct files", {
-  cache <- storr::storr_environment()
-  writeLines("123", "a.txt")
-  writeLines("123", "b.txt")
-  plan <- drake_plan(
-    a = file_in("a.txt"),
-    b = knitr_in("b.txt"),
-    c = writeLines("123", file_out("c.rds")),
-    strings_in_dots = "literals"
+  load_mtcars_example()
+  config <- drake_config(
+    my_plan,
+    cache = storr::storr_environment(),
+    skip_targets = TRUE,
+    session_info = FALSE
   )
-  config <- drake_config(plan, session_info = FALSE)
-  make_imports(config)
-  clean()
-  expect_true(file.exists("a.txt"))
-  expect_true(file.exists("b.txt"))
-  expect_false(file.exists("c.txt"))
+  make(config = config)
+  out <- dependency_profile(
+    file_store("report.Rmd"),
+    character_only = TRUE,
+    config
+  )
+  expect_equal(nrow(out), 4)
 })
 
 test_with_dir("Missing cache", {
@@ -129,7 +155,8 @@ test_with_dir("non-existent caches", {
   expect_error(tmp <- read_drake_plan(search = FALSE))
   expect_error(tmp <- read_drake_graph(search = FALSE))
   expect_error(tmp <- read_drake_seed(search = FALSE))
-  expect_error(tmp <- drake_session(search = FALSE))
+  expect_error(tmp <- drake_get_session_info(search = FALSE))
+  expect_error(tmp <- drake_set_session_info(search = FALSE))
   dummy <- new_cache()
   expect_silent(read_drake_graph(cache = dummy))
 })
@@ -178,11 +205,10 @@ test_with_dir("cache functions work", {
   cache_dir <- basename(default_cache_path())
   first_wd <- getwd()
   scratch <- file.path(first_wd, "scratch")
-  if (!file.exists(scratch)){
+  if (!file.exists(scratch)) {
     dir.create(scratch) # Will move up a level later.
   }
-  # Suppress goodpractice::gp(): legitimate need for setwd(). # nolint
-  eval(parse(text = "setwd(scratch)"))
+  setwd(scratch) # nolint
   owd <- getwd()
   expect_equal(character(0), cached(search = FALSE), imported(search = FALSE),
     built(search = FALSE))
@@ -192,7 +218,7 @@ test_with_dir("cache functions work", {
   expect_error(readd(search = FALSE))
   config <- dbug()
   using_global <- identical(config$envir, globalenv())
-  if (using_global){
+  if (using_global) {
     envir <- globalenv()
   } else {
     envir <- environment()
@@ -239,7 +265,7 @@ test_with_dir("cache functions work", {
   expect_true(n1 > n2 & n2 > 0)
 
   # find stuff in current directory session, progress
-  expect_true(is.list(drake_session(search = FALSE)))
+  expect_true(is.list(drake_get_session_info(search = FALSE)))
   expect_true(all(progress(search = FALSE) == "finished"))
   expect_equal(in_progress(search = FALSE), character(0))
   expect_warning(tmp <- progress(imported_files_only = TRUE))
@@ -329,13 +355,12 @@ test_with_dir("cache functions work", {
     dir.create("searchfrom")
     dir.create(file.path("searchfrom", "here"))
   }
-  # Suppress goodpractice::gp(): legitimate need for setwd(). # nolint
-  eval(parse(text = "setwd('..')"))
+  setwd("..") # nolint
   expect_equal(getwd(), first_wd)
   s <- normalizePath(file.path(scratch, "searchfrom", "here"))
 
   # progress, session
-  expect_true(is.list(drake_session(search = TRUE, path = s)))
+  expect_true(is.list(drake_get_session_info(search = TRUE, path = s)))
   expect_equal(sort(names(progress(search = TRUE, path = s))),
     sort(all))
   expect_equal(sort(names(progress(no_imported_objects = TRUE,
@@ -399,8 +424,7 @@ test_with_dir("cache functions work", {
   tmp <- capture.output(dev.off())
   unlink("Rplots.pdf", force = TRUE)
 
-  # Suppress goodpractice::gp(): legitimate need for setwd(). # nolint
-  eval(parse(text = "setwd(scratch)"))
+  setwd(scratch) # nolint
   pdf(NULL)
   tmp <- read_drake_graph(search = FALSE)
   tmp <- capture.output(dev.off())
@@ -408,8 +432,7 @@ test_with_dir("cache functions work", {
   pdf(NULL)
   tmp <- capture.output(dev.off())
   unlink("Rplots.pdf", force = TRUE)
-  # Suppress goodpractice::gp(): legitimate need for setwd(). # nolint
-  eval(parse(text = "setwd('..')"))
+  setwd("..") # nolint
 
   # clean using search = TRUE or FALSE
   expect_true(all(all %in% cached(path = s, search = T)))
@@ -439,7 +462,11 @@ test_with_dir("cache functions work", {
   expect_false(file.exists(where))
   expect_silent(drake_gc()) # Cache does not exist
 
-  # Suppress goodpractice::gp(): legitimate need for setwd(). # nolint
-  eval(parse(text = "setwd(scratch)"))
+  setwd(scratch) # nolint
   unlink("searchfrom", recursive = TRUE, force = TRUE)
+})
+
+test_with_dir("memo_expr() works without a cache", {
+  x <- "x"
+  expect_equal(memo_expr(x, cache = NULL), x)
 })

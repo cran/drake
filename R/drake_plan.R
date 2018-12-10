@@ -26,24 +26,32 @@
 #' - `retries`: number of times to retry a target if it fails
 #'   to build the first time.
 #' - `timeout`: Seconds of overall time to allow before imposing
-#'   a timeout on a target. Passed to `R.utils::withTimeout()`.
+#'   a timeout on a target.
 #'   Assign target-level timeout times with an optional `timeout`
 #'   column in `plan`.
 #' - `cpu`: Seconds of cpu time to allow before imposing
-#'   a timeout on a target. Passed to `R.utils::withTimeout()`.
+#'   a timeout on a target.
 #'   Assign target-level cpu timeout times with an optional `cpu`
 #'   column in `plan`.
 #' - `elapsed`: Seconds of elapsed time to allow before imposing
-#'   a timeout on a target. Passed to `R.utils::withTimeout()`.
+#'   a timeout on a target.
 #'   Assign target-level elapsed timeout times with an optional `elapsed`
 #'   column in `plan`.
-#' - `evaluator`: An experimental column. Each entry is a function
-#'   passed to the `evaluator` argument of `future::future()`
-#'   for each worker in `make(..., parallelism = "future")`.
+#' - `resources`: Experimental, no guarantees that this works all the time.
+#'   `resources` is a list column. Each element is a named list,
+#'   same as the `resources` argument to `batchtools_slurm()`
+#'   and related `future.bachtools` functions. See also
+#'   <https://github.com/HenrikBengtsson/future.batchtools#examples>. # nolint
+#'   `resources[[target_name]]` is a list of
+#'   computing resource parameters for the target.
+#'   Each element is a value passed to a `brew` placeholder of a
+#'   `batchtools` template file.
+#'   The list names of `resources[[target_name]]`
+#'   should be the brew patterns.
 #'
 #' @export
-#' @seealso map_plan, reduce_by, gather_by, reduce_plan, gather_plan,
-#'   evaluate_plan, expand_plan
+#' @seealso [map_plan()], [reduce_by()], [gather_by()], [reduce_plan()], [gather_plan()],
+#'   [evaluate_plan()], [expand_plan()]
 #' @return A data frame of targets and commands. See the details
 #' for optional columns you can append manually post-hoc.
 #' @param ... A collection of symbols/targets
@@ -142,8 +150,8 @@ drake_plan <- function(
   file_targets = NULL,
   strings_in_dots = pkgconfig::get_config("drake::strings_in_dots"),
   tidy_evaluation = TRUE
-){
-  if (tidy_evaluation){
+) {
+  if (tidy_evaluation) {
     dots <- rlang::exprs(...) # Enables quasiquotation via rlang.
   } else {
     dots <- match.call(expand.dots = FALSE)$...
@@ -152,7 +160,7 @@ drake_plan <- function(
   commands_dots <- lapply(dots, wide_deparse)
   names(commands_dots) <- names(dots)
   commands <- c(commands_dots, list)
-  if (!length(commands)){
+  if (!length(commands)) {
     return(
       tibble(
         target = character(0),
@@ -168,7 +176,7 @@ drake_plan <- function(
     command = commands
   )
   from_dots <- plan$target %in% names(commands_dots)
-  if (length(file_targets) || identical(strings_in_dots, "filenames")){
+  if (length(file_targets) || identical(strings_in_dots, "filenames")) {
     warning(
       "Use the file_in(), file_out(), and knitr_in() functions ",
       "to work with files in your commands, and pass ",
@@ -178,7 +186,7 @@ drake_plan <- function(
       "Worry about single-quotes no more!"
     )
   }
-  if (identical(file_targets, TRUE)){
+  if (identical(file_targets, TRUE)) {
     plan$target <- drake::drake_quotes(plan$target, single = TRUE)
   }
 
@@ -187,8 +195,8 @@ drake_plan <- function(
   # Currently, to totally take advantage of the new file API,
   # users need to set strings_in_dots to "literals" every time.
   from_dots_with_quotes <- grep("\"", plan$command[from_dots])
-  if (length(from_dots_with_quotes)){
-    if (!length(strings_in_dots)){
+  if (length(from_dots_with_quotes)) {
+    if (!length(strings_in_dots)) {
       warning(
         "Converting double-quotes to single-quotes because ",
         "the `strings_in_dots` argument is missing. ",
@@ -200,19 +208,19 @@ drake_plan <- function(
         call. = FALSE
       )
     }
-    if (!length(strings_in_dots) || identical(strings_in_dots, "filenames")){
+    if (!length(strings_in_dots) || identical(strings_in_dots, "filenames")) {
       plan$command[from_dots] <- gsub("\"", "'", plan$command[from_dots])
     }
   }
-  parse_custom_columns(plan) %>%
-    sanitize_plan
+  plan <- parse_custom_plan_columns(plan)
+  sanitize_plan(plan)
 }
 
 #' @title Row-bind together drake plans
-#' @description combine drake plans together in a way that
+#' @description Combine drake plans together in a way that
 #'   correctly fills in missing entries.
 #' @export
-#' @seealso drake_plan, make
+#' @seealso [drake_plan()], [make()]
 #' @param ... workflow plan data frames (see [drake_plan()])
 #' @examples
 #' # You might need to refresh your data regularly (see ?triggers).
@@ -231,15 +239,27 @@ drake_plan <- function(
 #' your_plan <- bind_plans(download_plan, analysis_plan)
 #' your_plan
 #' # make(your_plan) # nolint
-bind_plans <- function(...){
-  dplyr::bind_rows(...) %>%
-    sanitize_plan
+bind_plans <- function(...) {
+  plans <- list(...)
+  plans <- Filter(f = nrow, x = plans)
+  plans <- Filter(f = ncol, x = plans)
+  cols <- lapply(plans, colnames)
+  cols <- Reduce(f = union, x = cols)
+  plans <- lapply(plans, fill_cols, cols = cols)
+  plan <- do.call(rbind, plans)
+  sanitize_plan(plan)
 }
 
-handle_duplicated_targets <- function(plan){
+fill_cols <- function(x, cols) {
+  na_cols <- setdiff(cols, colnames(x))
+  x[, na_cols] <- NA
+  x
+}
+
+handle_duplicated_targets <- function(plan) {
   plan <- plan[!duplicated(plan[, c("target", "command")]), ]
   dups <- duplicated(plan$target)
-  if (any(dups)){
+  if (any(dups)) {
     stop(
       "Duplicated targets with different commands:\n",
       multiline_message(plan$target[dups]),
@@ -249,17 +269,15 @@ handle_duplicated_targets <- function(plan){
   plan
 }
 
-parse_custom_columns <- function(plan){
-  . <- NULL # For warnings about undefined global symbols.
-  out <- dplyr::group_by(plan, seq_len(n())) %>%
-    dplyr::do(parse_custom_colums_row(.))
-  out[["seq_len(n())"]] <- NULL
-  out
+parse_custom_plan_columns <- function(plan) {
+  splits <- split(plan, seq_len(nrow(plan)))
+  out <- lapply(splits, parse_custom_plan_row)
+  do.call(bind_plans, out)
 }
 
-parse_custom_colums_row <- function(row){
+parse_custom_plan_row <- function(row) {
   expr <- parse(text = row$command, keep.source = FALSE)
-  if (!length(expr) || !is_target_call(expr[[1]])){
+  if (!length(expr) || !is_target_call(expr[[1]])) {
     return(row)
   }
   out <- eval(expr[[1]])
@@ -267,33 +285,14 @@ parse_custom_colums_row <- function(row){
   out
 }
 
-complete_target_names <- function(commands_list){
-  if (!length(names(commands_list))){
+complete_target_names <- function(commands_list) {
+  if (!length(names(commands_list))) {
     # Should not actually happen, but it's better to have anyway.
     names(commands_list) <- paste0("drake_target_", seq_along(commands_list)) # nocov # nolint
   }
   index <- !nzchar(names(commands_list))
   names(commands_list)[index] <- paste0("drake_target_", seq_len(sum(index)))
   commands_list
-}
-
-drake_plan_override <- function(target, field, config){
-  in_plan <- config$plan[[field]]
-  if (is.null(in_plan)){
-    return(config[[field]])
-  } else {
-    # Should be length 0 or 1 because sanitize_plan()
-    # already screens for duplicate target names.
-    index <- which(config$plan$target == target)
-    if (!length(index)){
-      stop("target ", target, " is not in the workflow plan.")
-    }
-    out <- in_plan[[index]]
-    if (safe_is_na(out)){
-      out <- config[[field]]
-    }
-    out
-  }
 }
 
 #' @title Declare the file inputs of a workflow plan command.
@@ -333,7 +332,7 @@ drake_plan_override <- function(target, field, config){
 #' # in your report.
 #' })
 #' }
-file_in <- function(...){
+file_in <- function(...) {
   as.character(c(...))
 }
 
@@ -418,7 +417,7 @@ knitr_in <- file_in
 #'   deciding which target are out of date.
 #' @export
 #' @seealso [file_in()], [file_out()], [knitr_in()]
-#' @return the argument
+#' @return The argument.
 #' @param x code to ignore
 #' @examples
 #' \dontrun{
@@ -446,29 +445,33 @@ knitr_in <- file_in
 #' readd(x)
 #' })
 #' }
-ignore <- function(x = NULL){
+ignore <- function(x = NULL) {
   identity(x)
 }
 
 # Unnamed arguments may have been declared with `<-`` or `->``
 # rather than the required `=`.
-warn_arrows <- function(dots){
-  if (!length(dots)){
+warn_arrows <- function(dots) {
+  if (!length(dots)) {
     return()
   }
-  if (is.null(names(dots))){
+  if (is.null(names(dots))) {
     # Probably not possible, but good to have:
     names(dots) <- rep("", length(dots)) # nocov
   }
-  check_these <- purrr::map_lgl(names(dots), function(x){
-    !nzchar(x)
-  }) %>%
-    which
-  offending_commands <- lapply(dots[check_these], detect_arrow) %>%
-    Filter(f = function(x){
+  check_these <- vapply(names(dots),
+                        function(x) !nzchar(x),
+                        FUN.VALUE = logical(1))
+  check_these <- which(check_these)
+  # Here we use lapply, not vapply, because don't know whether there any
+  # offending commands (and thus don't know size of function return)
+  offending_commands <- lapply(dots[check_these], detect_arrow)
+  offending_commands <- Filter(
+    offending_commands,
+    f = function(x) {
       !is.null(x)
     })
-  if (length(offending_commands)){
+  if (length(offending_commands)) {
     warning(
       "Use `=` instead of `<-` or `->` ",
       "to assign targets to commands in `drake_plan()`. ",
@@ -480,8 +483,8 @@ warn_arrows <- function(dots){
   }
 }
 
-detect_arrow <- function(command){
-  if (length(command) > 2 && deparse(command[[1]]) %in% c("<-", "->")){
+detect_arrow <- function(command) {
+  if (length(command) > 2 && deparse(command[[1]]) %in% c("<-", "->")) {
     wide_deparse(command)
   } else {
     NULL
@@ -492,7 +495,7 @@ detect_arrow <- function(command){
 #' @description The `target()` function lets you define
 #'   custom columns in a workflow plan data frame, both
 #'   inside and outside calls to [drake_plan()].
-#'  @details Tidy evaluation is applied to the arguments,
+#' @details Tidy evaluation is applied to the arguments,
 #'    and the `!!` operator is evaluated immediately
 #'    for expressions and language objects.
 #' @export
@@ -511,8 +514,14 @@ detect_arrow <- function(command){
 #'   will be built first.
 #' @param worker the preferred worker to be assigned the target
 #'   (in parallel computing).
-#' @param evaluator the `future` evaluator of the target.
-#'   Not yet supported.
+#' @param resources Experimental, no guarantees that this works all the time.
+#'   Same as the `resources` argument to `batchtools_slurm()`
+#'   and related `future.bachtools` functions.
+#'   See also <https://github.com/HenrikBengtsson/future.batchtools#examples>. # nolint
+#'   `resources` is a list of computing resource parameters for the target.
+#'   Each element is a value passed to a `brew` placeholder of a
+#'   `batchtools` template file. The list names of `resources`
+#'   should be the brew patterns.
 #' @param ... named arguments specifying non-standard
 #'   fields of the workflow plan.
 #' @examples
@@ -544,9 +553,9 @@ target <- function(
   elapsed = NULL,
   priority = NULL,
   worker = NULL,
-  evaluator = NULL,
+  resources = NULL,
   ...
-){
+) {
   out <- list(
     command   = sanitize_cmd_type(rlang::enexpr(command)),
     trigger   = rlang::enexpr(trigger),
@@ -556,17 +565,20 @@ target <- function(
     elapsed   = rlang::enexpr(elapsed),
     priority  = rlang::enexpr(priority),
     worker    = rlang::enexpr(worker),
-    evaluator = rlang::enexpr(evaluator)
-  ) %>%
-    c(rlang::enexprs(...)) %>%
-    select_nonempty
-  out[nzchar(names(out))] %>%
-    purrr::map(.f = function(x){
-      if (is.language(x)){
+    resources = rlang::enexpr(resources)
+  )
+  out <- c(out, rlang::enexprs(...))
+  out <- select_nonempty(out)
+  out[nzchar(names(out))]
+  out <- lapply(
+    X = out,
+    FUN = function(x) {
+      if (is.language(x)) {
         wide_deparse(x)
       } else {
         x
       }
-    }) %>%
-    tibble::as_tibble()
+    }
+  )
+  tibble::as_tibble(out)
 }

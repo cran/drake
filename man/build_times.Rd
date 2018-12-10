@@ -10,9 +10,10 @@ build_times(..., path = getwd(), search = TRUE, digits = 3,
   type = c("build", "command"))
 }
 \arguments{
-\item{...}{targets to load from the cache: as names (symbols),
-character strings, or \code{dplyr}-style \code{tidyselect}
-commands such as \code{starts_with()}.}
+\item{...}{targets to load from the cache: as names (symbols) or
+character strings. If the \code{tidyselect} package is installed,
+you can also supply \code{dplyr}-style \code{tidyselect}
+commands such as \code{starts_with()}, \code{ends_with()}, and \code{one_of()}.}
 
 \item{path}{Root directory of the drake project,
 or if \code{search} is \code{TRUE}, either the
@@ -36,12 +37,12 @@ build times of the targets (exclude the imports).}
 Use \code{pkgconfig} to set the default value of \code{verbose}
 for your R session:
 for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
-\describe{
-\item{0 or \code{FALSE}:}{print nothing.}
-\item{1 or \code{TRUE}:}{print only targets to build.}
-\item{2:}{+ checks and cache info.}
-\item{3:}{+ any potentially missing items.}
-\item{4:}{+ imports and writes to the cache.}
+\itemize{
+\item \code{0} or \code{FALSE}: print nothing.
+\item \code{1} or \code{TRUE}: print only targets to build.
+\item \code{2}: also print checks and cache info.
+\item \code{3}: also print any potentially missing items.
+\item \code{4}: also print imports and writes to the cache.
 }}
 
 \item{jobs}{number of jobs/workers for parallel processing}
@@ -67,7 +68,6 @@ test_with_dir("Quarantine side effects.", {
 load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Build all the targets.
 build_times() # Show how long it took to build each target.
-build_times(starts_with("coef")) # `dplyr`-style `tidyselect`
 })
 }
 }

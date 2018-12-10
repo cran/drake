@@ -1,10 +1,10 @@
-choose_seed <- function(supplied, cache){
+choose_seed <- function(supplied, cache) {
   previous <- get_previous_seed(cache = cache)
   seed_conflict <-
     !is.null(previous) &&
     !is.null(supplied) &&
     !identical(previous, supplied)
-  if (seed_conflict){
+  if (seed_conflict) {
     stop(
       "You supplied a seed of ", supplied,
       " to either make() or drake_config(). ",
@@ -19,8 +19,8 @@ choose_seed <- function(supplied, cache){
   (previous %||% supplied) %||% 0
 }
 
-get_previous_seed <- function(cache){
-  if (cache$exists(key = "seed", namespace = "config")){
+get_previous_seed <- function(cache) {
+  if (cache$exists(key = "seed", namespace = "config")) {
     cache$get(key = "seed", namespace = "config")
   } else {
     NULL
@@ -32,8 +32,8 @@ get_previous_seed <- function(cache){
 # from arguments of basic types such as
 # numerics and characters.
 seed_from_basic_types <- function(...) {
-  hash <- paste0(..., collapse = "") %>%
-    digest::digest(algo = "murmur32", serialize = FALSE)
+  x <- paste0(..., collapse = "")
+  hash <- digest::digest(x, algo = "murmur32", serialize = FALSE)
   hexval <- paste0("0x", hash)
   utils::type.convert(hexval) %% .Machine$integer.max
 }

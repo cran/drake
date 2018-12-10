@@ -1,7 +1,11 @@
 #' @title Run a single target's command in debug mode.
-#' @description Also load the target's dependencies beforehand.
+#' @description `drake_debug()` loads a target's dependencies
+#'   and then runs its command in debug mode (see `browser()`,
+#'   `debug()`, and `debugonce()`). This function does not
+#'   store the target's value in the cache
+#'   (see <https://github.com/ropensci/drake/issues/587>).
 #' @export
-#' @seealso drake_build
+#' @seealso [drake_build()]
 #' @return The value of the target right after it is built.
 #' @inheritParams drake_build
 #' @param verbose logical, whether to print out the target
@@ -36,16 +40,16 @@ drake_debug <- function(
   jobs = 1,
   replace = FALSE,
   verbose = TRUE
-){
+) {
   # Tested in tests/testthat/test-always-skipped.R.
   # nocov start
-  if (!character_only){
+  if (!character_only) {
     target <- as.character(substitute(target))
   }
-  if (!length(target)){
+  if (!length(target)) {
     target <- utils::head(drake::failed(cache = config$cache), n = 1)
   }
-  if (verbose){
+  if (verbose) {
     message("Building target `", target, "` in debug mode.")
   }
   loadd(
@@ -55,38 +59,42 @@ drake_debug <- function(
     cache = config$cache,
     graph = config$graph,
     jobs = jobs,
-    replace = replace
+    replace = replace,
+    tidyselect = FALSE
   )
-  index <- which(config$plan$target == target)
-  config$plan$command[[index]] <- debug_command(config$plan$command[[index]])
+  config$layout[[target]]$command_build <- preprocess_command(
+    debug_command(config$layout[[target]]$command)
+  )
+  # Spoof the cache to avoid storage.
+  # We still want the error handling in build_store().
+  config$cache <- storr::storr_environment()
   build_store(target = target, config = config)
   # nocov end
 }
 
-debug_command <- function(command){
-  if (is.character(command)){
+debug_command <- function(command) {
+  if (is.character(command)) {
     debug_command_char(command)
   } else {
     . <- NULL
-    out <- rlang::expr_text(command) %>%
-      debug_command_char() %>%
-      parse(text = .)
-    out[[1]]
+    out <- rlang::expr_text(command)
+    out <- debug_command_char(out)
+    parse(text = out)[[1]]
   }
 }
 
-debug_command_char <- function(command){
+debug_command_char <- function(command) {
   paste0("drake::debug_and_run(function() {\n", command, "\n})")
 }
 
 #' @title Run a function in debug mode.
 #' @description Internal function for [drake_debug()]. Not for general use.
 #' @keywords internal
-#' @seealso drake_debug
+#' @seealso [drake_debug()]
 #' @export
-#' @return the return value of `f`
+#' @return The return value of `f`.
 #' @param f a function
-debug_and_run <- function(f){
+debug_and_run <- function(f) {
   # Tested in tests/testthat/test-always-skipped.R.
   # nocov start
   debug(f)

@@ -1,7 +1,7 @@
 #' @title Build/process a single target or import.
 #' @description Also load the target's dependencies beforehand.
 #' @export
-#' @seealso drake_build
+#' @seealso [drake_debug()]
 #' @return The value of the target right after it is built.
 #' @param target name of the target
 #' @param meta list of metadata that tell which
@@ -39,15 +39,15 @@ drake_build <- function(
   envir = parent.frame(),
   jobs = 1,
   replace = FALSE
-){
-  if (!is.null(meta)){
+) {
+  if (!is.null(meta)) {
     warning(
       "drake_build() is exclusively user-side now, ",
       "so we can affort to compute `meta` on the fly. ",
       "Thus, the `meta` argument is deprecated."
     )
   }
-  if (!character_only){
+  if (!character_only) {
     target <- as.character(substitute(target))
   }
   loadd(
@@ -57,47 +57,50 @@ drake_build <- function(
     cache = config$cache,
     graph = config$graph,
     jobs = jobs,
-    replace = replace
+    replace = replace,
+    tidyselect = FALSE
   )
   build_store(target = target, config = config)
 }
 
 check_build_store <- function(
   target, config, downstream = NULL, announce = TRUE, flag_attempt = FALSE
-){
+) {
   meta <- drake_meta(target = target, config = config)
   if (!should_build_target(
     target = target,
     meta = meta,
     config = config
-  )){
+  )) {
     console_skip(target = target, config = config)
     return()
   }
   meta$start <- proc.time()
-  prune_envir(
-    targets = target,
-    config = config,
-    downstream = downstream
-  )
+  if (!meta$imported) {
+    manage_memory(
+      targets = target,
+      config = config,
+      downstream = downstream
+    )
+  }
   value <- build_store(target = target, meta = meta, config = config)
   assign_to_envir(target = target, value = value, config = config)
-  if (flag_attempt && target %in% config$plan$target){
+  if (flag_attempt && !is_imported(target, config)) {
     set_attempt_flag(key = target, config = config)
   }
   invisible()
 }
 
-build_store <- function(target, config, meta = NULL, announce = TRUE){
+build_store <- function(target, config, meta = NULL, announce = TRUE) {
   # The environment should have been pruned by now.
   # For staged parallelism, this was already done in bulk
   # for the whole stage.
   # Most of these steps require access to the cache.
-  if (is.null(meta)){
+  if (is.null(meta)) {
     meta <- drake_meta(target = target, config = config)
   }
   meta$start <- proc.time()
-  if (announce){
+  if (announce) {
     announce_build(target = target, meta = meta, config = config)
   }
   build <- just_build(target = target, meta = meta, config = config)
@@ -109,7 +112,7 @@ build_store <- function(target, config, meta = NULL, announce = TRUE){
   )
 }
 
-just_build <- function(target, meta, config){
+just_build <- function(target, meta, config) {
   if (meta$imported) {
     process_import(target = target, meta = meta, config = config)
   } else {
@@ -121,7 +124,7 @@ just_build <- function(target, meta, config){
   }
 }
 
-announce_build <- function(target, meta, config){
+announce_build <- function(target, meta, config) {
   set_progress(
     target = target,
     value = "in progress",
@@ -130,24 +133,20 @@ announce_build <- function(target, meta, config){
   console(imported = meta$imported, target = target, config = config)
 }
 
-conclude_build <- function(target, value, meta, config){
+conclude_build <- function(target, value, meta, config) {
   assert_output_files(target = target, meta = meta, config = config)
   handle_build_exceptions(target = target, meta = meta, config = config)
   store_outputs(target = target, value = value, meta = meta, config = config)
   invisible(value)
 }
 
-assert_output_files <- function(target, meta, config){
-  deps <- vertex_attr(
-    graph = config$graph,
-    name = "deps",
-    index = target
-  )[[1]]
+assert_output_files <- function(target, meta, config) {
+  deps <- config$layout[[target]]$deps_build
   files <- sort(unique(as.character(deps$file_out)))
-  missing_files <- Filter(x = files, f = function(x){
+  missing_files <- Filter(x = files, f = function(x) {
     !file.exists(drake::drake_unquote(x))
   })
-  if (length(missing_files)){
+  if (length(missing_files)) {
     drake_warning(
       "Missing files for target ", target, ":\n",
       multiline_message(missing_files),
@@ -156,24 +155,20 @@ assert_output_files <- function(target, meta, config){
   }
 }
 
-build_target <- function(target, meta, config){
-  if (identical(config$garbage_collection, TRUE)){
+build_target <- function(target, meta, config) {
+  if (identical(config$garbage_collection, TRUE)) {
     on.exit(gc())
   }
   retries <- 0
-  max_retries <- drake_plan_override(
-    target = target,
-    field = "retries",
-    config = config
-  ) %>%
-    as.numeric
-  while (retries <= max_retries){
-    build <- one_build(
+  layout <- config$layout[[target]] %||% list()
+  max_retries <- as.numeric(layout$retries %||NA% config$retries)
+  while (retries <= max_retries) {
+    build <- with_seed_timeout(
       target = target,
       meta = meta,
       config = config
     )
-    if (!inherits(build$meta$error, "error")){
+    if (!inherits(build$meta$error, "error")) {
       return(build)
     }
     retries <- retries + 1
@@ -185,7 +180,7 @@ build_target <- function(target, meta, config){
 process_import <- function(target, meta, config) {
   if (is_file(target)) {
     value <- NA
-  } else if (target %in% ls(config$envir, all.names = TRUE)) {
+  } else if (exists(x = target, envir = config$envir, inherits = FALSE)) {
     value <- config$envir[[target]]
   } else {
     value <- tryCatch(

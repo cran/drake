@@ -5,7 +5,7 @@
 \title{Generate a workflow plan data frame to
 analyze multiple datasets using multiple methods of analysis.}
 \usage{
-plan_analyses(plan, datasets)
+plan_analyses(plan, datasets, sep = "_")
 }
 \arguments{
 \item{plan}{workflow plan data frame of analysis methods.
@@ -17,6 +17,9 @@ the commands in the output will include \code{lm(your_dataset_1)},
 
 \item{datasets}{workflow plan data frame with instructions
 to make the datasets.}
+
+\item{sep}{character scalar, delimiter for creating
+the names of new targets}
 }
 \value{
 An evaluated workflow plan data frame of analysis targets.
@@ -43,6 +46,6 @@ my_plan <- rbind(datasets, ans)
 my_plan
 }
 \seealso{
-drake_plan, map_plan, reduce_by, gather_by, reduce_plan,
-gather_plan, evaluate_plan, expand_plan, plan_summaries
+\code{\link[=drake_plan]{drake_plan()}}, \code{\link[=map_plan]{map_plan()}}, \code{\link[=reduce_by]{reduce_by()}}, \code{\link[=gather_by]{gather_by()}}, \code{\link[=reduce_plan]{reduce_plan()}},
+\code{\link[=gather_plan]{gather_plan()}}, \code{\link[=evaluate_plan]{evaluate_plan()}}, \code{\link[=expand_plan]{expand_plan()}}, \code{\link[=plan_summaries]{plan_summaries()}}
 }

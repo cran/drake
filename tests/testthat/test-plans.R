@@ -155,7 +155,7 @@ test_with_dir("edge cases for plans", {
 
 test_with_dir("plan set 2", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  for (tidy_evaluation in c(TRUE, FALSE)){
+  for (tidy_evaluation in c(TRUE, FALSE)) {
     x <- drake_plan(
       a = c,
       b = "c",
@@ -173,7 +173,7 @@ test_with_dir("plan set 2", {
 
 test_with_dir("plan set 3", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  for (tidy_evaluation in c(TRUE, FALSE)){
+  for (tidy_evaluation in c(TRUE, FALSE)) {
   expect_warning(x <- drake_plan(
     a = c,
     b = "c",
@@ -189,7 +189,7 @@ test_with_dir("plan set 3", {
 
 test_with_dir("drake_plan() trims outer whitespace in target names", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  for (tidy_evaluation in c(TRUE, FALSE)){
+  for (tidy_evaluation in c(TRUE, FALSE)) {
     x <- drake_plan(list = c(` a` = 1, `b \t\n` = 2),
                     tidy_evaluation = tidy_evaluation)
     y <- drake_plan(a = 1, b = 2, tidy_evaluation = tidy_evaluation)
@@ -307,7 +307,7 @@ test_with_dir("ignore() suppresses updates", {
 
   # With ignore()
   con <- make(
-    plan = drake_plan(x = sqrt( ignore(arg) + 123)),
+    plan = drake_plan(x = sqrt( ignore(arg) + 123)), # nolint
     envir = envir,
     cache = cache
   )
@@ -317,7 +317,7 @@ test_with_dir("ignore() suppresses updates", {
   expect_equal(justbuilt(con), character(0))
 
   con$envir$arg2 <- con$envir$arg + 1234
-  con$plan <- drake_plan(x = sqrt( ignore  (arg2 ) + 123))
+  con$plan <- drake_plan(x = sqrt( ignore  (arg2 ) + 123)) # nolint
   con <- make_with_config(con)
   expect_equal(justbuilt(con), character(0))
 })
@@ -340,6 +340,7 @@ test_with_dir("standardized commands with ignore()", {
     standardize_command("f(sqrt( ignore  (fun(arg) + 7) + 123) )"),
     "{\n f(sqrt(ignore() + 123)) \n}"
   )
+
   expect_equal(
     standardize_command(" f (sqrt( drake::ignore(fun(arg) + 7) + 123 ))"),
     "{\n f(sqrt(ignore() + 123)) \n}"
@@ -349,23 +350,30 @@ test_with_dir("standardized commands with ignore()", {
     "{\n f(sqrt(ignore() + 123)) \n}"
   )
   expect_equal(
-    standardize_command("function(x){(sqrt( ignore(fun(arg) + 7) + 123))}"),
+    standardize_command("function(x) {(sqrt( ignore(fun(arg) + 7) + 123))}"),
     "{\n function(x) {\n    (sqrt(ignore() + 123))\n} \n}"
   )
-  f <- function(x){
-    (sqrt( ignore(fun(arg) + 7) + 123))
+  f <- function(x) {
+    (sqrt( ignore(fun(arg) + 7) + 123)) # nolint
   }
   b <- body(ignore_ignore(f))
-  for (a in names(attributes(b))){
+  for (a in names(attributes(b))) {
     attr(b, a) <- NULL
   }
   expect_equal(b, quote({  (sqrt(ignore() + 123)) })) # nolint
 })
 
+test_with_dir("can standardize command with other ignored symbols", {
+  expect_equal(
+    standardize_command("function(x) {(sqrt( drake_envir(arg) + 123))}"),
+    "{\n function(x) {\n    (sqrt(ignore() + 123))\n} \n}"
+  )
+})
+
 test_with_dir("ignore() in imported functions", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  f <- function(x){
-    (sqrt( ignore(sqrt(x) + 7) + 123))
+  f <- function(x) {
+    (sqrt( ignore(sqrt(x) + 7) + 123)) # nolint
   }
   plan <- drake_plan(x = f(1))
   cache <- storr::storr_environment()
@@ -376,13 +384,13 @@ test_with_dir("ignore() in imported functions", {
     readd(f, cache = cache, namespace = "kernels")[3],
     "    (sqrt(ignore() + 123))"
   )
-  f <- function(x){
-    (sqrt( ignore(sqrt(x) + 8) + 123))
+  f <- function(x) {
+    (sqrt( ignore(sqrt(x) + 8) + 123)) # nolint
   }
   config <- make(plan, cache = cache)
   expect_equal(justbuilt(config), character(0))
-  f <- function(x){
-    (sqrt( ignore(sqrt(x) + 8) + 124))
+  f <- function(x) {
+    (sqrt( ignore(sqrt(x) + 8) + 124)) # nolint
   }
   config <- make(plan, cache = cache)
   expect_equal(justbuilt(config), "x")
@@ -395,8 +403,8 @@ test_with_dir("custom column interface", {
     stop(!!tidyvar), worker = !!tidyvar, cpu = 4, custom = stop(), c2 = 5)
   y <- tibble::tibble(
     command = "stop(2)",
-    worker = 2,
     cpu = 4,
+    worker = 2,
     custom = "stop()",
     c2 = 5
   )
@@ -406,8 +414,8 @@ test_with_dir("custom column interface", {
   y <- tibble::tibble(
     target = "x",
     command = "stop(2)",
-    worker = 2,
     cpu = 4,
+    worker = 2,
     custom = "stop()",
     c2 = 5
   )
@@ -460,8 +468,8 @@ test_with_dir("bind_plans()", {
 
 test_with_dir("spaces in target names are replaced only when appropriate", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  pl <- drake_plan(a = x__, file_out("x__")) %>%
-    evaluate_plan(wildcard = "x__", values = c("b  \n  x y", "a x"))
+  pl <- drake_plan(a = x__, file_out("x__"))
+  pl <- evaluate_plan(pl, wildcard = "x__", values = c("b  \n  x y", "a x"))
   pl2 <- tibble::tibble(
     target = c(
       "a_b.....x.y", "a_a.x",
@@ -567,6 +575,7 @@ test_with_dir("'columns' argument to evaluate_plan()", {
 
 test_with_dir("drake_plan_call() produces the correct calls", {
   skip_on_cran()
+  skip_if_not_installed("styler")
   load_mtcars_example()
   my_plan$trigger <- NA
   my_plan$trigger[4] <- "trigger(condition = is_tuesday(), file = FALSE)"
@@ -574,32 +583,33 @@ test_with_dir("drake_plan_call() produces the correct calls", {
   pkgconfig::set_config("drake::strings_in_dots" = "literals")
   new_plan <- eval(drake_plan_call(my_plan))
   expected <- my_plan
-  expect_equal(new_plan, expected)
+  expect_equal(
+    new_plan[, sort(colnames(new_plan))],
+    expected[, sort(colnames(expected))]
+  )
 })
 
 test_with_dir("drake_plan_source()", {
   skip_on_cran()
   skip_if_not_installed("styler")
+  skip_if_not_installed("prettycode")
   plan <- drake::drake_plan(
-    small_data = download_data("https://some_website.com") %>%
-      select_my_columns() %>%
-      munge(),
+    small_data = download_data("https://some_website.com"),
     large_data_raw = target(
-      command = download_data("https://lots_of_data.com") %>%
-        select_top_columns(),
+      command = download_data("https://lots_of_data.com"),
       trigger = trigger(
         change = time_last_modified("https://lots_of_data.com"),
         command = FALSE,
         depend = FALSE
       ),
-      timeout = 1e3
+      elapsed = 1e3
     ),
     strings_in_dots = "literals"
   )
   x <- drake_plan_source(plan)
   y <- capture.output(print(x))
-  expect_true(grepl("^drake_plan", x[1]))
-  expect_true(grepl("^drake_plan", y[1]))
+  expect_true(grepl("drake_plan", x[1]))
+  expect_true(grepl("drake_plan", y[1]))
   writeLines(x, "script.R")
   plan2 <- source("script.R")$value
   expect_equal(plan, plan2)
@@ -618,7 +628,7 @@ test_with_dir("plan_to_code()", {
   expect_false(file.exists("report.md"))
   load_mtcars_example()
   plan0 <- my_plan
-  my_plan$command <- purrr::map(my_plan$command, rlang::parse_expr)
+  my_plan$command <- lapply(my_plan$command, rlang::parse_expr)
   path <- tempfile()
   plan_to_code(my_plan, path)
   source(path, local = TRUE)
@@ -626,7 +636,7 @@ test_with_dir("plan_to_code()", {
   expect_true(file.exists("report.md"))
   skip_if_not_installed("CodeDepends")
   plan <- code_to_plan(path)
-  expect_equal(dplyr::arrange(plan, target), dplyr::arrange(plan0, target))
+  expect_equal(plan[order(plan$target), ], plan0[order(plan0$target), ])
 })
 
 test_with_dir("plan_to_notebook()", {
@@ -634,7 +644,7 @@ test_with_dir("plan_to_notebook()", {
   expect_false(file.exists("report.md"))
   load_mtcars_example()
   plan0 <- my_plan
-  my_plan$command <- purrr::map(my_plan$command, rlang::parse_expr)
+  my_plan$command <- lapply(my_plan$command, rlang::parse_expr)
   path <- "my_notebook.Rmd"
   plan_to_notebook(my_plan, path)
   knitr::knit(path, quiet = TRUE)
@@ -642,5 +652,5 @@ test_with_dir("plan_to_notebook()", {
   expect_true(file.exists("report.md"))
   skip_if_not_installed("CodeDepends")
   plan <- code_to_plan(path)
-  expect_equal(dplyr::arrange(plan, target), dplyr::arrange(plan0, target))
+  expect_equal(plan[order(plan$target), ], plan0[order(plan0$target), ])
 })

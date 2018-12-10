@@ -1,7 +1,7 @@
-assert_cache <- function(cache){
+assert_cache <- function(cache) {
   cache_exists <- inherits(x = cache$driver, what = "driver_environment") ||
     file.exists(cache$driver$path)
-  if (!cache_exists){
+  if (!cache_exists) {
     stop("drake cache missing.", call. = FALSE)
   }
 }
@@ -27,19 +27,19 @@ assert_cache <- function(cache){
 #' cache_path(cache = mem)
 #' })
 #' }
-cache_path <- function(cache = NULL){
-  if (is.null(cache)){
+cache_path <- function(cache = NULL) {
+  if (is.null(cache)) {
     NULL
-  } else if ("storr" %in% class(cache)){
+  } else if ("storr" %in% class(cache)) {
     cache$driver$path
   } else {
     NULL
   }
 }
 
-force_cache_path <- function(cache = NULL){
+force_cache_path <- function(cache = NULL) {
   path <- cache_path(cache)
-  if (is.null(path)){
+  if (is.null(path)) {
     path <- default_cache_path()
   }
   path
@@ -55,9 +55,7 @@ force_cache_path <- function(cache = NULL){
 #'   if available. `NULL` otherwise.
 #' @inheritParams cached
 #' @inheritParams drake_config
-#' @param force logical, whether to load the cache
-#'   despite any back compatibility issues with the
-#'   running version of drake.
+#' @param force deprecated
 #' @param fetch_cache character vector containing lines of code.
 #'   The purpose of this code is to fetch the `storr` cache
 #'   with a command like `storr_rds()` or `storr_dbi()`,
@@ -82,15 +80,18 @@ get_cache <- function(
   force = FALSE,
   fetch_cache = NULL,
   console_log_file = NULL
-){
-  if (search){
+) {
+  deprecate_force(force)
+  if (search) {
     path <- find_cache(path = path)
   } else {
     path <- default_cache_path()
   }
   this_cache(
-    path = path, force = force, verbose = verbose,
-    fetch_cache = fetch_cache, console_log_file = console_log_file
+    path = path,
+    verbose = verbose,
+    fetch_cache = fetch_cache,
+    console_log_file = console_log_file
   )
 }
 
@@ -102,9 +103,8 @@ get_cache <- function(
 #' @inheritParams cached
 #' @inheritParams drake_config
 #' @param path file path of the cache
-#' @param force logical, whether to load the cache
-#'   despite any back compatibility issues with the
-#'   running version of drake.
+#' @param force deprecated
+#'   is compatible with your current version of drake.
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -119,16 +119,18 @@ get_cache <- function(
 #' })
 #' }
 this_cache <- function(
-  path = drake::default_cache_path(), force = FALSE,
+  path = drake::default_cache_path(),
+  force = FALSE,
   verbose = drake::default_verbose(),
   fetch_cache = NULL,
   console_log_file = NULL
-){
+) {
+  deprecate_force(force)
   usual_path_missing <- is.null(path) || !file.exists(path)
-  if (usual_path_missing & is.null(fetch_cache)){
+  if (usual_path_missing & is.null(fetch_cache)) {
     return(NULL)
   }
-  if (!is.null(path)){
+  if (!is.null(path)) {
     console_cache(
       config = list(
         cache_path = path,
@@ -138,7 +140,7 @@ this_cache <- function(
     )
   }
   fetch_cache <- as.character(fetch_cache)
-  if (length(fetch_cache) && nzchar(fetch_cache)){
+  if (length(fetch_cache) && nzchar(fetch_cache)) {
     cache <- eval(parse(text = localize(fetch_cache)))
   } else {
     cache <- drake_try_fetch_rds(path = path)
@@ -149,15 +151,13 @@ this_cache <- function(
     overwrite_hash_algos = FALSE,
     init_common_values = FALSE
   )
-  if (!force){
-    assert_compatible_cache(cache = cache)
-  }
+  cache_vers_warn(cache = cache)
   cache
 }
 
-drake_try_fetch_rds <- function(path){
+drake_try_fetch_rds <- function(path) {
   out <- try(drake_fetch_rds(path = path), silent = TRUE)
-  if (!inherits(out, "try-error")){
+  if (!inherits(out, "try-error")) {
     return(out)
   }
   stop(
@@ -170,7 +170,7 @@ drake_try_fetch_rds <- function(path){
   )
 }
 
-drake_fetch_rds <- function(path){
+drake_fetch_rds <- function(path) {
   if (!file.exists(path)) {
     return(NULL)
   }
@@ -222,8 +222,8 @@ new_cache <- function(
   long_hash_algo = drake::default_long_hash_algo(),
   ...,
   console_log_file = NULL
-){
-  if (!is.null(type)){
+) {
+  if (!is.null(type)) {
     warning(
       "The 'type' argument of new_cache() is deprecated. ",
       "Please see the storage guide in the manual for the new cache API:",
@@ -266,6 +266,7 @@ new_cache <- function(
 #' in-memory caches such as [storr_environment()].
 #' @return A drake/storr cache.
 #' @inheritParams cached
+#' @inheritParams this_cache
 #' @inheritParams drake_config
 #' @param path file path of the cache
 #' @param short_hash_algo short hash algorithm for the cache.
@@ -294,12 +295,15 @@ recover_cache <- function(
   verbose = drake::default_verbose(),
   fetch_cache = NULL,
   console_log_file = NULL
-){
+) {
+  deprecate_force(force)
   cache <- this_cache(
-    path = path, force = force, verbose = verbose,
-    fetch_cache = fetch_cache, console_log_file = console_log_file
+    path = path,
+    verbose = verbose,
+    fetch_cache = fetch_cache,
+    console_log_file = console_log_file
   )
-  if (is.null(cache)){
+  if (is.null(cache)) {
     cache <- new_cache(
       path = path,
       verbose = verbose,
@@ -320,7 +324,7 @@ recover_cache <- function(
 #' \dontrun{
 #' default_cache_path()
 #' }
-default_cache_path <- function(){
+default_cache_path <- function() {
   file.path(getwd(), ".drake")
 }
 
@@ -392,12 +396,12 @@ configure_cache <- function(
   verbose = drake::default_verbose(),
   jobs = 1,
   init_common_values = FALSE
-){
+) {
   short_hash_algo <- match.arg(short_hash_algo,
     choices = available_hash_algos())
   long_hash_algo <- match.arg(long_hash_algo,
     choices = available_hash_algos())
-  if (log_progress){
+  if (log_progress) {
     warning(
       "The `log_progress` argument of `configure_cache()` is deprecated.",
       call. = FALSE
@@ -405,14 +409,14 @@ configure_cache <- function(
   }
   short_exists <- cache$exists(key = "short_hash_algo", namespace = "config")
   long_exists <- cache$exists(key = "long_hash_algo", namespace = "config")
-  if (overwrite_hash_algos | !short_exists){
+  if (overwrite_hash_algos | !short_exists) {
     cache$set(
       key = "short_hash_algo",
       value = short_hash_algo,
       namespace = "config"
     )
   }
-  if (overwrite_hash_algos | !long_exists){
+  if (overwrite_hash_algos | !long_exists) {
     cache$set(
       key = "long_hash_algo",
       value = long_hash_algo,
@@ -421,14 +425,14 @@ configure_cache <- function(
   }
   chosen_algo <- short_hash(cache)
   check_storr_short_hash(cache = cache, chosen_algo = chosen_algo)
-  if (init_common_values){
+  if (init_common_values) {
     init_common_values(cache)
   }
   cache
 }
 
 # Pre-set the values to avoid https://github.com/richfitz/storr/issues/80.
-init_common_values <- function(cache){
+init_common_values <- function(cache) {
   set_initial_drake_version(cache)
   common_values <- list(TRUE, FALSE, "finished", "in progress", "failed")
   cache$mset(
@@ -438,10 +442,10 @@ init_common_values <- function(cache){
   )
 }
 
-clear_tmp_namespace <- function(cache, jobs, namespace){
+clear_tmp_namespace <- function(cache, jobs, namespace) {
   lightly_parallelize(
     X = cache$list(),
-    FUN = function(target){
+    FUN = function(target) {
       cache$del(key = target, namespace = namespace)
     },
     jobs = jobs
@@ -450,17 +454,17 @@ clear_tmp_namespace <- function(cache, jobs, namespace){
   invisible()
 }
 
-set_initial_drake_version <- function(cache){
+set_initial_drake_version <- function(cache) {
   if (cache$exists(
     key = "initial_drake_version",
     namespace = "session"
-  )){
+  )) {
     return()
   } else if (cache$exists(
     key = "sessionInfo",
     namespace = "session"
-  )){
-    last_session <- drake_session(cache = cache)
+  )) {
+    last_session <- drake_get_session_info(cache = cache)
   } else {
     last_session <- NULL
   }
@@ -472,8 +476,8 @@ set_initial_drake_version <- function(cache){
   )
 }
 
-drake_version <- function(session_info = NULL){ # nolint
-  if (!length(session_info)){
+drake_version <- function(session_info = NULL) { # nolint
+  if (!length(session_info)) {
     return(packageVersion("drake"))
   }
   all_pkgs <- c(
@@ -483,72 +487,81 @@ drake_version <- function(session_info = NULL){ # nolint
   all_pkgs$drake$Version # nolint
 }
 
-is_default_cache <- function(cache){
+is_default_cache <- function(cache) {
   "driver_rds" %in% class(cache$driver) &&
     identical(cache$driver$mangle_key, TRUE)
 }
 
-safe_get <- function(key, namespace, config){
+safe_get <- function(key, namespace, config) {
   out <- just_try(config$cache$get(key = key, namespace = namespace))
-  if (inherits(out, "try-error")){
+  if (inherits(out, "try-error")) {
     out <- NA
   }
   out
 }
 
-safe_get_hash <- function(key, namespace, config){
+safe_get_hash <- function(key, namespace, config) {
   out <- just_try(config$cache$get_hash(key = key, namespace = namespace))
-  if (inherits(out, "try-error")){
+  if (inherits(out, "try-error")) {
     out <- NA
   }
   out
 }
 
-kernel_exists <- function(target, config){
+kernel_exists <- function(target, config) {
   config$cache$exists(key = target, namespace = "kernels")
 }
 
 target_exists <- kernel_exists
 
-assert_compatible_cache <- function(cache){
-  if (is.null(cache)){
-    return()
+cache_vers_check <- function(cache) {
+  if (is.null(cache)) {
+    return(character(0))
   }
   err <- try(
-    old <- drake_version(session_info = drake_session(cache = cache)), # nolint
+    old <- drake_version(session_info = drake_get_session_info(cache = cache)), # nolint
     silent = TRUE
   )
-  if (inherits(err, "try-error")){
+  if (inherits(err, "try-error")) {
     return(invisible())
   }
-  if (compareVersion(old, "5.4.0") < 0){
-    warning(
-      "The improvements to speed and reproducibility in drake version 6.0.0 ",
-      "put all targets out of date in projects previously built ",
-      "with drake version 5.4.0 or earlier. Sorry for the inconvenience.",
-      call. = FALSE
+  if (compareVersion(old, "5.4.0") < 0) {
+    paste0(
+      "This project was last run with drake version ",
+      old, ".\nYour cache is not compatible with the current ",
+      "version of drake (",
+      packageVersion("drake"), ").\nTo run your project with version ",
+      packageVersion("drake"), ", use make(force = TRUE).\n",
+      "But be warned: if you do that, ",
+      "all you targets will run from scratch.\nYou may instead wish to ",
+      "downgrade drake to version ", old, "."
     )
-  }
-  if (compareVersion(old, "4.4.0") <= 0){
-    stop(
-      "The project at '", cache$driver$path,
-      "' was previously built by drake ", old, ". ",
-      "You are running drake ", packageVersion("drake"),
-      ", which is not back-compatible. ",
-      "Run make(..., force = TRUE) to update.",
-      call. = FALSE
-    )
+  } else {
+    character(0)
   }
 }
 
-# Not true memoization, but still useful in build_drake_graph()
-memo_expr <- function(expr, cache, ...){
-  if (is.null(cache)){
+cache_vers_stop <- function(cache){
+  msg <- cache_vers_check(cache)
+  if (length(msg)) {
+    stop(msg, call. = FALSE)
+  }
+}
+
+cache_vers_warn <- function(cache){
+  msg <- cache_vers_check(cache)
+  if (length(msg)) {
+    warning(msg, call. = FALSE)
+  }
+}
+
+memo_expr <- function(expr, cache, ...) {
+  if (is.null(cache)) {
     return(force(expr))
   }
   lang <- match.call(expand.dots = FALSE)$expr
   key <- digest::digest(list(lang, ...), algo = "sha256")
-  if (cache$exists(key = key, namespace = "memoize")){
+  if (cache$exists(key = key, namespace = "memoize")) {
     return(cache$get(key = key, namespace = "memoize"))
   }
   value <- force(expr)

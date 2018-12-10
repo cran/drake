@@ -2,7 +2,7 @@ drake_context("edge cases")
 
 test_with_dir("skip everything", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  f <- function(x){
+  f <- function(x) {
     x
   }
   pl <- drake_plan(a = f(0))
@@ -63,7 +63,7 @@ test_with_dir("failed targets do not become up to date", {
   plan <- drake_plan(
     d = 3,
     a = {
-      if (fail){
+      if (fail) {
         stop("my failure message")
       } else {
         d
@@ -82,16 +82,6 @@ test_with_dir("failed targets do not become up to date", {
   expect_true(grepl("my failure message", meta$error$message, fixed = TRUE))
   con <- drake_config(plan)
   expect_equal(sort(outdated(con)), sort(c("a", "c")))
-})
-
-test_with_dir("drake_plan_override() quits correctly in error", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  con <- dbug()
-  con$plan$missing <- "nope"
-  expect_error(
-    drake_plan_override(target = "missing", field = "missing", config = con),
-    regexp = "not in the workflow plan"
-  )
 })
 
 test_with_dir("config and make without safety checks", {
@@ -222,7 +212,7 @@ test_with_dir("warning when file_out() files not produced", {
   skip_on_cran()
   plan <- drake_plan(
     x = {
-      fs::file_create(file_out("a"))
+      file.create(file_out("a"))
       file_out("b", "c")
     },
     strings_in_dots = "literals"

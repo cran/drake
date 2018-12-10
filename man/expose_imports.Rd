@@ -22,7 +22,7 @@ You will later pass this \code{envir} to \code{\link[=make]{make()}}.}
 of the imports.}
 }
 \value{
-the environment that the exposed imports are loaded into.
+The environment that the exposed imports are loaded into.
 Defaults to your R workspace.
 }
 \description{
@@ -54,10 +54,10 @@ test_with_dir("contain this example's side effects", {
 # which computes the hash of an object.
 
 library(digest) # Has the digest() function.
-g <- function(x){
+g <- function(x) {
   digest(x)
 }
-f <- function(x){
+f <- function(x) {
   g(x)
 }
 plan <- drake_plan(x = f(1))
@@ -97,7 +97,7 @@ length(cached(cache = cache))
 
 # Note: if you use `digest::digest()`` instead of just `digest()`,
 # `drake` does not dive into the function body anymore.
-g <- function(x){
+g <- function(x) {
   digest::digest(x) # Was previously just digest()
 }
 config <- drake_config(plan)

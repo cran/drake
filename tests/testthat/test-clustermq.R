@@ -2,8 +2,8 @@ drake_context("clustermq")
 
 test_with_dir("clustermq parallelism", {
   skip_on_cran()
-  if ("package:clustermq" %in% search()){
-    eval(parse(text = "detach('package:clustermq', unload = TRUE)"))
+  if ("package:clustermq" %in% search()) {
+    detach("package:clustermq", unload = TRUE) # nolint
   }
   options(clustermq.scheduler = "multicore")
   skip_if_not_installed("clustermq")
@@ -12,8 +12,8 @@ test_with_dir("clustermq parallelism", {
   e <- eval(parse(text = scenario$envir))
   jobs <- scenario$jobs # ignoring for now, using 2 jobs
   load_mtcars_example(envir = e)
-  for (parallelism in c("clustermq", "clustermq_staged")){
-    for (caching in c("master", "worker")){
+  for (parallelism in c("clustermq", "clustermq_staged")) {
+    for (caching in c("master", "worker")) {
       config <- drake_config(e$my_plan, envir = e)
       expect_equal(length(outdated(config)), nrow(config$plan))
       make(
@@ -38,7 +38,7 @@ test_with_dir("clustermq parallelism", {
       clean(destroy = TRUE)
     }
   }
-  if ("package:clustermq" %in% search()){
-    eval(parse(text = "detach('package:clustermq', unload = TRUE)"))
+  if ("package:clustermq" %in% search()) {
+    detach("package:clustermq", unload = TRUE) # nolint
   }
 })

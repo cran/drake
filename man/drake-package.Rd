@@ -4,15 +4,11 @@
 \name{drake-package}
 \alias{drake-package}
 \alias{drake}
-\title{drake is a pipeline toolkit
-(\url{https://github.com/pditommaso/awesome-pipeline})
-and a scalable, R-focused solution for reproducibility
-and high-performance computing.}
+\title{drake: A pipeline toolkit for reproducible computation at scale.}
 \description{
 drake is a pipeline toolkit
 (\url{https://github.com/pditommaso/awesome-pipeline})
-and a scalable, R-focused solution for reproducibility
-and high-performance computing.
+and a scalable, R-focused solution for reproducibility and high-performance computing.
 }
 \examples{
 \dontrun{
@@ -21,7 +17,7 @@ library(drake)
 load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Build everything.
 make(my_plan) # Nothing is done because everything is already up to date.
-reg2 = function(d){ # Change one of your functions.
+reg2 = function(d) { # Change one of your functions.
   d$x3 = d$x^3
   lm(y ~ x3, data = d)
 }

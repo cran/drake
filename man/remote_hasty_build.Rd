@@ -2,7 +2,7 @@
 % Please edit documentation in R/hasty.R
 \name{remote_hasty_build}
 \alias{remote_hasty_build}
-\title{Build a target using "hasty" parallelism}
+\title{Build a target on a remote worker using "hasty" parallelism}
 \usage{
 remote_hasty_build(target, deps = NULL, config)
 }

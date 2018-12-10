@@ -22,9 +22,10 @@
 #'
 #' @inheritParams cached
 #'
-#' @param ... targets to remove from the cache: as names (symbols),
-#'   character strings, or `dplyr`-style `tidyselect`
-#'   commands such as `starts_with()`.
+#' @param ... targets to remove from the cache: as names (symbols) or
+#'   character strings. If the `tidyselect` package is installed,
+#'   you can also supply `dplyr`-style `tidyselect`
+#'   commands such as `starts_with()`, `ends_with()`, and `one_of()`.
 #'
 #' @param list character vector naming targets to be removed from the
 #'   cache. Similar to the `list` argument of [remove()].
@@ -65,9 +66,6 @@
 #' clean(summ_regression1_large, small)
 #' # Those objects should be gone.
 #' cached(no_imported_objects = TRUE)
-#' # How about `tidyselect`?
-#' clean(starts_with("coef"))
-#' cached(no_imported_objects = TRUE)
 #' # Rebuild the missing targets.
 #' make(my_plan)
 #' # Remove all the targets and imports.
@@ -104,66 +102,72 @@ clean <- function(
   force = FALSE,
   garbage_collection = FALSE,
   purge = FALSE
-){
-  if (is.null(cache)){
+) {
+  if (is.null(cache)) {
     cache <- get_cache(
       path = path, search = search, verbose = verbose, force = force)
   }
-  if (is.null(cache)){
+  if (is.null(cache)) {
     return(invisible())
   }
-  targets <- drake_select(
-    cache = cache,
-    ...,
-    namespaces = target_namespaces(),
-    list = list
-  )
-  if (!length(targets) && is.null(c(...))){
+  targets <- c(as.character(match.call(expand.dots = FALSE)$...), list)
+  if (exists_tidyselect()) {
+    targets <- drake_tidyselect(
+      cache = cache, ...,
+      namespaces = target_namespaces(),
+      list = list
+    )
+  }
+  if (!length(targets) && is.null(c(...))) {
     targets <- cache$list()
   }
-  if (purge){
+  if (purge) {
     namespaces <- target_namespaces(default = cache$default_namespace)
   } else {
     namespaces <- cleaned_namespaces(default = cache$default_namespace)
   }
   graph <- read_drake_graph(cache = cache)
+  layout <- read_drake_layout(cache = cache)
   lightly_parallelize(
     X = targets,
     FUN = clean_single_target,
     jobs = jobs,
     cache = cache,
     namespaces = namespaces,
-    graph = graph
+    graph = graph,
+    layout = layout
   )
-  if (destroy){
+  if (destroy) {
     cache$destroy()
   }
-  if (garbage_collection){
+  if (garbage_collection) {
     cache$gc()
   }
   invisible()
 }
 
-clean_single_target <- function(target, cache, namespaces, graph){
+clean_single_target <- function(
+  target,
+  cache,
+  namespaces,
+  graph,
+  layout
+) {
   files <- character(0)
-  if (is_file(target)){
-    if (cache$exists(target, namespace = "meta")){
-      if (!is_imported(target, cache)){
+  if (is_file(target)) {
+    if (cache$exists(target, namespace = "meta")) {
+      if (!is_imported_cache(target, cache)) {
         files <- target
       }
     }
   }
-  if (target %in% igraph::V(graph)$name){
-    deps <- vertex_attr(
-      graph = graph,
-      name = "deps",
-      index = target
-    )[[1]]
+  if (target %in% igraph::V(graph)$name) {
+    deps <- layout[[target]]$deps_build
     files <- sort(unique(as.character(deps$file_out)))
   }
   unlink(drake_unquote(files))
-  for (namespace in namespaces){
-    for (key in c(target, files)){
+  for (namespace in namespaces) {
+    for (key in c(target, files)) {
       cache$del(key = key, namespace = namespace)
     }
   }
@@ -200,8 +204,8 @@ drake_gc <- function(
   verbose = drake::default_verbose(),
   cache = NULL,
   force = FALSE
-){
-  if (is.null(cache)){
+) {
+  if (is.null(cache)) {
     cache <- get_cache(
       path = path,
       search = search,
@@ -209,15 +213,15 @@ drake_gc <- function(
       force = force
     )
   }
-  if (!is.null(cache)){
+  if (!is.null(cache)) {
     cache$gc()
     rm_bad_cache_filenames(cache)
   }
   invisible()
 }
 
-rm_bad_cache_filenames <- function(cache){
-  if (is_default_cache(cache)){
+rm_bad_cache_filenames <- function(cache) {
+  if (is_default_cache(cache)) {
     files <- list.files(path = cache$driver$path, recursive = TRUE)
     keep <- grepl(pattern = "^[-_./\\0-9a-zA-Z]*$", x = files)
     unlink(files[!keep], recursive = TRUE)
@@ -269,13 +273,13 @@ rescue_cache <- function(
     path = path, search = search, verbose = verbose, force = force),
   jobs = 1,
   garbage_collection = FALSE
-){
-  if (is.null(cache)){
+) {
+  if (is.null(cache)) {
     return(invisible())
   }
-  for (namespace in cache$list_namespaces()){
+  for (namespace in cache$list_namespaces()) {
     X <- cache$list(namespace = namespace)
-    if (!is.null(targets)){
+    if (!is.null(targets)) {
       X <- intersect(X, targets)
     }
     lightly_parallelize(
@@ -286,23 +290,23 @@ rescue_cache <- function(
       namespace = namespace
     )
   }
-  if (garbage_collection){
+  if (garbage_collection) {
     cache$gc()
   }
   invisible(cache)
 }
 
-rescue_del <- function(key, cache, namespace){
+rescue_del <- function(key, cache, namespace) {
   tryCatch(
     touch_storr_object(key = key, cache = cache, namespace = namespace),
-    error = function(e){
+    error = function(e) {
       cache$del(key = key, namespace = namespace)
     }
   )
   invisible(NULL)
 }
 
-touch_storr_object <- function(key, cache, namespace){
+touch_storr_object <- function(key, cache, namespace) {
   envir <- environment()
   hash <- cache$get_hash(key = key, namespace = namespace)
   value <- cache$driver$get_object(hash = hash)

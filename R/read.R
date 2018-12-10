@@ -26,9 +26,9 @@
 #'   and then treat those loaded targets as dependencies.
 #'   That way, [make()] will automatically (re)run the report if those
 #'   dependencies change.
-#' Please do not put calls to [loadd()] or [readd()] inside
+#' @note Please do not put calls to [loadd()] or [readd()] inside
 #' your custom (imported) functions or the commands in your [drake_plan()].
-#' This create confusion inside [make()], which has its own ways of
+#' This creates confusion inside [make()], which has its own ways of
 #' interacting with the cache.
 #' @seealso [cached()], [built()], [imported()], [drake_plan()], [make()]
 #' @export
@@ -67,18 +67,18 @@ readd <- function(
   namespace = NULL,
   verbose = drake::default_verbose(),
   show_source = FALSE
-){
+) {
   # if the cache is null after trying get_cache:
-  if (is.null(cache)){
+  if (is.null(cache)) {
     stop("cannot find drake cache.")
   }
-  if (!character_only){
+  if (!character_only) {
     target <- as.character(substitute(target))
   }
-  if (is.null(namespace)){
+  if (is.null(namespace)) {
     namespace <- cache$default_namespace
   }
-  if (show_source){
+  if (show_source) {
     show_source(
       target = target,
       config = list(cache = cache),
@@ -96,14 +96,14 @@ readd <- function(
 #' @rdname readd
 #' @seealso [cached()], [built()], [imported()], [drake_plan()], [make()]
 #' @export
-#' @return `NULL`
 #'
 #' @inheritParams cached
 #' @inheritParams readd
 #'
-#' @param ... targets to load from the cache: as names (symbols),
-#'   character strings, or `dplyr`-style `tidyselect`
-#'   commands such as `starts_with()`.
+#' @param ... targets to load from the cache: as names (symbols) or
+#'   character strings. If the `tidyselect` package is installed,
+#'   you can also supply `dplyr`-style `tidyselect`
+#'   commands such as `starts_with()`, `ends_with()`, and `one_of()`.
 #'
 #' @param list character vector naming targets to be loaded from the
 #'   cache. Similar to the `list` argument of [remove()].
@@ -138,7 +138,7 @@ readd <- function(
 #'     with [assign()].
 #'   - `"promise"`: lazy loading with [delayedAssign()]
 #'   - `"bind"`: lazy loading with active bindings:
-#'     [bindr::populate_env()].
+#'     `bindr::populate_env()`.
 #'   - `TRUE`: same as `"promise"`.
 #'   - `FALSE`: same as `"eager"`.
 #'
@@ -150,6 +150,10 @@ readd <- function(
 #' @param replace logical. If `FALSE`,
 #'   items already in your environment
 #'   will not be replaced.
+#'  
+#' @param tidyselect logical, whether to enable
+#'   `tidyselect` expressions in `...` like
+#'   `starts_with("prefix")` and `ends_with("suffix")`.
 #'
 #' @examples
 #' \dontrun{
@@ -161,9 +165,6 @@ readd <- function(
 #' # For many targets, you can parallelize loadd()
 #' # using the 'jobs' argument.
 #' loadd(list = c("small", "large"), jobs = 2)
-#' ls()
-#' # How about tidyselect?
-#' loadd(starts_with("summ"))
 #' ls()
 #' # Load the dependencies of the target, coef_regression2_small
 #' loadd(coef_regression2_small, deps = TRUE)
@@ -200,28 +201,38 @@ loadd <- function(
   lazy = "eager",
   graph = NULL,
   replace = TRUE,
-  show_source = FALSE
-){
+  show_source = FALSE,
+  tidyselect = TRUE
+) {
   force(envir)
-  if (is.null(cache)){
+  if (is.null(cache)) {
     stop("cannot find drake cache.")
   }
-  if (is.null(namespace)){
+  if (is.null(namespace)) {
     namespace <- cache$default_namespace
   }
-  targets <- drake_select(
-    cache = cache, ..., namespaces = namespace, list = list)
-  if (!length(targets) && !length(list(...))){
+  targets <- c(as.character(match.call(expand.dots = FALSE)$...), list)
+  if (tidyselect) {
+    if (exists_tidyselect()) {
+      targets <- drake_tidyselect(
+        cache = cache,
+        ...,
+        namespaces = namespace,
+        list = list
+      )
+    }
+  }
+  if (!length(targets) && !length(list(...))) {
     targets <- cache$list()
   }
-  if (imported_only){
+  if (imported_only) {
     targets <- imported_only(targets = targets, cache = cache, jobs = jobs)
   }
-  if (!length(targets)){
+  if (!length(targets)) {
     stop("no targets to load.")
   }
-  if (deps){
-    if (is.null(graph)){
+  if (deps) {
+    if (is.null(graph)) {
       graph <- read_drake_graph(cache = cache)
     }
     targets <- dependencies(targets = targets, config = list(graph = graph))
@@ -229,11 +240,11 @@ loadd <- function(
       X = targets,
       FUN = cache$exists,
       jobs = jobs
-    ) %>%
-      unlist
+    )
+    exists <- unlist(exists)
     targets <- targets[exists]
   }
-  if (!replace){
+  if (!replace) {
     targets <- setdiff(targets, ls(envir, all.names = TRUE))
   }
   targets <- exclude_foreign_imports(
@@ -241,7 +252,7 @@ loadd <- function(
     cache = cache,
     jobs = jobs
   )
-  if (show_source){
+  if (show_source) {
     lapply(
       X = targets,
       FUN = show_source,
@@ -257,7 +268,7 @@ loadd <- function(
   invisible()
 }
 
-exclude_foreign_imports <- function(targets, cache, jobs){
+exclude_foreign_imports <- function(targets, cache, jobs) {
   parallel_filter(
     x = targets,
     f = is_not_foreign_import_obj,
@@ -266,11 +277,11 @@ exclude_foreign_imports <- function(targets, cache, jobs){
   )
 }
 
-is_not_foreign_import_obj <- function(target, cache){
-  if (is_file(target)){
+is_not_foreign_import_obj <- function(target, cache) {
+  if (is_file(target)) {
     return(TRUE)
   }
-  if (!cache$exists(key = target, namespace = "meta")){
+  if (!cache$exists(key = target, namespace = "meta")) {
     return(FALSE)
   }
   meta <- diagnose(
@@ -282,17 +293,17 @@ is_not_foreign_import_obj <- function(target, cache){
   identical(meta$imported, FALSE) || identical(meta$foreign, FALSE)
 }
 
-parse_lazy_arg <- function(lazy){
-  if (identical(lazy, FALSE)){
+parse_lazy_arg <- function(lazy) {
+  if (identical(lazy, FALSE)) {
     "eager"
-  } else if (identical(lazy, TRUE)){
+  } else if (identical(lazy, TRUE)) {
     "promise"
   } else {
     match.arg(arg = lazy, choices = c("eager", "promise", "bind"))
   }
 }
 
-load_target <- function(target, cache, namespace, envir, verbose, lazy){
+load_target <- function(target, cache, namespace, envir, verbose, lazy) {
   lazy <- parse_lazy_arg(lazy)
   switch(
     lazy,
@@ -327,7 +338,7 @@ load_target <- function(target, cache, namespace, envir, verbose, lazy){
 #' @keywords internal
 #' @export
 #' @inheritParams loadd
-eager_load_target <- function(target, cache, namespace, envir, verbose){
+eager_load_target <- function(target, cache, namespace, envir, verbose) {
   value <- readd(
     target,
     character_only = TRUE,
@@ -341,7 +352,7 @@ eager_load_target <- function(target, cache, namespace, envir, verbose){
   invisible()
 }
 
-promise_load_target <- function(target, cache, namespace, envir, verbose){
+promise_load_target <- function(target, cache, namespace, envir, verbose) {
   eval_env <- environment()
   delayedAssign(
     x = target,
@@ -357,10 +368,10 @@ promise_load_target <- function(target, cache, namespace, envir, verbose){
   )
 }
 
-bind_load_target <- function(target, cache, namespace, envir, verbose){
+bind_load_target <- function(target, cache, namespace, envir, verbose) {
   assert_pkg("bindr")
   # Allow active bindings to overwrite existing variables.
-  if (target %in% ls(envir)){
+  if (exists(x = target, envir = envir, inherits = FALSE)) {
     message(
       "Replacing already-loaded variable ", target,
       " with an active binding."
@@ -370,8 +381,8 @@ bind_load_target <- function(target, cache, namespace, envir, verbose){
   bindr::populate_env(
     env = envir,
     names = as.character(target),
-    fun = function(key, cache, namespace){
-      if (!length(namespace)){
+    fun = function(key, cache, namespace) {
+      if (!length(namespace)) {
         # Now impractical to cover because loadd() checks the namespace,
         # but good to have around anyway.
         namespace <- cache$default_namespace # nocov
@@ -420,7 +431,7 @@ read_drake_config <- function(
   verbose = drake::default_verbose(),
   jobs = 1,
   envir = parent.frame()
-){
+) {
   force(envir)
   if (is.null(cache)) {
     cache <- get_cache(path = path, search = search, verbose = verbose)
@@ -431,13 +442,13 @@ read_drake_config <- function(
   keys <- cache$list(namespace = "config")
   out <- lightly_parallelize(
     X = keys,
-    FUN = function(item){
+    FUN = function(item) {
       cache$get(key = item, namespace = "config", use_cache = FALSE)
     },
     jobs = jobs
   )
   names(out) <- keys
-  if (is.null(out$envir)){
+  if (is.null(out$envir)) {
     out$envir <- envir
   }
   # The file system of the original config$cache could have moved.
@@ -469,14 +480,14 @@ read_drake_graph <- function(
   search = TRUE,
   cache = NULL,
   verbose = drake::default_verbose()
-){
-  if (is.null(cache)){
+) {
+  if (is.null(cache)) {
     cache <- get_cache(path = path, search = search, verbose = verbose)
   }
-  if (is.null(cache)){
+  if (is.null(cache)) {
     stop("cannot find drake cache.")
   }
-  if (cache$exists(key = "graph", namespace = "config")){
+  if (cache$exists(key = "graph", namespace = "config")) {
     cache$get(key = "graph", namespace = "config", use_cache = FALSE)
   } else {
     make_empty_graph()
@@ -505,17 +516,31 @@ read_drake_plan <- function(
   search = TRUE,
   cache = NULL,
   verbose = drake::default_verbose()
-){
-  if (is.null(cache)){
+) {
+  if (is.null(cache)) {
     cache <- get_cache(path = path, search = search, verbose = verbose)
   }
-  if (is.null(cache)){
+  if (is.null(cache)) {
     stop("cannot find drake cache.")
   }
-  if (cache$exists(key = "plan", namespace = "config")){
+  if (cache$exists(key = "plan", namespace = "config")) {
     cache$get(key = "plan", namespace = "config", use_cache = FALSE)
   } else {
     drake_plan()
+  }
+}
+
+# TODO: the other read_drake_*() functions should be as minimal
+# as this one and probably not exported.
+read_drake_layout <- function(cache){
+  if (cache$exists(key = "layout", namespace = "config")) {
+    cache$get(
+      key = "layout",
+      namespace = "config",
+      use_cache = FALSE
+    )
+  } else {
+    list()
   }
 }
 
@@ -536,9 +561,9 @@ read_drake_plan <- function(
 #' cache <- storr::storr_environment() # Just for the examples.
 #' my_plan <- drake_plan(
 #'   target1 = sqrt(1234),
-#'   target2 = rnorm(n = 1, mean = target1)
+#'   target2 = sample.int(n = 12, size = 1) + target1
 #' )
-#' tmp <- runif(1) # Needed to get a .Random.seed, but not for drake.
+#' tmp <- sample.int(1) # Needed to get a .Random.seed, but not for drake.
 #' digest::digest(.Random.seed) # Fingerprint of the current R session's seed.
 #' make(my_plan, cache = cache) # Run the project, build the targets.
 #' digest::digest(.Random.seed) # Your session's seed did not change.
@@ -546,7 +571,7 @@ read_drake_plan <- function(
 #' read_drake_seed(cache = cache)
 #' readd(target2, cache = cache) # Randomly-generated target data.
 #' clean(target2, cache = cache) # Oops, I removed the data!
-#' tmp <- runif(1) # Maybe the R session's seed also changed.
+#' tmp <- sample.int(1) # Maybe the R session's seed also changed.
 #' make(my_plan, cache = cache) # Rebuild target2.
 #' # Same as before:
 #' read_drake_seed(cache = cache)
@@ -570,14 +595,14 @@ read_drake_seed <- function(
   search = TRUE,
   cache = NULL,
   verbose = drake::default_verbose()
-){
-  if (is.null(cache)){
+) {
+  if (is.null(cache)) {
     cache <- get_cache(path = path, search = search, verbose = verbose)
   }
-  if (is.null(cache)){
+  if (is.null(cache)) {
     stop("cannot find drake cache.")
   }
-  if (cache$exists(key = "seed", namespace = "config")){
+  if (cache$exists(key = "seed", namespace = "config")) {
     cache$get(key = "seed", namespace = "config")
   } else {
     stop("Pseudo-random seed not found in the cache.")

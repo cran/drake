@@ -1,38 +1,22 @@
-is_parsable <- Vectorize(function(x){
-  tryCatch({
-      parse(text = x)
-      TRUE
-    },
-    error = error_false
-  )
-},
-"x")
-
-extract_filenames <- function(command){
-  if (!safe_grepl("'", command, fixed = TRUE)){
+extract_filenames <- function(command) {
+  if (!safe_grepl("'", command, fixed = TRUE)) {
     return(character(0))
   }
-  splits <- stringi::stri_split_fixed(command, "'")[[1]]
+  splits <- paste(" ", command, " ")
+  splits <- strsplit(splits, split = "'")
+  splits <- unlist(splits)
   splits[seq(from = 2, to = length(splits), by = 2)]
 }
 
-# This is the version of the command that is
-# actually run in make(), not the version
-# that is cached and treated as a dependency.
-# It needs to (1) wrap the command in a function
-# to protect the user's environment from side effects,
-# and (2) call rlang::expr() to enable tidy evaluation
-# features such as quasiquotation.
-preprocess_command <- function(target, config){
-  text <- config$plan$command[config$plan$target == target] %>%
-    wrap_command
-  parse(text = text, keep.source = FALSE) %>%
-    eval(envir = config$envir)
-}
-
-# Use tidy evaluation to complete the contents of a command.
-wrap_command <- function(command){
-  paste0("rlang::expr(local({\n", command, "\n}))")
+# Get the command ready for tidy eval prep
+# and then pure eval (no side effects).
+preprocess_command <- function(command, config) {
+  if (is.character(command)){
+    command <- parse(text = command)
+  }
+  command <- as.call(c(quote(`{`), command))
+  command <- as.call(c(quote(local), command))
+  as.call(c(quote(rlang::expr), command))
 }
 
 # Can remove once we remove fetch_cache.
@@ -40,16 +24,6 @@ wrap_command <- function(command){
 # to optionally do all the caching.
 localize <- function(command) {
   paste0("local({\n", command, "\n})")
-}
-
-# This version of the command will be hashed and cached
-# as a dependency. When the command changes nontrivially,
-# drake will react. Otherwise, changes to whitespace or
-# comments are just standardized away, and drake
-# ignores them. Thus, superfluous builds are not triggered.
-get_standardized_command <- function(target, config) {
-  config$plan$command[config$plan$target == target] %>%
-    standardize_command
 }
 
 # The old standardization command
@@ -62,9 +36,9 @@ get_standardized_command <- function(target, config) {
 # If styler's behavior changes a lot, it will
 # put targets out of date.
 standardize_command <- function(x) {
-  x <- ignore_ignore(x) %>%
-    language_to_text
-  formatR::tidy_source(
+  x <- ignore_ignore(x)
+  x <- language_to_text(x)
+  x <- formatR::tidy_source(
     source = NULL,
     comment = FALSE,
     blank = FALSE,
@@ -74,24 +48,45 @@ standardize_command <- function(x) {
     output = FALSE,
     text = as.character(x),
     width.cutoff = 119
-  )$text.tidy %>%
-    paste(collapse = "\n") %>%
-    braces
+  )$text.tidy
+  x <- paste(x, collapse = "\n")
+  braces(x)
 }
 
-language_to_text <- function(x){
-  if (length(x) < 1){
-    return(character(0))
+ignore_ignore <- function(expr) {
+  if (is.character(expr)) {
+    expr <- parse(text = expr)
   }
-  if (is.expression(x)){
+  recurse_ignore(expr)
+}
+
+recurse_ignore <- function(x) {
+  if (is.function(x) && !is.primitive(x) && !is.null(body(x))) {
+    body(x) <- recurse_ignore(body(x))
+  } else if (is_callish(x)) {
+    if (wide_deparse(x[[1]]) %in% ignored_fns) {
+      x <- quote(ignore())
+    } else {
+      x[] <- lapply(as.list(x), recurse_ignore)
+    }
+  }
+  x
+}
+
+# We won't need this function after #563.
+language_to_text <- function(x) {
+  if (length(x) < 1) {
+    return(character(0)) # nocov
+  }
+  if (is.expression(x)) {
     # TODO: remove the if () clause in some major version bump.
     # The only reason it exists is to avoid invalidating old projects.
-    if (length(x) < 2){
+    if (length(x) < 2) {
       x <- x[[1]]
     }
   }
-  if (is.expression(x) || is.language(x)){
-    for (attribute in c("srcref", "srcfile", "wholeSrcref")){
+  if (is.expression(x) || is.language(x)) {
+    for (attribute in c("srcref", "srcfile", "wholeSrcref")) {
       attr(x = x, which = attribute) <- NULL
     }
     x <- wide_deparse(x)

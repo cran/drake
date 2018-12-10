@@ -9,9 +9,9 @@
 #' @param datasets Same as for [plan_analyses()].
 #' @examples
 #' # See ?plan_analyses for examples.
-analyses <- function(plan, datasets){
+analyses <- function(plan, datasets) {
   .Deprecated(
-    "backend",
+    "analyses",
     package = "drake",
     msg = paste(
       "drake::analyses() is deprecated",
@@ -32,9 +32,9 @@ analyses <- function(plan, datasets){
 #' @param x Same as for [file_store()].
 #' @examples
 #' # See ?file_store for examples.
-as_drake_filename <- function(x){
+as_drake_filename <- function(x) {
   .Deprecated(
-    "backend",
+    "as_drake_filename",
     package = "drake",
     msg = paste(
       "drake::as_drake_filename() is deprecated.",
@@ -54,9 +54,9 @@ as_drake_filename <- function(x){
 #' @param x Same as for [file_store()].
 #' @examples
 #' # See ?file_store for examples.
-as_file <- function(x){
+as_file <- function(x) {
   .Deprecated(
-    "backend",
+    "as_file",
     package = "drake",
     msg = paste(
       "drake::as_file() is deprecated",
@@ -68,26 +68,14 @@ as_file <- function(x){
 }
 
 #' @title Deprecated function `backend`
-#' @description Use [future::plan()] instead.
+#' @description Use `future::plan()` instead.
 #' Avoid `drake::plan()`.
 #' @details Deprecated on 2017-11-12.
 #' @export
 #' @keywords internal
 #' @return The same return value as `future::plan()`.
 #' @param ... Arguments to `future::plan()`.
-#' @examples
-#' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
-#' load_mtcars_example() # Get the code with drake_example("mtcars").
-#' # Choose future's multicore parallel backend.
-#' library(future)
-#' future::plan(multicore) # Instead of backend(). Avoid drake::plan().
-#' # Run the project, build the targets.
-#' # Future knows that you chose the multicore backend.
-#' make(my_plan, parallelism = "future_lapply")
-#' })
-#' }
-backend <- function(...){
+backend <- function(...) {
   .Deprecated(
     "backend",
     package = "drake",
@@ -100,43 +88,81 @@ backend <- function(...){
       "drake::plan() will be removed."
     )
   )
+  assert_pkg("future")
   future::plan(...)
 }
 
+#' @title Deprecated function `build_drake_graph`
+#' @description Use [drake_config()] instead.
+#' @details Deprecated on 2018-11-02.
+#' @export
+#' @keywords internal
+#' @return An `igraph` object.
+#' @inheritParams drake_config
+#' @param sanitize_plan deprecated
+#' @examples
+#' # See ?drake_config for examples.
+build_drake_graph <- function(
+  plan = read_drake_plan(),
+  targets = plan$target,
+  envir = parent.frame(),
+  verbose = drake::default_verbose(),
+  jobs = 1,
+  sanitize_plan = FALSE,
+  console_log_file = NULL,
+  trigger = drake::trigger(),
+  cache = NULL
+) {
+  .Deprecated(
+    "build_graph",
+    package = "drake",
+    msg = paste(
+      "drake::build_drake_graph() is deprecated.",
+      "Use drake_config()$graph instead."
+    )
+  )
+  drake_config(
+    plan = plan,
+    targets = targets,
+    envir = envir,
+    verbose = verbose,
+    jobs = jobs,
+    console_log_file = console_log_file,
+    trigger = trigger,
+    cache = cache
+  )$graph
+}
+
 #' @title Deprecated function `build_graph`
-#' @description Use [build_drake_graph()] instead.
+#' @description Use [drake_config()] instead.
 #' @details Deprecated on 2017-11-12.
 #' @export
 #' @keywords internal
-#' @seealso [build_drake_graph()]
-#' @return The same return value as [build_drake_graph()].
-#' @param plan Same as for [build_drake_graph()].
-#' @param targets Same as for [build_drake_graph()].
-#' @param envir Same as for [build_drake_graph()].
-#' @param verbose Same as for [build_drake_graph()].
-#' @param jobs Same as for [build_drake_graph()].
+#' @inheritParams drake_config
 #' @examples
-#' # See ?as_drake_filename for examples.
+#' # See ?drake_config for examples.
 build_graph <- function(
   plan = read_drake_plan(),
   targets = plan$target,
   envir = parent.frame(),
   verbose = 1,
   jobs = 1
-){
+) {
   .Deprecated(
-    "backend",
+    "build_graph",
     package = "drake",
     msg = paste(
-      "drake::build_graph() is deprecated",
-      "due to possible name conflicts.",
-      "Use build_drake_graph() instead."
+      "drake::build_graph() is deprecated.",
+      "Use drake_config()$graph instead."
     )
   )
-  build_drake_graph(
-    plan = plan, targets = targets, envir = envir, verbose = verbose,
+  drake_config(
+    plan = plan,
+    targets = targets,
+    envir = envir,
+    verbose = verbose,
     jobs = jobs
-  )
+  )$graph
 }
 
 #' @title Deprecated function `check`
@@ -159,7 +185,7 @@ check <- function(
   envir = parent.frame(),
   cache = drake::get_cache(verbose = verbose),
   verbose = TRUE
-){
+) {
   .Deprecated(
     "check",
     package = "drake",
@@ -238,7 +264,7 @@ config <- function(
   graph = NULL,
   trigger = "any",
   skip_imports = FALSE
-){
+) {
   .Deprecated(
     "evaluate",
     package = "drake",
@@ -342,7 +368,7 @@ dataframes_graph <- function(
 #' @keywords internal
 #' @return Evaluated code.
 #' @param code Placeholder for the code to build a target/import.
-default_hook <- function(code){
+default_hook <- function(code) {
   .Deprecated(
     "default_hook",
     package = "drake",
@@ -362,7 +388,7 @@ default_hook <- function(code){
 #' @param verbose logical, whether to be verbose
 #' @examples
 #' # See ?default_Makefile_args for examples.
-default_system2_args <- function(jobs, verbose){
+default_system2_args <- function(jobs, verbose) {
   .Deprecated(
     "default_system2_args",
     package = "drake",
@@ -372,16 +398,26 @@ default_system2_args <- function(jobs, verbose){
     )
   )
   out <- paste0("--jobs=", jobs)
-  if (verbose < 1){
+  if (verbose < 1) {
     out <- c(out, "--silent")
   }
   return(out)
 }
 
+# 2018-10-27 # nolint
+deprecate_force <- function(force) {
+  if (!identical(force, FALSE)) {
+    warning(
+      "Argument `force` is deprecated.",
+      call. = FALSE
+    )
+  }
+}
+
 # Deprecated ..analysis.. and ..dataset.. on 2017-11-12
 # in favor of analysis__ and dataset__
-deprecate_wildcard <- function(plan, old, replacement){
-  if (any(grepl(old, plan$command, fixed = TRUE))){
+deprecate_wildcard <- function(plan, old, replacement) {
+  if (any(grepl(old, plan$command, fixed = TRUE))) {
     warning(
       "The '", old, "' wildcard is deprecated. ",
       "Use '", replacement, "' instead.",
@@ -414,7 +450,7 @@ deprecate_wildcard <- function(plan, old, replacement){
 #'   The other names listed are functions or generic R objects.
 #' @examples
 #' # See deps_code() for examples.
-deps <- function(x){
+deps <- function(x) {
   .Deprecated(
     "deps_code()",
     package = "drake",
@@ -449,7 +485,7 @@ deps_targets <- function(
   targets,
   config = read_drake_config(),
   reverse = FALSE
-){
+) {
   .Deprecated(
     "deps_code()",
     package = "drake",
@@ -462,19 +498,19 @@ deps_targets <- function(
 }
 
 # Deprecated on 2018-02-15
-doc_of_function_call <- function(expr){
+doc_of_function_call <- function(expr) {
   args <- as.list(expr)[-1]
-  if (!length(args)){
+  if (!length(args)) {
     return(character(0))
   }
-  if (is.null(names(args))){
+  if (is.null(names(args))) {
     names(args) <- rep("", length(args))
   }
-  if (!is.null(args$input)){
+  if (!is.null(args$input)) {
     as.character(args$input)
   } else {
     unnamed <- which(!nzchar(names(args)))
-    if (!length(unnamed)){
+    if (!length(unnamed)) {
       return(character(0))
     }
     input_index <- min(unnamed)
@@ -495,7 +531,7 @@ drake_batchtools_tmpl_file <- function(
   example = drake::drake_hpc_template_files(),
   to = getwd(),
   overwrite = FALSE
-){
+) {
   .Deprecated(
     "drake_batchtools_tmpl_file",
     package = "drake",
@@ -507,13 +543,44 @@ drake_batchtools_tmpl_file <- function(
   drake_hpc_template_file(file = example, to = to, overwrite = overwrite)
 }
 
+#' @title Deprecated. Return the [sessionInfo()]
+#'   of the last call to [make()].
+#' @description Deprecated. Use [drake_get_session_info()] instead.
+#' @details Deprecated on 2018-12-06.
+#' @seealso [diagnose()], [built()], [imported()],
+#'   [readd()], [drake_plan()], [make()]
+#' @export
+#' @return [sessionInfo()] of the last call to [make()]
+#' @inheritParams cached
+#' @examples
+#' # See ?drake_get_session_info for examples.
+drake_session <- function(
+  path = getwd(),
+  search = TRUE,
+  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  verbose = drake::default_verbose()
+) {
+  .Deprecated(
+    "drake_session",
+    package = "drake",
+    msg = paste(
+      "drake_session() is deprecated.",
+      "Use drake_get_session_info() instead."
+    )
+  )
+  if (is.null(cache)) {
+    stop("No drake::make() session detected.")
+  }
+  return(cache$get("sessionInfo", namespace = "session"))
+}
+
 #' @title Deprecated.
 #' @description Deprecated on 2018-10-24.
 #' @export
 #' @keywords internal
 #' @return Evaluated code.
 #' @param code Placeholder for the code to build a target/import.
-empty_hook <- function(code){
+empty_hook <- function(code) {
   .Deprecated(
     "empty_hook",
     package = "drake",
@@ -542,7 +609,7 @@ evaluate <- function(
   wildcard = NULL,
   values = NULL,
   expand = TRUE
-){
+) {
   .Deprecated(
     "evaluate",
     package = "drake",
@@ -575,7 +642,7 @@ evaluate <- function(
 example_drake <- function(
   example = "main",
   destination = getwd()
-){
+) {
   .Deprecated(
     "example_drake",
     package = "drake",
@@ -625,7 +692,7 @@ examples_drake <- function() {
 expand <- function(
   plan,
   values = NULL
-){
+) {
   .Deprecated(
     "expand",
     package = "drake",
@@ -657,7 +724,7 @@ gather <- function(
   plan = NULL,
   target = "target",
   gather = "list"
-){
+) {
   .Deprecated(
     "gather",
     package = "drake",
@@ -675,8 +742,17 @@ gather <- function(
 }
 
 # Deprecated on 2018-02-15
-find_knitr_doc <- function(expr, result = character(0)){
-  if (!length(expr)){
+find_knitr_doc <- function(expr, result = character(0)) {
+  is_parsable <- Vectorize(function(x) {
+    tryCatch({
+      parse(text = x)
+      TRUE
+    },
+    error = error_false
+    )
+  },
+  "x")
+  if (!length(expr)) {
     return(result)
   }
   if (is.character(expr)) {
@@ -686,25 +762,31 @@ find_knitr_doc <- function(expr, result = character(0)){
       return(result)
     }
   }
-  if (is.function(expr)){
+  if (is.function(expr)) {
     result <- find_knitr_doc(body(expr), result = result)
-  } else if (is.call(expr) & length(expr) > 1){
+  } else if (is.call(expr) & length(expr) > 1) {
     does_knitting <-
       is_function_call(expr, package = "knitr", what = "knit") ||
       is_function_call(expr, package = "rmarkdown", what = "render")
-    if (does_knitting){
+    if (does_knitting) {
       result <- doc_of_function_call(expr)
     } else {
-      result <- lapply(as.list(expr), find_knitr_doc,
-                       result = result) %>%
-        clean_dependency_list
+      result <- lapply(
+        as.list(expr),
+        find_knitr_doc,
+        result = result
+      )
+      result <- clean_dependency_list(result)
     }
-  } else if (is.recursive(expr)){
-    result <- lapply(as.list(expr), find_knitr_doc,
-                     result = result) %>%
-      clean_dependency_list
+  } else if (is.recursive(expr)) {
+    result <- lapply(
+      as.list(expr),
+      find_knitr_doc,
+      result = result
+    )
+    result <- clean_dependency_list(result)
   }
-  setdiff(result, drake_fn_patterns)
+  setdiff(result, drake_symbols)
 }
 
 # Deprecated on 2018-02-15
@@ -712,7 +794,7 @@ is_function_call <- function(
   expr,
   package = c("drake", "knitr", "rmarkdown"),
   what = c("loadd", "readd", "knit", "render")
-){
+) {
   package <- match.arg(package)
   what <- match.arg(what)
   drake::drake_unquote(deparse(expr[[1]])) %in%
@@ -738,7 +820,7 @@ load_basic_example <- function(
   to = report_file,
   verbose = drake::default_verbose(),
   force = FALSE
-){
+) {
   .Deprecated(
     "load_basic_example",
     package = "drake",
@@ -783,7 +865,7 @@ max_useful_jobs <- function(
   config = drake::read_drake_config(),
   imports = c("files", "all", "none"),
   from_scratch = FALSE
-){
+) {
   .Deprecated(
     "predict_runtime",
     package = "drake",
@@ -799,21 +881,19 @@ max_useful_jobs <- function(
   # nocov start
   imports <- match.arg(imports)
   nodes <- drake_graph_info(config, from_scratch = from_scratch)$nodes
-  if (imports == "none"){
+  if (imports == "none") {
     nodes <- nodes[nodes$status != "imported", ]
-  } else if (imports == "files"){
+  } else if (imports == "files") {
     nodes <- nodes[nodes$status != "imported" | nodes$type == "file", ]
   }
-  if (!from_scratch){
+  if (!from_scratch) {
     nodes <- nodes[nodes$status != "outdated", ]
   }
-  if (!nrow(nodes)){
+  if (!nrow(nodes)) {
     return(0)
   }
-  level <- NULL
-  n_per_level <- group_by(nodes, level) %>%
-    mutate(nrow = n())
-  max(n_per_level$nrow)
+  per_level <- split(x = nodes, f = nodes$level)
+  max(vapply(per_level, nrow, FUN.VALUE = integer(1)))
   # nocov end
 }
 
@@ -823,7 +903,7 @@ max_useful_jobs <- function(
 #' @keywords internal
 #' @return Evaluated code.
 #' @param code Placeholder for the code to build a target/import.
-message_sink_hook <- function(code){
+message_sink_hook <- function(code) {
   .Deprecated(
     "message_sink_hook",
     package = "drake",
@@ -855,7 +935,7 @@ message_sink_hook <- function(code){
 #' }
 migrate_drake_project <- function(
   path = drake::default_cache_path(), jobs = 1
-){
+) {
   .Deprecated(
     package = "drake",
     msg = c(
@@ -871,7 +951,7 @@ migrate_drake_project <- function(
 #' @keywords internal
 #' @return Evaluated code.
 #' @param code Placeholder for the code to build a target/import.
-output_sink_hook <- function(code){
+output_sink_hook <- function(code) {
   .Deprecated(
     "output_sink_hook",
     package = "drake",
@@ -901,7 +981,7 @@ plan <- function(
   list = character(0),
   file_targets = FALSE,
   strings_in_dots = c("filenames", "literals")
-){
+) {
   .Deprecated(
     "plan",
     package = "drake",
@@ -918,7 +998,7 @@ plan <- function(
   commands <- c(commands_dots, list)
   targets <- names(commands)
   commands <- as.character(commands)
-  if (!length(commands)){
+  if (!length(commands)) {
     return(
       data.frame(
         target = character(0),
@@ -932,10 +1012,10 @@ plan <- function(
     stringsAsFactors = FALSE
   )
   from_dots <- plan$target %in% names(commands_dots)
-  if (file_targets){
+  if (file_targets) {
     plan$target <- drake::drake_quotes(plan$target, single = TRUE)
   }
-  if (strings_in_dots == "filenames"){
+  if (strings_in_dots == "filenames") {
     plan$command[from_dots] <- gsub("\"", "'", plan$command[from_dots])
   }
   sanitize_plan(plan)
@@ -959,7 +1039,7 @@ plan_drake <- function(
   list = character(0),
   file_targets = FALSE,
   strings_in_dots = c("filenames", "literals")
-){
+) {
   .Deprecated(
     "plan_drake",
     package = "drake",
@@ -975,7 +1055,7 @@ plan_drake <- function(
   commands <- c(commands_dots, list)
   targets <- names(commands)
   commands <- as.character(commands)
-  if (!length(commands)){
+  if (!length(commands)) {
     return(
       data.frame(
         target = character(0),
@@ -989,10 +1069,10 @@ plan_drake <- function(
     stringsAsFactors = FALSE
   )
   from_dots <- plan$target %in% names(commands_dots)
-  if (file_targets){
+  if (file_targets) {
     plan$target <- drake::drake_quotes(plan$target, single = TRUE)
   }
-  if (strings_in_dots == "filenames"){
+  if (strings_in_dots == "filenames") {
     plan$command[from_dots] <- gsub("\"", "'", plan$command[from_dots])
   }
   sanitize_plan(plan)
@@ -1003,7 +1083,7 @@ plan_drake <- function(
 #' @details Deprecated on 2017-10.
 #' @export
 #' @keywords internal
-#' @return a `visNetwork` graph
+#' @return A `visNetwork` graph.
 #' @param plan deprecated
 #' @param envir deprecated
 #' @param hook deprecated
@@ -1064,7 +1144,7 @@ plot_graph <- function(
   make_imports = TRUE,
   from_scratch = FALSE,
   ...
-){
+) {
   .Deprecated(
     "plot_graph",
     package = "drake",
@@ -1074,16 +1154,20 @@ plot_graph <- function(
       "Use vis_drake_graph() instead."
     )
   )
+  if (is.null(config)){
+    config <- drake_config(
+      plan = plan,
+      envir = envir,
+      verbose = verbose,
+      hook = hook,
+      cache = cache,
+      jobs = jobs,
+      parallelism = parallelism,
+      packages = packages,
+      prework = prework
+    )
+  }
   vis_drake_graph(
-    plan = plan,
-    envir = envir,
-    verbose = verbose,
-    hook = hook,
-    cache = cache,
-    jobs = jobs,
-    parallelism = parallelism,
-    packages = packages,
-    prework = prework,
     config = config,
     file = file,
     selfcontained = selfcontained,
@@ -1143,7 +1227,7 @@ rate_limiting_times <- function(
   targets_only = FALSE,
   future_jobs = 1,
   digits = 3
-){
+) {
   .Defunct(
     package = "drake",
     msg = c(
@@ -1172,7 +1256,7 @@ read_config <- function(
   path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
   verbose = TRUE
-){
+) {
   .Deprecated(
     "read_config",
     package = "drake",
@@ -1209,7 +1293,7 @@ read_graph <- function(
   path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
   verbose = 1, ...
-){
+) {
   .Deprecated(
     "read_graph",
     package = "drake",
@@ -1255,7 +1339,7 @@ read_drake_meta <- function(
   cache = NULL,
   verbose = 1,
   jobs = 1
-){
+) {
   .Deprecated(
     "read_drake_meta",
     package = "drake",
@@ -1270,12 +1354,12 @@ read_drake_meta <- function(
   if (is.null(cache)) {
     stop("cannot find drake cache.")
   }
-  if (is.null(targets)){
+  if (is.null(targets)) {
     targets <- cache$list(namespace = "meta")
   } else {
     targets <- parallel_filter(
       x = targets,
-      f = function(target){
+      f = function(target) {
         cache$exists(key = target, namespace = "meta")
       },
       jobs = jobs
@@ -1283,13 +1367,13 @@ read_drake_meta <- function(
   }
   out <- lightly_parallelize(
     X = targets,
-    FUN = function(target){
+    FUN = function(target) {
       cache$get(key = target, namespace = "meta")
     },
     jobs = jobs
   )
   names(out) <- targets
-  if (length(out) == 1){
+  if (length(out) == 1) {
     out <- out[[1]]
   }
   out
@@ -1313,7 +1397,7 @@ read_plan <- function(
   path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
   verbose = 1, ...
-){
+) {
   .Deprecated(
     "read_plan",
     package = "drake",
@@ -1336,7 +1420,7 @@ read_plan <- function(
 #' @details Deprecated on 2017-10.
 #' @export
 #' @keywords internal
-#' @return a `visNetwork` graph.
+#' @return A `visNetwork` graph.
 #' @param graph_info deprecated
 #' @param file deprecated
 #' @param layout deprecated
@@ -1360,7 +1444,7 @@ render_graph <- function(
   navigationButtons = TRUE, # nolint
   ncol_legend = 1,
   ...
-){
+) {
   .Deprecated(
     "render_graph",
     package = "drake",
@@ -1399,7 +1483,7 @@ render_graph <- function(
 render_static_drake_graph <- function(
   graph_info,
   main = graph_info$default_title
-){
+) {
   .Deprecated(
     "render_static_drake_graph",
     package = "drake",
@@ -1412,34 +1496,34 @@ render_static_drake_graph <- function(
 }
 
 #' @title Deprecated function `session`
-#' @description Use [drake_session()] instead
+#' @description Use [drake_get_session_info()] instead
 #' @details Deprecated on 2017-11-12.
-#' @seealso [drake_session()]
+#' @seealso [drake_get_session_info()]
 #' @export
 #' @keywords internal
-#' @return Same as for [drake_session()].
-#' @param cache Same as for [drake_session()].
-#' @param path Same as for [drake_session()].
-#' @param search Same as for [drake_session()].
-#' @param verbose Same as for [drake_session()].
+#' @return Same as for [drake_get_session_info()].
+#' @param cache Same as for [drake_get_session_info()].
+#' @param path Same as for [drake_get_session_info()].
+#' @param search Same as for [drake_get_session_info()].
+#' @param verbose Same as for [drake_get_session_info()].
 #' @examples
-#' # See ?drake_session for examples.
+#' # See ?drake_get_session_info for examples.
 session <- function(
   path = getwd(),
   search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
   verbose = TRUE
-){
+) {
   .Deprecated(
     "session",
     package = "drake",
     msg = paste(
       "drake::session() is deprecated",
       "due to a possible conlict with the R/shiny lexicon.",
-      "Use drake_session() instead."
+      "Use drake_get_session_info() instead."
     )
   )
-  drake_session(
+  drake_get_session_info(
     path = path,
     search = search,
     cache = cache,
@@ -1467,7 +1551,7 @@ session <- function(
 parallel_stages <- function(
   config = drake::read_drake_config(),
   from_scratch = FALSE
-){
+) {
   .Defunct(
     package = "drake",
     msg = c(
@@ -1484,7 +1568,7 @@ parallel_stages <- function(
 #' @keywords internal
 #' @return Evaluated code.
 #' @param code Placeholder for the code to build a target/import.
-silencer_hook <- function(code){
+silencer_hook <- function(code) {
   .Deprecated(
     "silencer_hook",
     package = "drake",
@@ -1525,7 +1609,7 @@ static_drake_graph <- function(
   full_legend = FALSE,
   group = NULL,
   clusters = NULL
-){
+) {
   .Deprecated(
     "static_drake_graph",
     package = "drake",
@@ -1565,13 +1649,13 @@ static_drake_graph <- function(
 #' @param datasets Same as for [plan_summaries()].
 #' @param gather Same as for [plan_summaries()].
 #' @examples
-#' # See ?drake_session for examples.
+#' # See ?drake_get_session_info for examples.
 summaries <- function(
   plan,
   analyses,
   datasets,
   gather = rep("list", nrow(plan))
-){
+) {
   .Deprecated(
     "summaries",
     package = "drake",
@@ -1600,7 +1684,7 @@ summaries <- function(
 #' @return A character vector with the names of the old triggers.
 #' @examples
 #' # Deprecated. See the trigger() function instead (singular).
-triggers <- function(){
+triggers <- function() {
   .Deprecated(
     "triggers",
     package = "drake",
@@ -1610,22 +1694,22 @@ triggers <- function(){
       "See trigger() (singular) for details."
     )
   )
-  c(
+  out <- c(
     "any",
     "always",
     "command",
     "depends",
     "file",
     "missing"
-  ) %>%
-    sort
+  )
+  sort(out)
 }
 
-convert_old_trigger <- function(x){
-  if (!is.character(x)){
+convert_old_trigger <- function(x) {
+  if (!is.character(x)) {
     return(x)
   }
-  if (!(x %in% suppressWarnings(triggers()))){
+  if (!(x %in% suppressWarnings(triggers()))) {
     return(x)
   }
   warning(
@@ -1634,17 +1718,17 @@ convert_old_trigger <- function(x){
     "to learn about the new trigger interface.",
     call. = FALSE
   )
-  if (identical(x, "any")){
+  if (identical(x, "any")) {
     "trigger()"
-  } else if (identical(x, "always")){
+  } else if (identical(x, "always")) {
     "trigger(condition = TRUE)"
-  } else if (identical(x, "command")){
+  } else if (identical(x, "command")) {
     "trigger(command = TRUE, depend = FALSE, file = FALSE)"
-  } else if (identical(x, "depends")){
+  } else if (identical(x, "depends")) {
     "trigger(command = FALSE, depend = TRUE, file = FALSE)"
-  } else if (identical(x, "file")){
+  } else if (identical(x, "file")) {
     "trigger(command = FALSE, depend = FALSE, file = TRUE)"
-  } else if (identical(x, "missing")){
+  } else if (identical(x, "missing")) {
     "trigger(command = FALSE, depend = FALSE, file = FALSE)"
   }
 }
@@ -1668,7 +1752,7 @@ workflow <- function(
   list = character(0),
   file_targets = FALSE,
   strings_in_dots = c("filenames", "literals")
-){
+) {
   .Deprecated(
     "workflow",
     package = "drake",
@@ -1681,7 +1765,7 @@ workflow <- function(
   commands <- c(commands_dots, list)
   targets <- names(commands)
   commands <- as.character(commands)
-  if (!length(commands)){
+  if (!length(commands)) {
     return(
       data.frame(
         target = character(0),
@@ -1695,10 +1779,10 @@ workflow <- function(
     stringsAsFactors = FALSE
   )
   from_dots <- plan$target %in% names(commands_dots)
-  if (file_targets){
+  if (file_targets) {
     plan$target <- drake::drake_quotes(plan$target, single = TRUE)
   }
-  if (strings_in_dots == "filenames"){
+  if (strings_in_dots == "filenames") {
     plan$command[from_dots] <- gsub("\"", "'", plan$command[from_dots])
   }
   sanitize_plan(plan)
@@ -1723,7 +1807,7 @@ workplan <- function(
   list = character(0),
   file_targets = FALSE,
   strings_in_dots = c("filenames", "literals")
-){
+) {
   .Deprecated(
     "drake_plan",
     package = "drake",
@@ -1736,7 +1820,7 @@ workplan <- function(
   commands <- c(commands_dots, list)
   targets <- names(commands)
   commands <- as.character(commands)
-  if (!length(commands)){
+  if (!length(commands)) {
     return(
       data.frame(
         target = character(0),
@@ -1750,11 +1834,107 @@ workplan <- function(
     stringsAsFactors = FALSE
   )
   from_dots <- plan$target %in% names(commands_dots)
-  if (file_targets){
+  if (file_targets) {
     plan$target <- drake::drake_quotes(plan$target, single = TRUE)
   }
-  if (strings_in_dots == "filenames"){
+  if (strings_in_dots == "filenames") {
     plan$command[from_dots] <- gsub("\"", "'", plan$command[from_dots])
   }
   sanitize_plan(plan)
+}
+
+#' @title Deprecated: load the main example.
+#' @description The main example lives at
+#' <https://github.com/wlandau/drake-examples/tree/master/main>.
+#' Use `drake_example("main")` to download its code.
+#' The chapter of the user manual at
+#' <https://ropenscilabs.github.io/drake-manual/main.html>
+#' also walks through the main example.
+#' This function also writes/overwrites
+#' the files `report.Rmd` and `raw_data.xlsx`.
+#' @export
+#' @seealso [clean_main_example()]
+#' @return A [drake_config()] configuration list.
+#' @inheritParams drake_config
+#' @param envir The environment to load the example into.
+#'   Defaults to your workspace.
+#'   For an insulated workspace,
+#'   set `envir = new.env(parent = globalenv())`.
+#' @param report_file where to write the report file `report.Rmd`.
+#' @param overwrite logical, whether to overwrite an
+#'   existing file `report.Rmd`
+#' @param force deprecated
+#' @keywords internal
+#' @details Deprecated December 2018.
+#' @examples
+#' \dontrun{
+#' # The code for this example is hosted at
+#' # https://github.com/wlandau/drake-examples/tree/master/main
+#' # You can download it iwth drake_example("main")
+#' # or watch a video tutorial about it at
+#' # https://ropenscilabs.github.io/drake-manual/.
+#' }
+load_main_example <- function(
+  envir = parent.frame(),
+  report_file = "report.Rmd",
+  overwrite = FALSE,
+  force = FALSE
+) {
+  deprecate_force(force)
+  .Deprecated(
+    "drake_example",
+    package = "drake",
+    msg = paste("load_main_example() is deprecated.",
+                'Use drake_example("main") instead.')
+  )
+
+  dir <- tempfile()
+  drake_example(example = "main", to = dir)
+  source(file.path(dir, "main", "R", "setup.R"), local = envir)
+  envir$plan <- source(
+    file.path(dir, "main", "R", "plan.R"),
+    local = TRUE
+  )$value
+  for (file in c("report.Rmd", "raw_data.xlsx")) {
+    if (file.exists(file) & overwrite) {
+      warning("Overwriting file ", file, call. = FALSE)
+    }
+    file.copy(
+      from = file.path(dir, "main", file),
+      to = file,
+      overwrite = overwrite
+    )
+  }
+  invisible()
+}
+
+#' @title Deprecated: clean the main example from `drake_example("main")`
+#' @description This function deletes files. Use at your own risk.
+#'   Destroys the `.drake/` cache and the `report.Rmd` file
+#'   in the current working directory. Your working directory
+#'   (`getcwd()`) must be the folder from which you first ran
+#'   `load_main_example()` and `make(my_plan)`.
+#' @export
+#' @return Nothing.
+#' @keywords internal
+#' @details Deprecated December 2018.
+#' @examples
+#' \dontrun{
+#' # The code for this example is hosted at
+#' # https://github.com/wlandau/drake-examples/tree/master/main
+#' # You can download it with drake_example("main")
+#' # or watch a video tutorial about it at
+#' # https://ropenscilabs.github.io/drake-manual/.
+#' }
+clean_main_example <- function() {
+  deprecate_force(force)
+  .Deprecated(
+    "clean",
+    package = "drake",
+    msg = paste("clean_main_example() is deprecated.")
+  )
+
+  clean(destroy = TRUE, search = FALSE)
+  unlink(c("report.Rmd", "raw_data.xlsx"))
+  invisible()
 }

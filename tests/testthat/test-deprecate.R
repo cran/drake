@@ -23,6 +23,7 @@ test_with_dir("deprecation: examples", {
 
 test_with_dir("deprecation: future", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("future")
   expect_warning(backend())
 })
 
@@ -80,6 +81,8 @@ test_with_dir("drake version checks in previous caches", {
   expect_false("initial_drake_version" %in% x$list(namespace = "session"))
   set_initial_drake_version(cache = x)
   expect_true("initial_drake_version" %in% x$list(namespace = "session"))
+  suppressWarnings(expect_error(drake_session(cache = NULL), regexp = "make"))
+  expect_warning(drake_session(cache = x), regexp = "deprecated")
 })
 
 test_with_dir("generative templating deprecation", {
@@ -97,7 +100,7 @@ test_with_dir("generative templating deprecation", {
     analyses <- analyses(methods, datasets = datasets))
   summary_types <- drake_plan(
     summ = summary(..analysis..), # nolint
-    coef = coefficients(..analysis..)) # nolint
+    coef = stats::coefficients(..analysis..)) # nolint
   expect_warning(
     summaries(summary_types, analyses, datasets))
 })
@@ -106,10 +109,12 @@ test_with_dir("deprecated graphing functions", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   pl <- drake_plan(a = 1, b = 2)
   expect_warning(build_graph(pl))
-  expect_warning(build_drake_graph(pl, sanitize_plan = TRUE))
+  expect_warning(build_drake_graph(pl))
   con <- drake_config(plan = pl)
+  skip_if_not_installed("lubridate")
   skip_if_not_installed("visNetwork")
   expect_warning(out <- plot_graph(config = con))
+  expect_warning(out <- plot_graph(plan = pl))
   skip_if_not_installed("ggraph")
   expect_warning(out <- static_drake_graph(config = con))
   expect_true(inherits(out, "gg"))
@@ -128,6 +133,7 @@ test_with_dir("deprecated example(s)_drake functions", {
 
 test_with_dir("deprecate misc utilities", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("lubridate")
   skip_if_not_installed("visNetwork")
   expect_error(parallel_stages(1), regexp = "parallelism")
   expect_error(rate_limiting_times(1), regexp = "parallelism")
@@ -197,7 +203,7 @@ test_with_dir("plan set 1", {
     pkgconfig::set_config("drake::strings_in_dots" = old_strings_in_dots)
   )
   pkgconfig::set_config("drake::strings_in_dots" = "filenames")
-  for (tidy_evaluation in c(TRUE, FALSE)){
+  for (tidy_evaluation in c(TRUE, FALSE)) {
     expect_warning(x <- drake_plan(
       a = c,
       b = "c",
@@ -214,41 +220,49 @@ test_with_dir("plan set 1", {
   }
 })
 
-test_with_dir("force loading a non-back-compatible cache", {
+test_with_dir("force with a non-back-compatible cache", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_null(assert_compatible_cache(NULL))
+  expect_equal(cache_vers_check(NULL), character(0))
   expect_null(get_cache())
   expect_null(this_cache())
   expect_true(inherits(recover_cache(), "storr"))
   write_v4.3.0_project() # nolint
-  suppressWarnings({
-    expect_error(get_cache())
-    expect_error(this_cache())
-    expect_error(recover_cache())
-  })
-  expect_true(inherits(get_cache(force = TRUE), "storr"))
-  expect_true(inherits(this_cache(force = TRUE), "storr"))
-  expect_true(inherits(recover_cache(force = TRUE), "storr"))
-  load_mtcars_example(force = TRUE)
-  config <- drake_config(my_plan, force = TRUE)
-  expect_true(length(outdated(config)) > 0)
-  expect_error(
-    expect_warning(
-      make(my_plan, verbose = FALSE, session_info = FALSE),
-      regexp = "inconvenience"
-    ),
-    regexp = "force"
+  expect_warning(get_cache(), regexp = "compatible")
+  expect_warning(this_cache(), regexp = "compatible")
+  expect_warning(recover_cache(), regexp = "compatible")
+  suppressWarnings(
+    expect_error(drake_config(drake_plan(x = 1)), regexp = "compatible")
   )
-  make(my_plan, verbose = FALSE, force = TRUE)
-  expect_equal(outdated(config), character(0))
-  expect_true(length(cached()) > 0)
-  clean()
-  expect_true(length(cached()) == 0)
+  suppressWarnings(
+    expect_error(make(drake_plan(x = 1)), regexp = "compatible")
+  )
+  expect_warning(make(drake_plan(x = 1), force = TRUE), regexp = "compatible")
+  expect_silent(tmp <- get_cache())
+  expect_silent(tmp <- this_cache())
+  expect_silent(tmp <- recover_cache())
+})
+
+test_with_dir("deprecate the `force` argument", {
+  expect_warning(tmp <- get_cache(force = TRUE), regexp = "deprecated")
+  expect_warning(tmp <- this_cache(force = TRUE), regexp = "deprecated")
+  expect_warning(tmp <- recover_cache(force = TRUE), regexp = "deprecated")
+  expect_warning(load_mtcars_example(force = TRUE), regexp = "deprecated")
+})
+
+test_with_dir("timeout argument", {
+  expect_warning(
+    make(
+      drake_plan(x = 1),
+      timeout = 5,
+      session_info = FALSE,
+      cache = storr::storr_environment()
+    )
+  )
 })
 
 test_with_dir("old trigger interface", {
   skip_on_cran()
-  for (old_trigger in suppressWarnings(triggers())){
+  for (old_trigger in suppressWarnings(triggers())) {
     plan <- drake_plan(x = 1)
     plan$trigger <- old_trigger
     clean()
@@ -262,7 +276,7 @@ test_with_dir("old trigger interface", {
     )
     trigger <- diagnose(x, cache = config$cache)$trigger
     expect_true(is.list(trigger))
-    if (identical(trigger$condition, TRUE)){
+    if (identical(trigger$condition, TRUE)) {
       expect_equal(old_trigger, "always")
     } else {
       expect_false(old_trigger == "always")
@@ -305,4 +319,37 @@ test_with_dir("deprecated hooks", {
   expect_warning(message_sink_hook(NULL), regexp = "deprecated")
   expect_warning(output_sink_hook(NULL), regexp = "deprecated")
   expect_warning(silencer_hook(NULL), regexp = "deprecated")
+})
+
+test_with_dir("pruning_strategy", {
+  expect_warning(
+    make(
+      drake_plan(x = 1),
+      pruning_strategy = 123,
+      session_info = FALSE,
+      cache = storr::storr_environment()
+    ),
+    regexp = "deprecated"
+  )
+})
+
+test_with_dir("main example", {
+  skip_on_cran()
+  skip_if_not_installed("downloader")
+  skip_if_not_installed("ggplot2")
+  for (file in c("raw_data.xlsx", "report.Rmd")) {
+    expect_false(file.exists(file))
+  }
+
+  # load_main_example() is now deprecated so should get a warning
+  expect_warning(load_main_example())
+
+  for (file in c("raw_data.xlsx", "report.Rmd")) {
+    expect_true(file.exists(file))
+  }
+  expect_warning(load_main_example(overwrite = TRUE), regexp = "Overwriting")
+  expect_warning(clean_main_example())
+  for (file in c("raw_data.xlsx", "report.Rmd")) {
+    expect_false(file.exists(file))
+  }
 })

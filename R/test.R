@@ -1,4 +1,4 @@
-drake_context <- function(x){
+drake_context <- function(x) {
   assert_pkg("testthat")
   ctx <- paste0(get_testing_scenario_name(), ": ", x)
   testthat::context(ctx)
@@ -8,14 +8,14 @@ testrun <- function(config) {
   set_test_backend()
   invisible(
     make(plan = config$plan, targets = config$targets, envir = config$envir,
-      verbose = config$verbose, parallelism = config$parallelism,
-      jobs = config$jobs,
-      packages = config$packages, prework = config$prework,
-      prepend = config$prepend, command = config$command,
-      cache = config$cache, lazy_load = config$lazy_load,
-      session_info = config$session_info,
-      fetch_cache = config$fetch_cache,
-      caching = config$caching
+         verbose = config$verbose, parallelism = config$parallelism,
+         jobs = config$jobs,
+         packages = config$packages, prework = config$prework,
+         prepend = config$prepend, command = config$command,
+         cache = config$cache, lazy_load = config$lazy_load,
+         session_info = config$session_info,
+         fetch_cache = config$fetch_cache,
+         caching = config$caching
     )
   )
 }
@@ -24,18 +24,21 @@ justbuilt <- function(config) {
   recorded <- config$cache$list(namespace = "progress")
   all <- lightly_parallelize(
     X = recorded,
-    FUN = function(target){
+    FUN = function(target) {
       config$cache$get(
         key = target, namespace = "progress", use_cache = FALSE)
     },
     jobs = config$jobs
   )
   names(all) <- recorded
-  unlist(all) %>%
-    Filter(f = function(x) x == "finished") %>%
-    names %>%
-    intersect(y = config$plan$target) %>%
-    sort
+  all <- unlist(all)
+  out <- Filter(
+    all,
+    f = function(x) {
+      x == "finished"
+    }
+  )
+  sort(intersect(names(out), y = config$plan$target))
 }
 
 nobuild <- function(config) {
@@ -50,7 +53,7 @@ nobuild <- function(config) {
 #' of the examples in the help files.
 #' @export
 #' @keywords internal
-#' @return nothing
+#' @return Nothing.
 #' @param desc character, description of the test
 #' @param ... code to test
 #' @examples
@@ -61,21 +64,23 @@ nobuild <- function(config) {
 #' )
 #' file.exists("world.txt") # FALSE
 #' }
-test_with_dir <- function(desc, ...){
+test_with_dir <- function(desc, ...) {
   assert_pkg("testthat")
-  while (file.exists(new <- tempfile())){
+  while (file.exists(new <- tempfile())) {
     # Should not reach this part of the loop.
     Sys.sleep(0.01) # nocov
   }
   dir.create(new)
-  withr::local_dir(new)
-  withr::local_options(new = list(clustermq.scheduler = "multicore"))
-  set_test_backend()
-  testthat::test_that(desc = desc, ...)
+  with_dir(new = new, {
+    with_options(new = list(clustermq.scheduler = "multicore"), {
+      set_test_backend()
+      testthat::test_that(desc = desc, ...)
+    })
+  })
   invisible()
 }
 
-restore_options <- function(old){
+restore_options <- function(old) {
   current <- options()
   remove_these <- setdiff(names(current), names(old))
   removal_list <- as.list(old[remove_these])
@@ -84,14 +89,24 @@ restore_options <- function(old){
   options(old)
 }
 
-set_test_backend <- function(){
+set_test_backend <- function() {
   eval(parse(text = get_testing_scenario()$backend))
 }
 
-unit_test_files <- function(path = getwd()){
-  assert_pkg("rprojroot")
-  root <- rprojroot::find_root(criterion = "DESCRIPTION", path = path)
-  file.path(root, "tests", "testthat")
+unit_test_files <- function(path = getwd(), max_depth = 100) {
+  # find the package root
+  p <- normalizePath(dirname(path))
+  criterion <- "DESCRIPTION"
+  for (i in seq_len(max_depth)) {
+    if (length(list.files(p, pattern = criterion))) {
+      # found criterion file; make sure it's ours
+      if (any(grepl("^Package: drake$", readLines(file.path(p, criterion))))) {
+        return(file.path(p, "tests", "testthat"))
+      }
+    }
+    p <- dirname(p)
+  }
+  stop("Maximum search of ", max_depth, " exceeded for ", path)
 }
 
 with_all_options <- function(code) {
@@ -100,7 +115,7 @@ with_all_options <- function(code) {
   force(code)
 }
 
-write_v4.3.0_project <- function(){ # nolint
+write_v4.3.0_project <- function() { # nolint
   zip <- system.file(
     file.path("testing", "built_mtcars_example_v4.3.0.zip"),
     package = "drake",
@@ -108,3 +123,38 @@ write_v4.3.0_project <- function(){ # nolint
   )
   unzip(zip, exdir = ".", setTimes = TRUE)
 }
+
+# Some installations of R require the && and || operators
+# to return a result of length 1.
+# For example, `nzchar(letters) && length(letters)` fails on
+# some platforms but not others. Below, we mock the operators
+# to preempt these elusive failures.
+# Below, toggle the if() condition on in test mode
+# and off in production mode.
+# nocov start
+if (FALSE) {
+  `&&` <- function(x, y) {
+    if (length(x) != 1) {
+      stop("length x not 1")
+    } else if (!x) {
+      return(x)
+    }
+    if (length(y) != 1) {
+      stop("length y not 1")
+    }
+    y
+  }
+
+  `||` <- function(x, y) {
+    if (length(x) != 1) {
+      stop("length x not 1")
+    } else if (x) {
+      return(x)
+    }
+    if (length(y) != 1) {
+      stop("length y not 1")
+    }
+    y
+  }
+}
+# nocov end

@@ -29,7 +29,7 @@ check_plan <- function(
   cache = drake::get_cache(verbose = verbose),
   verbose = drake::default_verbose(),
   jobs = 1
-){
+) {
   force(envir)
   config <- drake_config(
     plan = plan,
@@ -44,11 +44,11 @@ check_plan <- function(
 }
 
 check_drake_config <- function(config) {
-  if (identical(config$skip_safety_checks, TRUE)){
+  if (identical(config$skip_safety_checks, TRUE)) {
     return(invisible())
   }
   stopifnot(is.data.frame(config$plan))
-  if (!all(c("target", "command") %in% colnames(config$plan))){
+  if (!all(c("target", "command") %in% colnames(config$plan))) {
     stop(
       "The columns of your workflow plan data frame ",
       "must include 'target' and 'command'."
@@ -62,44 +62,64 @@ check_drake_config <- function(config) {
 }
 
 missing_input_files <- function(config) {
-  missing_files <- V(config$graph)$name %>%
-    setdiff(y = config$plan$target) %>%
-    parallel_filter(f = is_file, jobs = config$jobs) %>%
-    drake_unquote %>%
-    parallel_filter(f = function(x) !file.exists(x), jobs = config$jobs)
-  if (length(missing_files))
-    warning("missing input files:\n", multiline_message(missing_files),
-      call. = FALSE)
+  missing_files <- V(config$graph)$name
+  missing_files <- setdiff(x = missing_files, y = config$plan$target)
+  missing_files <- parallel_filter(
+    missing_files,
+    f = is_file,
+    jobs = config$jobs
+  )
+  missing_files <- drake_unquote(missing_files)
+  missing_files <- parallel_filter(
+    missing_files,
+    f = function(x) {
+      !file.exists(x)
+    },
+    jobs = config$jobs
+  )
+  if (length(missing_files)) {
+    warning(
+      "missing input files:\n",
+      multiline_message(missing_files),
+      call. = FALSE
+    )
+  }
   invisible(missing_files)
 }
 
-check_drake_graph <- function(graph){
-  if (is_dag(graph)){
+check_drake_graph <- function(graph) {
+  if (is_dag(graph)) {
     return()
   }
   comp <- igraph::components(graph, mode = "strong")
   cycle_component_indices <- which(comp$csize > 1)
-  cycles <- lapply(cycle_component_indices, function(i){
-    names(comp$membership[comp$membership == i]) %>%
-      paste(collapse = " ")
-  }) %>%
-    unlist
+  cycles <- lapply(cycle_component_indices, function(i) {
+    out <- names(comp$membership[comp$membership == i])
+    out <- paste(out, collapse = " ")
+  })
+  cycles <- unlist(cycles)
   stop(
-    "Circular workflow: there is a target ",
-    "that ultimately depends on itself. Cycles:\n",
+    "Circular workflow:\n",
+    "  at least one target in your drake plan\n",
+    "  ultimately depends on itself.\n",
+    "If you believe a dependency was detected in error\n",
+    "  (example: https://github.com/ropensci/drake/issues/578)\n",
+    "  then consider using ignore() to mask sections \n",
+    "  of your commands or imported functions.\n",
+    "Cycles:\n",
     multiline_message(cycles)
   )
 }
 
-check_jobs <- function(jobs){
+check_jobs <- function(jobs) {
   stopifnot(length(jobs) > 0)
   stopifnot(is.numeric(jobs) || is.integer(jobs))
   stopifnot(all(jobs > 0))
-  if (length(jobs) > 1){
+  if (length(jobs) > 1) {
     if (
       is.null(names(jobs)) ||
       !identical(sort(names(jobs)), sort(c("imports", "targets")))
-    ){
+    ) {
       stop(
         "In the `jobs` argument, you must either give a numeric scalar ",
         "or a named numeric vector with names 'imports' and 'targets'.",
@@ -109,14 +129,14 @@ check_jobs <- function(jobs){
   }
 }
 
-check_parallelism <- function(parallelism){
+check_parallelism <- function(parallelism) {
   stopifnot(length(parallelism) > 0)
   stopifnot(is.character(parallelism))
-  if (length(parallelism) > 1){
+  if (length(parallelism) > 1) {
     if (
       is.null(names(parallelism)) ||
       !identical(sort(names(parallelism)), sort(c("imports", "targets")))
-    ){
+    ) {
       stop(
         "In the `parallelism` argument, you must either ",
         "give a character scalar or a named character vector ",

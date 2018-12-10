@@ -30,12 +30,12 @@ running version of drake.}
 Use \code{pkgconfig} to set the default value of \code{verbose}
 for your R session:
 for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
-\describe{
-\item{0 or \code{FALSE}:}{print nothing.}
-\item{1 or \code{TRUE}:}{print only targets to build.}
-\item{2:}{+ checks and cache info.}
-\item{3:}{+ any potentially missing items.}
-\item{4:}{+ imports and writes to the cache.}
+\itemize{
+\item \code{0} or \code{FALSE}: print nothing.
+\item \code{1} or \code{TRUE}: print only targets to build.
+\item \code{2}: also print checks and cache info.
+\item \code{3}: also print any potentially missing items.
+\item \code{4}: also print imports and writes to the cache.
 }}
 
 \item{fetch_cache}{character vector containing lines of code.
@@ -47,11 +47,19 @@ and distributed parallelism (\code{parallelism = "future_lapply"}
 or \code{"Makefile"}) because the distributed R sessions
 need to know how to load the cache.}
 
-\item{console_log_file}{character scalar or \code{NULL}.
+\item{console_log_file}{character scalar,
+connection object (such as \code{stdout()}) or \code{NULL}.
 If \code{NULL}, console output will be printed
 to the R console using \code{message()}.
-Otherwise, \code{console_log_file} should be the name of a flat file.
-Console output will be appended to that file.}
+If a character scalar, \code{console_log_file}
+should be the name of a flat file, and
+console output will be appended to that file.
+If a connection object (e.g. \code{stdout()})
+warnings and messages will be sent to the connection.
+For example, if \code{console_log_file} is \code{stdout()},
+warnings and messages are printed to the console in real time
+(in addition to the usual in-bulk printing
+after each target finishes).}
 }
 \value{
 A drake/storr cache.

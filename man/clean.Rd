@@ -10,9 +10,10 @@ clean(..., list = character(0), destroy = FALSE, path = getwd(),
   purge = FALSE)
 }
 \arguments{
-\item{...}{targets to remove from the cache: as names (symbols),
-character strings, or \code{dplyr}-style \code{tidyselect}
-commands such as \code{starts_with()}.}
+\item{...}{targets to remove from the cache: as names (symbols) or
+character strings. If the \code{tidyselect} package is installed,
+you can also supply \code{dplyr}-style \code{tidyselect}
+commands such as \code{starts_with()}, \code{ends_with()}, and \code{one_of()}.}
 
 \item{list}{character vector naming targets to be removed from the
 cache. Similar to the \code{list} argument of \code{\link[=remove]{remove()}}.}
@@ -40,12 +41,12 @@ If supplied, \code{path} and \code{search} are ignored.}
 Use \code{pkgconfig} to set the default value of \code{verbose}
 for your R session:
 for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
-\describe{
-\item{0 or \code{FALSE}:}{print nothing.}
-\item{1 or \code{TRUE}:}{print only targets to build.}
-\item{2:}{+ checks and cache info.}
-\item{3:}{+ any potentially missing items.}
-\item{4:}{+ imports and writes to the cache.}
+\itemize{
+\item \code{0} or \code{FALSE}: print nothing.
+\item \code{1} or \code{TRUE}: print only targets to build.
+\item \code{2}: also print checks and cache info.
+\item \code{3}: also print any potentially missing items.
+\item \code{4}: also print imports and writes to the cache.
 }}
 
 \item{jobs}{Number of jobs for light parallelism
@@ -100,9 +101,6 @@ cached(no_imported_objects = TRUE)
 # Remove 'summ_regression1_large' and 'small' from the cache.
 clean(summ_regression1_large, small)
 # Those objects should be gone.
-cached(no_imported_objects = TRUE)
-# How about `tidyselect`?
-clean(starts_with("coef"))
 cached(no_imported_objects = TRUE)
 # Rebuild the missing targets.
 make(my_plan)

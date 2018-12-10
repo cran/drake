@@ -2,12 +2,13 @@ drake_context("visuals")
 
 test_with_dir("visNetwork graph runs", {
   skip_on_cran()
+  skip_if_not_installed("lubridate")
   skip_if_not_installed("visNetwork")
   config <- dbug()
   pdf(NULL)
   tmp <- vis_drake_graph(config)
   dev.off()
-  for (hover in c(TRUE, FALSE)){
+  for (hover in c(TRUE, FALSE)) {
     pdf(NULL)
     tmp <- vis_drake_graph(config, full_legend = FALSE, hover = hover)
     dev.off()
@@ -31,6 +32,7 @@ test_with_dir("visNetwork graph runs", {
 
 test_with_dir("visNetwork dep graph does not fail if input file is binary", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("lubridate")
   skip_if_not_installed("visNetwork")
   x <- drake_plan(
     y = readRDS(file_in("input.rds")),
@@ -46,6 +48,7 @@ test_with_dir("ggraphs", {
   skip_on_cran()
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("ggraph")
+  skip_if_not_installed("lubridate")
   skip_if_not_installed("visNetwork")
   load_mtcars_example()
   config <- drake_config(
@@ -55,13 +58,14 @@ test_with_dir("ggraphs", {
   make(config = config)
   gg <- drake_ggraph(config)
   expect_true(inherits(gg, "ggplot"))
-  if ("package:ggraph" %in% search()){
-    eval(parse(text = "detach('package:ggraph', unload = TRUE)"))
+  if ("package:ggraph" %in% search()) {
+    suppressWarnings(detach("package:ggraph", unload = TRUE)) # nolint
   }
 })
 
 test_with_dir("Sankey diagram runs", {
   skip_on_cran()
+  skip_if_not_installed("lubridate")
   skip_if_not_installed("networkD3")
   skip_if_not_installed("visNetwork")
   config <- dbug()

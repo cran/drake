@@ -37,9 +37,9 @@ drake_example <- function(
   destination = NULL,
   overwrite = FALSE,
   quiet = TRUE
-){
+) {
   assert_pkg("downloader")
-  if (!is.null(destination)){
+  if (!is.null(destination)) {
     warning(
       "The 'destination' argument of drake_example() is deprecated. ",
       "Use 'to' instead."
@@ -87,15 +87,15 @@ drake_examples <- function(quiet = TRUE) {
     destfile = destfile,
     quiet = quiet
   )
-  scan(destfile, what = character(1), quiet = TRUE) %>%
-    fs::path_ext_remove() %>%
-    sort()
+  out <- scan(destfile, what = character(1), quiet = TRUE)
+  out <- gsub(pattern = "\\.zip$", replacement = "", x = out)
+  sort(out)
 }
 
-#' @title Load the mtcars example from `drake_example("mtcars")`
+#' @title Load the mtcars example. 
 #' @description Is there an association between
 #' the weight and the fuel efficiency of cars?
-#' To find out, we use the mtcars dataset.
+#' To find out, we use the mtcars example from `drake_example("mtcars")`.
 #' The mtcars dataset itself only has 32 rows,
 #' so we generate two larger bootstrapped datasets
 #' and then analyze them with regression models.
@@ -109,8 +109,8 @@ drake_examples <- function(quiet = TRUE) {
 #' This function also writes/overwrites
 #' the file, `report.Rmd`.
 #' @export
-#' @seealso [clean_mtcars_example()]
-#' @return nothing
+#' @seealso [clean_mtcars_example()] [drake_examples()]
+#' @return Nothing.
 #' @inheritParams drake_config
 #' @param envir The environment to load the example into.
 #'   Defaults to your workspace.
@@ -122,8 +122,7 @@ drake_examples <- function(quiet = TRUE) {
 #'   working directory (current default).
 #' @param overwrite logical, whether to overwrite an
 #'   existing file `report.Rmd`
-#' @param force logical, whether to force the loading of a
-#'   non-back-compatible cache from a previous version of drake.
+#' @param force deprecated
 #' @examples
 #' \dontrun{
 #' test_with_dir("Quarantine side effects.", {
@@ -153,19 +152,20 @@ load_mtcars_example <- function(
   report_file = NULL,
   overwrite = FALSE,
   force = FALSE
-){
-  if (!is.null(report_file)){
+) {
+  deprecate_force(force)
+  if (!is.null(report_file)) {
     warning(
       "The `report_file` argument of load_mtcars_example() ",
       "is deprecated and will be removed in a future release.",
       call. = FALSE
     )
   }
-  if (is.null(report_file)){
+  if (is.null(report_file)) {
     report_file <- "report.Rmd"
   }
   populate_mtcars_example_envir(envir = envir)
-  if (file.exists(report_file) && overwrite){
+  if (file.exists(report_file) && overwrite) {
     warning("Overwriting file ", report_file, call. = FALSE)
   }
   report_path <- system.file(
@@ -177,25 +177,25 @@ load_mtcars_example <- function(
   invisible()
 }
 
-populate_mtcars_example_envir <- function(envir){
+populate_mtcars_example_envir <- function(envir) {
   eval(parse(text = "suppressPackageStartupMessages(require(drake))"))
   eval(parse(text = "suppressPackageStartupMessages(require(knitr))"))
-  mtcars <- NULL
+  mtcars <- lm <- NULL
   local(envir = envir, {
-    random_rows <- function(data, n){
+    random_rows <- function(data, n) {
       data[sample.int(n = nrow(data), size = n, replace = TRUE), ]
     }
-    simulate <- function(n){
+    simulate <- function(n) {
       data <- random_rows(data = mtcars, n = n)
       data.frame(
         x = data$wt,
         y = data$mpg
       )
     }
-    reg1 <- function(d){
+    reg1 <- function(d) {
       lm(y ~ + x, data = d)
     }
-    reg2 <- function(d){
+    reg2 <- function(d) {
       d$x2 <- d$x ^ 2
       lm(y ~ x2, data = d)
     }
@@ -204,7 +204,7 @@ populate_mtcars_example_envir <- function(envir){
   invisible()
 }
 
-mtcars_plan <- function(){
+mtcars_plan <- function() {
   simulate <- reg1 <- dataset__ <- reg2 <- analysis__ <- knit <- NULL
   mtcars <- NULL
   my_datasets <- drake_plan(
@@ -268,100 +268,8 @@ mtcars_plan <- function(){
 #' clean_mtcars_example()
 #' })
 #' }
-clean_mtcars_example <- function(){
+clean_mtcars_example <- function() {
   clean(destroy = TRUE, search = FALSE)
   unlink("report.Rmd")
-  invisible()
-}
-
-#' @title Load the main example from `drake_example("main")`
-#' @description The main example itself lives at
-#' <https://github.com/wlandau/drake-examples/tree/master/main>. # nolint
-#' Use `drake_example("main")` to download the code.
-#' The chapter of the user manual at
-#' <https://ropenscilabs.github.io/drake-manual/main.html> # nolint
-#' also walks through the main example.
-#' This function also writes/overwrites
-#' the files `report.Rmd` and `raw_data.xlsx`.
-#' @export
-#' @seealso [clean_main_example()]
-#' @return A [drake_config()] configuration list.
-#' @inheritParams drake_config
-#' @param envir The environment to load the example into.
-#'   Defaults to your workspace.
-#'   For an insulated workspace,
-#'   set `envir = new.env(parent = globalenv())`.
-#' @param report_file where to write the report file `report.Rmd`.
-#' @param overwrite logical, whether to overwrite an
-#'   existing file `report.Rmd`
-#' @param force logical, whether to force the loading of a
-#'   non-back-compatible cache from a previous version of drake.
-#' @examples
-#' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
-#' if (requireNamespace("downloader")){
-#' # Populate your workspace and write 'report.Rmd' and 'raw_data.xlsx'.
-#' load_main_example() # Get the code: drake_example("main")
-#' # Run the project with make(plan).
-#' # Make sure you have these packages installed first:
-#' # dplyr, forcats, ggplot2, readxl, and rmarkdown
-#' make(plan) # Build the targets.
-#' readd(hist) # Show the ggplot2 histogram.
-#' # Clean up the example.
-#' clean_main_example()
-#' }
-#' })
-#' }
-load_main_example <- function(
-  envir = parent.frame(),
-  report_file = "report.Rmd",
-  overwrite = FALSE,
-  force = FALSE
-){
-  dir <- tempfile()
-  drake_example(example = "main", to = dir)
-  source(file.path(dir, "main", "R", "setup.R"), local = envir)
-  envir$plan <- source(
-    file.path(dir, "main", "R", "plan.R"),
-    local = TRUE
-  )$value
-  for (file in c("report.Rmd", "raw_data.xlsx")){
-    if (file.exists(file) & overwrite){
-      warning("Overwriting file ", file, call. = FALSE)
-    }
-    file.copy(
-      from = file.path(dir, "main", file),
-      to = file,
-      overwrite = overwrite
-    )
-  }
-  invisible()
-}
-
-#' @title Clean the main example from `drake_example("main")`
-#' @description This function deletes files. Use at your own risk.
-#'   Destroys the `.drake/` cache and the `report.Rmd` file
-#'   in the current working directory. Your working directory
-#'   (`getcwd()`) must be the folder from which you first ran
-#'   `load_main_example()` and `make(my_plan)`.
-#' @export
-#' @return Nothing.
-#' @seealso [load_main_example()], [clean()]
-#' @examples
-#' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
-#' if (requireNamespace("downloader")){
-#' # Populate your workspace and write 'report.Rmd' and 'raw_data.xlsx'.
-#' load_main_example() # Get the code: drake_example("main")
-#' make(plan)
-#' readd(hist) # Show the ggplot2 histogram.
-#' # Clean up the example.
-#' clean_main_example()
-#' }
-#' })
-#' }
-clean_main_example <- function(){
-  clean(destroy = TRUE, search = FALSE)
-  unlink(c("report.Rmd", "raw_data.xlsx"))
   invisible()
 }

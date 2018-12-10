@@ -6,7 +6,7 @@
 #' @return The analysis wildcard used in [plan_summaries()].
 #' @examples
 #' # See ?plan_analyses for examples
-analysis_wildcard <- function(){
+analysis_wildcard <- function() {
   "analysis__"
 }
 
@@ -19,7 +19,7 @@ analysis_wildcard <- function(){
 #'   [plan_analyses()] and [plan_summaries()].
 #' @examples
 #' # See ?plan_analyses for examples
-dataset_wildcard <- function(){
+dataset_wildcard <- function() {
   "dataset__"
 }
 
@@ -37,8 +37,8 @@ dataset_wildcard <- function(){
 #' not `NULL`. Here, `rules` should be a list with wildcards
 #' as names and vectors of possible values as list elements.
 #' @export
-#' @seealso drake_plan, map_plan, reduce_by, gather_by, reduce_plan,
-#'   gather_plan, evaluate_plan, expand_plan
+#' @seealso [drake_plan()], [map_plan()], [reduce_by()], [gather_by()], [reduce_plan()],
+#'   [gather_plan()], [evaluate_plan()], [expand_plan()]
 #' @return A workflow plan data frame with the wildcards evaluated.
 #'
 #' @param plan workflow plan data frame, similar to one produced by
@@ -77,24 +77,38 @@ dataset_wildcard <- function(){
 #' @param columns character vector of names of columns
 #'   to look for and evaluate the wildcards.
 #'
+#' @param sep character scalar, separator for the names
+#'   of the new targets generated. For example, in
+#'   `evaluate_plan(drake_plan(x = sqrt(y__)), list(y__ = 1:2), sep = ".")`,
+#'   the names of the new targets are `x.1` and `x.2`.
+#'
 #' @examples
 #' # Create the part of the workflow plan for the datasets.
 #' datasets <- drake_plan(
 #'   small = simulate(5),
-#'   large = simulate(50))
+#'   large = simulate(50)
+#' )
 #' # Create a template workflow plan for the analyses.
 #' methods <- drake_plan(
 #'   regression1 = reg1(dataset__),
-#'   regression2 = reg2(dataset__))
+#'   regression2 = reg2(dataset__)
+#' )
 #' # Evaluate the wildcards in the template
 #' # to produce the actual part of the workflow plan
 #' # that encodes the analyses of the datasets.
 #' # Create one analysis for each combination of dataset and method.
-#' evaluate_plan(methods, wildcard = "dataset__",
-#'   values = datasets$target)
+#' evaluate_plan(
+#'   methods,
+#'   wildcard = "dataset__",
+#'   values = datasets$target
+#' )
 #' # Only choose some combinations of dataset and analysis method.
-#' ans <- evaluate_plan(methods, wildcard = "dataset__",
-#'   values = datasets$target, expand = FALSE)
+#' ans <- evaluate_plan(
+#'   methods,
+#'   wildcard = "dataset__",
+#'   values = datasets$target,
+#'   expand = FALSE
+#' )
 #' ans
 #' # For the complete workflow plan, row bind the pieces together.
 #' my_plan <- rbind(datasets, ans)
@@ -102,28 +116,26 @@ dataset_wildcard <- function(){
 #' # Wildcards for evaluate_plan() do not need the double-underscore suffix.
 #' # Any valid symbol will do.
 #' plan <- drake_plan(
-#'   t  = rt(1000, df = .df.),
-#'   normal = runif(1000, mean = `{MEAN}`, sd = ..sd)
+#'   numbers = sample.int(n = `{Number}`, size = ..size)
 #' )
 #' evaluate_plan(
 #'   plan,
 #'   rules = list(
-#'     "`{MEAN}`" = c(0, 1),
-#'     ..sd = c(3, 4),
-#'     .df. = 5:7
+#'     "`{Number}`" = c(10, 13),
+#'     ..size = c(3, 4)
 #'   )
 #' )
 #' # Workflow plans can have multiple wildcards.
 #' # Each combination of wildcard values will be used
 #' # Except when expand is FALSE.
-#' x <- drake_plan(draws = rnorm(mean = Mean, sd = Sd))
-#' evaluate_plan(x, rules = list(Mean = 1:3, Sd = c(1, 10)))
+#' x <- drake_plan(draws = sample.int(n = N, size = Size))
+#' evaluate_plan(x, rules = list(N = 10:13, Size = 1:2))
 #' # You can use wildcards on columns other than "command"
 #' evaluate_plan(
 #'   drake_plan(
-#'     x = target("always", cpu = "any"),
-#'     y = target("any", cpu = "always"),
-#'     z = target("any", cpu = "any"),
+#'     x = target("1 + 1", cpu = "any"),
+#'     y = target("sqrt(4)", cpu = "always"),
+#'     z = target("sqrt(16)", cpu = "any"),
 #'     strings_in_dots = "literals"
 #'   ),
 #'   rules = list(always = 1:2),
@@ -132,14 +144,14 @@ dataset_wildcard <- function(){
 #' # With the `trace` argument,
 #' # you can generate columns that show how the wildcards
 #' # were evaluated.
-#' plan <- drake_plan(x = rnorm(n__), y = rexp(n__))
+#' plan <- drake_plan(x = sample.int(n__), y = sqrt(n__))
 #' plan <- evaluate_plan(plan, wildcard = "n__", values = 1:2, trace = TRUE)
 #' print(plan)
 #' # With the `trace` argument,
 #' # you can generate columns that show how the wildcards
 #' # were evaluated. Then you can visualize the wildcard groups
 #' # as clusters.
-#' plan <- drake_plan(x = rnorm(n__), y = rexp(n__))
+#' plan <- drake_plan(x = sqrt(n__), y = sample.int(n__))
 #' plan <- evaluate_plan(plan, wildcard = "n__", values = 1:2, trace = TRUE)
 #' print(plan)
 #' cache <- storr::storr_environment()
@@ -159,9 +171,10 @@ evaluate_plan <- function(
   expand = TRUE,
   rename = expand,
   trace = FALSE,
-  columns = "command"
-){
-  if (!is.null(rules)){
+  columns = "command",
+  sep = "_"
+) {
+  if (!is.null(rules)) {
     check_wildcard_rules(rules)
     evaluate_wildcard_rules(
       plan = plan,
@@ -169,9 +182,10 @@ evaluate_plan <- function(
       expand = expand,
       rename = rename,
       trace = trace,
-      columns = columns
+      columns = columns,
+      sep = sep
     )
-  } else if (!is.null(wildcard) && !is.null(values)){
+  } else if (!is.null(wildcard) && !is.null(values)) {
     evaluate_single_wildcard(
       plan = plan,
       wildcard = wildcard,
@@ -179,7 +193,8 @@ evaluate_plan <- function(
       expand = expand,
       rename = rename,
       trace = trace,
-      columns = columns
+      columns = columns,
+      sep = sep
     )
   } else {
     plan
@@ -187,19 +202,26 @@ evaluate_plan <- function(
 }
 
 evaluate_single_wildcard <- function(
-  plan, wildcard, values, expand, rename, trace, columns
-){
-  if (!length(columns)){
+  plan,
+  wildcard,
+  values,
+  expand,
+  rename,
+  trace,
+  columns,
+  sep
+) {
+  if (!length(columns)) {
     return(plan)
   }
-  if ("target" %in% columns){
+  if ("target" %in% columns) {
     stop(
       "'target' cannot be in the `columns` argument of evaluate_plan().",
       call = FALSE
     )
   }
   missing_cols <- setdiff(columns, colnames(plan))
-  if (length(missing_cols)){
+  if (length(missing_cols)) {
     stop(
       "some columns you selected for evaluate_plan() are not in the plan:\n",
       multiline_message(missing_cols),
@@ -208,10 +230,10 @@ evaluate_single_wildcard <- function(
   }
   values <- as.character(values)
   matches <- rep(FALSE, nrow(plan))
-  for (col in columns){
+  for (col in columns) {
     matches <- matches | grepl(wildcard, plan[[col]], fixed = TRUE)
   }
-  if (!any(matches)){
+  if (!any(matches)) {
     return(plan)
   }
   major <- make.names(tempfile())
@@ -219,29 +241,29 @@ evaluate_single_wildcard <- function(
   plan[[major]] <- seq_len(nrow(plan))
   plan[[minor]] <- plan[[major]]
   matching <- plan[matches, ]
-  if (expand){
+  if (expand) {
     matching <- expand_plan(matching, values, rename = FALSE)
   }
   matched_targets <- matching$target
-  if (rename){
-    matching$target <- paste(matching$target, values, sep = "_")
+  if (rename) {
+    matching$target <- paste(matching$target, values, sep = sep)
   }
   values <- rep(values, length.out = nrow(matching))
-  for (col in columns){
+  for (col in columns) {
     matching[[col]] <- Vectorize(
-      function(value, command){
+      function(value, command) {
         gsub(wildcard, value, command, fixed = TRUE)
       }
     )(values, matching[[col]])
   }
-  if (trace){
+  if (trace) {
     matching[[wildcard]] <- values
     matching[[paste0(wildcard, "_from")]] <- matched_targets
   }
   rownames(matching) <- NULL
   rownames(plan) <- NULL
   matching[[minor]] <- seq_len(nrow(matching))
-  out <- dplyr::bind_rows(matching, plan[!matches, ])
+  out <- bind_plans(matching, plan[!matches, ])
   out <- out[order(out[[major]], out[[minor]]), ]
   out[[minor]] <- NULL
   out[[major]] <- NULL
@@ -250,9 +272,9 @@ evaluate_single_wildcard <- function(
 }
 
 evaluate_wildcard_rules <- function(
-  plan, rules, expand, rename, trace, columns
-){
-  for (index in seq_len(length(rules))){
+  plan, rules, expand, rename, trace, columns, sep
+) {
+  for (index in seq_len(length(rules))) {
     plan <- evaluate_single_wildcard(
       plan,
       wildcard = names(rules)[index],
@@ -260,19 +282,20 @@ evaluate_wildcard_rules <- function(
       expand = expand,
       rename = rename,
       trace = trace,
-      columns = columns
+      columns = columns,
+      sep = sep
     )
   }
   plan
 }
 
-check_wildcard_rules <- function(rules){
+check_wildcard_rules <- function(rules) {
   stopifnot(is.list(rules))
   wildcards <- names(rules)
   all_values <- unlist(rules)
-  for (i in seq_along(wildcards)){
+  for (i in seq_along(wildcards)) {
     matches <- grep(wildcards[i], all_values, fixed = TRUE, value = TRUE)
-    if (length(matches)){
+    if (length(matches)) {
       stop(
         "No wildcard name can match the name of any replacement value. ",
         "Conflicts: \"", wildcards[i], "\" with:\n",
@@ -281,7 +304,7 @@ check_wildcard_rules <- function(rules){
       )
     }
     matches <- grep(wildcards[i], wildcards[-i], fixed = TRUE, value = TRUE)
-    if (length(matches)){
+    if (length(matches)) {
       stop(
         "The name of a wildcard cannot be a substring ",
         "of any other wildcard name. ",
@@ -298,14 +321,17 @@ check_wildcard_rules <- function(rules){
 #' Prefixes are appended to the new target names
 #' so targets still have unique names.
 #' @export
-#' @seealso drake_plan, map_plan, reduce_by, gather_by, reduce_plan,
-#'   gather_plan, evaluate_plan, expand_plan
+#' @seealso [drake_plan()], [map_plan()], [reduce_by()], [gather_by()], [reduce_plan()],
+#'   [gather_plan()], [evaluate_plan()], [expand_plan()]
 #' @return An expanded workflow plan data frame (with replicated targets).
 #' @param plan workflow plan data frame
 #' @param values values to expand over. These will be appended to
 #'   the names of the new targets.
 #' @param rename logical, whether to rename the targets
 #'   based on the `values`. See the examples for a demo.
+#' @param sep character scalar, delimiter between the original
+#'   target names and the values to append to create the new
+#'   target names. Only relevant when `rename` is `TRUE`.
 #' @examples
 #' # Create the part of the workflow plan for the datasets.
 #' datasets <- drake_plan(
@@ -317,8 +343,8 @@ check_wildcard_rules <- function(rules){
 #' # Choose whether to rename the targets based on the values.
 #' expand_plan(datasets, values = 1:3, rename = TRUE)
 #' expand_plan(datasets, values = 1:3, rename = FALSE)
-expand_plan <- function(plan, values = NULL, rename = TRUE){
-  if (!length(values)){
+expand_plan <- function(plan, values = NULL, rename = TRUE, sep = "_") {
+  if (!length(values)) {
     return(plan)
   }
   nrows <- nrow(plan)
@@ -326,8 +352,8 @@ expand_plan <- function(plan, values = NULL, rename = TRUE){
   plan <- plan[repeat_targets, ]
   values <- as.character(values)
   values <- rep(values, times = nrows)
-  if (rename){
-    plan$target <- paste(plan$target, values, sep = "_")
+  if (rename) {
+    plan$target <- paste(plan$target, values, sep = sep)
   }
   rownames(plan) <- NULL
   sanitize_plan(plan, allow_duplicated_targets = TRUE)
@@ -337,8 +363,8 @@ expand_plan <- function(plan, values = NULL, rename = TRUE){
 #'   analyze multiple datasets using multiple methods of analysis.
 #' @description Uses wildcards to create a new
 #' workflow plan data frame from a template data frame.
-#' @seealso drake_plan, map_plan, reduce_by, gather_by, reduce_plan,
-#'   gather_plan, evaluate_plan, expand_plan, plan_summaries
+#' @seealso [drake_plan()], [map_plan()], [reduce_by()], [gather_by()], [reduce_plan()],
+#'   [gather_plan()], [evaluate_plan()], [expand_plan()], [plan_summaries()]
 #' @export
 #' @return An evaluated workflow plan data frame of analysis targets.
 #' @param plan workflow plan data frame of analysis methods.
@@ -349,6 +375,8 @@ expand_plan <- function(plan, values = NULL, rename = TRUE){
 #'   `lm(your_dataset_2)`, etc.
 #' @param datasets workflow plan data frame with instructions
 #'   to make the datasets.
+#' @param sep character scalar, delimiter for creating
+#'   the names of new targets
 #' @examples
 #' # Create the piece of the workflow plan for the datasets.
 #' datasets <- drake_plan(
@@ -365,7 +393,7 @@ expand_plan <- function(plan, values = NULL, rename = TRUE){
 #' # For the final workflow plan, row bind the pieces together.
 #' my_plan <- rbind(datasets, ans)
 #' my_plan
-plan_analyses <- function(plan, datasets){
+plan_analyses <- function(plan, datasets, sep = "_") {
   plan <- deprecate_wildcard(
     plan = plan,
     old = "..dataset..",
@@ -374,7 +402,8 @@ plan_analyses <- function(plan, datasets){
   evaluate_plan(
     plan,
     wildcard = dataset_wildcard(),
-    values = datasets$target
+    values = datasets$target,
+    sep = sep
   )
 }
 
@@ -382,8 +411,8 @@ plan_analyses <- function(plan, datasets){
 #'   multiple analyses of multiple datasets multiple ways.
 #' @description Uses wildcards to create a new
 #' workflow plan data frame from a template data frame.
-#' @seealso drake_plan, map_plan, reduce_by, gather_by, reduce_plan,
-#'   gather_plan, evaluate_plan, expand_plan, plan_analyses
+#' @seealso [drake_plan()], [map_plan()], [reduce_by()], [gather_by()], [reduce_plan()],
+#'   [gather_plan()], [evaluate_plan()], [expand_plan()], [plan_analyses()]
 #' @export
 #' @return An evaluated workflow plan data frame of instructions
 #'   for computing summaries of analyses and datasets.
@@ -398,6 +427,8 @@ plan_analyses <- function(plan, datasets){
 #'   summaries. If not `NULL`, the length must be the number of
 #'   rows in the `plan`. See the [gather_plan()] function
 #'   for more.
+#' @param sep character scalar, delimiter for creating the
+#'   new target names
 #' @examples
 #' # Create the part of the workflow plan data frame for the datasets.
 #' datasets <- drake_plan(
@@ -427,8 +458,9 @@ plan_summaries <- function(
   plan,
   analyses,
   datasets,
-  gather = rep("list", nrow(plan))
-){
+  gather = rep("list", nrow(plan)),
+  sep = "_"
+) {
   plan <- deprecate_wildcard(
     plan = plan,
     old = "..analysis..",
@@ -441,9 +473,9 @@ plan_summaries <- function(
   )
   plan <- with_analyses_only(plan)
   out <- plan
-  group <- paste(colnames(out), collapse = "_")
+  group <- paste(colnames(out), collapse = sep)
   out[[group]] <- out$target
-  if (!any(grepl(analysis_wildcard(), out$command, fixed = TRUE))){
+  if (!any(grepl(analysis_wildcard(), out$command, fixed = TRUE))) {
     stop(
       "no 'analysis__' wildcard found in plan$command. ",
       "Use plan_analyses() instead."
@@ -452,43 +484,46 @@ plan_summaries <- function(
   out <- evaluate_plan(
     out,
     wildcard = analysis_wildcard(),
-    values = analyses$target
+    values = analyses$target,
+    sep = sep
   )
   out <- evaluate_plan(
     out,
     wildcard = dataset_wildcard(),
     values = datasets$target,
-    expand = FALSE
+    expand = FALSE,
+    sep = sep
   )
-  if (!length(gather)){
+  if (!length(gather)) {
     return(out[setdiff(names(out), group)])
   }
-  if (length(gather) == 1){
+  if (length(gather) == 1) {
     gather <- rep(gather, dim(plan)[1])
   }
-  if (!(length(gather) == dim(plan)[1])){
+  if (!(length(gather) == dim(plan)[1])) {
     stop("gather must be NULL or have length 1 or nrow(plan)")
   }
-  . <- group_sym <- as.symbol(group)
-  gathered <- group_by(out, !!!group_sym) %>%
-    do({
-      summary_type <- .[[group]][1]
+  gathered <- map_by(
+    .x = out,
+    .by = group,
+    .f = function(x) {
+      summary_type <- x[[group]][1]
       gather_plan(
-        .,
+        x,
         target = summary_type,
         gather = gather[which(summary_type == plan$target)],
         append = FALSE
       )
-    })
+    }
+  )
   target <- command <- NULL
-  bind_plans(gathered, out) %>%
-    ungroup %>%
-    select(target, command)
+  out <- bind_plans(gathered, out)
+  out[, c("target", "command")]
 }
 
-with_analyses_only <- function(plan){
+with_analyses_only <- function(plan) {
   has_analysis <- grepl(analysis_wildcard(), plan$command, fixed = TRUE)
-  if (any(!has_analysis)){
+  if (any(!has_analysis)) {
     warning(
       "removing ",
       sum(has_analysis),

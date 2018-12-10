@@ -1,37 +1,8 @@
-#' @title Return the [sessionInfo()]
-#'   of the last call to [make()].
-#' @description By default, session info is saved
-#' during [make()] to ensure reproducibility.
-#' Your loaded packages and their versions are recorded, for example.
-#' @seealso [diagnose()], [built()], [imported()],
-#'   [readd()], [drake_plan()], [make()]
-#' @export
-#' @return [sessionInfo()] of the last
-#'   call to [make()]
-#' @inheritParams cached
-#' @examples
-#' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
-#' load_mtcars_example() # Get the code with drake_example("mtcars").
-#' make(my_plan) # Run the project, build the targets.
-#' drake_session() # Retrieve the cached sessionInfo() of the last make().
-#' })
-#' }
-drake_session <- function(path = getwd(), search = TRUE,
-  cache = drake::get_cache(path = path, search = search, verbose = verbose),
-  verbose = drake::default_verbose()
-){
-  if (is.null(cache)) {
-    stop("No drake::make() session detected.")
-  }
-  return(cache$get("sessionInfo", namespace = "session"))
-}
-
 #' @title List the targets that either
 #'   (1) are currently being built during a [make()], or
 #'   (2) were being built if the last [make()] quit unexpectedly.
 #' @description Similar to [progress()].
-#' @seealso [diagnose()], [drake_session()],
+#' @seealso [diagnose()], [drake_get_session_info()],
 #'   [built()], [imported()],
 #'   [readd()], [drake_plan()], [make()]
 #' @export
@@ -49,11 +20,9 @@ drake_session <- function(path = getwd(), search = TRUE,
 in_progress <- function(path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
   verbose = drake::default_verbose()
-){
+) {
   prog <- progress(path = path, search = search, cache = cache)
-  which(prog == "in progress") %>%
-    names() %>%
-    as.character()
+  as.character(names(which(prog == "in progress")))
 }
 
 #' @title List the targets that failed in the last call
@@ -61,7 +30,7 @@ in_progress <- function(path = getwd(), search = TRUE,
 #' @description Together, functions `failed` and
 #' [diagnose()] should eliminate the strict need
 #' for ordinary error messages printed to the console.
-#' @seealso [diagnose()], [drake_session()],
+#' @seealso [diagnose()], [drake_get_session_info()],
 #'   [built()], [imported()],
 #'   [readd()], [drake_plan()], [make()]
 #' @export
@@ -87,12 +56,10 @@ failed <- function(path = getwd(), search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
   verbose = drake::default_verbose(),
   upstream_only = FALSE
-){
+) {
   prog <- progress(path = path, search = search, cache = cache)
-  out <- which(prog == "failed") %>%
-    names() %>%
-    as.character()
-  if (upstream_only){
+  out <- as.character(names(which(prog == "failed")))
+  if (upstream_only) {
     graph <- read_drake_graph(cache = cache)
     out <- filter_upstream(targets = out, graph = graph)
   }
@@ -104,7 +71,7 @@ failed <- function(path = getwd(), search = TRUE,
 #' @description Objects that drake imported, built, or attempted
 #' to build are listed as `"finished"` or `"in progress"`.
 #' Skipped objects are not listed.
-#' @seealso [diagnose()], [drake_session()],
+#' @seealso [diagnose()], [drake_get_session_info()],
 #'   [built()], [imported()],
 #'   [readd()], [drake_plan()], [make()]
 #' @export
@@ -153,9 +120,9 @@ progress <- function(
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
   verbose = drake::default_verbose(),
   jobs = 1
-){
+) {
   # deprecate imported_files_only
-  if (length(imported_files_only)){
+  if (length(imported_files_only)) {
     warning(
       "The imported_files_only argument to progress() is deprecated ",
       "and will be removed the next major release. ",
@@ -164,12 +131,12 @@ progress <- function(
     )
     no_imported_objects <- imported_files_only
   }
-  if (is.null(cache)){
+  if (is.null(cache)) {
     return(character(0))
   }
   dots <- match.call(expand.dots = FALSE)$...
   targets <- targets_from_dots(dots, list)
-  if (!length(targets)){
+  if (!length(targets)) {
     return(
       list_progress(
         no_imported_objects = no_imported_objects,
@@ -181,7 +148,7 @@ progress <- function(
   get_progress(targets = targets, cache = cache, jobs = jobs)
 }
 
-list_progress <- function(no_imported_objects, cache, jobs){
+list_progress <- function(no_imported_objects, cache, jobs) {
   all_marked <- cache$list(namespace = "progress")
   all_progress <- get_progress(
     targets = all_marked,
@@ -190,25 +157,25 @@ list_progress <- function(no_imported_objects, cache, jobs){
   )
   abridged_marked <- parallel_filter(
     all_marked,
-    f = function(target){
+    f = function(target) {
       is_built_or_imported_file(target = target, cache = cache)
     },
     jobs = jobs
   )
   abridged_progress <- all_progress[abridged_marked]
-  if (no_imported_objects){
+  if (no_imported_objects) {
     out <- abridged_progress
   } else{
     out <- all_progress
   }
-  if (!length(out)){
+  if (!length(out)) {
     out <- as.character(out)
   }
   return(out)
 }
 
-get_progress <- function(targets, cache, jobs){
-  if (!length(targets)){
+get_progress <- function(targets, cache, jobs) {
+  if (!length(targets)) {
     return(character(0))
   }
   out <- lightly_parallelize(
@@ -216,22 +183,22 @@ get_progress <- function(targets, cache, jobs){
     FUN = get_progress_single,
     jobs = jobs,
     cache = cache
-  ) %>%
-    unlist
+  )
+  out <- unlist(out)
   names(out) <- targets
   out
 }
 
-get_progress_single <- function(target, cache){
-  if (cache$exists(key = target, namespace = "progress")){
+get_progress_single <- function(target, cache) {
+  if (cache$exists(key = target, namespace = "progress")) {
     cache$get(key = target, namespace = "progress")
   } else{
     "not built or imported"
   }
 }
 
-set_progress <- function(target, value, config){
-  if (!config$log_progress){
+set_progress <- function(target, value, config) {
+  if (!config$log_progress) {
     return()
   }
   config$cache$duplicate(

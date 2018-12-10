@@ -104,7 +104,6 @@ test_with_dir("mclapply and lapply", {
   suppressWarnings(out <- make(config = config))
   expect_false(
     grepl("NA", mc_get_checksum(target = "combined", config = config)))
-  expect_error(mc_get_checksum(target = "askldfklhjsdfkj", config = config))
   expect_true(length(justbuilt(out)) > 0)
   expect_true(is.numeric(readd(final)))
   suppressWarnings(out <- make(config = config))
@@ -153,9 +152,9 @@ test_with_dir("staged mclapply and lapply", {
 
 test_with_dir("lightly_parallelize_atomic() is correct", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  withr::with_seed(seed = 2017, code = {
+  with_seed(seed = 2017, code = {
     x <- sample(LETTERS[1:3], size = 1e3, replace = TRUE)
-    append <- function(x){
+    append <- function(x) {
       paste0(x, "_text")
     }
     out0 <- lightly_parallelize(X = x, FUN = append, jobs = 2)
@@ -213,7 +212,6 @@ test_with_dir("checksum functionality", {
   checksum <- mc_get_checksum(target = "combined", config = config)
   bad <- "askldfklhjsdfkj"
   expect_false(grepl("NA", checksum))
-  expect_error(mc_get_checksum(target = bad, config = config))
   expect_true(
     mc_is_good_checksum(
       target = "combined", checksum = checksum, config = config))

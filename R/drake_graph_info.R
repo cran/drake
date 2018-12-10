@@ -7,7 +7,7 @@
 #'   one for edges, and one for
 #'   the legend nodes. The list also contains the
 #'   default title of the graph.
-#' @seealso [vis_drake_graph()], [build_drake_graph()]
+#' @seealso [vis_drake_graph()]
 #' @param config a [drake_config()] configuration list.
 #'   You can get one as a return value from [make()] as well.
 #'
@@ -107,10 +107,9 @@
 #' # Use the data frames to plot your own custom visNetwork graph.
 #' # For example, you can omit the legend nodes
 #' # and change the direction of the graph.
-#' library(magrittr)
 #' library(visNetwork)
-#' visNetwork(nodes = raw_graph$nodes, edges = raw_graph$edges) %>%
-#'   visHierarchicalLayout(direction = 'UD')
+#' graph <- visNetwork(nodes = raw_graph$nodes, edges = raw_graph$edges)
+#' visHierarchicalLayout(graph, direction = 'UD')
 #' # Optionally visualize clusters.
 #' config$plan$large_data <- grepl("large", config$plan$target)
 #' graph <- drake_graph_info(
@@ -144,10 +143,10 @@ drake_graph_info <- function(
   show_output_files = TRUE
 ) {
   assert_pkg("visNetwork")
-  if (!length(V(config$graph)$name)){
+  if (!length(V(config$graph)$name)) {
     return(null_graph())
   }
-  if (!is.null(split_columns)){
+  if (!is.null(split_columns)) {
     warning("Argument split_columns is deprecated.", call. = FALSE)
   }
   config$build_times <- resolve_build_times(build_times)
@@ -157,7 +156,21 @@ drake_graph_info <- function(
   config$make_imports <- make_imports
   config$group <- group
   config$clusters <- clusters
-  config <- get_raw_node_category_data(config)
+  config$file_out <- lapply(config$plan$target, function(target) {
+    config$layout[[target]]$deps_build$file_out
+  })
+  names(config$file_out) <- config$plan$target
+  if (show_output_files) {
+    config$graph <- create_drake_graph(
+      layout = config$layout,
+      targets = config$targets,
+      cache = NULL,
+      jobs = config$jobs,
+      console_log_file = config$console_log_file,
+      verbose = config$verbose,
+      collapse = FALSE
+    )
+  }
   config$graph <- get_neighborhood(
     graph = config$graph,
     from = from,
@@ -165,12 +178,17 @@ drake_graph_info <- function(
     order = order
   )
   config$graph <- subset_graph(graph = config$graph, subset = subset)
-  if (targets_only){
-    config$graph <- subset_graph(
+  config$imports <- intersect(
+    igraph::V(config$graph)$name,
+    config$all_imports
+  )
+  if (targets_only) {
+    config$graph <- igraph::delete_vertices(
       graph = config$graph,
-      subset = config$plan$target
+      v = config$imports
     )
   }
+  config <- get_raw_node_category_data(config)
   network_data <- visNetwork::toVisNetworkData(config$graph)
   config$nodes <- merge(
     x = network_data$nodes,
@@ -181,15 +199,15 @@ drake_graph_info <- function(
   )
   config <- trim_node_categories(config)
   config$nodes <- configure_nodes(config = config)
-  config$edges <- network_data$edges
-  if (show_output_files){
-    config <- insert_file_outs(config)
+  if (show_output_files) {
+    config$nodes <- append_output_file_nodes(config)
   }
-  if (nrow(config$edges)){
+  config$edges <- network_data$edges
+  if (nrow(config$edges)) {
     config$edges$arrows <- "to"
     config$edges$smooth <- TRUE
   }
-  if (length(config$group)){
+  if (length(config$group)) {
     config <- cluster_nodes(config)
   }
   list(

@@ -23,7 +23,7 @@
 #'   into memory before evaluating these triggers.
 #' @export
 #' @seealso [drake_plan()], [make()]
-#' @return a list of trigger specification details that
+#' @return A list of trigger specification details that
 #'   `drake` processes internally when it comes time to decide
 #'   whether to build the target.
 #' @param command logical, whether to rebuild the target if the
@@ -69,7 +69,7 @@
 #' make(my_plan, trigger = trigger(condition = TRUE))
 #' # You can also define specific triggers for each target.
 #' plan <- drake_plan(
-#'   x = rnorm(15),
+#'   x = sample.int(15),
 #'   y = target(
 #'     command = x + 1,
 #'     trigger = trigger(depend = FALSE)
@@ -78,7 +78,7 @@
 #' # Now, when x changes, y will not.
 #' make(plan)
 #' make(plan)
-#' plan$command[1] <- "rnorm(16)" # change x
+#' plan$command[1] <- "sample.int(16)" # change x
 #' make(plan)
 #' })
 #' }
@@ -89,7 +89,7 @@ trigger <- function(
   condition = FALSE,
   change = NULL,
   mode = c("whitelist", "blacklist", "condition")
-){
+) {
   stopifnot(is.logical(command))
   stopifnot(is.logical(depend))
   stopifnot(is.logical(file))
@@ -103,7 +103,7 @@ trigger <- function(
   )
 }
 
-parse_trigger <- function(trigger, envir){
+parse_trigger <- function(trigger, envir) {
  if (is.character(trigger)) {
     trigger <- convert_old_trigger(trigger)
     trigger <- parse(text = trigger)
@@ -111,8 +111,8 @@ parse_trigger <- function(trigger, envir){
   eval(trigger, envir = envir)
 }
 
-command_trigger <- function(target, meta, config){
-  if (is.null(meta$command)){
+command_trigger <- function(target, meta, config) {
+  if (is.null(meta$command)) {
     return(FALSE)
   }
   command <- get_from_subspace(
@@ -124,8 +124,8 @@ command_trigger <- function(target, meta, config){
   !identical(command, meta$command)
 }
 
-depend_trigger <- function(target, meta, config){
-  if (is.null(meta$dependency_hash)){
+depend_trigger <- function(target, meta, config) {
+  if (is.null(meta$dependency_hash)) {
     return(FALSE)
   }
   dependency_hash <- get_from_subspace(
@@ -139,51 +139,43 @@ depend_trigger <- function(target, meta, config){
 
 # We really need a file dependency hash just for all the files.
 # Maybe that's the role of meta$file
-file_trigger <- function(target, meta, config){
-  if (!length(target) || !length(config) || !length(meta)){
+file_trigger <- function(target, meta, config) {
+  if (!length(target) || !length(config) || !length(meta)) {
     return(FALSE)
   }
-  file_out <- vertex_attr(
-    graph = config$graph,
-    name = "deps",
-    index = target
-  )[[1]]$file_out
-  for (file in file_out){
-    if (!file.exists(drake_unquote(file))){
+  file_out <- config$layout[[target]]$deps_build$file_out
+  for (file in file_out) {
+    if (!file.exists(drake_unquote(file))) {
       return(TRUE)
     }
   }
-  for (hash_name in c("input_file_hash", "output_file_hash")){
+  for (hash_name in c("input_file_hash", "output_file_hash")) {
     old_file_hash <- get_from_subspace(
       key = target,
       subspace = hash_name,
       namespace = "meta",
       cache = config$cache
     )
-    if (!identical(old_file_hash, meta[[hash_name]])){
+    if (!identical(old_file_hash, meta[[hash_name]])) {
       return(TRUE)
     }
   }
   FALSE
 }
 
-condition_trigger <- function(target, meta, config){
-  if (!length(target) || !length(config) || !length(meta)){
+condition_trigger <- function(target, meta, config) {
+  if (!length(target) || !length(config) || !length(meta)) {
     return(FALSE)
   }
-  if (is.language(meta$trigger$condition)){
-    vertex_attr(
-      graph = config$graph,
-      name = "deps",
-      index = target
-    )[[1]]$condition %>%
-      ensure_loaded(config = config)
-    value <- eval(meta$trigger$condition, envir = config$envir) %>%
-      as.logical()
+  if (is.language(meta$trigger$condition)) {
+    deps <- config$layout[[target]]$deps_condition
+    deps <- ensure_loaded(deps, config = config)
+    value <- eval(meta$trigger$condition, envir = config$envir)
+    value <- as.logical(value)
   } else {
     value <- as.logical(meta$trigger$condition)
   }
-  if (length(value) != 1 || !is.logical(value)){
+  if (length(value) != 1 || !is.logical(value)) {
     drake_error(
       "The `condition` trigger must evaluate to a logical of length 1. ",
       "got `", value, "` for target ", target, ".",
@@ -193,61 +185,61 @@ condition_trigger <- function(target, meta, config){
   condition_decision(value = value, mode = meta$trigger$mode)
 }
 
-condition_decision <- function(value, mode){
-  if (identical(mode, "whitelist") && identical(value, TRUE)){
+condition_decision <- function(value, mode) {
+  if (identical(mode, "whitelist") && identical(value, TRUE)) {
     return(TRUE)
   }
-  if (identical(mode, "blacklist") && identical(value, FALSE)){
+  if (identical(mode, "blacklist") && identical(value, FALSE)) {
     return(FALSE)
   }
-  if (identical(mode, "condition")){
+  if (identical(mode, "condition")) {
     return(value)
   }
   "defer"
 }
 
-change_trigger <- function(target, meta, config){
-  if (!length(target) || !length(config) || !length(meta)){
+change_trigger <- function(target, meta, config) {
+  if (!length(target) || !length(config) || !length(meta)) {
     return(FALSE)
   }
-  if (!config$cache$exists(key = target, namespace = "change")){
+  if (!config$cache$exists(key = target, namespace = "change")) {
     return(FALSE) # nocov
   }
   old_value <- config$cache$get(key = target, namespace = "change")
   !identical(old_value, meta$trigger$value)
 }
 
-should_build_target <- function(target, meta = NULL, config){
-  if (is.null(meta)){
+should_build_target <- function(target, meta = NULL, config) {
+  if (is.null(meta)) {
     meta <- drake_meta(target = target, config = config)
   }
-  if (meta$imported){
+  if (meta$imported) {
     return(TRUE)
   }
-  if (meta$missing){
+  if (meta$missing) {
     return(TRUE)
   }
   condition <- condition_trigger(target = target, meta = meta, config = config)
-  if (is.logical(condition)){
+  if (is.logical(condition)) {
     return(condition)
   }
-  if (identical(meta$trigger$command, TRUE)){
-    if (command_trigger(target = target, meta = meta, config = config)){
+  if (identical(meta$trigger$command, TRUE)) {
+    if (command_trigger(target = target, meta = meta, config = config)) {
       return(TRUE)
     }
   }
-  if (identical(meta$trigger$depend, TRUE)){
-    if (depend_trigger(target = target, meta = meta, config = config)){
+  if (identical(meta$trigger$depend, TRUE)) {
+    if (depend_trigger(target = target, meta = meta, config = config)) {
       return(TRUE)
     }
   }
-  if (identical(meta$trigger$file, TRUE)){
-    if (file_trigger(target = target, meta = meta, config = config)){
+  if (identical(meta$trigger$file, TRUE)) {
+    if (file_trigger(target = target, meta = meta, config = config)) {
       return(TRUE)
     }
   }
-  if (!is.null(meta$trigger$change)){
-    if (change_trigger(target = target, meta = meta, config = config)){
+  if (!is.null(meta$trigger$change)) {
+    if (change_trigger(target = target, meta = meta, config = config)) {
       return(TRUE)
     }
   }

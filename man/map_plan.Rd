@@ -32,23 +32,24 @@ help "trace back" the original settings that went into building
 each target. Similar to the \code{trace} argument of \code{\link[=evaluate_plan]{evaluate_plan()}}.}
 }
 \value{
-A workflow plan data frame
+A workflow plan data frame.
 }
 \description{
-\code{map_plan()} is like \code{pmap_df()} from the \code{purrr} package.
-It takes a function name and a grid of arguments, and it
+\code{map_plan()} is like \code{base::Map()}:
+it takes a function name and a grid of arguments, and
 writes out all the commands calls to apply the function to
 each row of arguments.
 }
 \examples{
 # For the full tutorial, visit
 # https://ropenscilabs.github.io/drake-manual/plans.html#map_plan.
-my_model_fit <- function(x1, x2, data){
+my_model_fit <- function(x1, x2, data) {
   lm(as.formula(paste("mpg ~", x1, "+", x1)), data = data)
 }
 covariates <- setdiff(colnames(mtcars), "mpg")
-args <- tibble::as_tibble(t(combn(covariates, 2)))
+args <- t(combn(covariates, 2))
 colnames(args) <- c("x1", "x2")
+args <- tibble::as_tibble(args)
 args$data <- "mtcars"
 args$data <- rlang::syms(args$data)
 args$id <- paste0("fit_", args$x1, "_", args$x2)
@@ -65,6 +66,6 @@ make(plan, verbose = FALSE, cache = cache)
 readd(fit_cyl_disp, cache = cache)
 }
 \seealso{
-drake_plan, reduce_by, gather_by, reduce_plan, gather_plan,
-evaluate_plan, expand_plan
+\code{\link[=drake_plan]{drake_plan()}}, \code{\link[=reduce_by]{reduce_by()}}, \code{\link[=gather_by]{gather_by()}}, \code{\link[=reduce_plan]{reduce_plan()}}, \code{\link[=gather_plan]{gather_plan()}},
+\code{\link[=evaluate_plan]{evaluate_plan()}}, \code{\link[=expand_plan]{expand_plan()}}
 }

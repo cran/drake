@@ -1,12 +1,12 @@
 #' @title Create a plan that maps a function to a grid of arguments.
-#' @description `map_plan()` is like `pmap_df()` from the `purrr` package.
-#'   It takes a function name and a grid of arguments, and it
+#' @description `map_plan()` is like `base::Map()`:
+#'   it takes a function name and a grid of arguments, and 
 #'   writes out all the commands calls to apply the function to
 #'   each row of arguments.
 #' @export
-#' @seealso drake_plan, reduce_by, gather_by, reduce_plan, gather_plan,
-#'   evaluate_plan, expand_plan
-#' @return A workflow plan data frame
+#' @seealso [drake_plan()], [reduce_by()], [gather_by()], [reduce_plan()], [gather_plan()],
+#'   [evaluate_plan()], [expand_plan()]
+#' @return A workflow plan data frame.
 #' @param args a data frame (or better yet, a `tibble`)
 #'   of function arguments to `fun`.
 #'   Here, the column names should be the names of the arguments
@@ -29,12 +29,13 @@
 #' @examples
 #' # For the full tutorial, visit
 #' # https://ropenscilabs.github.io/drake-manual/plans.html#map_plan.
-#' my_model_fit <- function(x1, x2, data){
+#' my_model_fit <- function(x1, x2, data) {
 #'   lm(as.formula(paste("mpg ~", x1, "+", x1)), data = data)
 #' }
 #' covariates <- setdiff(colnames(mtcars), "mpg")
-#' args <- tibble::as_tibble(t(combn(covariates, 2)))
+#' args <- t(combn(covariates, 2))
 #' colnames(args) <- c("x1", "x2")
+#' args <- tibble::as_tibble(args)
 #' args$data <- "mtcars"
 #' args$data <- rlang::syms(args$data)
 #' args$id <- paste0("fit_", args$x1, "_", args$x2)
@@ -55,14 +56,14 @@ map_plan <- function(
   id = "id",
   character_only = FALSE,
   trace = FALSE
-){
+) {
   args <- tibble::as_tibble(args)
-  if (!character_only){
+  if (!character_only) {
     fun <- as.character(substitute(fun))
     id <- as.character(substitute(id))
   }
   cols <- setdiff(colnames(args), id)
-  if (id %in% colnames(args)){
+  if (id %in% colnames(args)) {
     target <- args[[id]]
   } else {
     target <- paste0(
@@ -70,20 +71,19 @@ map_plan <- function(
       apply(X = args, MARGIN = 1, FUN = digest::digest, algo = "murmur32")
     )
   }
-  command <- purrr::pmap_chr(
+  command <- as.character(unlist(drake_pmap(
     .l = args[, cols],
-    .f = function(...){
-      list(as.name(fun), ...) %>%
-        as.call() %>%
-        rlang::expr_text()
+    .f = function(...) {
+      out <- list(as.name(fun), ...)
+      out <- as.call(out)
+      rlang::expr_text(out)
     }
-  )
-  out <- tibble::tibble(target = target, command = command) %>%
-    sanitize_plan()
-  if (trace){
-    out <- dplyr::bind_cols(out, args)
+  )))
+  out <- tibble::tibble(target = target, command = command)
+  if (trace) {
+    out <- tibble::as_tibble(cbind(out, args))
   }
-  out
+  sanitize_plan(out)
 }
 
 #' @title Write commands to combine several targets into one
@@ -91,8 +91,8 @@ map_plan <- function(
 #' @description Creates a new workflow plan to aggregate
 #'   existing targets in the supplied plan.
 #' @export
-#' @seealso drake_plan, map_plan, reduce_by, gather_by, reduce_plan,
-#'   evaluate_plan, expand_plan
+#' @seealso [drake_plan(), [map_plan()], [reduce_by()], [gather_by()], [reduce_plan()],
+#'   [evaluate_plan()], [expand_plan()]
 #' @return A workflow plan data frame that aggregates multiple
 #'   prespecified targets into one additional target downstream.
 #' @param plan workflow plan data frame of prespecified targets
@@ -135,12 +135,12 @@ gather_plan <- function(
   target = "target",
   gather = "list",
   append = FALSE
-){
+) {
   command <- paste(plan$target, "=", plan$target)
   command <- paste(command, collapse = ", ")
   command <- paste0(gather, "(", command, ")")
   new_plan <- tibble(target = target, command = command)
-  if (append){
+  if (append) {
     bind_plans(plan, new_plan)
   } else {
     new_plan
@@ -152,12 +152,11 @@ gather_plan <- function(
 #'   based on groupings from columns in the plan,
 #'   and then row-bind the new targets to the plan.
 #' @export
-#' @seealso drake_plan, map_plan, reduce_by, reduce_plan,
-#'   gather_plan, evaluate_plan, expand_plan
-#' @return a workflow plan data frame
+#' @seealso [drake_plan()], [map_plan()], [reduce_by()], [reduce_plan()],
+#'   [gather_plan()], [evaluate_plan()], [expand_plan()]
+#' @return A workflow plan data frame.
 #' @inheritParams gather_plan
-#' @param ... Symbols, columns of `plan` to define target groupings
-#'   passed to `dplyr::group_by()`.
+#' @param ... Symbols, columns of `plan` to define target groupings.
 #'   A [gather_plan()] call is applied for each grouping.
 #'   Groupings with all `NA`s in the selector variables are ignored.
 #' @param prefix character, prefix for naming the new targets.
@@ -170,6 +169,8 @@ gather_plan <- function(
 #'   Because `gather_by(append = TRUE, filter = my_column == "my_value")`
 #'   gathers on some targets while including all the original targets
 #'   in the output. See the examples for a demonstration.
+#' @param sep character scalar, delimiter for creating the names
+#'   of new targets
 #' @examples
 #' plan <- drake_plan(
 #'   data = get_data(),
@@ -178,7 +179,7 @@ gather_plan <- function(
 #' )
 #' plan <- evaluate_plan(plan, rules = list(mu__ = 1:2), trace = TRUE)
 #' plan
-#' gather_by(plan, mu___from, gather = "dplyr::bind_rows")
+#' gather_by(plan, mu___from, gather = "rbind")
 #' gather_by(plan, mu___from, append = TRUE)
 #' gather_by(plan, mu___from, append = FALSE)
 #' gather_by(plan, mu__, mu___from, prefix = "x")
@@ -201,30 +202,32 @@ gather_by <- function(
   prefix = "target",
   gather = "list",
   append = TRUE,
-  filter = NULL
-){
-  . <- NULL
-  if (is.null(substitute(filter))){
-    gathered <- plan
-  } else {
+  filter = NULL,
+  sep = "_"
+) {
+  gathered <- plan
+  if (!is.null(substitute(filter))) {
     filter <- rlang::enquo(filter)
-    gathered <- dplyr::filter(plan, !!filter)
+    selection <- rlang::eval_tidy(expr = filter, data = gathered)
+    selection[is.na(selection)] <- FALSE
+    gathered <- gathered[selection, ]
   }
-  gathered <- dplyr::group_by(gathered, ...) %>%
-    dplyr::do(
-      gather_plan(
-        plan = .,
-        target = prefix,
-        gather = gather,
-        append = FALSE
-      )
-    )
-  cols <- dplyr::select(gathered, ...)
-  suffix <- apply(X = cols, MARGIN = 1, FUN = paste, collapse = "_")
-  if (length(suffix) && nzchar(suffix)){
-    gathered$target <- paste(gathered$target, suffix, sep = "_")
+  col_names <- as.character(match.call(expand.dots = FALSE)$...)
+  gathered <- map_by(
+    .x = gathered,
+    .by = col_names,
+    .f = gather_plan,
+    target = prefix,
+    gather = gather,
+    append = FALSE
+  )
+  cols <- gathered[, col_names]
+  suffix <- apply(X = cols, MARGIN = 1, FUN = paste, collapse = sep)
+  if (length(suffix)) {
+    suffix[nzchar(suffix)] <- paste0(sep, suffix[nzchar(suffix)])
+    gathered$target <- paste0(gathered$target, suffix)
   }
-  if (append){
+  if (append) {
     out <- bind_plans(plan, gathered)
   } else {
     out <- gathered
@@ -237,8 +240,8 @@ gather_by <- function(
 #'   commands to do a reduction (i.e. to repeatedly apply a binary
 #'   operator to pairs of targets to produce one target).
 #' @export
-#' @seealso drake_plan, map_plan, reduce_by, gather_by,
-#'   gather_plan, evaluate_plan, expand_plan
+#' @seealso [drake_plan()], [map_plan()], [reduce_by()], [gather_by()],
+#'   [gather_plan()], [evaluate_plan()], [expand_plan()]
 #' @return A workflow plan data frame that aggregates multiple
 #'   prespecified targets into one additional target downstream.
 #' @param plan workflow plan data frame of prespecified targets
@@ -255,6 +258,7 @@ gather_by <- function(
 #'   original rows in the `plan` argument.
 #'   If `FALSE`, the output will only include the new
 #'   targets and commands.
+#' @param sep character scalar, delimiter for creating new target names
 #' @examples
 #' # Workflow plan for datasets:
 #' x_plan <- evaluate_plan(
@@ -289,12 +293,13 @@ reduce_plan <- function(
   op = " + ",
   end = "",
   pairwise = TRUE,
-  append = FALSE
-){
-  if (pairwise){
+  append = FALSE,
+  sep = "_"
+) {
+  if (pairwise) {
     pairs <- reduction_pairs(
       x = plan$target,
-      base_name = paste0(target, "_")
+      base_name = paste0(target, sep)
     )
     pairs$names[nrow(pairs)] <- target
     out <- tibble(
@@ -304,13 +309,13 @@ reduce_plan <- function(
   } else {
     command <- Reduce(
       x = plan$target,
-      f = function(x, y){
+      f = function(x, y) {
         paste0(begin, x, op, y, end)
       }
     )
     out <- tibble(target = target, command = command)
   }
-  if (append){
+  if (append) {
     bind_plans(plan, out)
   } else{
     out
@@ -322,12 +327,11 @@ reduce_plan <- function(
 #'   based on groupings from columns in the plan,
 #'   and then row-bind the new targets to the plan.
 #' @export
-#' @seealso drake_plan, map_plan, gather_by, reduce_plan,
-#'   gather_plan, evaluate_plan, expand_plan
-#' @return a workflow plan data frame
+#' @seealso [drake_plan()], [map_plan()], [gather_by()], [reduce_plan()],
+#'   [gather_plan()], [evaluate_plan()], [expand_plan()]
+#' @return A workflow plan data frame.
 #' @inheritParams reduce_plan
-#' @param ... Symbols, columns of `plan` to define target groupings
-#'   passed to `dplyr::group_by()`.
+#' @param ... Symbols, columns of `plan` to define target groupings.
 #'   A [reduce_plan()] call is applied for each grouping.
 #'   Groupings with all `NA`s in the selector variables are ignored.
 #' @param prefix character, prefix for naming the new targets.
@@ -340,6 +344,8 @@ reduce_plan <- function(
 #'   Because `gather_by(append = TRUE, filter = my_column == "my_value")`
 #'   gathers on some targets while including all the original targets
 #'   in the output. See the examples for a demonstration.
+#' @param sep character scalar, delimiter for creating the names
+#'   of new targets
 #' @examples
 #' plan <- drake_plan(
 #'   data = get_data(),
@@ -376,33 +382,36 @@ reduce_by <- function(
   end = "",
   pairwise = TRUE,
   append = TRUE,
-  filter = NULL
-){
-  . <- NULL
-  if (is.null(substitute(filter))){
-    reduced <- plan
-  } else {
+  filter = NULL,
+  sep = "_"
+) {
+  reduced <- plan
+  if (!is.null(substitute(filter))) {
     filter <- rlang::enquo(filter)
-    reduced <- dplyr::filter(plan, !!filter)
+    selection <- rlang::eval_tidy(expr = filter, data = reduced)
+    selection[is.na(selection)] <- FALSE
+    reduced <- reduced[selection, ]
   }
-  reduced <- dplyr::group_by(reduced, ...) %>%
-    dplyr::do(
-      reduce_plan(
-        plan = .,
-        target = prefix,
-        begin = begin,
-        op = op,
-        end = end,
-        pairwise = pairwise,
-        append = FALSE
-      )
-    )
-  cols <- dplyr::select(reduced, ...)
-  suffix <- apply(X = cols, MARGIN = 1, FUN = paste, collapse = "_")
-  if (length(suffix) && nzchar(suffix)){
-    reduced$target <- paste(reduced$target, suffix, sep = "_")
+  col_names <- as.character(match.call(expand.dots = FALSE)$...)
+  reduced <- map_by(
+    .x = reduced,
+    .by = col_names,
+    .f = reduce_plan,
+    target = prefix,
+    begin = begin,
+    op = op,
+    end = end,
+    pairwise = pairwise,
+    append = FALSE,
+    sep = sep
+  )
+  cols <- reduced[, col_names]
+  suffix <- apply(X = cols, MARGIN = 1, FUN = paste, collapse = sep)
+  if (length(suffix)) {
+    suffix[nzchar(suffix)] <- paste0(sep, suffix[nzchar(suffix)])
+    reduced$target <- paste0(reduced$target, suffix)
   }
-  if (append){
+  if (append) {
     out <- bind_plans(plan, reduced)
   } else {
     out <- reduced
@@ -410,14 +419,14 @@ reduce_by <- function(
   arrange_plan_cols(out)
 }
 
-reduction_pairs <- function(x, pairs = NULL, base_name = "reduced_"){
-  if (length(x) < 2){
+reduction_pairs <- function(x, pairs = NULL, base_name = "reduced_") {
+  if (length(x) < 2) {
     return(pairs)
   }
   evens <- x[seq(from = 2, to = length(x), by = 2)]
   odds <- x[seq(from = 1, to = length(x), by = 2)]
   names <- new_x <- paste0(base_name, seq_along(odds) + (nrow(pairs) %||% 0))
-  if (length(odds) > length(evens)){
+  if (length(odds) > length(evens)) {
     evens[length(evens) + 1] <- names[1]
     new_x <- new_x[-1]
   }

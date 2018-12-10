@@ -6,24 +6,25 @@
 \usage{
 make(plan = drake::read_drake_plan(), targets = NULL,
   envir = parent.frame(), verbose = drake::default_verbose(),
-  hook = NULL, cache = drake::get_cache(verbose = verbose, force =
-  force, console_log_file = console_log_file), fetch_cache = NULL,
+  hook = NULL, cache = drake::get_cache(verbose = verbose,
+  console_log_file = console_log_file), fetch_cache = NULL,
   parallelism = drake::default_parallelism(), jobs = 1,
   packages = rev(.packages()), prework = character(0),
   prepend = character(0), command = drake::default_Makefile_command(),
   args = drake::default_Makefile_args(jobs = jobs, verbose = verbose),
   recipe_command = drake::default_recipe_command(),
-  log_progress = TRUE, skip_targets = FALSE, timeout = Inf,
-  cpu = NULL, elapsed = NULL, retries = 0, force = FALSE,
+  log_progress = TRUE, skip_targets = FALSE, timeout = NULL,
+  cpu = Inf, elapsed = Inf, retries = 0, force = FALSE,
   return_config = NULL, graph = NULL, trigger = drake::trigger(),
   skip_imports = FALSE, skip_safety_checks = FALSE, config = NULL,
   lazy_load = "eager", session_info = TRUE, cache_log_file = NULL,
   seed = NULL, caching = "master", keep_going = FALSE,
-  session = NULL, imports_only = NULL,
-  pruning_strategy = c("lookahead", "speed", "memory"),
+  session = NULL, imports_only = NULL, pruning_strategy = NULL,
   makefile_path = "Makefile", console_log_file = NULL,
   ensure_workers = TRUE, garbage_collection = FALSE,
-  template = list(), sleep = function(i) 0.01)
+  template = list(), sleep = function(i) 0.01,
+  hasty_build = drake::default_hasty_build,
+  memory_strategy = c("speed", "memory", "lookahead"), layout = NULL)
 }
 \arguments{
 \item{plan}{workflow plan data frame.
@@ -58,17 +59,15 @@ then reproducibly tracked as dependencies.}
 Use \code{pkgconfig} to set the default value of \code{verbose}
 for your R session:
 for example, \code{pkgconfig::set_config("drake::verbose" = 2)}.
-\describe{
-\item{0 or \code{FALSE}:}{print nothing.}
-\item{1 or \code{TRUE}:}{print only targets to build.}
-\item{2:}{+ checks and cache info.}
-\item{3:}{+ any potentially missing items.}
-\item{4:}{+ imports and writes to the cache.}
+\itemize{
+\item \code{0} or \code{FALSE}: print nothing.
+\item \code{1} or \code{TRUE}: print only targets to build.
+\item \code{2}: also print checks and cache info.
+\item \code{3}: also print any potentially missing items.
+\item \code{4}: also print imports and writes to the cache.
 }}
 
-\item{hook}{Deprecated. A future release may support
-individual hooks for specific build phases.
-See \url{https://github.com/ropensci/drake/issues/558}.}
+\item{hook}{Deprecated.}
 
 \item{cache}{drake cache as created by \code{\link[=new_cache]{new_cache()}}.
 See also \code{\link[=get_cache]{get_cache()}} and \code{\link[=this_cache]{this_cache()}}.}
@@ -85,7 +84,7 @@ need to know how to load the cache.}
 \item{parallelism}{character, type of parallelism to use.
 To list the options, call \code{\link[=parallelism_choices]{parallelism_choices()}}.
 For detailed explanations, see the
-\href{https://ropenscilabs.github.io/drake-manual/store.html}{high-performance computing chapter} # nolint
+\href{https://ropenscilabs.github.io/drake-manual/hpc.html}{high-performance computing chapter}
 of the user manual.}
 
 \item{jobs}{maximum number of parallel workers for processing the targets.
@@ -133,9 +132,9 @@ is run once before any targets are built. If \code{parallelism} is
 and then once again for each target right before that target is built.}
 
 \item{prepend}{lines to prepend to the Makefile if \code{parallelism}
-is \code{"Makefile"}. See the \href{https://ropenscilabs.github.io/drake-manual/store.html}{high-performance computing guide} # nolint
+is \code{"Makefile"}. See the \href{https://ropenscilabs.github.io/drake-manual/store.html}{high-performance computing guide}
 to learn how to use \code{prepend}
-to take advantage of multiple nodes of a supercomputer.}
+to distribute work on a cluster.}
 
 \item{command}{character scalar, command to call the Makefile
 generated for distributed computing.
@@ -177,18 +176,15 @@ will no longer work if you do that.}
 \item{skip_targets}{logical, whether to skip building the targets
 in \code{plan} and just import objects and files.}
 
-\item{timeout}{Seconds of overall time to allow before imposing
-a timeout on a target. Passed to \code{R.utils::withTimeout()}.
-Assign target-level timeout times with an optional \code{timeout}
-column in \code{plan}.}
+\item{timeout}{\code{deprecated}. Use \code{elapsed} and \code{cpu} instead.}
 
-\item{cpu}{Seconds of cpu time to allow before imposing
-a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+\item{cpu}{Same as the \code{cpu} argument of \code{setTimeLimit()}.
+Seconds of cpu time before a target times out.
 Assign target-level cpu timeout times with an optional \code{cpu}
 column in \code{plan}.}
 
-\item{elapsed}{Seconds of elapsed time to allow before imposing
-a timeout on a target. Passed to \code{R.utils::withTimeout()}.
+\item{elapsed}{Same as the \code{elapsed} argument of \code{setTimeLimit()}.
+Seconds of elapsed time before a target times out.
 Assign target-level elapsed timeout times with an optional \code{elapsed}
 column in \code{plan}.}
 
@@ -196,9 +192,14 @@ column in \code{plan}.}
 Assign target-level retries with an optional \code{retries}
 column in \code{plan}.}
 
-\item{force}{Force \code{make()} to build your targets even if some
-about your setup is not quite right: for example, if you are using
-a version of drake that is not back compatible with your project's cache.}
+\item{force}{Logical. If \code{FALSE} (default) then \code{drake} will stop you
+if the cache was created with an old
+and incompatible version of drake.
+This gives you an opportunity to
+downgrade \code{drake} to a compatible version
+rather than rerun all your targets from scratch.
+If \code{force} is \code{TRUE}, then \code{make()} executes your workflow
+regardless of the version of \code{drake} that last ran \code{make()} on the cache.}
 
 \item{return_config}{Logical, whether to return the internal list
 of runtime configuration parameters used by \code{make()}.
@@ -206,10 +207,7 @@ This argument is deprecated. Now, a configuration list
 is always invisibly returned.}
 
 \item{graph}{An \code{igraph} object from the previous \code{make()}.
-Supplying a pre-built graph could save time.
-The graph is constructed by \code{\link[=build_drake_graph]{build_drake_graph()}}.
-You can also get one from \code{drake_config(my_plan)$graph}.
-Overrides \code{skip_imports}.}
+Supplying a pre-built graph could save time.}
 
 \item{trigger}{Name of the trigger to apply to all targets.
 Ignored if \code{plan} has a \code{trigger} column.
@@ -233,7 +231,7 @@ on your workflow. Use at your own peril.}
 with \code{\link[=assign]{assign()}}.
 \item \code{"promise"}: lazy loading with \code{\link[=delayedAssign]{delayedAssign()}}
 \item \code{"bind"}: lazy loading with active bindings:
-\code{\link[bindr:populate_env]{bindr::populate_env()}}.
+\code{bindr::populate_env()}.
 \item \code{TRUE}: same as \code{"promise"}.
 \item \code{FALSE}: same as \code{"eager"}.
 }
@@ -335,36 +333,27 @@ with the last few targets it builds.}
 
 \item{imports_only}{deprecated. Use \code{skip_targets} instead.}
 
-\item{pruning_strategy}{Character scalar, name of the
-approach that \code{drake} takes regarding when to unload targets
-from memory. Choices:
-\itemize{
-\item \code{"lookahead"} (default): keep loaded targets in memory until they are
-no longer needed as dependencies in downstream build steps.
-Then, unload them from the environment. This step avoids
-keeping unneeded data in memory and minimizes expensive
-reads from the cache. However, it requires looking ahead
-in the dependency graph, which could add overhead for every
-target of projects with lots of targets.
-\item \code{"speed"}: Once a target is loaded in memory, just keep it there.
-Maximizes speed, but hogs memory.
-\item \code{"memory"}: For each target, unload everything from memory
-except the target's direct dependencies. Conserves memory,
-but sacrifices speed because each new target needs to reload
-any previously unloaded targets from the cache.
-}}
+\item{pruning_strategy}{deprecated. See \code{memory_strategy}.}
 
 \item{makefile_path}{Path to the \code{Makefile} for
 \code{make(parallelism = "Makefile")}. If you set this argument to a
 non-default value, you are responsible for supplying this same
 path to the \code{args} argument so \code{make} knows where to find it.
-Example: \code{make(parallelism = "Makefile", makefile_path = ".drake/.makefile", command = "make", args = "--file=.drake/.makefile")} # nolint}
+Example: \code{make(parallelism = "Makefile", makefile_path = ".drake/.makefile", command = "make", args = "--file=.drake/.makefile")}}
 
-\item{console_log_file}{character scalar or \code{NULL}.
+\item{console_log_file}{character scalar,
+connection object (such as \code{stdout()}) or \code{NULL}.
 If \code{NULL}, console output will be printed
 to the R console using \code{message()}.
-Otherwise, \code{console_log_file} should be the name of a flat file.
-Console output will be appended to that file.}
+If a character scalar, \code{console_log_file}
+should be the name of a flat file, and
+console output will be appended to that file.
+If a connection object (e.g. \code{stdout()})
+warnings and messages will be sent to the connection.
+For example, if \code{console_log_file} is \code{stdout()},
+warnings and messages are printed to the console in real time
+(in addition to the usual in-bulk printing
+after each target finishes).}
 
 \item{ensure_workers}{logical, whether the master process
 should wait for the workers to post before assigning them
@@ -411,6 +400,51 @@ But to avoid consuming too many resources during heavier
 and longer workflows, you might use an exponential
 back-off: say,
 \code{function(i) { 0.1 + 120 * pexp(i - 1, rate = 0.01) }}.}
+
+\item{hasty_build}{a user-defined function.
+In "hasty mode" (\code{make(parallelism = "hasty")})
+this is the function that evaluates a target's command
+and returns the resulting value. The \code{hasty_build} argument
+has no effect if \code{parallelism} is any value other than "hasty".
+
+The function you pass to \code{hasty_build} must have arguments \code{target}
+and \code{config}. Here, \code{target} is a character scalar naming the
+target being built, and \code{config} is a configuration list of
+runtime parameters generated by \code{\link[=drake_config]{drake_config()}}.}
+
+\item{memory_strategy}{Character scalar, name of the
+strategy \code{drake} uses to manage targets in memory. For more direct
+control over which targets \code{drake} keeps in memory, see the
+help file examples of \code{\link[=drake_envir]{drake_envir()}}. The \code{memory_strategy} argument
+to \code{make()} and \code{drake_config()} is an attempt at an automatic
+catch-all solution. These are the choices.
+\itemize{
+\item \code{"speed"}: Once a target is loaded in memory, just keep it there.
+Maximizes speed, but hogs memory.
+\item \code{"memory"}: For each target, unload everything from memory
+except the target's direct dependencies. Conserves memory,
+but sacrifices speed because each new target needs to reload
+any previously unloaded targets from the cache.
+\item \code{"lookahead"} (default): keep loaded targets in memory until they are
+no longer needed as dependencies in downstream build steps.
+Then, unload them from the environment. This step avoids
+keeping unneeded data in memory and minimizes expensive
+reads from the cache. However, it requires looking ahead
+in the dependency graph, which could add overhead for every
+target of projects with lots of targets.
+}
+
+Each strategy has a weakness.
+\code{"speed"} is memory-hungry, \code{"memory"} wastes time reloading
+targets from storage, and \code{"lookahead"} wastes time
+traversing the entire dependency graph on every \code{\link[=make]{make()}}. For a better
+compromise and more control, see the examples in the help file
+of \code{\link[=drake_envir]{drake_envir()}}.}
+
+\item{layout}{\code{config$layout}, where \code{config} is the return value
+from a prior call to \code{drake_config()}. If your plan or environment
+have changed since the last \code{make()}, do not supply a \code{layout} argument.
+Otherwise, supplying one could save time.}
 }
 \value{
 The master internal configuration list, mostly
@@ -435,7 +469,7 @@ outdated(config) # Which targets need to be (re)built?
 make(my_plan, jobs = 2) # Build what needs to be built.
 outdated(config) # Everything is up to date.
 # Change one of your imported function dependencies.
-reg2 = function(d){
+reg2 = function(d) {
   d$x3 = d$x^3
   lm(y ~ x3, data = d)
 }

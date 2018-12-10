@@ -2,18 +2,17 @@ first_outdated <- function(config) {
   graph <- targets_graph(config)
   out <- character(0)
   old_leaves <- NULL
-  while (TRUE){
-    new_leaves <- leaf_nodes(graph) %>%
-      setdiff(y = out)
+  while (TRUE) {
+    new_leaves <- setdiff(leaf_nodes(graph), out)
     do_build <- lightly_parallelize(
       X = new_leaves,
       FUN = should_build_target,
       jobs = config$jobs,
       config = config
-    ) %>%
-      unlist
+    )
+    do_build <- unlist(do_build)
     out <- c(out, new_leaves[do_build])
-    if (all(do_build)){
+    if (all(do_build)) {
       break
     } else {
       graph <- delete_vertices(graph, v = new_leaves[!do_build])
@@ -28,7 +27,7 @@ first_outdated <- function(config) {
 #'   [make()].
 #' @details `outdated()` is sensitive to the alternative triggers
 #' described at
-#' <https://ropenscilabs.github.io/drake-manual/debug.html>. # nolint
+#' <https://ropenscilabs.github.io/drake-manual/debug.html>.
 #' For example, even if `outdated(...)` shows everything up to date,
 #' `outdated(..., trigger = "always")` will show
 #' all targets out of date.
@@ -71,11 +70,11 @@ outdated <-  function(
   config = drake::read_drake_config(),
   make_imports = TRUE,
   do_prework = TRUE
-){
-  if (do_prework){
+) {
+  if (do_prework) {
     do_prework(config = config, verbose_packages = config$verbose)
   }
-  if (make_imports){
+  if (make_imports) {
     make_imports(config = config)
   }
   first_targets <- first_outdated(config = config)
@@ -84,10 +83,7 @@ outdated <-  function(
     graph = config$graph,
     jobs = config$jobs
   )
-  c(first_targets, later_targets) %>%
-    as.character %>%
-    unique %>%
-    sort
+  sort(unique(as.character(c(first_targets, later_targets))))
 }
 
 #' @title Report any import objects required by your drake_plan
@@ -111,17 +107,17 @@ outdated <-  function(
 #' missed(config) # Should report that reg1 is missing.
 #' })
 #' }
-missed <- function(config = drake::read_drake_config()){
+missed <- function(config = drake::read_drake_config()) {
   imports <- setdiff(V(config$graph)$name, config$plan$target)
   is_missing <- lightly_parallelize(
     X = imports,
-    FUN = function(x){
+    FUN = function(x) {
       missing_import(x, envir = config$envir)
     },
     jobs = config$jobs
-  ) %>%
-    as.logical
-  if (!any(is_missing)){
+  )
+  is_missing <- as.logical(is_missing)
+  if (!any(is_missing)) {
     return(character(0))
   }
   imports[is_missing]

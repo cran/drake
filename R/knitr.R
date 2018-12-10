@@ -27,16 +27,15 @@
 #' try(knitr_deps("'report.md'"), silent = FALSE) # error
 #' })
 #' }
-knitr_deps <- function(target){
-  if (!length(target)){
+knitr_deps <- function(target) {
+  if (!length(target)) {
     return(character(0))
   }
-  knitr_deps_list(target) %>%
-    clean_dependency_list
+  clean_dependency_list(knitr_deps_list(target))
 }
 
-knitr_deps_list <- function(target){
-  if (!length(target)){
+knitr_deps_list <- function(target) {
+  if (!length(target)) {
     return(list())
   }
   fragments <- safe_get_tangled_frags(target)
@@ -47,17 +46,17 @@ knitr_deps_list <- function(target){
     "file_out",
     "loadd",
     "readd"
-  ) %>%
-    intersect(y = names(results))
+  )
+  select <- intersect(select, names(results))
   results[select]
 }
 
-safe_get_tangled_frags <- function(target){
-  if (!length(target)){
+safe_get_tangled_frags <- function(target) {
+  if (!length(target)) {
     return(character(0))
   }
   file <- drake_unquote(target)
-  if (!file.exists(file)){
+  if (!file.exists(file)) {
     warning(
       "knitr/rmarkdown report '", file,
       "' does not exist and cannot be inspected for dependencies.",
@@ -68,7 +67,7 @@ safe_get_tangled_frags <- function(target){
   fragments <- tryCatch({
     get_tangled_frags(file)
   },
-  error = function(e){
+  error = function(e) {
     warning(
       "Could not parse file '", file,
       "'. drake dependencies could not be extracted from code chunks: ",
@@ -84,7 +83,7 @@ get_tangled_frags <- function(doc) {
   id <- make.names(tempfile())
   con <- textConnection(id, "w", local = TRUE)
   on.exit(close(con))
-  withr::with_options(
+  with_options(
     new = list(knitr.purl.inline = TRUE),
     code = knitr::knit(doc, output = con, tangle = TRUE, quiet = TRUE)
   )
