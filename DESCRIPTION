@@ -11,7 +11,7 @@ Description: A general-purpose computational engine for data analysis,
   to practical examples and more, is available at the reference website
   <https://ropensci.github.io/drake/> and the online manual
   <https://ropenscilabs.github.io/drake-manual/>.
-Version: 6.2.1
+Version: 7.0.0
 License: GPL-3
 URL: https://github.com/ropensci/drake
 BugReports: https://github.com/ropensci/drake/issues
@@ -53,7 +53,7 @@ Authors@R: c(
     email = "slaughter@nceas.ucsb.edu",
     role = "rev"
   ),
-    person(
+  person(
     family = "Bond-Lamberty",
     given = "Ben",
     email = "bondlamberty@pnnl.gov",
@@ -61,23 +61,30 @@ Authors@R: c(
     comment = c(ORCID = "0000-0001-9525-4633")
   ),
   person(
+    family = "Mahr",
+    given = "Tristan",
+    email = "tristan.mahr@wisc.edu",
+    role = "ctb",
+    comment = c(ORCID = "0000-0002-8890-5116")
+  ),
+  person(
     family = "Eli Lilly and Company",
     role = "cph"
   ))
 Depends: R (>= 3.3.0)
-Imports: codetools, digest, formatR, igraph, methods, pkgconfig, rlang
-        (>= 0.2.0), storr (>= 1.1.0), tibble, utils
-Suggests: abind, bindr, callr, clustermq, CodeDepends, crayon,
-        datasets, DBI, downloader, future, future.apply, grDevices,
-        ggplot2, ggraph, knitr, lubridate, networkD3, parallel,
-        prettycode, RSQLite, stats, testthat, tidyselect (>= 0.2.4),
-        txtq, rmarkdown, styler, visNetwork, webshot
+Imports: base64url, digest, igraph, methods, rlang (>= 0.2.0), storr
+        (>= 1.1.0), utils
+Suggests: abind, bindr, callr, clustermq, CodeDepends, crayon, curl,
+        datasets, downloader, future, grDevices, ggplot2, ggraph,
+        knitr, lubridate, networkD3, parallel, prettycode, stats,
+        testthat, tibble, tidyselect (>= 0.2.4), rmarkdown, styler,
+        visNetwork, webshot
 VignetteBuilder: knitr
 Encoding: UTF-8
 Language: en-US
 RoxygenNote: 6.1.1
-NeedsCompilation: no
-Packaged: 2018-12-10 22:22:39 UTC; landau
+NeedsCompilation: yes
+Packaged: 2019-03-10 20:54:02 UTC; landau
 Author: William Michael Landau [aut, cre]
     (<https://orcid.org/0000-0003-1878-3253>),
   Alex Axthelm [ctb],
@@ -86,7 +93,8 @@ Author: William Michael Landau [aut, cre]
   Ben Marwick [rev],
   Peter Slaughter [rev],
   Ben Bond-Lamberty [ctb] (<https://orcid.org/0000-0001-9525-4633>),
+  Tristan Mahr [ctb] (<https://orcid.org/0000-0002-8890-5116>),
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-12-10 23:20:03 UTC
+Date/Publication: 2019-03-10 21:33:10 UTC

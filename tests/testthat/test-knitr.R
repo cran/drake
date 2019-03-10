@@ -2,6 +2,7 @@ drake_context("knitr")
 
 test_with_dir("codeless knitr report", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("knitr")
   file <- "codeless.Rmd"
   path <- system.file(
     file.path("testing", "knitr", file),
@@ -14,16 +15,12 @@ test_with_dir("codeless knitr report", {
     overwrite = TRUE
   ))
   expect_true(file.exists(file))
-  expect_equal(
-    deps_code(quote(knitr_in("codeless.Rmd"))),
-    list(knitr_in = file_store(file))
-  )
+  deps <- deps_code(quote(knitr_in("codeless.Rmd")))
+  expect_equal(deps$name, "codeless.Rmd")
+  expect_equal(deps$type, "knitr_in")
   expect_silent(
-    tmp <- make(
-      drake_plan(
-        x = knitr_in("codeless.Rmd"),
-        strings_in_dots = "literals"
-      ),
+    make(
+      drake_plan(x = knitr_in("codeless.Rmd")),
       session_info = FALSE,
       cache = storr::storr_environment(),
       verbose = FALSE
@@ -47,10 +44,9 @@ test_with_dir("bad knitr report", {
   expect_true(file.exists(file))
   expect_warning(deps_code(quote(knitr_in("bad.Rmd"))))
   expect_warning(
-    tmp <- make(
+    make(
       drake_plan(
-        x = knitr_in("bad.Rmd"),
-        strings_in_dots = "literals"
+        x = knitr_in("bad.Rmd")
       ),
       session_info = FALSE,
       cache = storr::storr_environment(),
@@ -62,133 +58,58 @@ test_with_dir("bad knitr report", {
 
 test_with_dir("empty cases", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_equal(knitr_deps_list(NULL), list())
   expect_equal(safe_get_tangled_frags(NULL), character(0))
+  expect_silent(tmp <- analyze_knitr_file(NULL, NULL))
 })
 
-test_with_dir("unparsable pieces of commands are handled correctly", {
+test_with_dir("deps_knitr() works", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  x <- "bluh$"
-  expect_error(parse(text = x))
-  expect_equal(find_knitr_doc(x), character(0))
-})
-
-test_with_dir("knitr_deps() works", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  file <- system.file(
-    file.path("testing", "knitr", "test.Rmd"),
+  skip_if_not_installed("knitr")
+  expect_true(!nrow(deps_knitr(character(0))))
+  files <- system.file(
+    file.path("testing", "knitr", c("nested.Rmd", "test.Rmd")),
     package = "drake", mustWork = TRUE
   )
-  expect_true(file.copy(
-    from = file,
+  expect_true(all(file.copy(
+    from = files,
     to = getwd(),
     recursive = TRUE,
     overwrite = TRUE
-  ))
+  )))
   ans <- sort(c(
     "inline_dep", paste0("target", seq_len(18)),
-    file_store(paste0("file", seq_len(6)))
+    paste0("\"file", seq_len(6), "\""),
+    "input.txt", "output.txt", "nested.Rmd", "nested"
   ))
-  expect_equal(sort(knitr_deps("'test.Rmd'")), ans)
+  out <- deps_knitr("test.Rmd")
+  out2 <- deps_knitr(file_store("test.Rmd"))
+  expect_equal(out, out2)
+  expect_equal(sort(out$name), ans)
   expect_false(file.exists("test.md"))
-  expect_warning(x <- sort(knitr_deps("report.Rmd")))
-  expect_warning(expect_equal(x, sort(knitr_deps("\"report.Rmd\""))))
-  expect_equal(x, character(0))
+  expect_warning(x <- deps_knitr("report.Rmd"))
+  expect_warning(expect_equal(x$name, sort(
+    deps_knitr(encode_path("report.Rmd"))$name)))
+  expect_true(!nrow(x))
   load_mtcars_example()
-  w <- clean_dependency_list(deps_code("funct(knitr_in(report.Rmd))"))
-  old_strings_in_dots <- pkgconfig::get_config("drake::strings_in_dots")
-  on.exit(
-    pkgconfig::set_config("drake::strings_in_dots" = old_strings_in_dots)
-  )
-  pkgconfig::set_config("drake::strings_in_dots" = "filenames")
-  x <- knitr_deps("report.Rmd")
-  y <- expect_warning(
-    clean_dependency_list(deps_code("knit('report.Rmd')")))
-  z <- expect_warning(
-    clean_dependency_list(deps_code("render('report.Rmd')")))
+  w <- deps_code("funct(knitr_in(report.Rmd))")
+  x <- deps_knitr("report.Rmd")
   real_deps <- c(
     "small", "coef_regression2_small", "large"
   )
-  expect_equal(sort(w), sort(c("funct")))
-  expect_equal(sort(x), sort(real_deps))
-  expect_equal(sort(y), sort(c(real_deps, "knit", "\"report.Rmd\"")))
-  expect_equal(sort(z), sort(c(real_deps, "render", "\"report.Rmd\"")))
-})
-
-test_with_dir("find_knitr_doc() works", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  false <- c(
-    "knit",
-    "knit()",
-    "dknit(4)",
-    "other(f)",
-    "knittles(f('file.Rmd'))",
-    "other::knit('file.Rmd')",
-    "drake:::knit('file.Rmd')",
-    "render",
-    "render()",
-    "rendermania(f('file.Rmd'))",
-    "other::render('file.Rmd')",
-    "drake:::render('file.Rmd')"
-  )
-  true <- list(
-    "knit('file.Rmd')",
-    "knitr::knit(input = 'file.Rmd')",
-    "knitr:::knit('file.Rmd')",
-    function(x) {
-      knit("file.Rmd")
-    },
-    "f(g(knit('file.Rmd', output = 'file.md', quiet = TRUE)))",
-    "f(g(knit(output = 'file.md', quiet = TRUE, input = 'file.Rmd') + 5))",
-    "f(g(knit(output = 'file.md', quiet = TRUE, 'file.Rmd') + 5))",
-    "render(input = 'file.Rmd')",
-    "rmarkdown::render('file.Rmd')",
-    "rmarkdown:::render('file.Rmd')",
-    function(x) {
-      render("file.Rmd")
-    },
-    "f(g(render('file.Rmd', output_file = 'file.md', quiet = TRUE)))",
-    "f(g(render(output_file = 'file.md', quiet = TRUE, input = 'file.Rmd') + 5))", # nolint
-    "f(g(render(output_file = 'file.md', quiet = TRUE, 'file.Rmd') + 5))"
-  )
-  for (cmd in false) {
-    expect_equal(find_knitr_doc(cmd), character(0))
-  }
-  for (cmd in true) {
-    expect_equal(find_knitr_doc(cmd), "file.Rmd")
-  }
-})
-
-test_with_dir("edge cases finding knitr docs", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_equal(find_knitr_doc("knit(a, b)"), "a")
-  expect_equal(find_knitr_doc("knit(quiet = TRUE)"), character(0))
-  expect_equal(
-    clean_dependency_list(deps_code("knit(quiet = TRUE)")), "knit")
+  expect_equal(sort(w$name), sort(c("funct")))
+  expect_equal(sort(x$name), sort(real_deps))
 })
 
 test_with_dir("knitr file deps from commands and functions", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("knitr")
   load_mtcars_example()
-  expect_equal(sort(
-    clean_dependency_list(deps_code("'report.Rmd'"))), sort(c(
-    "coef_regression2_small", "large", "small"
-  )))
+  expect_equal(
+    sort(deps_code("knitr_in(\"report.Rmd\")")$name),
+    sort(c("coef_regression2_small", "large", "small", "report.Rmd"))
+  )
   f <- function(x) {
     knit(x)
   }
-  expect_equal(clean_dependency_list(deps_code(f)), "knit")
-})
-
-test_with_dir("misc knitr", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  f <- function()
-  expect_silent(o <- doc_of_function_call(knit))
-  f <- function(x) {
-    knitr::knit("file.Rmd")
-  }
-  doc_of_function_call(f)
-  expect_equal(doc_of_function_call(as.expression(1)), character(0))
-  expect_equal(doc_of_function_call(list(1, 2, 3)), "2")
-  expect_equal(find_knitr_doc(NULL), character(0))
+  expect_equal(deps_code(f)$name, "knit")
 })

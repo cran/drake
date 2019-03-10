@@ -25,16 +25,18 @@ test_with_dir("function_dependencies() works on :: and :::", {
       "triple:::triple"
     )
   )
-  cd <- code_dependencies(crazy)
+  cd <- analyze_code(crazy)
+  cd <- decode_deps_list(cd)
   expect_equal(sort(cd$namespaced), ns)
+  cd <- analyze_code(crazy)
+  cd <- decode_deps_list(cd)
   expect_equal(
-    unname(sort(unlist(code_dependencies(crazy)))),
+    unname(sort(unlist(cd))),
     sort(c(ns, "g", "myfun1", "sqrt", "local"))
   )
   command <- "pkgx::pkgx(mypkg1::myfun3(myfun1(mypkg1::myfun2(100))))"
-  d <- sort(clean_dependency_list(deps_code(command)))
   expect_equal(
-    d,
+    sort(deps_code(command)$name),
     sort(
       c(
         "pkgx::pkgx",
@@ -56,7 +58,15 @@ test_with_dir("namespaced drake_plan works", {
     base:::c(x, 1)
   }
   x <- drake_plan(a = base::list(f(1)))
-  config <- make(
+  make(
+    x,
+    envir = envir,
+    jobs = scenarios$jobs,
+    parallelism = scenarios$parallelism,
+    verbose = FALSE,
+    session_info = FALSE
+  )
+  config <- drake_config(
     x,
     envir = envir,
     jobs = scenarios$jobs,
@@ -65,12 +75,13 @@ test_with_dir("namespaced drake_plan works", {
     session_info = FALSE
   )
   fromcache <- readd("base::list", character_only = TRUE)
-  expect_equal(fromcache(1, "a"), list(1, "a"))
+  expect_true(is.character(fromcache))
   fromcache2 <- readd("base:::c", character_only = TRUE)
-  expect_equal(fromcache2(1, 2), c(1, 2))
+  expect_true(is.character(fromcache2))
   ns <- sort(c("base:::c", "base::list", "base::nchar"))
-  expect_true(all(cached(list = ns)))
-  expect_true(all(ns %in% imported()))
+  expect_true(all(ns %in% cached(targets_only = FALSE)))
+  expect_true(all(ns %in% setdiff(cached(targets_only = FALSE),
+                                  cached(targets_only = TRUE))))
   expect_equal(
     outdated(config),
     character(0)

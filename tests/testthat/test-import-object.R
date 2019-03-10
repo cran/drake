@@ -50,7 +50,7 @@ test_with_dir("responses to imported objects and functions", {
   expect_true("final" %in% justbuilt(config))
 
   # command depends on imported object k
-  config$plan$command[2] <- "f(1+1) + k"
+  config$plan$command[[2]] <- quote(f(1 + 1) + k)
   config$envir$k <- 5
   testrun(config)
   final0 <- readd(final, search = FALSE)
@@ -79,13 +79,15 @@ test_with_dir("responses to imported objects and functions", {
 test_with_dir("add a new import", {
   plan <- drake_plan(a = as.integer(sqrt(4)))
   cache <- storr::storr_environment()
-  config <- make(plan, cache = cache, session_info = FALSE)
+  make(plan, cache = cache, session_info = FALSE)
+  config <- drake_config(plan, cache = cache, session_info = FALSE)
   expect_equal(justbuilt(config), "a")
   expect_equal(readd(a, cache = cache), 2L)
   sqrt <- function(x) {
     x + 1L
   }
-  config <- make(plan, cache = cache, session_info = FALSE)
+  make(plan, cache = cache, session_info = FALSE)
+  config <- drake_config(plan, cache = cache, session_info = FALSE)
   expect_equal(justbuilt(config), "a")
   expect_equal(readd(a, cache = cache), 5L)
 })

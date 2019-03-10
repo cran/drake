@@ -1,190 +1,251 @@
 <!DOCTYPE html>
-<html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<title>Learn about drake</title>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
 
-<script type="text/javascript">
-window.onload = function() {
-  var imgs = document.getElementsByTagName('img'), i, img;
-  for (i = 0; i < imgs.length; i++) {
-    img = imgs[i];
-    // center an image if it is the only element of its parent
-    if (img.parentElement.childElementCount === 1)
-      img.parentElement.style.textAlign = 'center';
-  }
-};
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Will Landau" />
+
+<meta name="date" content="2019-03-10" />
+
+<title>drake</title>
 
 
 
 
 
-<style type="text/css">
-body, td {
-   font-family: sans-serif;
-   background-color: white;
-   font-size: 13px;
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
 }
-
-body {
-  max-width: 800px;
-  margin: auto;
-  padding: 1em;
-  line-height: 20px;
+#header {
+text-align: center;
 }
-
-tt, code, pre {
-   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
 }
-
-h1 {
-   font-size:2.2em;
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
 }
-
-h2 {
-   font-size:1.8em;
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
 }
-
-h3 {
-   font-size:1.4em;
+#TOC ul ul {
+margin-left: -2em;
 }
-
-h4 {
-   font-size:1.0em;
+#TOC li {
+line-height: 16px;
 }
-
-h5 {
-   font-size:0.9em;
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
 }
-
-h6 {
-   font-size:0.8em;
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
 }
-
-a:visited {
-   color: rgb(50%, 0%, 50%);
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
 }
-
-pre, img {
-  max-width: 100%;
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
 }
 pre {
-  overflow-x: auto;
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
 }
-pre code {
-   display: block; padding: 0.5em;
+pre:not([class]) {
+background-color: #f7f7f7;
 }
-
 code {
-  font-size: 92%;
-  border: 1px solid #ccc;
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
 }
-
-code[class] {
-  background-color: #F8F8F8;
+p > code, li > code {
+padding: 2px 0px;
 }
-
-table, td, th {
-  border: none;
+div.figure {
+text-align: center;
 }
-
-blockquote {
-   color:#666666;
-   margin:0;
-   padding-left: 1em;
-   border-left: 0.5em #EEE solid;
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
 }
-
-hr {
-   height: 0px;
-   border-bottom: none;
-   border-top-width: thin;
-   border-top-style: dotted;
-   border-top-color: #999999;
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
 }
-
-@media print {
-   * {
-      background: transparent !important;
-      color: black !important;
-      filter:none !important;
-      -ms-filter: none !important;
-   }
-
-   body {
-      font-size:12pt;
-      max-width:100%;
-   }
-
-   a, a:visited {
-      text-decoration: underline;
-   }
-
-   hr {
-      visibility: hidden;
-      page-break-before: always;
-   }
-
-   pre, blockquote {
-      padding-right: 1em;
-      page-break-inside: avoid;
-   }
-
-   tr, img {
-      page-break-inside: avoid;
-   }
-
-   img {
-      max-width: 100% !important;
-   }
-
-   @page :left {
-      margin: 15mm 20mm 15mm 10mm;
-   }
-
-   @page :right {
-      margin: 15mm 10mm 15mm 20mm;
-   }
-
-   p, h2, h3 {
-      orphans: 3; widows: 3;
-   }
-
-   h2, h3 {
-      page-break-after: avoid;
-   }
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
 }
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
 </style>
-
-
 
 </head>
 
 <body>
-<h1>Learn about drake</h1>
 
-<p>The main resources to learn <code>drake</code> are</p>
 
-<ol>
-<li>The <a href="https://ropenscilabs.github.io/drake-manual/">full manual</a></li>
-<li>The <a href="https://ropensci.github.io/drake/">package website</a></li>
-<li><a href="https://github.com/krlmlr">Kirill Müller</a>&#39;s <a href="https://github.com/krlmlr/drake-sib-zurich"><code>drake</code> workshop from March 5, 2018</a>.</li>
-</ol>
 
-<h2>Cheat sheet</h2>
 
+<h1 class="title toc-ignore">drake</h1>
+<h4 class="author"><em>Will Landau</em></h4>
+<h4 class="date"><em>2019-03-10</em></h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#learn-about-drake"><span class="toc-section-number">1</span> Learn about drake</a><ul>
+<li><a href="#cheat-sheet"><span class="toc-section-number">1.1</span> Cheat sheet</a></li>
+<li><a href="#frequently-asked-questions"><span class="toc-section-number">1.2</span> Frequently asked questions</a></li>
+<li><a href="#function-reference"><span class="toc-section-number">1.3</span> Function reference</a></li>
+<li><a href="#tutorials"><span class="toc-section-number">1.4</span> Tutorials</a></li>
+<li><a href="#examples"><span class="toc-section-number">1.5</span> Examples</a></li>
+<li><a href="#presentations"><span class="toc-section-number">1.6</span> Presentations</a></li>
+<li><a href="#context-and-history"><span class="toc-section-number">1.7</span> Context and history</a></li>
+</ul></li>
+<li><a href="#acknowledgements"><span class="toc-section-number">2</span> Acknowledgements</a></li>
+</ul>
+</div>
+
+<div id="learn-about-drake" class="section level1">
+<h1><span class="header-section-number">1</span> Learn about drake</h1>
+<p>The main resources to learn <code>drake</code> are the <a href="https://ropenscilabs.github.io/drake-manual/">user manual</a> and the <a href="https://ropensci.github.io/drake/">reference website</a>. Others are below.</p>
+<div id="cheat-sheet" class="section level2">
+<h2><span class="header-section-number">1.1</span> Cheat sheet</h2>
 <p>Thanks to <a href="https://github.com/krlmlr">Kirill</a> for preparing a <a href="https://github.com/krlmlr/drake-sib-zurich/blob/master/cheat-sheet.pdf"><code>drake</code> cheat sheet</a> for the <a href="https://github.com/krlmlr/drake-sib-zurich">workshop</a>.</p>
-
-<h2>Frequently asked questions</h2>
-
+</div>
+<div id="frequently-asked-questions" class="section level2">
+<h2><span class="header-section-number">1.2</span> Frequently asked questions</h2>
 <p>The <a href="https://ropenscilabs.github.io/drake-manual/faq.html">FAQ page</a> is an index of links to <a href="https://github.com/ropensci/drake/issues?q=is%3Aissue+is%3Aopen+label%3A%22frequently+asked+question%22">appropriately-labeled issues on GitHub</a>. To contribute, please <a href="https://github.com/ropensci/drake/issues/new">submit a new issue</a> and ask that it be labeled as a frequently asked question.</p>
-
-<h2>Function reference</h2>
-
+</div>
+<div id="function-reference" class="section level2">
+<h2><span class="header-section-number">1.3</span> Function reference</h2>
 <p>The <a href="https://ropensci.github.io/drake/reference/index.html">reference section</a> lists all the available functions. Here are the most important ones.</p>
-
 <ul>
 <li><code>drake_plan()</code>: create a workflow data frame (like <code>my_plan</code>).</li>
 <li><code>make()</code>: build your project.</li>
@@ -197,65 +258,130 @@ hr {
 <li><code>failed()</code>: list the targets that failed to build in the last <code>make()</code>.</li>
 <li><code>diagnose()</code>: return the full context of a build, including errors, warnings, and messages.</li>
 </ul>
-
-<h2>Tutorials</h2>
-
+</div>
+<div id="tutorials" class="section level2">
+<h2><span class="header-section-number">1.4</span> Tutorials</h2>
 <p>Thanks to <a href="https://github.com/krlmlr">Kirill</a> for constructing two interactive <a href="https://rstudio.github.io/learnr/"><code>learnr</code></a> tutorials: <a href="https://krlmlr.shinyapps.io/cooking-drake-tutorial/">one supporting <code>drake</code> itself</a>, and a <a href="https://krlmlr.shinyapps.io/cooking-tutorial/">prerequisite walkthrough</a> of the <a href="https://github.com/krlmlr/cooking"><code>cooking</code> package</a>.</p>
-
-<h2>Examples</h2>
-
-<p>There are multiple <code>drake</code>-powered example projects <a href="https://github.com/wlandau/drake-examples">available here</a>, ranging from beginner-friendly stubs to demonstrations of high-performance computing. You can generate the files for a project with <code>drake_example()</code> (e.g. <code>drake_example(&quot;gsp&quot;)</code>), and you can list the available projects with <code>drake_examples()</code>. You can contribute your own example project with a <a href="https://github.com/wlandau/drake-examples/pulls">fork and pull request</a>.</p>
-
-<h2>Presentations</h2>
-
-<ul>
-<li><a href="https://krlmlr.github.io/drake-pitch">Kirill&#39;s <code>drake</code> pitch</a></li>
-<li><a href="https://krlmlr.github.io/slides/drake-sib-zurich"><code>drake</code> + cooking with Kirill</a></li>
-<li><a href="https://krlmlr.github.io/slides/drake-sib-zurich/cooking.html"><code>drake</code> + cooking exercises</a></li>
-<li><a href="https://github.com/cstawitz">Christine Stawitz</a>&#39;s <a href="https://github.com/cstawitz/RLadies_Sea_drake">R-Ladies Seattle talk on June 25, 2018</a></li>
-<li><a href="https://github.com/sinarueeger">Sina Rüeger</a>&#39;s <a href="https://sinarueeger.github.io/20181004-geneve-rug">Geneva R Users Group presentation on October 4, 2018</a> (<a href="https://github.com/sinarueeger/workflow-example">example code</a>). The talk broadly focused on tidy workflows and diversity in the R community.</li>
-</ul>
-
-<h2>Real example projects</h2>
-
+</div>
+<div id="examples" class="section level2">
+<h2><span class="header-section-number">1.5</span> Examples</h2>
 <p>Here are some real-world applications of <code>drake</code> in the wild.</p>
-
 <ul>
+<li><a href="https://github.com/sol-eng/tensorflow-w-r">sol-eng/tensorflow-w-r</a></li>
 <li><a href="https://github.com/efcaguab/demografia-del-voto">efcaguab/demografia-del-voto</a></li>
 <li><a href="https://github.com/efcaguab/great-white-shark-nsw">efcaguab/great-white-shark-nsw</a></li>
 <li><a href="https://github.com/IndianaCHE/Detailed-SSP-Reports">IndianaCHE/Detailed-SSP-Reports</a></li>
 <li><a href="https://github.com/tiernanmartin/home-and-hope">tiernanmartin/home-and-hope</a></li>
 </ul>
-
-<p>If you have a project of your own, we would love to add it. <a href="https://github.com/ropensci/drake/edit/master/README.Rmd">Click here to edit the <code>README.Rmd</code> file</a>.</p>
-
-<h2>Context and history</h2>
-
+<p>There are also multiple <code>drake</code>-powered example projects <a href="https://github.com/wlandau/drake-examples">available here</a>, ranging from beginner-friendly stubs to demonstrations of high-performance computing. You can generate the files for a project with <code>drake_example()</code> (e.g. <code>drake_example(&quot;gsp&quot;)</code>), and you can list the available projects with <code>drake_examples()</code>. You can contribute your own example project with a <a href="https://github.com/wlandau/drake-examples/pulls">fork and pull request</a>.</p>
+</div>
+<div id="presentations" class="section level2">
+<h2><span class="header-section-number">1.6</span> Presentations</h2>
+<table>
+<colgroup>
+<col width="22%"></col>
+<col width="22%"></col>
+<col width="22%"></col>
+<col width="31%"></col>
+</colgroup>
+<thead>
+<tr class="header">
+<th>Author</th>
+<th>Venue</th>
+<th>Date</th>
+<th>Materials</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/aedobbyn">Amanda Dobbyn</a></td>
+<td><a href="https://www.rladiesnyc.org/">R-Ladies NYC</a></td>
+<td>2019-02-12</td>
+<td><a href="https://aedobbyn.github.io/nyc-fires/index.html#1">slides</a>, <a href="https://github.com/aedobbyn/nyc-fires">source</a></td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/wlandau">Will Landau</a></td>
+<td><a href="https://projects.iq.harvard.edu/datafest2019/home">Harvard DataFest</a></td>
+<td>2019-01-22</td>
+<td><a href="https://wlandau.github.io/drake-datafest-2019">slides</a>, <a href="https://github.com/wlandau/drake-datafest-2019">source</a></td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/karthik">Karthik Ram</a></td>
+<td><a href="https://www.rstudio.com/conference">RStudio Conference</a></td>
+<td>2019-01-18</td>
+<td><a href="https://resources.rstudio.com/rstudio-conf-2019/a-guide-to-modern-reproducible-data-science-with-r">video</a>, <a href="http://inundata.org/talks/rstd19/#/">slides</a>, <a href="https://github.com/karthik/rstudio2019">resources</a></td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/sinarueeger">Sina Rüeger</a></td>
+<td><a href="https://www.meetup.com/Geneve-R-User-Group">Geneva R User Group</a></td>
+<td>2018-10-04</td>
+<td><a href="https://sinarueeger.github.io/20181004-geneve-rug">slides</a>, <a href="https://github.com/sinarueeger/workflow-example">example code</a></td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/wlandau">Will Landau</a></td>
+<td><a href="http://rinpharma.com/">R in Pharma</a></td>
+<td>2018-08-16</td>
+<td><a href="https://ropenscilabs.github.io/drake-manual/">video</a>, <a href="https://wlandau.github.io/drake-talk">slides</a>, <a href="https://github.com/wlandau/drake-talk">source</a></td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/cstawitz">Christine Stawitz</a></td>
+<td><a href="https://www.meetup.com/rladies-seattle">R-Ladies Seattle</a></td>
+<td>2018-06-25</td>
+<td><a href="https://github.com/cstawitz/RLadies_Sea_drake">materials</a></td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/krlmlr">Kirill Müller</a></td>
+<td><a href="https://www.sib.swiss">Swiss Institute of Bioinformatics</a></td>
+<td>2018-03-05</td>
+<td><a href="https://www.sib.swiss/training/course/2018-03-remake">workshop</a>, <a href="https://krlmlr.github.io/slides/drake-sib-zurich">slides</a>, <a href="https://github.com/krlmlr/drake-sib-zurich">source</a>, <a href="https://krlmlr.github.io/slides/drake-sib-zurich/cooking.html">exercises</a></td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/krlmlr">Kirill Müller</a></td>
+<td><a href="https://www.rstudio.com/conference">RStudio Conference</a></td>
+<td>2018-02-01</td>
+<td><a href="https://krlmlr.github.io/drake-pitch">slides</a>, <a href="https://github.com/krlmlr/drake-pitch">source</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="context-and-history" class="section level2">
+<h2><span class="header-section-number">1.7</span> Context and history</h2>
 <p>For context and history, please refer to the following.</p>
-
 <ul>
 <li>The rOpenSci blog post from February 6, 2018.</li>
 <li>Episode 22 of the R-Podcast.</li>
 </ul>
-
-<h1>Acknowledgements</h1>
-
-<p>Special thanks to <a href="http://www.jarad.me/">Jarad Niemi</a>, my advisor from <a href="http://stat.iastate.edu/">graduate school</a>, for first introducing me to the idea of <a href="https://www.gnu.org/software/make/">Makefiles</a> for research. He originally set me down the path that led to <code>drake</code>.</p>
-
+</div>
+</div>
+<div id="acknowledgements" class="section level1">
+<h1><span class="header-section-number">2</span> Acknowledgements</h1>
+<p>Special thanks to <a href="https://www.jarad.me/">Jarad Niemi</a>, my advisor from <a href="https://stat.iastate.edu/">graduate school</a>, for first introducing me to the idea of <a href="https://www.gnu.org/software/make/">Makefiles</a> for research. He originally set me down the path that led to <code>drake</code>.</p>
 <p>Many thanks to <a href="https://github.com/jules32">Julia Lowndes</a>, <a href="https://github.com/benmarwick">Ben Marwick</a>, and <a href="https://github.com/gothub">Peter Slaughter</a> for <a href="https://github.com/ropensci/onboarding/issues/156">reviewing drake for rOpenSci</a>, and to <a href="https://github.com/maelle">Maëlle Salmon</a> for such active involvement as the editor. Thanks also to the following people for contributing early in development.</p>
-
 <ul>
 <li><a href="https://github.com/AlexAxthelm">Alex Axthelm</a></li>
 <li><a href="https://github.com/mrchypark">Chan-Yub Park</a></li>
 <li><a href="https://github.com/dfalster">Daniel Falster</a></li>
-<li><a href="https://r-podcast.org">Eric Nantz</a></li>
+<li><a href="https://github.com/rpodcast">Eric Nantz</a></li>
 <li><a href="https://github.com/HenrikBengtsson">Henrik Bengtsson</a></li>
 <li><a href="https://github.com/IanAWatson">Ian Watson</a></li>
 <li><a href="https://github.com/dapperjapper">Jasper Clarkberg</a></li>
 <li><a href="https://github.com/kendonB">Kendon Bell</a></li>
-<li><a href="https://github.com/krlmlr">Kirill M&uuml;ller</a></li>
+<li><a href="https://github.com/krlmlr">Kirill Müller</a></li>
+<li><a href="https://github.com/mschubert">Michael Schubert</a></li>
 </ul>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
 
 </body>
-
 </html>

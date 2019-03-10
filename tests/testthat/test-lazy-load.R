@@ -10,14 +10,16 @@ test_with_dir("no overt errors lazy load for the debug example", {
   }
   expect_equal(sort(outdated(config)), sort(config$plan$target))
 
-  config <- testrun(config)
+  testrun(config)
+  config <- testconfig(config)
   expect_equal(sort(justbuilt(config)), sort(config$plan$target))
   expect_equal(outdated(config), character(0))
 
   unload_these <- intersect(config$plan$target, ls(envir = config$envir))
   remove(list = unload_these, envir = config$envir)
 
-  config <- testrun(config)
+  testrun(config)
+  config <- testconfig(config)
   expect_equal(sort(justbuilt(config)), character(0))
   expect_equal(outdated(config), character(0))
 
@@ -26,7 +28,8 @@ test_with_dir("no overt errors lazy load for the debug example", {
 
   config$plan$command[config$plan$target == "combined"] <-
     "nextone + yourinput + 1"
-  config <- testrun(config)
+  testrun(config)
+  config <- testconfig(config)
   expect_equal(sort(justbuilt(config)), sort(c(
     "combined", "final", "drake_target_1"
   )))
@@ -39,8 +42,9 @@ test_with_dir("lazy loading is actually lazy", {
   eagerly_loaded <- "combined"
   config <- dbug()
   unload_these <- c(lazily_loaded, eagerly_loaded)
-  unload_these <- intersect(unload_these, ls(envir = config$envir))
-  remove(list = unload_these, envir = config$envir)
+  unload_these <- intersect(unload_these, ls(envir = config$eval))
+  remove(list = unload_these, envir = config$eval)
+  eval <- config$eval
   config <- drake_config(
     lazy_load = TRUE,
     plan = config$plan,
@@ -49,9 +53,10 @@ test_with_dir("lazy loading is actually lazy", {
     verbose = FALSE,
     session_info = FALSE
   )
+  config$eval <- eval
   config$schedule <- config$graph
-  run_loop(config)
-  loaded <- ls(envir = config$envir)
+  backend_loop(config)
+  loaded <- ls(envir = config$eval)
   expect_true(all(lazily_loaded %in% loaded))
   expect_false(any(eagerly_loaded %in% loaded))
 })
@@ -92,7 +97,7 @@ test_with_dir("active bindings", {
 
   # Active bindings react to make()
   old_final <- e$final
-  config$plan$command[6] <- paste0(sum(old_final), "+ 1")
+  config$plan$command[[6]] <- parse(text = paste0(sum(old_final), "+ 1"))[[1]]
   testrun(config)
   expect_equal(e$final, sum(old_final) + 1)
 

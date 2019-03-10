@@ -6,11 +6,10 @@ test_with_dir("scratch build with custom filesystem cache.", {
   path <- "my_cache"
   config$cache <- cache <- new_cache(
     path = path,
-    short_hash_algo = "murmur32",
-    long_hash_algo = "sha512"
+    hash_algorithm = "murmur32"
   )
   expect_error(drake_get_session_info(cache = cache))
-  expect_true(length(progress(cache = cache)) == 0)
+  expect_true(nrow(progress(cache = cache)) == 0)
   expect_equal(config$cache$list(), character(0))
 
   testrun(config)
@@ -18,22 +17,18 @@ test_with_dir("scratch build with custom filesystem cache.", {
   expect_true(is.numeric(readd(final, cache = cache)))
   expect_true(length(config$cache$list()) > 2)
   expect_false(any(c("f", "final") %in% ls()))
-  expect_true(
-    all(read_drake_plan(cache = cache)$target %in% config$plan$target))
-
-  cache <- this_cache(path = path)
-  expect_equal(short_hash(cache), "murmur32")
-  expect_equal(long_hash(cache), "sha512")
+  cache <- storr::storr_rds(path = path)
+  expect_equal(cache$driver$hash_algorithm, "murmur32")
 
   # changed nothing
   testrun(config)
   nobuild(config)
 
-  cache <- this_cache(path = path)
+  cache <- storr::storr_rds(path = path)
 
   # take this opportunity to test clean() and prune()
-  all <- sort(c("\"input.rds\"",
-    "\"intermediatefile.rds\"", "drake_target_1", "a",
+  all <- sort(c(encode_path("input.rds"),
+    encode_path("intermediatefile.rds"), "drake_target_1", "a",
     "b", "c", "combined", "f", "final", "g", "h", "i", "j",
     "myinput", "nextone", "yourinput"))
   expect_equal(config$cache$list(), all)
@@ -43,7 +38,7 @@ test_with_dir("scratch build with custom filesystem cache.", {
   expect_true(file.exists(path))
 
   # clean specific targets
-  clean(b, c, list = c("\"intermediatefile.rds\"", "nextone"),
+  clean(b, c, list = c("drake_target_1", "nextone"),
     cache = cache)
   expect_false(file.exists("intermediatefile.rds"))
   expect_true(file.exists("input.rds"))
@@ -51,33 +46,29 @@ test_with_dir("scratch build with custom filesystem cache.", {
     sort(config$cache$list()),
     sort(setdiff(
       all,
-      c("b", "c", "\"intermediatefile.rds\"", "nextone")
+      c("b", "c", "drake_target_1",
+        encode_path("intermediatefile.rds"), "nextone")
     ))
   )
 
   # clean does not remove imported files
   expect_true(file.exists("input.rds"))
-  expect_true("\"input.rds\"" %in%
+  expect_true(encode_path("input.rds") %in%
     config$cache$list())
-  clean("\"input.rds\"", cache = cache)
+  clean(list = encode_path("input.rds"), cache = cache)
   expect_true(file.exists("input.rds"))
-  expect_false("\"input.rds\"" %in%
+  expect_false(encode_path("input.rds") %in%
     config$cache$list())
 
   # clean removes imported functions and cleans up 'functions'
   # namespace
-  expect_true(cached(f, cache = cache))
-  for (n in c(cache$default_namespace, "kernels")) {
-    expect_true("f" %in% config$cache$list(namespace = n))
-  }
+  expect_true("f" %in% cached(targets_only = FALSE, cache = cache))
+  expect_true("f" %in% config$cache$list())
   clean(f, cache = cache)
-  for (n in c(cache$default_namespace, "kernels")) {
-    expect_false("f" %in% config$cache$list(namespace = n))
-  }
+  expect_false("f" %in% config$cache$list())
 
   clean(destroy = FALSE, cache = cache)
   expect_equal(config$cache$list(), character(0))
-  expect_equal(config$cache$list("kernels"), character(0))
   expect_false(file.exists("intermediatefile.rds"))
   expect_true(file.exists("input.rds"))
   expect_false(file.exists(default_cache_path()))

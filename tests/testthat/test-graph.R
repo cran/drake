@@ -12,11 +12,7 @@ test_with_dir("Recursive functions are okay", {
   x <- drake_plan(output = factorial(10))
   cache <- storr::storr_environment()
   make(x, cache = cache, session_info = FALSE)
-})
-
-test_with_dir("Supplied graph is not an igraph.", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_error(prune_drake_graph(12345, to = "node"))
+  expect_equal(readd(output, cache = cache), factorial(10))
 })
 
 test_with_dir("null graph", {
@@ -30,16 +26,14 @@ test_with_dir("null graph", {
 test_with_dir("circular non-DAG drake_plans quit in error", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- drake_plan(a = b, b = c, c = a)
-  expect_error(tmp <- capture.output(check_plan(x)))
   expect_error(
     make(x, verbose = FALSE, session_info = FALSE),
     regexp = "[Cc]ircular workflow"
   )
   x <- drake_plan(
     a = b, b = c, c = a, d = 4, e = d,
-    A = B, B = C, C = A, mytarget = e
+    Aa = Bb, Bb = Cc, Cc = Aa, mytarget = e
   )
-  expect_error(tmp <- capture.output(check_plan(x)))
   expect_error(
     make(x, verbose = FALSE, session_info = FALSE),
     regexp = "[Cc]ircular workflow"
@@ -61,18 +55,6 @@ test_with_dir("Supplied graph disagrees with the workflow plan", {
   )
 })
 
-test_with_dir("Supplied graph is pruned.", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  load_mtcars_example()
-  graph <- drake_config(my_plan)$graph
-  con <- drake_config(my_plan, targets = c("small", "large"), graph = graph)
-  vertices <- V(con$graph)$name
-  include <- c("small", "simulate", "large")
-  exclude <- setdiff(my_plan$target, include)
-  expect_true(all(include %in% vertices))
-  expect_false(any(exclude %in% vertices))
-})
-
 test_with_dir("we can generate different visNetwork dependency graphs", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("lubridate")
@@ -85,7 +67,10 @@ test_with_dir("we can generate different visNetwork dependency graphs", {
     tmp <- drake_graph_info(
       config = config, build_times = FALSE, from_scratch = TRUE))
   expect_warning(
-    tmp <- drake_graph_info(config = config, split_columns = TRUE))
+    tmp <- drake_graph_info(
+      config = config, build_times = FALSE, full_legend = TRUE))
+  expect_warning(
+    tmp <- drake_graph_info(config = config, build_times = TRUE))
   expect_warning(
     tmp <- drake_graph_info(config = config, build_times = FALSE))
   tmpcopy <- drake_graph_info(config = config,
@@ -104,10 +89,8 @@ test_with_dir("we can generate different visNetwork dependency graphs", {
     targets_only = TRUE)
   tmp6 <- drake_graph_info(config = config, build_times = "build",
     targets_only = TRUE, from_scratch = FALSE)
-  expect_warning(
-    tmp7 <- drake_graph_info(config = config, build_times = "none",
-                             from = c("small", "not_found"))
-  )
+  tmp7 <- drake_graph_info(config = config, build_times = "build",
+    targets_only = TRUE, from_scratch = FALSE, hover = TRUE)
   expect_error(
     tmp8 <- drake_graph_info(config = config, build_times = "none",
                              from = "not_found")
@@ -121,12 +104,10 @@ test_with_dir("we can generate different visNetwork dependency graphs", {
   expect_false(identical(tmp$nodes, tmp4$nodes))
   expect_false(identical(tmp$nodes, tmp5$nodes))
   expect_false(identical(tmp$nodes, tmp6$nodes))
-
-  expect_false(file.exists("Makefile"))
+  expect_false(identical(tmp$nodes, tmp7$nodes))
   expect_true(is.data.frame(tmp$nodes))
   expect_equal(sort(outdated(config = config)),
                sort(c(config$plan$target)))
-  expect_false(file.exists("Makefile"))
 })
 
 test_with_dir("clusters", {
@@ -189,6 +170,7 @@ test_with_dir("clusters", {
 
 test_with_dir("can get the graph info when a file is missing", {
   skip_on_cran()
+  skip_if_not_installed("knitr")
   load_mtcars_example()
   unlink("report.Rmd")
   expect_warning(
@@ -216,36 +198,42 @@ test_with_dir("file_out()/file_in() connections", {
     saver2 = file_out("d"),
     out2 = reader2,
     reader1 = file_in("c", "d"),
-    reader2 = file_in("a", "b"),
-    strings_in_dots = "literals"
+    reader2 = file_in("a", "b")
   )
   config <- drake_config(
     plan,
     session_info = FALSE,
     cache = storr::storr_environment()
   )
+  dependencies <- function(target, config, reverse = FALSE) {
+    deps_graph(targets = target, graph = config$graph, reverse = reverse)
+  }
   expect_equal(dependencies("out1", config), "saver1")
   expect_equal(dependencies("saver1", config), character(0))
   expect_equal(
     sort(dependencies("reader3", config)),
-    sort(c("saver1", "saver2"))
+    sort(c("saver1", "saver2", encode_path("b"), encode_path("d")))
   )
   expect_equal(dependencies("saver2", config), character(0))
   expect_equal(dependencies("out2", config), "reader2")
   expect_equal(
     sort(dependencies("reader1", config)),
-    sort(c("saver1", "saver2"))
+    sort(c("saver1", "saver2", encode_path("c"), encode_path("d")))
   )
-  expect_equal(dependencies("reader2", config), "saver1")
+  expect_equal(
+    sort(dependencies("reader2", config)),
+    sort(c("saver1", encode_path("a"), encode_path("b")))
+  )
   expect_equal(dependencies("out1", config, reverse = TRUE), character(0))
   expect_equal(
     sort(dependencies("saver1", config, reverse = TRUE)),
-    sort(c("out1", "reader1", "reader2", "reader3"))
+    sort(c("out1", "reader1", "reader2", "reader3",
+           encode_path("a"), encode_path("b"), encode_path("c")))
   )
   expect_equal(dependencies("reader3", config, reverse = TRUE), character(0))
   expect_equal(
     sort(dependencies("saver2", config, reverse = TRUE)),
-    sort(c("reader1", "reader3"))
+    sort(c("reader1", "reader3", encode_path("d")))
   )
   expect_equal(dependencies("out2", config, reverse = TRUE), character(0))
   expect_equal(dependencies("reader1", config, reverse = TRUE), character(0))
@@ -267,14 +255,19 @@ test_with_dir("show_output_files", {
       file_out("out3.txt", "out4.txt")
       file.create("out3.txt")
       file.create("out4.txt")
-    },
-    strings_in_dots = "literals"
+    }
   )
   writeLines("in1", "in1.txt")
   writeLines("in2", "in2.txt")
-  config <- make(
+  cache <- storr::storr_environment()
+  make(
     plan,
-    cache = storr::storr_environment(),
+    cache = cache,
+    session_info = FALSE
+  )
+  config <- drake_config(
+    plan,
+    cache = cache,
     session_info = FALSE
   )
   writeLines("abcdefg", "out3.txt")
@@ -304,18 +297,19 @@ test_with_dir("show_output_files", {
   }
   e <- info$edges[with(info$edges, order(from, to)), ]
   expect_equal(
-    e$from,
-    c(
+    sort(e$from),
+    sort(c(
       file_store(paste0("out", 1:2, ".txt")),
+      "target1",
       paste0("target", rep(1:2, each = 2))
-    )
+    ))
   )
   expect_equal(
-    e$to,
-    c(
-      rep("target2", 2),
+    sort(e$to),
+    sort(c(
+      rep("target2", 3),
       file_store(paste0("out", 1:4, ".txt"))
-    )
+    ))
   )
   info <- drake_graph_info(
     config,
@@ -355,14 +349,19 @@ test_with_dir("same, but with an extra edge not due to files", {
       file.create("out3.txt")
       file.create("out4.txt")
       target1
-    },
-    strings_in_dots = "literals"
+    }
   )
   writeLines("in1", "in1.txt")
   writeLines("in2", "in2.txt")
-  config <- make(
+  cache <- storr::storr_environment()
+  make(
     plan,
-    cache = storr::storr_environment(),
+    cache = cache,
+    session_info = FALSE
+  )
+  config <- drake_config(
+    plan,
+    cache = cache,
     session_info = FALSE
   )
   writeLines("abcdefg", "out3.txt")
@@ -392,20 +391,20 @@ test_with_dir("same, but with an extra edge not due to files", {
   }
   e <- info$edges[with(info$edges, order(from, to)), ]
   expect_equal(
-    e$from,
-    c(
+    sort(e$from),
+    sort(c(
       file_store(paste0("out", 1:2, ".txt")),
       paste0("target", c(1, rep(1:2, each = 2)))
-    )
+    ))
   )
   expect_equal(
-    e$to,
-    c(
+    sort(e$to),
+    sort(c(
       rep("target2", 2),
       file_store(paste0("out", 1:2, ".txt")),
       "target2",
       file_store(paste0("out", 3:4, ".txt"))
-    )
+    ))
   )
   info <- drake_graph_info(
     config,

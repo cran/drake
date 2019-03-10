@@ -43,7 +43,7 @@ test_with_dir("build times works if no targets are built", {
   expect_equal(nrow(build_times(search = FALSE)), 0)
   my_plan <- drake_plan(x = 1)
   con <- drake_config(my_plan, verbose = FALSE)
-  make_imports(con)
+  process_imports(con)
   expect_equal(nrow(build_times(search = FALSE)), 0)
 })
 
@@ -51,16 +51,18 @@ test_with_dir("build time the same after superfluous make", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("lubridate")
   x <- drake_plan(y = Sys.sleep(0.25))
-  c1 <- make(x, verbose = FALSE, session_info = FALSE)
+  make(x, verbose = FALSE, session_info = FALSE)
+  c1 <- drake_config(x, verbose = FALSE, session_info = FALSE)
   expect_equal(justbuilt(c1), "y")
   b1 <- build_times(search = FALSE)
   expect_true(all(complete.cases(b1)))
 
-  c2 <- make(x, verbose = FALSE, session_info = FALSE)
+  make(x, verbose = FALSE, session_info = FALSE)
+  c2 <- drake_config(x, verbose = FALSE, session_info = FALSE)
   expect_equal(justbuilt(c2), character(0))
   b2 <- build_times(search = FALSE)
   expect_true(all(complete.cases(b2)))
-  expect_equal(b1[b1$item == "y", ], b2[b2$item == "y", ])
+  expect_equal(b1[b1$target == "y", ], b2[b2$target == "y", ])
 })
 
 test_with_dir("runtime predictions", {
@@ -80,7 +82,6 @@ test_with_dir("runtime predictions", {
   )
   expect_true(p0 > 4e4 - 10 && p0 < 6e4 + 10)
   testrun(con)
-  expect_warning(predict_runtime(con, digits = 1))
   p1 <- as.numeric(predict_runtime(config = con, jobs = 1))
   p2 <- predict_runtime(
     config = con,
@@ -104,9 +105,6 @@ test_with_dir("runtime predictions", {
   )
   p4 <- as.numeric(p4)
   known_times <- c(
-    a = 0, b = 0, c = 0, f = 0, g = 0, h = 0, i = 0, j = 0,
-    readRDS = 0, saveRDS = 0,
-    "\"saveRDS\"" = 0, "\"input.rds\"" = 0,
     myinput = 10,
     nextone = 33,
     yourinput = 27,
@@ -144,4 +142,17 @@ test_with_dir("runtime predictions", {
   expect_equal(p5, 0, tolerance = 1e-6)
   expect_equal(p6, 70, tolerance = 1e-6)
   expect_equal(p7, 43, tolerance = 1e-6)
+})
+
+test_with_dir("predict_workers()", {
+  skip_on_cran()
+  skip_if_not_installed("knitr")
+  load_mtcars_example()
+  cache <- storr::storr_environment()
+  config <- drake_config(my_plan, cache = cache, session_info = FALSE)
+  make(my_plan, cache = config$cache)
+  out <- predict_workers(config, jobs = 4)
+  expect_equal(sort(unique(out$worker)), sort(as.integer(1:4)))
+  expect_equal(dim(out), dim(config$plan))
+  expect_equal(sort(colnames(out)), sort(c("target", "worker")))
 })

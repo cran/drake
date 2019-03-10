@@ -10,30 +10,32 @@ test_with_dir("console_cache", {
   expect_message(console_cache(config = list(verbose = 2)))
 })
 
+test_with_dir("crop_lines() crops lines", {
+  expect_equal(length(crop_lines(letters, n = 10)), 10)
+})
+
 test_with_dir("console_up_to_date", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   pl <- drake_plan(a = 1)
-  con <- make(pl, verbose = FALSE, session_info = FALSE)
+  make(pl, verbose = FALSE, session_info = FALSE)
+  con <- drake_config(pl, verbose = FALSE, session_info = FALSE)
   expect_silent(console_up_to_date(con))
-  con$verbose <- TRUE
-  expect_silent(console_up_to_date(con))
-  con$cache$clear(namespace = "attempt")
-  con <- make(pl, verbose = FALSE, session_info = FALSE)
   con$verbose <- TRUE
   expect_message(console_up_to_date(con))
 })
 
 test_with_dir("verbose consoles", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  config <- list(verbose = 2)
-  expect_silent(console_missing("\"myfile\"", config))
-  expect_silent(console_import("\"myfile\"", config))
+  config <- dbug()
+  config$verbose <- 2
+  expect_silent(console_missing(encode_path("input.rds"), config))
+  expect_silent(console_import(encode_path("input.rds"), config))
   config$verbose <- 3
-  expect_message(console_missing("\"myfile\"", config))
-  expect_silent(console_import("\"myfile\"", config))
+  expect_message(console_missing(encode_path("input.rds"), config))
+  expect_silent(console_import(encode_path("input.rds"), config))
   config$verbose <- 4
-  expect_message(console_missing("\"myfile\"", config))
-  expect_message(console_import("\"myfile\"", config))
+  expect_message(console_missing(encode_path("input.rds"), config))
+  expect_message(console_import(encode_path("input.rds"), config))
 })
 
 test_with_dir("console_parLapply", {
@@ -146,20 +148,21 @@ test_with_dir("console_skip", {
 
 test_with_dir("console to file", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("knitr")
   load_mtcars_example()
   cache <- storr::storr_environment()
   expect_false(file.exists("log.txt"))
   tmp <- capture.output({
       make(
-        my_plan, cache = cache, verbose = 4, session_info = FALSE,
+        my_plan, cache = cache, verbose = 6, session_info = FALSE,
         console_log_file = "log.txt"
       )
       make(
-        my_plan, cache = cache, verbose = 4, session_info = FALSE,
+        my_plan, cache = cache, verbose = 6, session_info = FALSE,
         console_log_file = "log.txt"
       )
       make(
-        my_plan, cache = cache, verbose = 4, session_info = FALSE,
+        my_plan, cache = cache, verbose = 6, session_info = FALSE,
         trigger = trigger(condition = TRUE), console_log_file = "log.txt"
       )
     },
@@ -175,8 +178,7 @@ test_with_dir("drake_warning() and drake_error()", {
       message("some_message")
       warning("some_warning")
       stop("some_error")
-    },
-    strings_in_dots = "literals"
+    }
   )
   expect_error(expect_warning(make(
     plan, cache = storr::storr_environment(),

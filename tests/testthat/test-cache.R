@@ -1,44 +1,59 @@
 drake_context("cache")
 
 test_with_dir("clean() removes the correct files", {
+  skip_if_not_installed("knitr")
   cache <- storr::storr_environment()
   writeLines("123", "a.txt")
   writeLines("123", "b.txt")
   plan <- drake_plan(
     a = file_in("a.txt"),
     b = knitr_in("b.txt"),
-    d = writeLines("123", file_out("d.rds")),
-    strings_in_dots = "literals"
+    d = writeLines("123", file_out("d.rds"))
   )
-  config <- drake_config(plan, session_info = FALSE)
-  make_imports(config)
+  config <- drake_config(plan, session_info = FALSE, skip_targets = TRUE)
+  make(config = config)
   clean()
   expect_true(file.exists("a.txt"))
   expect_true(file.exists("b.txt"))
   expect_false(file.exists("d.txt"))
 })
 
-test_with_dir("empty read_drake_plan()", {
+test_with_dir("drake_version", {
+  cache <- storr::storr_environment()
   expect_equal(
-    read_drake_plan(cache = storr::storr_environment()),
-    drake_plan()
+    get_cache_version(cache),
+    as.character(utils::packageVersion("drake"))
+  )
+  make(drake_plan(x = 1), session_info = FALSE)
+  con <- drake_config(drake_plan(x = 1), session_info = FALSE)
+  expect_true(is.character(get_cache_version(con$cache)))
+  clean()
+  make(drake_plan(x = 1), session_info = TRUE)
+  con <- drake_config(drake_plan(x = 1), session_info = TRUE)
+  expect_true(is.character(get_cache_version(con$cache)))
+  con$cache$clear(namespace = "session")
+  expect_equal(
+    get_cache_version(con$cache),
+    as.character(utils::packageVersion("drake"))
   )
 })
 
 test_with_dir("dependency profile", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("knitr")
   b <- 1
-  config <- make(drake_plan(a = b), session_info = FALSE)
+  make(drake_plan(a = b), session_info = FALSE)
+  config <- drake_config(drake_plan(a = b), session_info = FALSE)
   expect_error(
-    dependency_profile(target = missing, config = config),
+    deps_profile(target = missing, config = config),
     regexp = "no recorded metadata"
   )
-  expect_false(any(dependency_profile(target = a, config = config)$changed))
+  expect_false(any(deps_profile(target = a, config = config)$changed))
   b <- 2
-  expect_false(any(dependency_profile(target = a, config = config)$changed))
+  expect_false(any(deps_profile(target = a, config = config)$changed))
   config$skip_targets <- TRUE
   make(config = config)
-  dp <- dependency_profile(target = a, config = config)
+  dp <- deps_profile(target = a, config = config)
   expect_true(as.logical(dp[dp$hash == "depend", "changed"]))
   expect_equal(sum(dp$changed), 1)
   config$plan$command <- "b + c"
@@ -46,8 +61,8 @@ test_with_dir("dependency profile", {
     plan = config$plan,
     envir = config$envir,
     cache = config$cache
-  )
-  dp <- dependency_profile(target = a, config = config)
+  )$layout
+  dp <- deps_profile(target = a, config = config)
   expect_true(as.logical(dp[dp$hash == "command", "changed"]))
   expect_equal(sum(dp$changed), 2)
   load_mtcars_example()
@@ -58,7 +73,7 @@ test_with_dir("dependency profile", {
     session_info = FALSE
   )
   make(config = config)
-  out <- dependency_profile(
+  out <- deps_profile(
     file_store("report.Rmd"),
     character_only = TRUE,
     config
@@ -71,9 +86,10 @@ test_with_dir("Missing cache", {
   s <- storr::storr_rds("s")
   unlink(s$driver$path, recursive = TRUE)
   expect_error(assert_cache(s), regexp = "drake cache missing")
+  expect_equal(cached(), character(0))
 })
 
-test_with_dir("broken cache", {
+test_with_dir("broken or incomplete cache", {
   skip_on_cran()
   make(drake_plan(x = 1), session_info = FALSE)
   unlink(file.path(".drake", "config"), recursive = TRUE)
@@ -85,12 +101,9 @@ test_with_dir("broken cache", {
 
 test_with_dir("Cache namespaces", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  x <- cache_namespaces()
-  y <- target_namespaces()
-  z <- cleaned_namespaces()
-  expect_true(all(y %in% x))
+  y <- target_namespaces_()
+  z <- cleaned_namespaces_()
   expect_true(all(z %in% y))
-  expect_false(all(x %in% y))
   expect_false(all(y %in% z))
 })
 
@@ -110,16 +123,11 @@ test_with_dir("can exclude bad targets from loadd()", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   plan <- drake_plan(a = TRUE)
   make(plan)
-  expect_silent(loadd(a, b, lazy = FALSE))
-  expect_equal(a, TRUE)
-  expect_equal(
-    exclude_foreign_imports(
-      targets = "b",
-      cache = get_cache(),
-      jobs = 1
-    ),
-    character(0)
-  )
+  e <- new.env(parent = emptyenv())
+  loadd(a, b, lazy = FALSE, envir = e)
+  expect_true(exists("a", envir = e, inherits = FALSE))
+  expect_equal(e$a, TRUE)
+  expect_false(exists("b", envir = e, inherits = FALSE))
 })
 
 test_with_dir("bad/corrupt caches, no progress, no seed", {
@@ -147,18 +155,18 @@ test_with_dir("bad/corrupt caches, no progress, no seed", {
 test_with_dir("non-existent caches", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_equal(0, nrow(drake_cache_log()))
-  check_storr_short_hash(NULL, "BLAH")
   expect_equal(find_cache(), NULL)
-  expect_equal(find_project(), NULL)
   expect_error(loadd(list = "nothing", search = FALSE))
-  expect_error(tmp <- read_drake_config(search = FALSE))
-  expect_error(tmp <- read_drake_plan(search = FALSE))
-  expect_error(tmp <- read_drake_graph(search = FALSE))
   expect_error(tmp <- read_drake_seed(search = FALSE))
   expect_error(tmp <- drake_get_session_info(search = FALSE))
   expect_error(tmp <- drake_set_session_info(search = FALSE))
   dummy <- new_cache()
-  expect_silent(read_drake_graph(cache = dummy))
+})
+
+test_with_dir("drake_gc() and mangled keys", {
+  cache <- storr::storr_rds(tempfile(), mangle_key = TRUE)
+  cache$set("a", 1)
+  expect_silent(tmp <- drake_gc(cache = cache))
 })
 
 test_with_dir("try to rescue non-existent stuff", {
@@ -196,7 +204,24 @@ test_with_dir("subspaces", {
   expect_equal(sort(lst), c("a", "b"))
 })
 
-test_with_dir("cache functions work", {
+test_with_dir("get_cache() can search", {
+  dir.create(file.path("w"))
+  dir.create(file.path("w", "x"))
+  dir.create(file.path("w", "x", "y"))
+  dir.create(file.path("w", "x", "y", "z"))
+  tmp <- storr::storr_rds(file.path("w", "x", ".drake"), mangle_key = TRUE)
+  cache <- get_cache(file.path("w", "x", "y", "z"))
+  expect_true(inherits(cache, "storr"))
+  cache <- get_cache(file.path("w", "x", ".drake"))
+  expect_true(inherits(cache, "storr"))
+  cache <- get_cache(file.path("w", "x", ".drake", "keys"))
+  expect_true(inherits(cache, "storr"))
+  cache <- get_cache(file.path("w", "x"), search = FALSE)
+  expect_true(inherits(cache, "storr"))
+  expect_null(get_cache(file.path("w", "x", "y", "z"), search = FALSE))
+})
+
+test_with_dir("cache functions work from various working directories", {
   skip_if_not_installed("lubridate")
   # May have been loaded in a globalenv() testing scenario # nolint
   remove_these <- intersect(ls(envir = globalenv()), c("h", "j"))
@@ -210,11 +235,9 @@ test_with_dir("cache functions work", {
   }
   setwd(scratch) # nolint
   owd <- getwd()
-  expect_equal(character(0), cached(search = FALSE), imported(search = FALSE),
-    built(search = FALSE))
   expect_equal(nrow(build_times(search = FALSE)), 0)
-  expect_equal(progress(search = FALSE), character(0))
-  expect_equal(in_progress(search = FALSE), character(0))
+  expect_equal(nrow(progress(search = FALSE)), 0)
+  expect_false(any("in progress" %in% progress(search = FALSE)))
   expect_error(readd(search = FALSE))
   config <- dbug()
   using_global <- identical(config$envir, globalenv())
@@ -234,9 +257,6 @@ test_with_dir("cache functions work", {
   n_a <- nrow(all_hashes)
   n_s <- nrow(some_hashes)
   expect_true(n_a > n_s && n_s > 0)
-  expect_false(file.exists("log.txt"))
-  drake_cache_log_file(file = "log.txt")
-  expect_true(file.exists("log.txt"))
 
   # drake_gc() should not remove any important targets/imports.
   x <- cached()
@@ -247,108 +267,74 @@ test_with_dir("cache functions work", {
   expect_equal(outdated(config), character(0))
 
   # targets and imports
-  imports <- sort(c("\"input.rds\"",
-    "a", "b", "c", "f", "g",
-    "h", "i", "j"))
+  imports <- sort(c(encode_path("input.rds"),
+                    "a", "b", "c", "f", "g",
+                    "h", "i", "j"))
   builds <- sort(config$plan$target)
-  out_files <- "\"intermediatefile.rds\""
+  out_files <- encode_path("intermediatefile.rds")
   all <- sort(c(builds, imports, out_files))
 
   # build_times
   x <- config$cache
-  bt <- build_times(search = FALSE, targets_only = FALSE)
-  expect_equal(sort(x$list(namespace = "meta")), sort(cached()))
-  expect_equal(sort(bt$item), all)
-  expect_length(bt, 5) # 5 columns
+  bt <- build_times(search = FALSE)
+  expect_equal(
+    sort(display_keys(x$list(namespace = "meta"))),
+    sort(cached(targets_only = FALSE))
+  )
+  expect_equal(
+    sort(config$plan$target),
+    sort(cached(targets_only = TRUE))
+  )
+  expect_equal(sort(bt$target), sort(builds))
+  expect_length(bt, 4) # 4 columns
   n1 <- nrow(bt)
-  n2 <- nrow(build_times(search = FALSE, targets_only = TRUE))
-  expect_true(n1 > n2 & n2 > 0)
 
   # find stuff in current directory session, progress
-  expect_true(is.list(drake_get_session_info(search = FALSE)))
-  expect_true(all(progress(search = FALSE) == "finished"))
-  expect_equal(in_progress(search = FALSE), character(0))
-  expect_warning(tmp <- progress(imported_files_only = TRUE))
-  expect_equal(sort(names(progress(search = FALSE))), all)
-  expect_equal(
-    sort(names(progress(search = FALSE, no_imported_objects = TRUE))),
-    sort(c("\"input.rds\"", out_files, builds)))
-  expect_equal(progress(bla, f, list = c("h", "final"), search = FALSE),
-    c(bla = "not built or imported", f = "finished", h = "finished",
-      final = "finished"))
-
-  # config
-  newconfig <- read_drake_config(search = FALSE)
-  expect_equal(newconfig$short_hash_algo, default_short_hash_algo())
-  expect_equal(newconfig$long_hash_algo, default_long_hash_algo())
-  expect_true(is.list(newconfig) & length(newconfig) > 1)
-  expect_equal(read_drake_plan(search = FALSE), config$plan)
   expect_equal(read_drake_seed(search = FALSE), config$seed)
-  expect_true(inherits(read_drake_graph(search = FALSE), "igraph"))
+  expect_true(is.list(drake_get_session_info(search = FALSE)))
+  expect_true(all(progress(search = FALSE)$progress == "done"))
+  expect_false(any("running" %in% progress(search = FALSE)))
+  expect_equal(sort(progress(search = FALSE)$target), sort(config$plan$target))
+  exp <- weak_tibble(target = "final", progress = "done")
+  expect_equal(progress(final, search = FALSE), exp)
+  expect_equal(progress(list = "final", search = FALSE), exp)
 
-  # imported , built, cached, diagnose, rescue
+  # cached, diagnose, rescue
   expect_true(length(diagnose(search = FALSE)) > length(config$plan$target))
-  expect_equal(imported(files_only = FALSE, search = FALSE),
-    imports)
-  expect_equal(imported(files_only = TRUE, search = FALSE),
-    "\"input.rds\"")
+  expect_error(diagnose("xyz", cache = config$cache), regexp = "diagnostic")
   expect_equal(
-    sort(built(search = FALSE)),
-    sort(c(config$plan$target, out_files))
+    sort(cached(search = FALSE, targets_only = TRUE)),
+    sort(builds)
   )
-  twopiece <- sort(c(built(search = FALSE), imported(search = FALSE,
-    files_only = FALSE)))
-  expect_equal(sort(cached(search = FALSE)), sort(all), twopiece)
-  expect_equal(sort(cached(search = FALSE, no_imported_objects = TRUE)),
-    sort(c("\"input.rds\"", out_files, builds)))
-  expect_true(is_cached(targets = "\"input.rds\"", no_imported_objects = TRUE,
-    cache = config$cache, jobs = 1, namespace = config$cache$default_namespace))
-  expect_true(all(cached(search = FALSE, list = all)))
-  expect_equal(
-    length(cached(search = FALSE, i, list = imported(files_only = FALSE))),
-    length(imported(files_only = FALSE)))
-  expect_equal(sort(cached(i, bla, list = c("final", "run"),
-    search = FALSE)), sort(c(i = TRUE, bla = FALSE, final = TRUE,
-    run = FALSE)))
   expect_true(
     inherits(rescue_cache(search = FALSE, targets = "final"), "storr"))
   expect_true(inherits(
     rescue_cache(search = FALSE, garbage_collection = FALSE), "storr"))
   expect_true(inherits(
     rescue_cache(search = FALSE, garbage_collection = TRUE), "storr"))
-  expect_equal(sort(cached(search = FALSE)), sort(all), twopiece)
 
   # find your project
-  expect_equal(find_project(), getwd())
   expect_equal(find_cache(), file.path(getwd(), cache_dir))
   expect_true(is.numeric(readd(a, search = FALSE)))
 
   # load and read stuff
-  list <- intersect(c(imported(), built()), ls(envir = envir))
+  list <- intersect(
+    setdiff(cached(targets_only = FALSE), cached(targets_only = TRUE)),
+    ls(envir = envir)
+  )
   rm(list = list, envir = envir)
   expect_error(h(1))
   expect_true(is.numeric(readd(final, search = FALSE)))
-  expect_error(loadd(yourinput, myinput, search = FALSE, imported_only = TRUE))
-  loadd(h, i, j, c, jobs = 2, search = FALSE, envir = envir)
-  expect_true(is.numeric(h(1)))
-  rm(h, i, j, c, envir = envir)
-  expect_error(h(1))
 
-  # test loadd imported_only and loadd() everything safe
-  e <- new.env()
-  loadd(imported_only = TRUE, envir = e)
-  should_have_loaded <- setdiff(
-    imported(search = FALSE),
-    c("readRDS", "saveRDS")
-  )
-  expect_true(all(should_have_loaded %in% ls(envir = e)))
+  loadd(yourinput, nextone, jobs = 2, search = FALSE, envir = envir)
+  expect_true(is.numeric(envir[["yourinput"]]))
+  expect_true(is.numeric(envir[["nextone"]]))
+  rm(yourinput, nextone, envir = envir)
+
+  # test loadd loadd() everything
   e <- new.env()
   loadd(search = FALSE, envir = e)
-  should_have_loaded <- setdiff(
-    config$cache$list(),
-    c("readRDS", "saveRDS")
-  )
-  expect_true(all(should_have_loaded %in% ls(envir = e)))
+  expect_equal(sort(config$plan$target), sort(ls(envir = e)))
 
   # search from a different directory
   if (!file.exists("searchfrom")) {
@@ -361,99 +347,66 @@ test_with_dir("cache functions work", {
 
   # progress, session
   expect_true(is.list(drake_get_session_info(search = TRUE, path = s)))
-  expect_equal(sort(names(progress(search = TRUE, path = s))),
-    sort(all))
-  expect_equal(sort(names(progress(no_imported_objects = TRUE,
-    search = TRUE, path = s))), sort(c("\"input.rds\"", out_files, builds)))
-  expect_equal(sort(progress(search = TRUE, path = s, bla, f,
-    list = c("h", "final"))), sort(c(bla = "not built or imported",
-    f = "finished", h = "finished", final = "finished")))
-  expect_equal(in_progress(search = TRUE, path = s), character(0))
+  prog <- progress(search = TRUE, path = s)
+  expect_equal(sort(prog$target), sort(config$plan$target))
+  expect_true(all(prog$progress == "done"))
+  prog <- progress(nothing, search = TRUE, path = s)
+  expect_equal(prog, weak_tibble(target = "nothing", progress = "none"))
 
-  # imported, built, cached, diagnose
+  # cached and diagnose
   expect_equal(diagnose(search = TRUE), character(0))
-  expect_equal(sort(imported(files_only = FALSE, search = TRUE,
-    path = s)), sort(imports))
-  expect_equal(imported(files_only = TRUE, search = TRUE, path = s),
-    "\"input.rds\"")
-  expect_equal(sort(built(search = TRUE, path = s)),
-    sort(c(config$plan$target, out_files)))
-  twopiece <- sort(c(built(path = s, search = TRUE),
-    imported(files_only = FALSE,
-    path = s, search = TRUE)))
-  expect_equal(sort(cached(path = s, search = TRUE)), sort(all),
-    twopiece)
-  expect_equal(sort(cached(no_imported_objects = TRUE, path = s,
-    search = T)), sort(c("\"input.rds\"", out_files, builds)))
-  expect_true(all(cached(list = all, path = s, search = TRUE)))
+  expect_equal(
+    sort(cached(targets_only = TRUE, path = s, search = TRUE)),
+    sort(config$plan$target)
+  )
+  expect_equal(
+    length(cached(targets_only = FALSE, path = s, search = TRUE)),
+    length(config$cache$list())
+  )
   expect_true(inherits(rescue_cache(path = s, search = TRUE), "storr"))
-  expect_true(all(cached(list = all, path = s, search = TRUE)))
 
   # find your project
-  expect_equal(find_project(path = s), file.path(scratch))
   expect_equal(find_cache(path = s),
-    file.path(scratch, cache_dir))
-
-  # config
-  newconfig <- read_drake_config(search = TRUE, path = s)
-  expect_true(is.list(newconfig) & length(newconfig) > 1)
-  expect_equal(read_drake_plan(search = TRUE, path = s), config$plan)
-  expect_equal(class(read_drake_graph(search = TRUE, path = s)),
-    "igraph")
+               file.path(scratch, cache_dir))
 
   # load and read stuff
   expect_true(is.numeric(readd(a, path = s, search = TRUE)))
-  expect_error(h(1))
-  expect_error(j(1))
-  loadd(h, i, j, c, path = s, search = TRUE, envir = envir)
-  expect_true(is.numeric(h(1)))
-  rm(h, i, j, c, envir = envir)
-  expect_error(h(1))
+
+  loadd(yourinput, nextone, jobs = 2, search = TRUE, path = s, envir = envir)
+  expect_true(is.numeric(envir[["yourinput"]]))
+  expect_true(is.numeric(envir[["nextone"]]))
+  rm(yourinput, nextone, envir = envir)
 
   # load dependencies
   e <- new.env()
   deps <- c("nextone", "yourinput")
   expect_false(any(deps %in% ls(envir = e)))
-  loadd(combined, deps = TRUE, path = s, search = TRUE, envir = e)
+  loadd(
+    combined, deps = TRUE, config = config,
+    path = s, search = TRUE, envir = e
+  )
   expect_true(all(deps %in% ls(envir = e)))
 
-  # Read the graph
-  pdf(NULL)
-  tmp <- dbug()
-  tmp <- read_drake_graph(search = TRUE, path = s)
-  tmp <- capture.output(dev.off())
-  unlink("Rplots.pdf", force = TRUE)
-
-  setwd(scratch) # nolint
-  pdf(NULL)
-  tmp <- read_drake_graph(search = FALSE)
-  tmp <- capture.output(dev.off())
-  unlink("Rplots.pdf", force = TRUE)
-  pdf(NULL)
-  tmp <- capture.output(dev.off())
-  unlink("Rplots.pdf", force = TRUE)
-  setwd("..") # nolint
-
   # clean using search = TRUE or FALSE
-  expect_true(all(all %in% cached(path = s, search = T)))
+  expect_true(all(config$plan$target %in% cached(path = s, search = TRUE)))
   clean(final, path = s, search = TRUE, jobs = 2,
-    garbage_collection = TRUE)
-  expect_true(all(setdiff(all, "final") %in% cached(path = s,
-    search = T)))
-  drake_gc(path = s, search = T)
+        garbage_collection = TRUE)
+  targs <- setdiff(config$plan$target, "final")
+  expect_true(all(targs %in% cached(path = s, search = TRUE)))
+  drake_gc(path = s, search = TRUE)
 
   # Test purging
   prog <- progress(search = TRUE, path = s)
-  expect_true("final" %in% names(prog))
+  expect_true("final" %in% prog$target)
 
   clean(final, path = s, search = TRUE, jobs = 2,
-    garbage_collection = TRUE, purge = TRUE)
+        garbage_collection = TRUE, purge = TRUE)
   prog <- progress(search = TRUE, path = s)
-  expect_false("final" %in% names(prog))
+  expect_false("final" %in% prog$target)
 
   # More cleaning checks
   clean(path = s, search = TRUE, garbage_collection = FALSE)
-  expect_equal(cached(path = s, search = T), character(0))
+  expect_equal(cached(path = s, search = TRUE), character(0))
   where <- file.path(scratch, cache_dir)
   expect_true(file.exists(where))
   clean(path = s, search = FALSE, destroy = TRUE)
@@ -469,4 +422,119 @@ test_with_dir("cache functions work", {
 test_with_dir("memo_expr() works without a cache", {
   x <- "x"
   expect_equal(memo_expr(x, cache = NULL), x)
+})
+
+test_with_dir("master caching, environment caches and parallelism", {
+  skip_on_cran()
+  skip_if_not_installed("future")
+  load_mtcars_example()
+  future::plan(future::multiprocess)
+  cache <- storr::storr_environment() # not thread-safe
+  make(
+    my_plan,
+    cache = cache,
+    caching = "master",
+    parallelism = "future",
+    jobs = 2
+  )
+  config <- drake_config(
+    my_plan,
+    cache = cache,
+    caching = "master",
+    parallelism = "future",
+    jobs = 2
+  )
+  expect_true("report" %in% justbuilt(config))
+})
+
+test_with_dir("run make() from subdir", {
+  old <- Sys.getenv("drake_warn_subdir")
+  Sys.setenv(drake_warn_subdir = "")
+  on.exit(Sys.setenv(drake_warn_subdir = old))
+  plan <- drake_plan(x = 1)
+  x <- new_cache()
+  y <- new_cache("not_.drake")
+  dir.create("subdir")
+  with_dir("subdir", {
+    expect_warning(make(plan), regexp = "subdirectory")
+    expect_warning(make(plan), regexp = "subdirectory")
+    make(plan, cache = y)
+    new_cache(".drake")
+    make(plan)
+    make(plan, cache = storr::storr_environment())
+  })
+})
+
+test_with_dir("loadd() does not load imports", {
+  f <- function(x) {
+    x + 1
+  }
+  plan <- drake_plan(y = f(1))
+  cache <- storr::storr_environment()
+  make(plan, cache = cache, session_info = FALSE)
+  e <- new.env(parent = emptyenv())
+  rm(f)
+  loadd(envir = e, cache = cache)
+  expect_equal(ls(e), "y")
+  expect_message(
+    loadd(f, envir = e, cache = cache, verbose = TRUE),
+    regexp = "No targets to load"
+  )
+})
+
+test_with_dir("can filter progress", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  plan <- drake_plan(a = TRUE, b = TRUE, c = stop())
+  expect_error(make(plan))
+
+  out <- progress(a, b, c, d)
+  exp <- weak_tibble(
+    target = c("a", "b", "c", "d"),
+    progress = c("done", "done", "failed", "none")
+  )
+  expect_equivalent(out, exp)
+
+  exp1 <- weak_tibble(
+    target = c("a", "b", "c"),
+    progress = c("done", "done", "failed")
+  )
+  exp2 <- weak_tibble(
+    target = c("a", "b"),
+    progress = c("done", "done")
+  )
+  exp3 <- weak_tibble(
+    target = "c",
+    progress = "failed"
+  )
+
+  expect_equivalent(progress(progress = c("done", "failed")), exp1)
+  expect_equivalent(progress(progress = "done"), exp2)
+  expect_equivalent(progress(progress = "failed"), exp3)
+
+  expect_error(
+    progress(progress = "stuck"),
+    "should be one of")
+})
+
+test_with_dir("make() writes a cache log file", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  plan <- drake_plan(a = TRUE, b = TRUE)
+  expect_false(file.exists("log.txt"))
+  make(plan, cache_log_file = "log.txt")
+  expect_true(file.exists("log.txt"))
+
+  # Check structure of cache
+  log1 <- read.table("log.txt", header = TRUE, stringsAsFactors = FALSE)
+  expect_equal(log1$type, c("target", "target"))
+  expect_equal(log1$name, c("a", "b"))
+
+  # Change plan so cache has to change.
+  plan <- drake_plan(a = TRUE, b = FALSE)
+  make(plan, cache_log_file = "log.txt")
+  log2 <- read.table("log.txt", header = TRUE, stringsAsFactors = FALSE)
+
+  expect_equal(log1$hash[1], log2$hash[1])
+
+  # Changed parts of cache are different.
+  expect_false(log1$hash[2] == log2$hash[2])
 })

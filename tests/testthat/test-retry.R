@@ -26,7 +26,7 @@ test_with_dir("retries", {
 
   debrief_retries <- function() {
     expect_true(file.exists("failed_once.txt"))
-    expect_true(cached(x))
+    expect_true("x" %in% cached())
     expect_null(diagnose(x)$error)
   }
 
@@ -79,7 +79,7 @@ test_with_dir("timeouts", {
       session_info = FALSE
     )
   )
-  expect_true(cached(x))
+  expect_true("x" %in% cached())
 
   # Should time out.
   clean()
@@ -95,7 +95,7 @@ test_with_dir("timeouts", {
       )
     )
   )
-  expect_false(cached(x))
+  expect_false("x" %in% cached())
 
   # Should time out too. The workflow plan should override
   # the arguments to make().
@@ -116,6 +116,6 @@ test_with_dir("timeouts", {
         do.call(what = make, args = args)
       )
     )
-    expect_false(cached(x))
+    expect_false("x" %in% cached())
   }
 })

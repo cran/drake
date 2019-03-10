@@ -2,13 +2,8 @@ drake_context("import file")
 
 test_with_dir("responses to imported file", {
   config <- dbug()
-  expect_silent(check_plan(plan = config$plan, envir = config$envir))
-  expect_warning(
-    check_plan(plan = config$plan[-1, ], envir = config$envir,
-          verbose = FALSE))
-  expect_silent(
-    check_plan(plan = config$plan[c(-1, -6), ], envir = config$envir,
-          verbose = FALSE))
+  con2 <- drake_config(plan = config$plan[-1, ], envir = config$envir)
+  expect_warning(runtime_checks(con2))
   testrun(config)
   expect_true(length(justbuilt(config)) > 0)
   testrun(config)
@@ -17,8 +12,8 @@ test_with_dir("responses to imported file", {
   # check missing and then replace file exactly as before
   contents <- readRDS("input.rds")
   unlink("input.rds", force = TRUE)
-  expect_warning(tmp <- capture.output(check_plan(plan = config$plan,
-    envir = config$envir)))
+  con3 <- drake_config(plan = config$plan, envir = config$envir)
+  expect_warning(tmp <- runtime_checks(con3))
   saveRDS(contents, "input.rds")
   testrun(config)
   nobuild(config)

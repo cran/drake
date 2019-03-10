@@ -2,7 +2,11 @@ drake_context("examples")
 
 test_with_dir("examples are listed and written", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("curl")
   skip_if_not_installed("downloader")
+  if (!curl::has_internet()) {
+    skip("no internet connection")
+  }
   x <- drake_examples()
   expect_true(is.character(x) & length(x) > 0)
   example <- "main"
@@ -23,6 +27,7 @@ test_with_dir("example template files", {
 })
 
 test_with_dir("mtcars example works", {
+  skip_if_not_installed("knitr")
   scenario <- get_testing_scenario()
   e <- eval(parse(text = scenario$envir))
   jobs <- scenario$jobs
@@ -42,9 +47,10 @@ test_with_dir("mtcars example works", {
 
   dats <- c("small", "large")
   config$targets <- dats
-  con <- testrun(config)
+  testrun(config)
+  con <- testconfig(config)
 
-  expect_true(is.list(dependency_profile(
+  expect_true(is.list(deps_profile(
     target = "small", config = con)))
   expect_equal(parallelism == "Makefile", file.exists("Makefile"))
 
@@ -52,7 +58,7 @@ test_with_dir("mtcars example works", {
   remove_these <- intersect(dats, ls(config$envir))
   rm(list = remove_these, envir = config$envir)
   config$targets <- config$plan$target
-  con <- testrun(config)
+  testrun(config)
   jb <- justbuilt(con)
   expect_true("report" %in% jb)
   expect_false(any(dats %in% jb))
@@ -60,7 +66,7 @@ test_with_dir("mtcars example works", {
   # Check that file is not rehashed.
   # Code coverage should cover every line of file_hash().
   expect_true(is.character(file_hash(
-    target = "\"report.Rmd\"", config = con, size_cutoff = -1)))
+    target = encode_path("report.Rmd"), config = con, size_cutoff = -1)))
   config <- drake_config(
     my_plan, envir = e, jobs = jobs, parallelism = parallelism,
     verbose = FALSE)
@@ -112,7 +118,7 @@ test_with_dir("mtcars example works", {
     all_times <- build_times()
     expect_true(nrow(all_times) >= nrow(config$plan))
     some_times <- build_times(starts_with("coef"))
-    expect_equal(sort(some_times$item), coefs)
+    expect_equal(sort(some_times$target), coefs)
 
     # clean() # nolint
     x <- sort(cached())
@@ -132,15 +138,18 @@ test_with_dir("mtcars example works", {
     c = knitr::knit("nonfile"),
     d = rmarkdown::render("report.Rmd"), # nolint
     e = rmarkdown::render("report.md"), # nolint
-    f = rmarkdown::render("nonfile"),
-    strings_in_dots = "literals"
+    f = rmarkdown::render("nonfile")
   )
   suppressWarnings(con <- drake_config(plan = x))
   for (target in c("a")) {
-    expect_true("small" %in% dependencies(targets = target, config = con))
+    expect_true(
+      "small" %in% deps_target(target, con, character_only = TRUE)$name
+    )
   }
   for (target in c("b", "c")) {
-    expect_false("small" %in% dependencies(targets = target, config = con))
+    expect_false(
+      "small" %in% deps_target(target, con, character_only = TRUE)$name
+    )
   }
 
   # clean_mtcars_example() # nolint

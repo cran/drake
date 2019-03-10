@@ -1,12 +1,72 @@
 drake_context("edge cases")
 
+test_with_dir("lock_envir works", {
+  scenario <- get_testing_scenario()
+  e <- eval(parse(text = scenario$envir))
+  jobs <- scenario$jobs
+  parallelism <- scenario$parallelism
+  caching <- scenario$caching
+  plan <- drake_plan(
+    x = testthat::expect_error(
+      assign("a", 1, envir = parent.env(drake_envir())),
+      regexp = "binding"
+    )
+  )
+  make(
+    plan,
+    envir = e,
+    jobs = jobs,
+    parallelism = parallelism,
+    caching = caching,
+    lock_envir = TRUE,
+    verbose = TRUE,
+    session_info = FALSE
+  )
+  e$a <- 123
+  e$plan$four <- "five"
+  plan <- drake_plan(
+    x = assign("a", 1, envir = parent.env(drake_envir()))
+  )
+  make(
+    plan,
+    envir = e,
+    jobs = jobs,
+    parallelism = parallelism,
+    caching = caching,
+    lock_envir = FALSE,
+    verbose = FALSE,
+    session_info = FALSE
+  )
+  expect_true("x" %in% cached())
+})
+
+test_with_dir("Try to modify a locked environment", {
+  e <- new.env()
+  lock_environment(e)
+  plan <- drake_plan(x = {
+    e$a <- 1
+    2
+  })
+  expect_error(
+    make(plan, session_info = FALSE, cache = storr::storr_environment()),
+    regexp = "Self-invalidation"
+  )
+})
+
 test_with_dir("skip everything", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   f <- function(x) {
     x
   }
   pl <- drake_plan(a = f(0))
-  con <- make(
+  make(
+    pl,
+    session_info = FALSE,
+    skip_targets = TRUE,
+    skip_imports = TRUE,
+    verbose = 2
+  )
+  con <- drake_config(
     pl,
     session_info = FALSE,
     skip_targets = TRUE,
@@ -49,12 +109,9 @@ test_with_dir("can keep going", {
       session_info = FALSE
     )
   )
-  expect_equal(sort(built()), sort(c("a2", "a3", "b2", "b3", "b4")))
+  expect_equal(sort(cached(targets_only = FALSE)),
+               sort(c("a2", "a3", "b2", "b3", "b4", "fail", "succeed")))
   expect_equal(sort(failed()), sort(c("a1", "a4", "b1")))
-  expect_equal(
-    sort(failed(upstream_only = TRUE)),
-    sort(c("a1", "a4"))
-  )
 })
 
 test_with_dir("failed targets do not become up to date", {
@@ -70,10 +127,10 @@ test_with_dir("failed targets do not become up to date", {
       }
     },
     b = 5,
-    c = list(a, b),
-    strings_in_dots = "literals"
+    c = list(a, b)
   )
-  con <- make(plan)
+  make(plan)
+  con <- drake_config(plan)
   expect_equal(sort(justbuilt(con)), sort(letters[1:4]))
   fail <- TRUE
   expect_error(make(plan))
@@ -87,48 +144,27 @@ test_with_dir("failed targets do not become up to date", {
 test_with_dir("config and make without safety checks", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- drake_plan(
-    file = readRDS(file_in("my_file.rds")),
-    strings_in_dots = "literals"
+    file = readRDS(file_in("my_file.rds"))
   )
   tmp <- drake_config(x, verbose = FALSE)
   expect_silent(
     tmp <- drake_config(x, skip_safety_checks = TRUE, verbose = FALSE))
-  expect_silent(check_drake_config(config = tmp))
+  expect_silent(config_checks(config = tmp))
 })
 
 test_with_dir("Strings stay strings, not symbols", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_silent(x <- drake_plan(a = "A", strings_in_dots = "literals"))
+  expect_silent(x <- drake_plan(a = "A"))
   expect_silent(make(x, verbose = FALSE, session_info = FALSE))
 })
 
 test_with_dir("error handlers", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_equal(error_na(1), NA)
+  expect_equal(error_na(1), NA_character_)
   expect_false(error_false(1))
   expect_equal(error_character0(1), character(0))
   expect_null(error_null(1))
   expect_error(error_tibble_times(123))
-  expect_warning(
-    error_process(
-      e = list(message = 5),
-      id = "2",
-      config = dbug()),
-    regexp = "5"
-  )
-  config <- dbug()
-  config$cache$set("worker_1", TRUE, "mc_error")
-  config$keep_going <- FALSE
-  expect_warning(tmp <- mc_abort_with_errored_workers(config))
-  expect_true(tmp)
-  config$keep_going <- TRUE
-  expect_silent(tmp <- mc_abort_with_errored_workers(config))
-  expect_false(tmp)
-})
-
-test_with_dir("error when file target names do not match actual filenames", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_warning(x <- drake_plan(y = 1, file_targets = TRUE))
 })
 
 test_with_dir("clean a nonexistent cache", {
@@ -156,24 +192,27 @@ test_with_dir("target conflicts with current import or another target", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- dbug()
   config$plan <- rbind(config$plan, data.frame(target = "f",
-    command = "1+1"))
-  expect_message(check_plan(plan = config$plan,
-    envir = config$envir))
+                                               command = "1+1"))
+  expect_message(drake_config(plan = config$plan,
+                            envir = config$envir),
+                 regexp = "Unloading targets from environment")
   config$plan$target <- "repeated"
-  expect_error(check_plan(plan = config$plan))
+  expect_error(drake_config(plan = config$plan))
 })
 
 test_with_dir("target conflicts with previous import", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- dbug()
   testrun(config)
-  config$plan$command[2] <- "g(1+1)"
-  config$plan <- rbind(config$plan, data.frame(target = "f",
-    command = "1+1"))
+  config$plan$command[[2]] <- quote(g(1 + 1))
+  new_row <- drake_plan(f = 1 + 1)
+  config$plan <- bind_plans(config$plan, new_row)
   config$targets <- config$plan$target
   testrun(config)
-  expect_equal(justbuilt(config), sort(c("drake_target_1",
-    "combined", "f", "final", "yourinput")))
+  expect_equal(
+    justbuilt(config),
+    sort(c("drake_target_1", "combined", "f", "final", "yourinput"))
+  )
 })
 
 test_with_dir("true targets can be functions", {
@@ -182,14 +221,10 @@ test_with_dir("true targets can be functions", {
     x + 1
   })
   plan <- drake_plan(myfunction = generator(), output = myfunction(1))
-  config <- make(plan, verbose = FALSE, session_info = FALSE)
+  make(plan, verbose = FALSE, session_info = FALSE)
+  config <- drake_config(plan, verbose = FALSE, session_info = FALSE)
   expect_equal(readd(output), 2)
-  expect_true(
-    is.character(
-      config$cache$get("myfunction",
-      namespace = "kernels")
-    )
-  )
+  expect_true(is.function(config$cache$get("myfunction")))
   myfunction <- readd(myfunction)
   expect_equal(myfunction(4), 5)
 })
@@ -201,11 +236,17 @@ test_with_dir("GitHub issue 460", {
     targets = "b",
     cache = storr::storr_environment()
   )
-  expect_equal(sort(config$all_targets), sort(letters[1:2]))
+  expect_equal(sort(igraph::V(config$schedule)$name), sort(letters[1:2]))
   expect_equal(
-    intersect(config$all_imports, config$all_targets), character(0))
-  expect_true("base::sqrt" %in% config$all_imports)
-  make_targets(config)
+    intersect(
+      igraph::V(config$schedule)$name,
+      igraph::V(config$imports)$name
+    ),
+    character(0)
+  )
+  expect_true(
+    encode_namespaced("base::sqrt") %in% igraph::V(config$imports)$name)
+  process_targets(config)
 })
 
 test_with_dir("warning when file_out() files not produced", {
@@ -214,8 +255,7 @@ test_with_dir("warning when file_out() files not produced", {
     x = {
       file.create(file_out("a"))
       file_out("b", "c")
-    },
-    strings_in_dots = "literals"
+    }
   )
   expect_warning(
     make(plan, cache = storr::storr_environment(), session_info = FALSE),
@@ -225,5 +265,52 @@ test_with_dir("warning when file_out() files not produced", {
 
 test_with_dir("file hash of a non-file", {
   expect_true(is.na(file_hash("asdf", list())))
-  expect_true(is.na(rehash_file("asdf")))
+  expect_true(is.na(rehash_file("asdf", list())))
+  expect_true(is.na(file_hash(encode_path("asdf"), list())))
+  expect_true(is.na(rehash_file(encode_path("asdf"), list())))
+})
+
+test_with_dir("imported functions cannot depend on targets", {
+  global_import <- 1
+  my_fun <- function(){
+    global_import
+    other_fun <- function(){
+      target_in_plan
+    }
+  }
+  plan <- drake_plan(
+    target_in_plan = 1,
+    my_fun()()
+  )
+  config <- drake_config(
+    plan,
+    cache = storr::storr_environment(),
+    session_info = FALSE
+  )
+  deps <- deps_target("my_fun", config)
+  expect_equal(deps$name, "global_import")
+})
+
+test_with_dir("case sensitivity", {
+  plan <- drake_plan(
+    a = 1,
+    b = 2,
+    B = A(),
+    c = 15
+  )
+  A <- function(){
+    1 + 1
+  }
+  expect_warning(
+    config <- drake_config(
+      plan,
+      cache = storr::storr_environment(),
+      session_info = FALSE
+    ),
+    regexp = "case insensitive"
+  )
+})
+
+test_with_dir("empty deps_graph()", {
+  expect_equal(deps_graph(NULL, 1, 2), character(0))
 })

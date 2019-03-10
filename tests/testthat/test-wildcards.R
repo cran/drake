@@ -2,43 +2,43 @@ drake_context("wildcards")
 
 test_with_dir("empty generative args", {
   x <- drake_plan(a = 1, b = FUNCTION())
-  expect_equal(evaluate_plan(x), x)
-  expect_equal(evaluate_wildcard_rules(x, rules = NULL), x)
-  expect_equal(expand_plan(x), x)
+  equivalent_plans(evaluate_plan(x), x)
+  equivalent_plans(evaluate_wildcard_rules(x, rules = NULL), x)
+  equivalent_plans(expand_plan(x), x)
 })
 
 test_with_dir("evaluate and expand", {
   df <- drake_plan(data = simulate(center = MU, scale = SIGMA))
   m0 <- evaluate_plan(df, wildcard = "NULL", values = 1:2)
-  expect_equal(m0, df)
+  equivalent_plans(m0, df)
   m1 <- evaluate_plan(df, rules = list(nothing = 1:2), expand = FALSE)
-  expect_equal(m1, df)
+  equivalent_plans(m1, df)
 
   x <- expand_plan(df, values = c("rep1", "rep2"), sep = ".")
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c("data.rep1", "data.rep2"),
     command = rep("simulate(center = MU, scale = SIGMA)", 2)
   )
-  expect_equal(x, y)
+  equivalent_plans(x, y)
 
   x <- expand_plan(df, values = c("rep1", "rep2"))
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c("data_rep1", "data_rep2"),
     command = rep("simulate(center = MU, scale = SIGMA)", 2)
   )
-  expect_equal(x, y)
+  equivalent_plans(x, y)
 
   x1 <- expand_plan(df, values = c("rep1", "rep2"), rename = TRUE)
   x2 <- expand_plan(df, values = c("rep1", "rep2"), rename = FALSE)
-  y2 <- tibble::tibble(
+  y2 <- weak_tibble(
     target = c("data", "data"),
     command = rep("simulate(center = MU, scale = SIGMA)", 2)
   )
-  expect_equal(x1, y)
-  expect_equal(x2, y2)
+  equivalent_plans(x1, y)
+  equivalent_plans(x2, y2)
 
   x2 <- evaluate_plan(x, wildcard = "MU", values = 1:2, sep = ".")
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c("data_rep1.1", "data_rep1.2", "data_rep2.1", "data_rep2.2"),
     command = c(
       "simulate(center = 1, scale = SIGMA)",
@@ -47,10 +47,10 @@ test_with_dir("evaluate and expand", {
       "simulate(center = 2, scale = SIGMA)"
     )
   )
-  expect_equal(x2, y)
+  equivalent_plans(x2, y)
 
   x2 <- evaluate_plan(x, wildcard = "MU", values = 1:2)
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c("data_rep1_1", "data_rep1_2", "data_rep2_1", "data_rep2_2"),
     command = c(
       "simulate(center = 1, scale = SIGMA)",
@@ -59,11 +59,11 @@ test_with_dir("evaluate and expand", {
       "simulate(center = 2, scale = SIGMA)"
     )
   )
-  expect_equal(x2, y)
+  equivalent_plans(x2, y)
 
   x3 <- evaluate_plan(x2, wildcard = "SIGMA", values = letters[1:2],
                       expand = FALSE)
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c("data_rep1_1", "data_rep1_2", "data_rep2_1", "data_rep2_2"),
     command = c(
       "simulate(center = 1, scale = a)",
@@ -72,11 +72,11 @@ test_with_dir("evaluate and expand", {
       "simulate(center = 2, scale = b)"
     )
   )
-  expect_equal(x3, y)
+  equivalent_plans(x3, y)
 
   x3a <- evaluate_plan(x2, wildcard = "SIGMA", values = letters[1:2],
                        expand = FALSE, rename = TRUE)
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c(
       "data_rep1_1_a", "data_rep1_2_b", "data_rep2_1_a", "data_rep2_2_b"),
     command = c(
@@ -86,7 +86,7 @@ test_with_dir("evaluate and expand", {
       "simulate(center = 2, scale = b)"
     )
   )
-  expect_equal(x3a, y)
+  equivalent_plans(x3a, y)
 
   x3b <- evaluate_plan(
     x2,
@@ -96,7 +96,7 @@ test_with_dir("evaluate and expand", {
     rename = TRUE,
     sep = "."
   )
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c(
       "data_rep1_1.a", "data_rep1_2.b", "data_rep2_1.a", "data_rep2_2.b"),
     command = c(
@@ -106,26 +106,26 @@ test_with_dir("evaluate and expand", {
       "simulate(center = 2, scale = b)"
     )
   )
-  expect_equal(x3b, y)
+  equivalent_plans(x3b, y)
 
   x4 <- evaluate_plan(x, rules = list(MU = 1:2, SIGMA = c(0.1, 1)),
                       expand = FALSE)
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c("data_rep1", "data_rep2"),
     command = c(
       "simulate(center = 1, scale = 0.1)",
       "simulate(center = 2, scale = 1)"
     )
   )
-  expect_equal(x4, y)
+  equivalent_plans(x4, y)
 
   x5 <- evaluate_plan(x, rules = list(MU = 1:2, SIGMA = c(0.1, 1, 10)))
-  expect_equal(12, nrow(x5))
-  expect_equal(12, length(unique(x5$target)))
-  expect_equal(6, length(unique(x5$command)))
+  expect_equal(12L, nrow(x5))
+  expect_equal(12L, length(unique(x5$target)))
+  expect_equal(6L, length(unique(x5$command)))
 
   x6 <- evaluate_plan(df, rules = list(MU = 0:1, SIGMA = 1:2), sep = ".")
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c("data.0.1", "data.0.2", "data.1.1", "data.1.2"),
     command = c(
       "simulate(center = 0, scale = 1)",
@@ -134,191 +134,7 @@ test_with_dir("evaluate and expand", {
       "simulate(center = 1, scale = 2)"
     )
   )
-  expect_equal(x6, y)
-})
-
-test_with_dir("analyses and summaries", {
-  datasets <- drake_plan(small = simulate(5), large = simulate(50))
-  methods <- drake_plan(
-    regression1 = reg1(dataset__),
-    regression2 = reg2(dataset__)
-  )
-
-  analyses <- plan_analyses(methods, datasets = datasets, sep = ".")
-  x <- tibble(
-    target = c(
-      "regression1.small",
-      "regression1.large",
-      "regression2.small",
-      "regression2.large"
-    ),
-    command = c(
-      "reg1(small)",
-      "reg1(large)",
-      "reg2(small)",
-      "reg2(large)")
-  )
-  expect_equal(analyses, x)
-
-  analyses <- plan_analyses(methods, datasets = datasets)
-  x <- tibble(
-    target = c(
-      "regression1_small",
-      "regression1_large",
-      "regression2_small",
-      "regression2_large"
-    ),
-    command = c(
-      "reg1(small)",
-      "reg1(large)",
-      "reg2(small)",
-      "reg2(large)")
-  )
-  expect_equal(analyses, x)
-
-  m2 <- drake_plan(regression1 = reg1(n), regression2 = reg2(n))
-  expect_equal(plan_analyses(m2, datasets = datasets), m2)
-
-  no_analyses <- drake_plan(
-    summ = summary(dataset__),
-    coef = stats::coefficients(dataset__)
-  )
-  suppressWarnings(
-    expect_error(
-      plan_summaries(no_analyses, analyses, datasets)
-    )
-  )
-
-  summary_types <- drake_plan(
-    summ = summary(analysis__),
-    coef = stats::coefficients(analysis__)
-  )
-
-  results <- plan_summaries(
-    summary_types,
-    analyses,
-    datasets,
-    gather = NULL,
-    sep = "."
-  )
-  x <- tibble(
-    target = c(
-      "summ.regression1_small",
-      "summ.regression1_large",
-      "summ.regression2_small",
-      "summ.regression2_large",
-      "coef.regression1_small",
-      "coef.regression1_large",
-      "coef.regression2_small",
-      "coef.regression2_large"
-    ),
-    command = c(
-      "summary(regression1_small)",
-      "summary(regression1_large)",
-      "summary(regression2_small)",
-      "summary(regression2_large)",
-      "stats::coefficients(regression1_small)",
-      "stats::coefficients(regression1_large)",
-      "stats::coefficients(regression2_small)",
-      "stats::coefficients(regression2_large)"
-    )
-  )
-  expect_equal(results, x)
-
-  results <- plan_summaries(summary_types, analyses, datasets, gather = NULL)
-  x <- tibble(
-    target = c(
-      "summ_regression1_small",
-      "summ_regression1_large",
-      "summ_regression2_small",
-      "summ_regression2_large",
-      "coef_regression1_small",
-      "coef_regression1_large",
-      "coef_regression2_small",
-      "coef_regression2_large"
-    ),
-    command = c(
-      "summary(regression1_small)",
-      "summary(regression1_large)",
-      "summary(regression2_small)",
-      "summary(regression2_large)",
-      "stats::coefficients(regression1_small)",
-      "stats::coefficients(regression1_large)",
-      "stats::coefficients(regression2_small)",
-      "stats::coefficients(regression2_large)"
-    )
-  )
-  expect_equal(results, x)
-
-  summary_types <- drake_plan(
-    summ = summary(analysis__, dataset__),
-    coef = stats::coefficients(analysis__)
-  )
-  results <- plan_summaries(
-    summary_types,
-    analyses,
-    datasets,
-    gather = c("list", "rbind")
-  )
-  x <- tibble(
-    target = c(
-      "summ_regression1_small",
-      "summ_regression1_large",
-      "summ_regression2_small",
-      "summ_regression2_large",
-      "coef_regression1_small",
-      "coef_regression1_large",
-      "coef_regression2_small",
-      "coef_regression2_large"
-    ),
-    command = c(
-      "summary(regression1_small, small)",
-      "summary(regression1_large, large)",
-      "summary(regression2_small, small)",
-      "summary(regression2_large, large)",
-      "stats::coefficients(regression1_small)",
-      "stats::coefficients(regression1_large)",
-      "stats::coefficients(regression2_small)",
-      "stats::coefficients(regression2_large)"
-    )
-  )
-  y <- results[-1:-2, ]
-  row.names(x) <- row.names(y) <- NULL
-  expect_equal(x, y)
-  expect_true(grepl("^rbind\\(coef", results$command[1]))
-  expect_true(grepl("^list\\(summ", results$command[2]))
-
-  results <- plan_summaries(summary_types, analyses, datasets)
-  expect_true(all(grepl("^list\\(", results$command[1:2])))
-
-  results <- plan_summaries(
-    summary_types, analyses, datasets, gather = "my_bind")
-  expect_true(all(grepl("^my_bind\\(", results$command[1:2])))
-
-  expect_error(
-    nope <- plan_summaries(
-      summary_types,
-      analyses,
-      datasets,
-      gather = rep("list", 37)
-    )
-  )
-
-  newtypes <- rbind(
-    summary_types,
-    drake_plan(
-      other = myother(dataset__)
-    )
-  )
-  expect_warning(
-    s <- plan_summaries(
-      newtypes,
-      analyses,
-      datasets,
-      gather = NULL
-    )
-  )
-  expect_equal(nrow(s), 8)
+  equivalent_plans(x6, y)
 })
 
 test_with_dir("evaluate_plan() and trace", {
@@ -333,7 +149,7 @@ test_with_dir("evaluate_plan() and trace", {
 
   x <- evaluate_plan(
     plan, trace = TRUE, wildcard = "MU", values = 1:2, expand = FALSE)
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c(
       "top",
       "data",
@@ -353,11 +169,11 @@ test_with_dir("evaluate_plan() and trace", {
     MU = as.character(c(NA, 1, 2, NA, NA, NA)),
     MU_from = as.character(c(NA, "data", "mus", NA, NA, NA))
   )
-  expect_equal(x, y)
+  equivalent_plans(x, y)
 
   x <- evaluate_plan(
     plan, trace = TRUE, wildcard = "SIGMA", values = 1:2, expand = FALSE)
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c(
       "top",
       "data",
@@ -377,10 +193,10 @@ test_with_dir("evaluate_plan() and trace", {
     SIGMA = as.character(c(NA, 1, NA, NA, 2, NA)),
     SIGMA_from = as.character(c(NA, "data", NA, NA, "sigmas", NA))
   )
-  expect_equal(x, y)
+  equivalent_plans(x, y)
 
   x <- evaluate_plan(plan, trace = TRUE, wildcard = "MU", values = 1:2)
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c(
       "top",
       "data_1",
@@ -404,11 +220,11 @@ test_with_dir("evaluate_plan() and trace", {
     MU = as.character(c(NA, 1, 2, 1, 2, NA, NA, NA)),
     MU_from = as.character(c(NA, "data", "data", "mus", "mus", NA, NA, NA))
   )
-  expect_equal(x, y)
+  equivalent_plans(x, y)
 
   x <- evaluate_plan(
     plan, trace = TRUE, rules = list(MU = 1:2, SIGMA = 3:4), expand = FALSE)
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c(
       "top",
       "data",
@@ -430,10 +246,10 @@ test_with_dir("evaluate_plan() and trace", {
     SIGMA = as.character(c(NA, 3, NA, NA, 4, NA)),
     SIGMA_from = as.character(c(NA, "data", NA, NA, "sigmas", NA))
   )
-  expect_equal(x, y)
+  equivalent_plans(x, y)
 
   x <- evaluate_plan(plan, trace = TRUE, rules = list(MU = 1:2, SIGMA = 3:4))
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c(
       "top",
       "data_1_3",
@@ -472,7 +288,7 @@ test_with_dir("evaluate_plan() and trace", {
       )
     )
   )
-  expect_equal(x, y)
+  equivalent_plans(x, y)
 })
 
 test_with_dir("make() with wildcard columns", {
@@ -486,9 +302,11 @@ test_with_dir("make() with wildcard columns", {
   for (col in c("n__", "n___from")) {
     expect_true(col %in% colnames(plan))
   }
-  con <- make(plan, cache = storr::storr_environment(), session_info = FALSE)
+  cache <- storr::storr_environment()
+  make(plan, cache = cache, session_info = FALSE)
+  con <- drake_config(plan, cache = cache, session_info = FALSE)
   expect_true(all(plan$target %in% cached(cache = con$cache)))
-  expect_identical(con$plan, plan)
+  equivalent_plans(con$plan, plan)
 })
 
 test_with_dir("unconventional wildcards", {
@@ -497,12 +315,67 @@ test_with_dir("unconventional wildcards", {
   x <- evaluate_plan(
     x0, rules = list(.MU. = 1:2, "`{SIGMA}`" = c(0.1, 1)), expand = FALSE # nolint
   )
-  y <- tibble::tibble(
+  y <- weak_tibble(
     target = c("data_rep1", "data_rep2"),
     command = c(
       "simulate(center = 1, scale = 0.1)",
       "simulate(center = 2, scale = 1)"
     )
   )
-  expect_equal(x, y)
+  equivalent_plans(x, y)
+})
+
+test_with_dir("'columns' argument to evaluate_plan()", {
+  plan <- drake_plan(
+    x = target(always, cpu = "any"),
+    y = target(any, cpu = "always"),
+    z = target(any, cpu = "any")
+  )
+  out <- weak_tibble(
+    target = c("x_1", "x_2", "y_1", "y_2", "z"),
+    command = c(1, 2, rep("any", 3)),
+    cpu = c("any", "any", 1, 2, "any")
+  )
+  equivalent_plans(
+    evaluate_plan(
+      plan, wildcard = "always", values = 1:2, columns = c("command", "cpu")
+    ),
+    out
+  )
+  out <- weak_tibble(
+    target = c("x", "y_1", "y_2", "z"),
+    command = c("always", rep("any", 3)),
+    cpu = c("any", 1, 2, "any")
+  )
+  equivalent_plans(
+    evaluate_plan(
+      plan, wildcard = "always", values = 1:2, columns = "cpu"
+    ),
+    out
+  )
+  out <- weak_tibble(
+    target = c("x", "y", "z"),
+    command = c(1, rep("any", 2)),
+    cpu = c("any", 2, "any")
+  )
+  equivalent_plans(
+    evaluate_plan(
+      plan, wildcard = "always", values = 1:2, columns = c("command", "cpu"),
+      expand = FALSE
+    ),
+    out
+  )
+  rules <- list(always = 1:2, any = 3:4)
+  out <- weak_tibble(
+    target = c(
+      "x_1_3", "x_1_4", "x_2_3", "x_2_4", "y_1_3",
+      "y_1_4", "y_2_3", "y_2_4", "z_3", "z_4"
+    ),
+    command = as.character(c(1, 1, 2, 2, 3, 4, 3, 4, 3, 4)),
+    cpu = as.character(c(3, 4, 3, 4, 1, 1, 2, 2, 3, 4))
+  )
+  equivalent_plans(
+    evaluate_plan(plan, rules = rules, columns = c("command", "cpu")),
+    out
+  )
 })
