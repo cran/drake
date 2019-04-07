@@ -11,7 +11,7 @@ Description: A general-purpose computational engine for data analysis,
   to practical examples and more, is available at the reference website
   <https://ropensci.github.io/drake/> and the online manual
   <https://ropenscilabs.github.io/drake-manual/>.
-Version: 7.0.0
+Version: 7.1.0
 License: GPL-3
 URL: https://github.com/ropensci/drake
 BugReports: https://github.com/ropensci/drake/issues
@@ -42,18 +42,6 @@ Authors@R: c(
     role = "ctb"
   ),
   person(
-    family = "Marwick",
-    given = "Ben",
-    email = "bmarwick@uw.edu",
-    role = "rev"
-  ),
-  person(
-    family = "Slaughter",
-    given = "Peter",
-    email = "slaughter@nceas.ucsb.edu",
-    role = "rev"
-  ),
-  person(
     family = "Bond-Lamberty",
     given = "Ben",
     email = "bondlamberty@pnnl.gov",
@@ -68,33 +56,53 @@ Authors@R: c(
     comment = c(ORCID = "0000-0002-8890-5116")
   ),
   person(
+    family = "McBain",
+    given = "Miles",
+    email = "miles.mcbain@gmail.com",
+    role = "ctb",
+    comment = c(ORCID = "0000-0003-2865-2548")
+  ),
+  person(
+    family = "Marwick",
+    given = "Ben",
+    email = "bmarwick@uw.edu",
+    role = "rev"
+  ),
+  person(
+    family = "Slaughter",
+    given = "Peter",
+    email = "slaughter@nceas.ucsb.edu",
+    role = "rev"
+  ),
+  person(
     family = "Eli Lilly and Company",
     role = "cph"
   ))
 Depends: R (>= 3.3.0)
 Imports: base64url, digest, igraph, methods, rlang (>= 0.2.0), storr
         (>= 1.1.0), utils
-Suggests: abind, bindr, callr, clustermq, CodeDepends, crayon, curl,
-        datasets, downloader, future, grDevices, ggplot2, ggraph,
-        knitr, lubridate, networkD3, parallel, prettycode, stats,
-        testthat, tibble, tidyselect (>= 0.2.4), rmarkdown, styler,
-        visNetwork, webshot
+Suggests: abind, bindr, callr, cli, clustermq, CodeDepends, crayon,
+        curl, datasets, downloader, future, ggplot2, ggraph, grDevices,
+        knitr, lubridate, networkD3, parallel, prettycode, Rcpp,
+        rmarkdown, rstudioapi, stats, styler, testthat, tibble,
+        tidyselect (>= 0.2.4), usethis, visNetwork, webshot
 VignetteBuilder: knitr
 Encoding: UTF-8
 Language: en-US
 RoxygenNote: 6.1.1
 NeedsCompilation: yes
-Packaged: 2019-03-10 20:54:02 UTC; landau
+Packaged: 2019-04-07 15:04:35 UTC; landau
 Author: William Michael Landau [aut, cre]
     (<https://orcid.org/0000-0003-1878-3253>),
   Alex Axthelm [ctb],
   Jasper Clarkberg [ctb],
   Kirill Müller [ctb],
-  Ben Marwick [rev],
-  Peter Slaughter [rev],
   Ben Bond-Lamberty [ctb] (<https://orcid.org/0000-0001-9525-4633>),
   Tristan Mahr [ctb] (<https://orcid.org/0000-0002-8890-5116>),
+  Miles McBain [ctb] (<https://orcid.org/0000-0003-2865-2548>),
+  Ben Marwick [rev],
+  Peter Slaughter [rev],
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2019-03-10 21:33:10 UTC
+Date/Publication: 2019-04-07 15:23:01 UTC

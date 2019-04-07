@@ -1,0 +1,9 @@
+#!/bin/bash
+#$ -cwd               # Run in the current working directory.
+#$ -j y               # Direct stdout and stderr to the same file.
+#$ -o <%= log.file %> # log file
+#$ -V                 # Use environment variables.
+#$ -N <%= job.name %> # job name
+# module load R       # Uncomment if R is an environment module.
+Rscript -e 'batchtools::doJobCollection("<%= uri %>")'
+exit 0

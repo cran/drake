@@ -51,15 +51,11 @@ Wherever necessary, objects and functions are imported
 from \code{envir} and the global environment and
 then reproducibly tracked as dependencies.}
 
-\item{verbose}{Logical or numeric, control printing to the console.
+\item{verbose}{Integer, control printing to the console/terminal.
 \itemize{
-\item \code{0} or \code{FALSE}: print nothing.
-\item \code{1} or \code{TRUE}: print only targets to build.
-\item \code{2}: plus checks and cache info.
-\item \code{3}: plus missing imports.
-\item \code{4}: plus all imports.
-\item \code{5}: plus execution and total build times for targets.
-\item \code{6}: plus notifications when targets are being stored.
+\item \code{0}: print nothing.
+\item \code{1}: print targets, retries, and failures.
+\item \code{2}: also show a spinner when preprocessing tasks are underway.
 }}
 
 \item{hook}{Deprecated.}
@@ -83,7 +79,6 @@ from \code{drake}'s internals are the \code{backend_*()} functions:
 \item \code{backend_loop()}
 \item \code{backend_clustermq()}
 \item \code{backend_future()}
-\item \code{backend_hasty()} (unofficial)
 However, this functionality is really a back door
 and should not be used for production purposes unless you really
 know what you are doing and you are willing to suffer setbacks
@@ -251,9 +246,8 @@ To ensure reproducibility across different R sessions,
 \code{drake} workflows. Conversely, \code{make()} does not usually
 change \code{.Random.seed},
 even when pseudo-random numbers are generated.
-The exceptions to this last point are
-\code{make(parallelism = "clustermq")} and
-\code{make(parallelism = "clustermq_staged")},
+The exception to this last point is
+\code{make(parallelism = "clustermq")}
 because the \code{clustermq} package needs to generate random numbers
 to set up ports and sockets for ZeroMQ.
 
@@ -267,9 +261,7 @@ seed from the project's cache (usually the \code{.drake/} folder).
 To reset the random number generator seed for a project,
 use \code{clean(destroy = TRUE)}.}
 
-\item{caching}{Character string, only applies to
-\code{"clustermq"}, \code{"clustermq_staged"}, and \code{"future"} parallel backends.
-The \code{caching} argument can be either \code{"master"} or \code{"worker"}.
+\item{caching}{Character string, either \code{"master"} or \code{"worker"}.
 \itemize{
 \item \code{"master"}: Targets are built by remote workers and sent back to
 the master process. Then, the master process saves them to the
@@ -297,19 +289,9 @@ non-default value, you are responsible for supplying this same
 path to the \code{args} argument so \code{make} knows where to find it.
 Example: \code{make(parallelism = "Makefile", makefile_path = ".drake/.makefile", command = "make", args = "--file=.drake/.makefile")}}
 
-\item{console_log_file}{Character scalar,
-connection object (such as \code{stdout()}) or \code{NULL}.
-If \code{NULL}, console output will be printed
-to the R console using \code{message()}.
-If a character scalar, \code{console_log_file}
-should be the name of a flat file, and
-console output will be appended to that file.
-If a connection object (e.g. \code{stdout()})
-warnings and messages will be sent to the connection.
-For example, if \code{console_log_file} is \code{stdout()},
-warnings and messages are printed to the console in real time
-(in addition to the usual in-bulk printing
-after each target finishes).}
+\item{console_log_file}{Optional character scalar of a file name or
+connection object (such as \code{stdout()}) to dump maximally verbose
+log information for \code{\link[=make]{make()}}. Independent of the \code{verbose} argument.}
 
 \item{ensure_workers}{Logical, whether the master process
 should wait for the workers to post before assigning them
@@ -327,14 +309,21 @@ a target is built during \code{\link[=make]{make()}}.}
 placeholders in template files (e.g. from \code{\link[=drake_hpc_template_file]{drake_hpc_template_file()}}).
 Same as the \code{template} argument of \code{clustermq::Q()} and
 \code{clustermq::workers}.
-Enabled for \code{clustermq} only (\code{make(parallelism = "clustermq_staged")}),
+Enabled for \code{clustermq} only (\code{make(parallelism = "clustermq")}),
 not \code{future} or \code{batchtools} so far.
 For more information, see the \code{clustermq} package:
 \url{https://github.com/mschubert/clustermq}.
 Some template placeholders such as \code{{{ job_name }}} and \code{{{ n_jobs }}}
 cannot be set this way.}
 
-\item{sleep}{In its parallel processing, \code{drake} uses
+\item{sleep}{Optional function on a single numeric argument \code{i}.
+Default: \code{function(i) 0.01}.
+
+To conserve memory, \code{drake} assigns a brand new closure to
+\code{sleep}, so your custom function should not depend on in-memory data
+except from loaded packages.
+
+For parallel processing, \code{drake} uses
 a central master process to check what the parallel
 workers are doing, and for the affected high-performance
 computing workflows, wait for data to arrive over a network.

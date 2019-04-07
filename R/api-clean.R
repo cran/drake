@@ -16,6 +16,13 @@
 #' which includes
 #' file targets as well as the entire drake cache. Only use `clean()`
 #' if you're sure you won't lose anything important.
+#' @section Safeguards:
+#' If you run [clean()] with no arguments, `drake`'s response is to
+#' remove all the targets etc. from the cache. To prevent you from
+#' doing this accidentally in an interactive session, [clean()]
+#' prompts you with a menu to confirm. The menu only appears
+#' once per session. You can disable it with
+#' `options(drake_clean_menu = FALSE)`.
 #' @seealso [drake_gc()], [make()]
 #' @export
 #' @return Invisibly return `NULL`.
@@ -111,14 +118,18 @@ clean <- function(
     return(invisible())
   }
   targets <- c(as.character(match.call(expand.dots = FALSE)$...), list)
-  if (exists_tidyselect()) {
-    targets <- drake_tidyselect(
-      cache = cache, ...,
-      namespaces = target_namespaces_(),
-      list = list
+  if (requireNamespace("tidyselect", quietly = TRUE)) {
+    targets <- drake_tidyselect_cache(
+      ...,
+      list = list,
+      cache = cache,
+      namespaces = target_namespaces_()
     )
   }
   if (!length(targets) && is.null(c(...))) {
+    if (abort_full_clean()) {
+      return(invisible()) # nocov
+    }
     targets <- cache$list()
   }
   if (purge) {
@@ -159,7 +170,7 @@ clean_single_target <- function(
     }
   }
   if (length(files)) {
-    unlink(decode_path(files))
+    unlink(decode_path(files), recursive = TRUE)
   }
 }
 
@@ -306,4 +317,23 @@ touch_storr_object <- function(key, cache, namespace) {
   value <- cache$driver$get_object(hash = hash)
   remove(value, envir = envir)
   invisible(NULL)
+}
+
+abort_full_clean <- function() {
+  menu_enabled <- .pkg_envir[["drake_clean_menu"]] %||%
+    getOption("drake_clean_menu") %||%
+    TRUE
+  if (!(interactive() && menu_enabled)) {
+    return(FALSE)
+  }
+  # nocov start
+  title <- paste(
+    "Really delete everything in the drake cache?",
+    "(Prompt shown once per session.)",
+    sep = "\n"
+  )
+  response <- utils::menu(choices = c("yes", "no"), title = title)
+  .pkg_envir[["drake_clean_menu"]] <- FALSE
+  !identical(as.integer(response), 1L)
+  # nocov end
 }

@@ -60,7 +60,7 @@ initialize_session <- function(config) {
   runtime_checks(config = config)
   config$cache$set(key = "seed", value = config$seed, namespace = "session")
   init_common_values(config$cache)
-  config$eval[[drake_plan_marker]] <- config$plan
+  config$eval[[drake_envir_marker]] <- TRUE
   if (config$log_progress) {
     clear_tmp_namespace(
       cache = config$cache,
@@ -80,17 +80,16 @@ conclude_session <- function(config) {
     jobs = config$jobs
   )
   remove(list = names(config$eval), envir = config$eval)
-  console_final_notes(config)
   invisible()
 }
 
 prompt_intv_make <- function(config) {
-  show_menu <- .pkg_envir[["drake_make_menu"]] %||%
+  menu_enabled <- .pkg_envir[["drake_make_menu"]] %||%
     getOption("drake_make_menu") %||%
     TRUE
   interactive() &&
     igraph::gorder(config$schedule) &&
-    show_menu
+    menu_enabled
 }
 
 abort_intv_make <- function(config) {
@@ -112,6 +111,6 @@ abort_intv_make <- function(config) {
     sep = "\n"
   )
   out <- utils::menu(choices = c("yes", "no"), title = title)
-  identical(as.integer(out), 2L)
+  !identical(as.integer(out), 1L)
   # nocov end
 }

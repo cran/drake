@@ -23,6 +23,22 @@
   }
 }
 
+assert_config_not_plan <- function(config) {
+  if (!inherits(config, "drake_plan")) {
+    return()
+  }
+  stop(
+    "You supplied a drake plan to the ",
+    shQuote("config"),
+    " argument of a function. Instead, please call ",
+    shQuote("drake_config()"),
+    " on the plan and then supply the return value to ",
+    shQuote("config"),
+    ".",
+    call. = FALSE
+  )
+}
+
 assert_pkg <- function(pkg, version = NULL, install = "install.packages") {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     stop(
@@ -65,12 +81,6 @@ complete_cases <- function(x) {
   !as.logical(Reduce(`|`, lapply(x, is.na)))
 }
 
-exists_tidyselect <- function() {
-  suppressWarnings(
-    eval(parse(text = "require('tidyselect', quietly = TRUE)"))
-  )
-}
-
 # Simple version of purrr::pmap for use in drake
 # Applies function .f to list .l elements in parallel, i.e.
 # .f(.l[[1]][1], .l[[2]][1], ..., .l[[n]][1]) and then
@@ -98,33 +108,17 @@ drake_pmap <- function(.l, .f, jobs = 1, ...) {
     jobs = jobs)
 }
 
-drake_tidyselect <- function(
-  cache,
+drake_tidyselect_cache <- function(
   ...,
-  namespaces = cache$default_namespace,
-  list = character(0)
+  list = character(0),
+  cache,
+  namespaces = cache$default_namespace
 ) {
-  tryCatch(
-    drake_tidyselect_attempt(
-      cache = cache, ..., namespaces = namespaces, list = list
-    ),
-    error = function(e){
-      # nocov start
-      eval(parse(text = "require(tidyselect)"))
-      drake_tidyselect_attempt(
-        cache = cache, ..., namespaces = namespaces, list = list
-      )
-      # nocov end
-    }
+  suppressPackageStartupMessages(
+    suppressWarnings(
+      eval(parse(text = "require('tidyselect', quietly = TRUE)"))
+    )
   )
-}
-
-drake_tidyselect_attempt <- function(
-  cache,
-  ...,
-  namespaces = cache$default_namespace,
-  list = character(0)
-) {
   out <- tidyselect::vars_select(
     .vars = list_multiple_namespaces(cache = cache, namespaces = namespaces),
     ...,
@@ -190,7 +184,7 @@ random_tempdir <- function() {
   dir
 }
 
-rehash_file_size_cutoff <- 1e5
+rehash_storage_size_cutoff <- 1e5
 
 safe_is_na <- function(x) {
   tryCatch(is.na(x), error = error_false, warning = error_false)
@@ -463,4 +457,8 @@ make_unique <- function(x) {
   suffix <- suffix + i
   y[i] <- paste(y[i], suffix[i], sep = "_")
   y[order(ord)]
+}
+
+microtimestamp <- function() {
+  format(Sys.time(), "%Y-%m-%d %H:%M:%OS9")
 }

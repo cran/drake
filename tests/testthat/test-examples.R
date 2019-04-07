@@ -42,7 +42,7 @@ test_with_dir("mtcars example works", {
   my_plan <- e$my_plan
   config <- drake_config(my_plan, envir = e,
                          jobs = jobs, parallelism = parallelism,
-                         verbose = FALSE, caching = caching)
+                         verbose = 0L, caching = caching)
   expect_false(file.exists("Makefile"))
 
   dats <- c("small", "large")
@@ -64,12 +64,12 @@ test_with_dir("mtcars example works", {
   expect_false(any(dats %in% jb))
 
   # Check that file is not rehashed.
-  # Code coverage should cover every line of file_hash().
-  expect_true(is.character(file_hash(
+  # Code coverage should cover every line of storage_hash().
+  expect_true(is.character(storage_hash(
     target = encode_path("report.Rmd"), config = con, size_cutoff = -1)))
   config <- drake_config(
     my_plan, envir = e, jobs = jobs, parallelism = parallelism,
-    verbose = FALSE)
+    verbose = 0L)
   expect_equal(outdated(config), character(0))
 
   # Change an imported function
@@ -79,7 +79,7 @@ test_with_dir("mtcars example works", {
   }
   config <- drake_config(
     my_plan, envir = e, jobs = jobs, parallelism = parallelism,
-    verbose = FALSE)
+    verbose = 0L)
   to_build <- sort(c(
     "report", "coef_regression2_large",
     "coef_regression2_small", "regression2_large", "regression2_small",
@@ -90,7 +90,7 @@ test_with_dir("mtcars example works", {
   expect_equal(sort(justbuilt(config)), to_build)
   config <- drake_config(
     my_plan, envir = e, jobs = jobs, parallelism = parallelism,
-    verbose = FALSE)
+    verbose = 0L)
   expect_equal(sort(outdated(config = config)), character(0))
 
   # Take this opportunity to test tidyselect API. Saves test time that way.
@@ -103,7 +103,7 @@ test_with_dir("mtcars example works", {
       "coef_regression2_small"
     )
   )
-  if (exists_tidyselect()) {
+  if (requireNamespace("tidyselect", quietly = TRUE)) {
     e <- new.env(parent = globalenv())
     expect_error(loadd(not_a_target, envir = e))
     expect_equal(ls(envir = e), character(0))

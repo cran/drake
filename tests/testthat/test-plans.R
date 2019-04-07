@@ -141,13 +141,13 @@ test_with_dir("edge cases for plans", {
 
 test_with_dir("plan set 2", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  for (tidy_evaluation in c(TRUE, FALSE)) {
+  for (tidy_eval in c(TRUE, FALSE)) {
     x <- drake_plan(
       a = c,
       b = "c",
       c = d,
       d = readRDS("e"),
-      tidy_evaluation = tidy_evaluation
+      tidy_eval = tidy_eval
     )
     y <- weak_tibble(
       target = letters[1:4],
@@ -159,12 +159,12 @@ test_with_dir("plan set 2", {
 
 test_with_dir("drake_plan() trims outer whitespace in target names", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  for (tidy_evaluation in c(TRUE, FALSE)) {
+  for (tidy_eval in c(TRUE, FALSE)) {
     x <- sanitize_plan(weak_tibble(
       target = c(" a", "b \t\n"),
       command = 1:2
     ))
-    y <- drake_plan(a = 1, b = 2, tidy_evaluation = tidy_evaluation)
+    y <- drake_plan(a = 1, b = 2, tidy_eval = tidy_eval)
     expect_equal(x$target, y$target)
   }
 })
@@ -174,7 +174,7 @@ test_with_dir(
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- weak_tibble(target = c("a\n", "  b", "c ", "\t  d   "),
                   command = 1)
-  expect_silent(make(x, verbose = FALSE, session_info = FALSE))
+  expect_silent(make(x, verbose = 0L, session_info = FALSE))
   expect_equal(sort(cached()), letters[1:4])
   prog <- progress()
   expect_equal(sort(prog$target), letters[1:4])
@@ -182,13 +182,13 @@ test_with_dir(
   expect_warning({
     make(
       x,
-      verbose = FALSE,
+      verbose = 0L,
       targets = c("a", "nobody_home"),
       session_info = FALSE
     )
     con <- drake_config(
       x,
-      verbose = FALSE,
+      verbose = 0L,
       targets = c("a", "nobody_home"),
       session_info = FALSE
     )
@@ -226,7 +226,7 @@ test_with_dir("can use semicolons for multi-line commands", {
       b
     }
   )
-  make(plan, verbose = FALSE, session_info = FALSE)
+  make(plan, verbose = 0L, session_info = FALSE)
   expect_false(any(c("a", "b") %in% ls()))
   expect_true(all(c("x", "y") %in% cached(search = FALSE)))
   expect_equal(cached(search = FALSE), c("x", "y"))
@@ -476,33 +476,6 @@ test_with_dir("plan_to_notebook()", {
   skip_if_not_installed("CodeDepends")
   plan <- code_to_plan(path)
   equivalent_plans(plan[order(plan$target), ], plan0[order(plan0$target), ])
-})
-
-test_with_dir("can use from_plan() from within make()", {
-  scenario <- get_testing_scenario()
-  e <- eval(parse(text = scenario$envir))
-  jobs <- scenario$jobs
-  parallelism <- scenario$parallelism
-  caching <- scenario$caching
-  plan <- drake_plan(my_target = target(from_plan("a"), a = "a_value"))
-  cache <- new_cache()
-  config <- drake_config(
-    plan, cache = cache, jobs = jobs,
-    parallelism = parallelism, caching = caching,
-    log_progress = TRUE
-  )
-  make(config = config)
-  expect_equal(justbuilt(config), "my_target")
-  expect_equal("a_value", readd(my_target, cache = cache))
-  make(config = config)
-  expect_equal(justbuilt(config), character(0))
-  plan <- drake_plan(my_target = target(from_plan("a"), a = "nope"))
-  config <- drake_config(
-    plan, cache = cache, jobs = jobs,
-    parallelism = parallelism, caching = caching
-  )
-  make(config = config)
-  expect_equal(justbuilt(config), character(0))
 })
 
 test_with_dir("commands and triggers can be character strings too", {

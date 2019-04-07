@@ -35,18 +35,13 @@ manage_memory <- function(targets, config, downstream = NULL, jobs = 1) {
   } else {
     downstream <- downstream_deps <- NULL
   }
-  already_loaded <- names(config$eval)
+  already_loaded <- setdiff(names(config$eval), drake_envir_marker)
   target_deps <- deps_memory(targets = targets, config = config)
   if (!identical(config$memory_strategy, "speed")) {
     keep_these <- c(target_deps, downstream_deps)
-    discard_these <- setdiff(x = config$plan$target, y = keep_these)
-    discard_these <- intersect(discard_these, already_loaded)
+    discard_these <- setdiff(x = already_loaded, y = keep_these)
     if (length(discard_these)) {
-      console_many_targets(
-        discard_these,
-        pattern = "unload",
-        config = config
-      )
+      log_msg("unload", discard_these, config = config)
       rm(list = discard_these, envir = config$eval)
     }
   }
@@ -68,11 +63,7 @@ deps_memory <- function(targets, config) {
 try_load <- function(targets, config, jobs = 1) {
   if (length(targets)) {
     if (config$lazy_load == "eager") {
-      console_many_targets(
-        targets,
-        pattern = "load",
-        config = config
-      )
+      log_msg("load", targets, config = config)
     }
     lapply(
       X = targets,

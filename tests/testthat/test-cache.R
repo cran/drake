@@ -5,17 +5,38 @@ test_with_dir("clean() removes the correct files", {
   cache <- storr::storr_environment()
   writeLines("123", "a.txt")
   writeLines("123", "b.txt")
+  dir.create("abc")
+  writeLines("123", "abc/c.txt")
   plan <- drake_plan(
     a = file_in("a.txt"),
     b = knitr_in("b.txt"),
-    d = writeLines("123", file_out("d.rds"))
+    d = writeLines("123", file_out("d.rds")),
+    x = file_in("abc"),
+    y = {
+      dir.create(file_out("xyz"))
+      writeLines("123", "xyz/e.txt")
+    }
   )
-  config <- drake_config(plan, session_info = FALSE, skip_targets = TRUE)
-  make(config = config)
-  clean()
+  make(
+    plan,
+    cache = cache,
+    session_info = FALSE
+  )
   expect_true(file.exists("a.txt"))
   expect_true(file.exists("b.txt"))
-  expect_false(file.exists("d.txt"))
+  expect_true(file.exists("d.rds"))
+  expect_true(dir.exists("abc"))
+  expect_true(dir.exists("xyz"))
+  expect_true(file.exists("abc/c.txt"))
+  expect_true(file.exists("xyz/e.txt"))
+  clean(cache = cache)
+  expect_true(file.exists("a.txt"))
+  expect_true(file.exists("b.txt"))
+  expect_false(file.exists("d.rds"))
+  expect_true(dir.exists("abc"))
+  expect_false(dir.exists("xyz"))
+  expect_true(file.exists("abc/c.txt"))
+  expect_false(file.exists("xyz/e.txt"))
 })
 
 test_with_dir("drake_version", {
@@ -135,17 +156,17 @@ test_with_dir("bad/corrupt caches, no progress, no seed", {
   expect_null(drake_fetch_rds("sldkfjlke"))
   expect_warning(new_cache(type = "nope"))
   x <- drake_plan(a = 1)
-  make(x, verbose = FALSE, session_info = FALSE, log_progress = FALSE)
+  make(x, verbose = 0L, session_info = FALSE, log_progress = FALSE)
   expect_equal(get_cache()$list(namespace = "progress"), character(0))
   clean()
-  make(x, verbose = FALSE, session_info = FALSE, log_progress = TRUE)
+  make(x, verbose = 0L, session_info = FALSE, log_progress = TRUE)
   expect_equal(get_cache()$list(namespace = "progress"), "a")
   path <- file.path(default_cache_path(), "config", "hash_algorithm")
   expect_true(file.exists(path))
   unlink(path)
   expect_false(file.exists(path))
   expect_warning(expect_error(
-    make(x, verbose = FALSE, session_info = FALSE)))
+    make(x, verbose = 0L, session_info = FALSE)))
   expect_error(
     read_drake_seed(cache = storr::storr_environment()),
     regexp = "random seed not found"
@@ -477,7 +498,7 @@ test_with_dir("loadd() does not load imports", {
   loadd(envir = e, cache = cache)
   expect_equal(ls(e), "y")
   expect_message(
-    loadd(f, envir = e, cache = cache, verbose = TRUE),
+    loadd(f, envir = e, cache = cache, verbose = 1L),
     regexp = "No targets to load"
   )
 })

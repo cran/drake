@@ -1,6 +1,7 @@
 Acknowledgements
 ailProbPaper
 acyclic
+addin
 advisor
 algo
 Ane
@@ -62,6 +63,7 @@ Genotype
 ggplot
 github
 globals
+gridlines
 gsp
 Halotype
 hotfix
@@ -84,6 +86,8 @@ Kirill's
 knitr
 Knitr
 lapply
+loadd
+Loadd
 Lowndes
 Maëlle
 Makefile
@@ -91,6 +95,7 @@ Makefiles
 Marwick
 mbostock
 mc
+md
 mclapply
 memoise
 Memoise
@@ -128,6 +133,7 @@ phyloQTLpaper
 Pinnoi
 pre
 preCCProbPaper
+precomputed
 Preprocess
 prettycode
 prework

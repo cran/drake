@@ -35,10 +35,7 @@
 #' @param list Deprecated
 #' @param file_targets Deprecated.
 #' @param strings_in_dots Deprecated.
-#' @param tidy_evaluation Logical, whether to use tidy evaluation
-#'   such as quasiquotation
-#'   when evaluating commands passed through the free-form
-#'   `...` argument.
+#' @param tidy_evaluation Deprecated. Use `tidy_eval` instead.
 #' @param transform Logical, whether to transform the plan
 #'   into a larger plan with more targets.
 #'   This is still an experimental feature,
@@ -49,6 +46,10 @@
 #' @param trace Logical, whether to add columns to show
 #'   what happens during target transformations.
 #' @param envir Environment for tidy evaluation.
+#' @param tidy_eval Logical, whether to use tidy evaluation
+#'   (e.g. unquoting/`!!`) when resolving commands.
+#'   Tidy evaluation in transformations is always turned on
+#'   regardless of the value you supply to this argument.
 #' @examples
 #' test_with_dir("Contain side effects", {
 #' # Create workflow plan data frames.
@@ -87,7 +88,7 @@
 #'   summ = target(
 #'     sum_fun(data, reg),
 #'    transform = cross(sum_fun = c(coef, residuals), reg)
-#'   ), 
+#'   ),
 #'   winners = target(
 #'     min(summ),
 #'     transform = combine(summ, .by = c(data, sum_fun))
@@ -108,7 +109,7 @@
 #'   summ = target(
 #'     sum_fun(data, reg),
 #'    transform = cross(sum_fun = c(coef, residuals), reg)
-#'   ), 
+#'   ),
 #'   winners = target(
 #'     min(summ),
 #'     transform = combine(summ, .by = c(data, sum_fun))
@@ -139,7 +140,8 @@ drake_plan <- function(
   tidy_evaluation = NULL,
   transform = TRUE,
   trace = FALSE,
-  envir = parent.frame()
+  envir = parent.frame(),
+  tidy_eval = TRUE
 ) {
   if (length(file_targets) || length(strings_in_dots)) {
     # 2019-02-01 nolint
@@ -156,6 +158,14 @@ drake_plan <- function(
       "Use the interface described at ",
       "https://ropenscilabs.github.io/drake-manual/plans.html#large-plans."
     )
+  }
+  if (!is.null(tidy_evaluation)) {
+    # 2019-04-02 nolint
+    warning(
+      "The `tidy_evaluation` argument of `drake_plan()` is deprecated. ",
+      "Use the `tidy_eval` argument instead."
+    )
+    tidy_eval <- tidy_evaluation
   }
   force(envir)
   dots <- match.call(expand.dots = FALSE)$...
@@ -174,7 +184,7 @@ drake_plan <- function(
   if (transform && ("transform" %in% colnames(plan))) {
     plan <- transform_plan(plan, envir = envir, trace = trace)
   }
-  if (tidy_evaluation %||% TRUE) {
+  if (tidy_eval) {
     for (col in setdiff(colnames(plan), c("target", "transform"))) {
       plan[[col]] <- tidyeval_exprs(plan[[col]], envir = envir)
     }
@@ -239,15 +249,13 @@ complete_target_names <- function(commands_list) {
   commands_list
 }
 
-#' @title Declare the file inputs of a workflow plan command.
-#' @description Use this function to help write the commands
-#'   in your workflow plan data frame. See the examples
-#'   for a full explanation.
+#' @title Declare input files and directories.
+#' @description `file_in()` marks individual files
+#'   (and whole directories) that your targets depend on.
 #' @export
 #' @seealso [file_out()], [knitr_in()], [ignore()]
-#' @return A character vector of declared input file paths.
-#' @param ... Character strings. File paths of input files
-#'   to a command in your workflow plan data frame.
+#' @return A character vector of declared input file or directory paths.
+#' @param ... Character vector, paths to files and directories.
 #' @export
 #' @examples
 #' \dontrun{
@@ -259,7 +267,7 @@ complete_target_names <- function(commands_list) {
 #' # in your workflow plan data frame.
 #' suppressWarnings(
 #'   plan <- drake_plan(
-#'     write.csv(mtcars, file_out("mtcars.csv")),
+#'     out = write.csv(mtcars, file_out("mtcars.csv")),
 #'     contents = read.csv(file_in("mtcars.csv"))
 #'   )
 #' )
@@ -268,37 +276,51 @@ complete_target_names <- function(commands_list) {
 #' # and a dependency of `contents`. See for yourself:
 #' make(plan)
 #' file.exists("mtcars.csv")
-#' # See also `knitr_in()`. `knitr_in()` is like `file_in()`
-#' # except that it analyzes active code chunks in your `knitr`
-#' # source file and detects non-file dependencies.
-#' # That way, updates to the right dependencies trigger rebuilds
-#' # in your report.
+#' # You can also work with entire directories this way.
+#' # However, in `file_out("your_directory")`, the directory
+#' # becomes an entire unit. Thus, `file_in("your_directory")`
+#' # is more appropriate for subsequent steps than
+#' # `file_in("your_directory/file_inside.txt")`.
+#' suppressWarnings(
+#'   plan <- drake_plan(
+#'     out = {
+#'       dir.create(file_out("dir"))
+#'       write.csv(mtcars, "dir/mtcars.csv")
+#'     },
+#'     contents = read.csv(file.path(file_in("dir"), "mtcars.csv"))
+#'   )
+#' )
+#' plan
+#' make(plan)
+#' file.exists("dir/mtcars.csv")
+#' # See the connections that the file relationships create:
+#' # config <- drake_config(plan) # nolint
+#' # vis_drake_graph(config)      # nolint
 #' })
 #' }
 file_in <- function(...) {
   as.character(c(...))
 }
 
-#' @title Declare the file outputs of a workflow plan command.
-#' @description Use this function to help write the commands
-#'   in your workflow plan data frame. You can only specify
-#'   one file output per command. See the examples
-#'   for a full explanation.
+#' @title Declare output files and directories.
+#' @description `file_in()` marks individual files
+#'   (and whole directories) that your targets create.
 #' @export
-#' @seealso [file_in()], [knitr_in()], [ignore()]
-#' @return A character vector of declared output file paths.
-#' @param ... Character vector of output file paths.
+#' @seealso [file_out()], [knitr_in()], [ignore()]
+#' @return A character vector of declared output file or directory paths.
+#' @param ... Character vector, paths to files and directories.
+#' @export
 #' @examples
 #' \dontrun{
 #' test_with_dir("Contain side effects", {
 #' # The `file_out()` and `file_in()` functions
 #' # just takes in strings and returns them.
-#' file_out("summaries.txt", "output.csv")
+#' file_out("summaries.txt")
 #' # Their main purpose is to orchestrate your custom files
 #' # in your workflow plan data frame.
 #' suppressWarnings(
 #'   plan <- drake_plan(
-#'     write.csv(mtcars, file_out("mtcars.csv")),
+#'     out = write.csv(mtcars, file_out("mtcars.csv")),
 #'     contents = read.csv(file_in("mtcars.csv"))
 #'   )
 #' )
@@ -307,20 +329,40 @@ file_in <- function(...) {
 #' # and a dependency of `contents`. See for yourself:
 #' make(plan)
 #' file.exists("mtcars.csv")
-#' # See also `knitr_in()`. `knitr_in()` is like `file_in()`
-#' # except that it analyzes active code chunks in your `knitr`
-#' # source file and detects non-file dependencies.
-#' # That way, updates to the right dependencies trigger rebuilds
-#' # in your report.
+#' # You can also work with entire directories this way.
+#' # However, in `file_out("your_directory")`, the directory
+#' # becomes an entire unit. Thus, `file_in("your_directory")`
+#' # is more appropriate for subsequent steps than
+#' # `file_in("your_directory/file_inside.txt")`.
+#' suppressWarnings(
+#'   plan <- drake_plan(
+#'     out = {
+#'       dir.create(file_out("dir"))
+#'       write.csv(mtcars, "dir/mtcars.csv")
+#'     },
+#'     contents = read.csv(file.path(file_in("dir"), "mtcars.csv"))
+#'   )
+#' )
+#' plan
+#' make(plan)
+#' # See the connections that the file relationships create:
+#' # config <- drake_config(plan) # nolint
+#' # vis_drake_graph(config)      # nolint
+#' file.exists("dir/mtcars.csv")
 #' })
 #' }
 file_out <- file_in
 
-#' @title Declare the `knitr`/`rmarkdown` source files
-#'   of a workflow plan command.
-#' @description Use this function to help write the commands
-#'   in your workflow plan data frame. See the examples
-#'   for a full explanation.
+#' @title Declare `knitr`/`rmarkdown` source files
+#'   as dependencies.
+#' @description `knitr_in()` marks individual `knitr`/R Markdown
+#'   reports as dependencies. In `drake`, these reports are pieces
+#'   of the pipeline. R Markdown is a great tool for *displaying*
+#'   precomputed results, but not for running a large workflow
+#'   from end to end. These reports should do as little
+#'   computation as possible.
+#' @details Unlike [file_in()] and [file_out()], `knitr_in()`
+#'   does not work with entire directories.
 #' @export
 #' @seealso [file_in()], [file_out()], [ignore()]
 #' @return A character vector of declared input file paths.
@@ -515,7 +557,7 @@ target <- function(command = NULL, ...) {
 drake_envir <- function() {
   envir <- environment()
   for (i in seq_len(getOption("expressions"))) {
-    if (exists(drake_plan_marker, envir = envir, inherits = FALSE)) {
+    if (exists(drake_envir_marker, envir = envir, inherits = FALSE)) {
       return(envir)
     }
     if (identical(envir, globalenv())) {
@@ -531,79 +573,7 @@ drake_envir <- function() {
   )
 }
 
-#' @title Get a target's plan info from inside a plan's command.
-#' @description Call this function inside the commands in your plan
-#'   to get an entry from any column in the plan. Changes to custom
-#'   columns referred to this way
-#'   (for example, `a` in `drake_plan(x = target(from_plan("a"), a = 123))`)
-#'   do not invalidate targets, so be careful. Only use `from_plan()`
-#'   to reference data that does not actually affect the output value
-#'   of the target. For example, you might use `from_plan()` to set the
-#'   number of parallel workers within a target:
-#'   `drake_plan(x = target(mclapply(..., from_plan("cores"), cores = 4))`.
-#'   Now, if you change the `cores` column of the plan, the parallelism will
-#'   change, but the target `x` will stay up to date.
-#' @export
-#' @seealso [drake_envir()]
-#' @return `plan[target, column]`, where `plan` is your workflow
-#'   plan data frame, `target` is the target being built,
-#'   and `column` is the name of the column of the plan you provide.
-#' @param column Character, name of a column in your `drake` plan.
-#' @examples
-#' plan <- drake_plan(my_target = target(from_plan("a"), a = "a_value"))
-#' plan
-#'
-#' cache <- storr::storr_environment()
-#' make(plan, cache = cache, session_info = FALSE)
-#' readd(my_target, cache = cache)
-#'
-#' # Why do we care?
-#' # Because this is a good way to apply parallel computing within targets
-#' # and keep them up to date even when we change
-#' # the number of "cores"
-#'
-#' plan <- drake_plan(
-#'   a = target(
-#'     parallel::mclapply(1:8, sqrt, mc.cores = from_plan("cores")),
-#'     cores = 4
-#'   ),
-#'   b = target(
-#'     parallel::mclapply(1:4, sqrt, mc.cores = from_plan("cores")),
-#'     cores = 2
-#'   )
-#' )
-#'
-#' plan
-#'
-#' # If make(plan, parallelism = "loop") fails,
-#' # try make(plan, lock_envir = FALSE)
-#' # or another parallel computing option like parLapply()
-#' # or furrr::future_map().
-#' # See https://github.com/ropensci/drake/issues/675#issuecomment-454403818
-#' # and the ensuing comments for a discussion.
-#'
-#' # But usually, parallelism *among* targets happens through a cluster.
-#' # drake_hpc_template_file("slurm_clustermq.tmpl") # Edit by hand. # nolint
-#' # options(
-#' #   clustermq.scheduler = "slurm",
-#' #   clustermq.template = "slurm_clustermq.tmpl",
-#' # )
-#' # make(plan, parallelism = "clustermq", jobs = 2) # nolint
-#'
-#' # Now, if you change the `cores` column of the plan, the parallelism will
-#' # change, but the targets will stay up to date.
-#' plan$cores <- c(1, 1)
-#' plan
-#'
-#' # make(plan) # nolint
-from_plan <- function(column) {
-  envir <- drake_envir()
-  plan <- get(drake_plan_marker, envir = envir)
-  target <- get(drake_target_marker, envir = envir)
-  plan[[column]][plan$target == target]
-}
-
-drake_plan_marker <- "._drake_plan"
+drake_envir_marker <- "._drake_envir"
 drake_target_marker <- "._drake_target"
 
 advertise_dsl <- function() {

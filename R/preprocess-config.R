@@ -41,14 +41,10 @@
 #'   from `envir` and the global environment and
 #'   then reproducibly tracked as dependencies.
 #'
-#' @param verbose Logical or numeric, control printing to the console.
-#'   - `0` or `FALSE`: print nothing.
-#'   - `1` or `TRUE`: print only targets to build.
-#'   - `2`: plus checks and cache info.
-#'   - `3`: plus missing imports.
-#'   - `4`: plus all imports.
-#'   - `5`: plus execution and total build times for targets.
-#'   - `6`: plus notifications when targets are being stored.
+#' @param verbose Integer, control printing to the console/terminal.
+#'   - `0`: print nothing.
+#'   - `1`: print targets, retries, and failures.
+#'   - `2`: also show a spinner when preprocessing tasks are underway.
 #'
 #' @param hook Deprecated.
 #'
@@ -68,7 +64,6 @@
 #'   - `backend_loop()`
 #'   - `backend_clustermq()`
 #'   - `backend_future()`
-#'   - `backend_hasty()` (unofficial)
 #'   However, this functionality is really a back door
 #'   and should not be used for production purposes unless you really
 #'   know what you are doing and you are willing to suffer setbacks
@@ -219,9 +214,8 @@
 #'   `drake` workflows. Conversely, `make()` does not usually
 #'   change `.Random.seed`,
 #'   even when pseudo-random numbers are generated.
-#'   The exceptions to this last point are
-#'   `make(parallelism = "clustermq")` and
-#'   `make(parallelism = "clustermq_staged")`,
+#'   The exception to this last point is
+#'   `make(parallelism = "clustermq")`
 #'   because the `clustermq` package needs to generate random numbers
 #'   to set up ports and sockets for ZeroMQ.
 #'
@@ -235,9 +229,7 @@
 #'   To reset the random number generator seed for a project,
 #'   use `clean(destroy = TRUE)`.
 #'
-#' @param caching Character string, only applies to
-#'   `"clustermq"`, `"clustermq_staged"`, and `"future"` parallel backends.
-#'   The `caching` argument can be either `"master"` or `"worker"`.
+#' @param caching Character string, either `"master"` or `"worker"`.
 #'   - `"master"`: Targets are built by remote workers and sent back to
 #'     the master process. Then, the master process saves them to the
 #'     cache (`config$cache`, usually a file system `storr`).
@@ -292,19 +284,9 @@
 #'   path to the `args` argument so `make` knows where to find it.
 #'   Example: `make(parallelism = "Makefile", makefile_path = ".drake/.makefile", command = "make", args = "--file=.drake/.makefile")`
 #'
-#' @param console_log_file Character scalar,
-#'   connection object (such as `stdout()`) or `NULL`.
-#'   If `NULL`, console output will be printed
-#'   to the R console using `message()`.
-#'   If a character scalar, `console_log_file`
-#'   should be the name of a flat file, and
-#'   console output will be appended to that file.
-#'   If a connection object (e.g. `stdout()`)
-#'   warnings and messages will be sent to the connection.
-#'   For example, if `console_log_file` is `stdout()`,
-#'   warnings and messages are printed to the console in real time
-#'   (in addition to the usual in-bulk printing
-#'   after each target finishes).
+#' @param console_log_file Optional character scalar of a file name or
+#'   connection object (such as `stdout()`) to dump maximally verbose
+#'   log information for [make()]. Independent of the `verbose` argument.
 #'
 #' @param ensure_workers Logical, whether the master process
 #'   should wait for the workers to post before assigning them
@@ -322,14 +304,21 @@
 #'   placeholders in template files (e.g. from [drake_hpc_template_file()]).
 #'   Same as the `template` argument of `clustermq::Q()` and
 #'   `clustermq::workers`.
-#'   Enabled for `clustermq` only (`make(parallelism = "clustermq_staged")`),
+#'   Enabled for `clustermq` only (`make(parallelism = "clustermq")`),
 #'   not `future` or `batchtools` so far.
 #'   For more information, see the `clustermq` package:
 #'   <https://github.com/mschubert/clustermq>.
 #'   Some template placeholders such as `{{ job_name }}` and `{{ n_jobs }}`
 #'   cannot be set this way.
 #'
-#' @param sleep In its parallel processing, `drake` uses
+#' @param sleep Optional function on a single numeric argument `i`.
+#'   Default: `function(i) 0.01`.
+#'
+#'   To conserve memory, `drake` assigns a brand new closure to
+#'   `sleep`, so your custom function should not depend on in-memory data
+#'   except from loaded packages.
+#'
+#'   For parallel processing, `drake` uses
 #'   a central master process to check what the parallel
 #'   workers are doing, and for the affected high-performance
 #'   computing workflows, wait for data to arrive over a network.
@@ -444,8 +433,6 @@ drake_config <- function(
   layout = NULL,
   lock_envir = TRUE
 ) {
-  force(envir)
-  unlink(console_log_file)
   deprecate_fetch_cache(fetch_cache)
   if (!is.null(hook)) {
     warning(
@@ -484,7 +471,6 @@ drake_config <- function(
       # 2018-12-19 # nolint
     )
   }
-  deprecate_fetch_cache(fetch_cache)
   if (!is.null(timeout)) {
     warning(
       "Argument `timeout` is deprecated. ",
@@ -527,11 +513,11 @@ drake_config <- function(
     )
   }
   plan <- sanitize_plan(plan)
-  if (is.null(targets)) {
-    targets <- plan$target
-  } else {
-    targets <- sanitize_targets(plan, targets)
-  }
+  targets <- sanitize_targets(targets, plan)
+  force(envir)
+  unlink(console_log_file)
+  trigger <- convert_old_trigger(trigger)
+  sleep <- `environment<-`(sleep, new.env(parent = globalenv()))
   if (is.null(cache)) {
     cache <- recover_cache_(
       verbose = verbose,
@@ -539,11 +525,10 @@ drake_config <- function(
       console_log_file = console_log_file
     )
   }
+  seed <- choose_seed(supplied = seed, cache = cache)
   if (identical(force, TRUE)) {
     drake_set_session_info(cache = cache, full = session_info)
   }
-  seed <- choose_seed(supplied = seed, cache = cache)
-  trigger <- convert_old_trigger(trigger)
   layout <- create_drake_layout(
     plan = plan,
     envir = envir,

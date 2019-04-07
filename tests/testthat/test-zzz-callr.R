@@ -98,12 +98,15 @@ test_with_dir("supply the source explicitly", {
     ),
     "my_script.R"
   )
+  expect_false(file.exists("log.txt"))
   old <- getOption("drake_source")
   options(drake_source = "overridden.R")
   on.exit(options(drake_source = old))
   expect_false(file.exists(default_drake_source))
   expect_false(file.exists("overridden.R"))
   expect_true(length(r_outdated(source = "my_script.R")) > 1)
+  expect_true(file.exists("log.txt"))
+  unlink("log.txt")
   expect_false(file.exists("log.txt"))
   r_make(source = "my_script.R", r_args = list(show = FALSE))
   expect_true(file.exists("log.txt"))
@@ -135,7 +138,7 @@ test_with_dir("r_make() loads packages and sets options", {
   options(drake_abind_opt = NULL)
 })
 
-test_with_dir("configuring callr", {
+test_with_dir("configuring a background callr process", {
   skip_on_cran()
   skip_if_not_installed("callr")
   skip_if_not_installed("knitr")
@@ -146,12 +149,15 @@ test_with_dir("configuring callr", {
     c(
       "library(drake)",
       "load_mtcars_example()",
-      "drake_config(my_plan, verbose = 6)"
+      "drake_config(my_plan, verbose = 1L)"
     ),
     default_drake_source
   )
   expect_false(file.exists("stdout.log"))
-  r_make(r_fn = callr::r, r_args = list(stdout = "stdout.log", show = FALSE))
+  px <- r_make(r_fn = callr::r_bg, r_args = list(stdout = "stdout.log"))
+  while (px$is_alive()) {
+    Sys.sleep(1e-2)
+  }
   expect_true(file.exists("stdout.log"))
   expect_true(is.data.frame(readd(small)))
   expect_equal(r_outdated(r_args = list(show = FALSE)), character(0))

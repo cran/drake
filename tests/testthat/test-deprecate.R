@@ -44,7 +44,7 @@ test_with_dir("deprecation: cache functions", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   plan <- drake_plan(x = 1)
   expect_error(expect_warning(tmp <- read_drake_meta(search = FALSE)))
-  expect_silent(make(plan, verbose = FALSE, session_info = FALSE))
+  expect_silent(make(plan, verbose = 0L, session_info = FALSE))
   expect_true(is.numeric(readd(x, search = FALSE)))
   expect_equal(cached(), "x")
   cache <- get_cache()
@@ -115,7 +115,7 @@ test_with_dir("drake version checks in previous caches", {
   # We need to be able to set the drake version
   # to check back compatibility.
   plan <- drake_plan(x = 1)
-  expect_silent(make(plan, verbose = FALSE))
+  expect_silent(make(plan, verbose = 0L))
   x <- get_cache()
   suppressWarnings(expect_error(drake_session(cache = NULL), regexp = "make"))
   expect_warning(drake_session(cache = x), regexp = "deprecated")
@@ -185,11 +185,15 @@ test_with_dir("deprecate misc utilities", {
   expect_warning(predict_load_balancing(config), regexp = "deprecated")
   expect_warning(tmp <- this_cache(), regexp = "deprecated")
   expect_warning(drake_cache_log_file(), regexp = "deprecated")
+  expect_error(from_plan(), regexp = "defunct")
 })
 
 test_with_dir("deprecated arguments", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  pl <- drake_plan(a = 1, b = a)
+  expect_warning(
+    pl <- drake_plan(a = 1, b = a, tidy_evaluation = TRUE),
+    regexp = "deprecated"
+  )
   con <- drake_config(plan = pl)
   expect_warning(drake::drake_plan(x = y, file_targets = TRUE))
   expect_warning(drake_plan(list = c(a = "1")), regexp = "deprecated")
@@ -229,7 +233,7 @@ test_with_dir("force with a non-back-compatible cache", {
     expect_error(make(drake_plan(x = 1)), regexp = "compatible")
   )
   expect_warning(make(drake_plan(x = 1), force = TRUE), regexp = "compatible")
-  expect_silent(tmp <- get_cache())
+  tmp <- get_cache()
 })
 
 test_with_dir("deprecate the `force` argument", {

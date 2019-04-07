@@ -1,0 +1,17 @@
+#!/bin/bash
+# From: https://github.com/HenrikBengtsson/future.batchtools/blob/master/inst/templates/torque.tmpl
+#PBS -N <%= if (exists("job.name", mode = "character")) job.name else job.hash %>
+#PBS -o <%= log.file %> # log file
+#PBS -j oe              # Merge stdout and stderr
+#PBS -m ae # Email on abort (a) and termination (e), but not when starting (b) (via mailutils)
+
+# Resources needed:
+<% if (length(resources) > 0) {
+  opts <- unlist(resources, use.names = TRUE)
+  opts <- sprintf("%s=%s", names(opts), opts)
+  opts <- paste(opts, collapse = ",") %>
+#PBS -l <%= opts %>
+<% } %>
+
+# module load R # Uncomment if R is an environment module.
+Rscript -e 'batchtools::doJobCollection("<%= uri %>")'

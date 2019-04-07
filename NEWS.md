@@ -1,3 +1,34 @@
+# Version 7.1.0
+
+## Bug fixes
+
+- In `drake` 7.0.0, if you run `make()` in interactive mode and respond to the menu prompt with an option other than `1` or `2`, targets will still build. 
+- Make sure file outputs show up in `drake_graph()`. The bug came from `append_output_file_nodes()`, a utility function of `drake_graph_info()`.
+- Repair `r_make(r_fn = callr::r_bg())` re https://github.com/ropensci/drake/issues/799.
+- Allow `drake_ggraph()` and `sankey_drake_graph()` to work when the graph has no edges.
+
+## New features
+
+- Add a new `use_drake()` function to write the `make.R` and `_drake.R` files from the [main example](https://github.com/wlandau/drake-examples/tree/master/main). Does not write other supporting scripts.
+- With an optional logical `hpc` column in your `drake_plan()`, you can now select which targets to deploy to HPC and which to run locally.
+- Add a `list` argument to `build_times()`, just like `loadd()`.
+- Add a new RStudio addin: 'loadd target at cursor' which can be bound a keyboard shortcut to load the target identified by the symbol at the cursor position to the global environment.
+
+## Enhancements
+
+- `file_in()` and `file_out()` can now handle entire directories, e.g. `file_in("your_folder_of_input_data_files")` and `file_out("directory_with_a_bunch_of_output_files")`.
+- Send less data from `config` to HPC workers.
+- Improve `drake_ggraph()`
+  - Hide node labels by default and render the arrows behind the nodes.
+  - Print an informative error message when the user supplies a `drake` plan to the `config` argument of a function.
+  - By default, use gray arrows and a black-and-white background with no gridlines.
+- For the `map()` and `cross()` transformations in the DSL, prevent the [accidental sorting of targets by name](https://github.com/ropensci/drake/issues/786). Needed `merge(sort = FALSE)` in `dsl_left_outer_join()`.
+- Simplify verbosity. The `verbose` argument of `make()` now takes values 0, 1, and 2, and maximum verbosity in the console prints targets, retries, failures, and a spinner. The console log file, on the other hand, dumps maximally verbose runtime info regardless of the `verbose` argument.
+- In previous versions, functions generated with `f <- Rcpp::cppFunction(...)` did not stay up to date from session to session because the addresses corresponding to anonymous pointers were showing up in `deparse(f)`. Now, `drake` ignores those pointers, and `Rcpp` functions compiled inline appear to stay up to date. This problem was more of an edge case than a bug.
+- Prepend time stamps with sub-second times to the lines of the console log file.
+- In `drake_plan()`, deprecate the `tidy_evaluation` argument in favor of the new and more concise `tidy_eval`. To preserve back compatibility for now, if you supply a non-`NULL` value to `tidy_evaluation`, it overwrites `tidy_eval`.
+- Reduce the object size of `drake_config()` objects by assigning closure of `config$sleep` to `baseenv()`.
+
 # Version 7.0.0
 
 ## Breaking changes
@@ -26,7 +57,7 @@
 
 ## New features
 
-- Introduce a new experimental domain-specific language for generating large plans (#233). Details [here](file:///home/landau/projects/drake-manual/_book/plans.html#large-plans).
+- Introduce a new experimental domain-specific language for generating large plans (#233). Details [here](https://ropenscilabs.github.io/drake-manual/plans.html#large-plans).
 - Implement a `lock_envir` argument to safeguard reproducibility. See [this thread](https://github.com/ropensci/drake/issues/615#issuecomment-447585359) for a demonstration of the problem solved by `make(lock_envir = TRUE)`. More discussion: #619, #620.
 - The new `from_plan()` function allows the users to reference custom plan columns from within commands. Changes to values in these columns columns do not invalidate targets.
 - Add a menu prompt (https://github.com/ropensci/drake/pull/762) to safeguard against `make()` pitfalls in interactive mode (https://github.com/ropensci/drake/issues/761). Appears once per session. Disable with `options(drake_make_menu = FALSE)`.
@@ -221,7 +252,7 @@ to tell the user if the command, a dependency, an input file, or an output file 
 - Skip more tests on CRAN. White-list tests instead of blacklisting them in order to try to keep check time under the official 10-minute cap.
 - Disallow wildcard names to grep-match other wildcard names or any replacement values. This will prevent careless mistakes and confusion when generating `drake_plan()`s.
 - Prevent persistent workers from hanging when a target fails.
-- Move the example template files [here](https://github.com/ropensci/drake/tree/master/inst/hpc_template_files).
+- Move the example template files to `inst/hpc_template_files`.
 - Deprecate `drake_batchtools_tmpl_file()` in favor of `drake_hpc_template_file()` and `drake_hpc_template_files()`.
 - Add a `garbage_collection` argument to `make()`. If `TRUE`, `gc()` is called after every new build of a target.
 - Remove redundant calls to `sanitize_plan()` in `make()`.
