@@ -11,7 +11,7 @@
 #' @inheritParams cached
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build the targets.
@@ -77,7 +77,7 @@ conclude_session <- function(config) {
   drake_cache_log_file_(
     file = config$cache_log_file,
     cache = config$cache,
-    jobs = config$jobs
+    jobs = config$jobs_preprocess
   )
   remove(list = names(config$eval), envir = config$eval)
   invisible()
@@ -88,7 +88,7 @@ prompt_intv_make <- function(config) {
     getOption("drake_make_menu") %||%
     TRUE
   interactive() &&
-    igraph::gorder(config$schedule) &&
+    igraph::gorder(config$graph) &&
     menu_enabled
 }
 
@@ -103,8 +103,8 @@ abort_intv_make <- function(config) {
     )
   )
   title <- paste(
-    paste(igraph::gorder(config$schedule), "outdated targets:"),
-    multiline_message(igraph::V(config$schedule)$name),
+    paste(igraph::gorder(config$graph), "outdated targets:"),
+    multiline_message(igraph::V(config$graph)$name),
     "\nPlease read the \"Interactive mode\" section of the make() help file.",
     "This prompt only appears once per session.",
     "\nReally run make() instead of r_make() in interactive mode?",

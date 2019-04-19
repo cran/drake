@@ -29,11 +29,11 @@ test_with_dir("cache log files, gc, and make()", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- drake_plan(a = 1)
   make(x, session_info = FALSE, garbage_collection = TRUE)
-  expect_false(file.exists("drake_cache.log"))
+  expect_false(file.exists("drake_cache.csv"))
   make(x, session_info = FALSE)
-  expect_false(file.exists("drake_cache.log"))
+  expect_false(file.exists("drake_cache.csv"))
   make(x, session_info = FALSE, cache_log_file = TRUE)
-  expect_true(file.exists("drake_cache.log"))
+  expect_true(file.exists("drake_cache.csv"))
   make(x, session_info = FALSE, cache_log_file = "my.log")
   expect_true(file.exists("my.log"))
 })
@@ -187,7 +187,8 @@ test_with_dir("config_checks() via make()", {
       envir = config$envir,
       session_info = FALSE,
       verbose = 0L
-    )
+    ),
+    regexp = "valid targets"
   ))
 })
 
@@ -211,52 +212,49 @@ test_with_dir("file_store quotes properly", {
 test_with_dir("misc utils", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   expect_equal(pair_text("x", c("y", "z")), c("xy", "xz"))
-  config <- list(plan = data.frame(x = 1, y = 2))
-  expect_error(config_checks(config), regexp = "columns")
+  config <- list()
+  expect_error(config_checks(config))
+  expect_error(plan_checks(data.frame(x = 1, y = 2)), "columns")
   expect_error(targets_from_dots(123, NULL), regexp = "must contain names")
 })
 
 test_with_dir("make(..., skip_imports = TRUE) works", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   con <- dbug()
-  verbose <- max(con$jobs) < 2
-  suppressMessages({
-    make(
-      con$plan, parallelism = con$parallelism,
-      envir = con$envir, jobs = con$jobs, verbose = verbose,
-      skip_imports = TRUE,
-      session_info = FALSE
-    )
-    con <- drake_config(
-      con$plan, parallelism = con$parallelism,
-      envir = con$envir, jobs = con$jobs, verbose = verbose,
-      skip_imports = TRUE,
-      session_info = FALSE
-    )
-  })
+  plan <- dbug_plan()
+  make(
+    plan, parallelism = con$parallelism,
+    envir = con$envir, jobs = con$jobs,
+    skip_imports = TRUE,
+    session_info = FALSE
+  )
+  con <- drake_config(
+    plan, parallelism = con$parallelism,
+    envir = con$envir, jobs = con$jobs,
+    skip_imports = TRUE,
+    session_info = FALSE
+  )
   expect_equal(
     sort(cached(targets_only = FALSE)),
     sort(display_keys(
-      c(encode_path("intermediatefile.rds"), con$plan$target)
+      c(encode_path("intermediatefile.rds"), plan$target)
     ))
   )
 
   # If the imports are already cached, the targets built with
   # skip_imports = TRUE should be up to date.
-  make(con$plan, verbose = 0L, envir = con$envir, session_info = FALSE)
-  clean(list = con$plan$target, verbose = 0L)
-  suppressMessages({
-    make(
-      con$plan, parallelism = con$parallelism,
-      envir = con$envir, jobs = con$jobs, verbose = verbose,
-      skip_imports = TRUE, session_info = FALSE
-    )
-    con <- drake_config(
-      con$plan, parallelism = con$parallelism,
-      envir = con$envir, jobs = con$jobs, verbose = verbose,
-      skip_imports = TRUE, session_info = FALSE
-    )
-  })
+  make(plan, envir = con$envir, session_info = FALSE)
+  clean(list = plan$target)
+  make(
+    plan, parallelism = con$parallelism,
+    envir = con$envir, jobs = con$jobs,
+    skip_imports = TRUE, session_info = FALSE
+  )
+  con <- drake_config(
+    plan, parallelism = con$parallelism,
+    envir = con$envir, jobs = con$jobs,
+    skip_imports = TRUE, session_info = FALSE
+  )
   out <- outdated(con)
   expect_equal(out, character(0))
 })
@@ -378,7 +376,7 @@ test_with_dir("parallelism can be a scheduler function", {
     eval(expr = tidy_expr, envir = config$eval)
   }
   loop_ <- function(config) {
-    targets <- igraph::topo_sort(config$schedule)$name
+    targets <- igraph::topo_sort(config$graph)$name
     for (target in targets) {
       log_msg(target, config = config, newline = TRUE)
       config$eval[[target]] <- build_(

@@ -5,7 +5,7 @@ drake_context <- function(x) {
 }
 
 testconfig <- function(config) {
-  drake_config(
+  out <- drake_config(
     plan = config$plan,
     targets = config$targets,
     envir = config$envir,
@@ -23,6 +23,9 @@ testconfig <- function(config) {
     caching = config$caching,
     lock_envir = !any(grepl("staged", config$parallelism))
   )
+  out$plan <- config$plan
+  out$targets <- config$targets
+  out
 }
 
 testrun <- function(config) {
@@ -51,13 +54,12 @@ testrun <- function(config) {
 
 justbuilt <- function(config) {
   recorded <- config$cache$list(namespace = "progress")
-  all <- lightly_parallelize(
+  all <- lapply(
     X = recorded,
     FUN = function(target) {
       config$cache$get(
         key = target, namespace = "progress", use_cache = FALSE)
-    },
-    jobs = config$jobs
+    }
   )
   names(all) <- recorded
   all <- unlist(all)
@@ -67,7 +69,7 @@ justbuilt <- function(config) {
       x == "done"
     }
   )
-  sort(intersect(names(out), y = config$plan$target))
+  sort(intersect(names(out), y = all_targets(config)))
 }
 
 nobuild <- function(config) {
@@ -75,24 +77,6 @@ nobuild <- function(config) {
   testthat::expect_true(length(justbuilt(config)) < 1)
 }
 
-#' @title Run a unit test in a way that quarantines
-#'   the side effects from your workspace and file system.
-#' @description Typical users of drake should not need this function.
-#' It is exported so it can be used to quarantine the side effects
-#' of the examples in the help files.
-#' @export
-#' @keywords internal
-#' @return Nothing.
-#' @param desc Character, description of the test.
-#' @param ... Code to test.
-#' @examples
-#' \dontrun{
-#' test_with_dir(
-#'   "Write a file to a temporary folder",
-#'   writeLines("hello", "world.txt")
-#' )
-#' file.exists("world.txt") # FALSE
-#' }
 test_with_dir <- function(desc, ...) {
   assert_pkg("testthat")
   old <- Sys.getenv("drake_warn_subdir")
@@ -106,7 +90,8 @@ test_with_dir <- function(desc, ...) {
   with_dir(new = new, {
     opts <- list(
       clustermq.scheduler = "multicore",
-      drake_make_menu = FALSE
+      drake_make_menu = FALSE,
+      drake_clean_menu = FALSE
     )
     with_options(new = opts, {
       set_test_backend()
@@ -115,6 +100,17 @@ test_with_dir <- function(desc, ...) {
   })
   invisible()
 }
+
+#' @title Isolate the side effects of an example.
+#' @description Runs code in a temporary directory
+#'   in a controlled environment with a controlled
+#'   set of options.
+#' @export
+#' @keywords internal
+#' @return Nothing.
+#' @param desc Character, description of the test.
+#' @param ... Code to test.
+isolate_example <- test_with_dir
 
 restore_options <- function(old) {
   current <- options()

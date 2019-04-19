@@ -2,28 +2,29 @@ config_checks <- function(config) {
   if (identical(config$skip_safety_checks, TRUE)) {
     return(invisible())
   }
-  stopifnot(is.data.frame(config$plan))
-  if (!all(c("target", "command") %in% colnames(config$plan))) {
+  check_case_sensitivity(config)
+  check_drake_graph(graph = config$graph)
+  cache_vers_stop(config$cache)
+  check_parallelism(config$parallelism, config$jobs)
+  check_jobs(config$jobs)
+}
+
+plan_checks <- function(plan) {
+  stopifnot(is.data.frame(plan))
+  if (!all(c("target", "command") %in% colnames(plan))) {
     stop(
       "The columns of your workflow plan data frame ",
       "must include 'target' and 'command'.",
       call. = FALSE
     )
   }
-  if (any(bad_symbols %in% config$plan$target)) {
+  if (any(bad_symbols %in% plan$target)) {
     stop(
       "symbols that cannot be target names: \n",
       multiline_message(shQuote(bad_symbols)),
       call. = FALSE
     )
   }
-  stopifnot(nrow(config$plan) > 0)
-  stopifnot(length(config$targets) > 0)
-  check_case_sensitivity(config)
-  check_drake_graph(graph = config$graph)
-  cache_vers_stop(config$cache)
-  check_parallelism(config$parallelism, config$jobs)
-  check_jobs(config$jobs)
 }
 
 runtime_checks <- function(config) {
@@ -36,7 +37,7 @@ runtime_checks <- function(config) {
 
 missing_input_files <- function(config) {
   files <- parallel_filter(
-    igraph::V(config$imports)$name,
+    all_imports(config),
     f = is_encoded_path,
     jobs = config$jobs_preprocess
   )

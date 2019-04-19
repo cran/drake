@@ -8,7 +8,7 @@
 #' `outdated(..., trigger = trigger(condition = TRUE))` will show
 #' all targets out of date.
 #' You must use a fresh `config` argument with an up-to-date
-#' `config$targets` element that was never modified by hand.
+#' dependency graph that was never modified by hand.
 #' If needed, rerun [drake_config()] early and often.
 #' See the details in the help file for [drake_config()].
 #' @export
@@ -18,7 +18,7 @@
 #' @param config Optional internal runtime parameter list
 #'   produced with [drake_config()].
 #'   You must use a fresh `config` argument with an up-to-date
-#'   `config$targets` element that was never modified by hand.
+#'   dependency graph that was never modified by hand.
 #'   If needed, rerun [drake_config()] early and often.
 #'   See the details in the help file for [drake_config()].
 #' @param make_imports Logical, whether to make the imports first.
@@ -27,7 +27,7 @@
 #'   normally supplied to [make()].
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Recopute the config list early and often to have the
@@ -55,19 +55,20 @@ outdated <-  function(
   }
   from <- first_outdated(config = config)
   log_msg("find downstream outdated targets", config = config)
-  to <- downstream_nodes(config$schedule, from)
-  sort(unique(as.character(c(from, to))))
+  to <- downstream_nodes(config$graph, from)
+  out <- sort(unique(as.character(c(from, to))))
+  out[!is_encoded_path(out)]
 }
 
 first_outdated <- function(config) {
   config$ht_get_hash <- ht_new() # Memoize getting hashes from the cache.
   on.exit(ht_clear(config$ht_get_hash)) # Needs to be empty afterwards.
-  schedule <- config$schedule
   out <- character(0)
   old_leaves <- NULL
+  config$graph <- subset_graph(config$graph, all_targets(config))
   while (TRUE) {
     log_msg("find more outdated targets", config = config)
-    new_leaves <- setdiff(leaf_nodes(schedule), out)
+    new_leaves <- setdiff(leaf_nodes(config$graph), out)
     do_build <- lightly_parallelize(
       X = new_leaves,
       FUN = function(target) {
@@ -84,7 +85,7 @@ first_outdated <- function(config) {
     if (all(do_build)) {
       break
     } else {
-      schedule <- delete_vertices(schedule, v = new_leaves[!do_build])
+      config$graph <- delete_vertices(config$graph, v = new_leaves[!do_build])
     }
     old_leaves <- new_leaves
   }
@@ -104,7 +105,7 @@ first_outdated <- function(config) {
 #'
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan)
@@ -116,13 +117,13 @@ first_outdated <- function(config) {
 #' }
 missed <- function(config) {
   assert_config_not_plan(config)
-  imports <- igraph::V(config$imports)$name
+  imports <- all_imports(config)
   is_missing <- lightly_parallelize(
     X = imports,
     FUN = function(x) {
       missing_import(x, config = config)
     },
-    jobs = config$jobs
+    jobs = config$jobs_preprocess
   )
   is_missing <- as.logical(is_missing)
   if (!any(is_missing)) {

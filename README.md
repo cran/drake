@@ -3,6 +3,7 @@
 <center>
 <img src="https://ropensci.github.io/drake/figures/infographic.svg" alt="infographic" align="center" style = "border: none; float: center;">
 </center>
+
 <table class="table">
 <thead>
 <tr class="header">
@@ -23,7 +24,7 @@ Development
 <a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img src="https://img.shields.io/badge/licence-GPL--3-blue.svg" alt="Licence"></a>
 </td>
 <td align="left">
-<a href="https://doi.org/10.21105/joss.00550"><img src="https://joss.theoj.org/papers/10.21105/joss.00550/status.svg" alt="JOSS"></a>
+<a href="https://cran.r-project.org/package=drake"><img src="https://www.r-pkg.org/badges/version/drake" alt="CRAN"></a>
 </td>
 <td align="left">
 <a href="https://travis-ci.org/ropensci/drake"><img src="https://travis-ci.org/ropensci/drake.svg?branch=master" alt="Travis"></a>
@@ -45,7 +46,7 @@ Development
 <a href="https://CRAN.R-project.org/package=drake"><img src="https://cranlogs.r-pkg.org/badges/drake" alt="downloads"></a>
 </td>
 <td align="left">
-<a href="https://cran.r-project.org/package=drake"><img src="https://www.r-pkg.org/badges/version/drake" alt="CRAN"></a>
+<a href="https://doi.org/10.21105/joss.00550"><img src="https://joss.theoj.org/papers/10.21105/joss.00550/status.svg" alt="JOSS"></a>
 </td>
 <td align="left">
 <a href="https://codecov.io/github/ropensci/drake?branch=master"><img src="https://codecov.io/github/ropensci/drake/coverage.svg?branch=master" alt="Codecov"></a>
@@ -57,6 +58,15 @@ Development
 </td>
 <td align="left">
 <a href="https://zenodo.org/badge/latestdoi/82609103"><img src="https://zenodo.org/badge/82609103.svg" alt="Zenodo"></a>
+</td>
+<td align="left">
+<a href="https://bestpractices.coreinfrastructure.org/projects/2135"><img src="https://bestpractices.coreinfrastructure.org/projects/2135/badge"></a>
+</td>
+</tr>
+<tr class="odd">
+<td align="left">
+</td>
+<td align="left">
 </td>
 <td align="left">
 <a href="https://www.repostatus.org/#active"><img src="https://www.repostatus.org/badges/latest/active.svg" alt="Project Status: Active – The project has reached a stable, usable state and is being actively developed." /></a>
@@ -362,6 +372,8 @@ Here are some real-world applications of `drake` in the wild.
 -   [efcaguab/demografia-del-voto](https://github.com/efcaguab/demografia-del-voto)
 -   [efcaguab/great-white-shark-nsw](https://github.com/efcaguab/great-white-shark-nsw)
 -   [IndianaCHE/Detailed-SSP-Reports](https://github.com/IndianaCHE/Detailed-SSP-Reports)
+-   [pat-s/pathogen-modeling](https://github.com/pat-s/pathogen-modeling)
+-   [sol-eng/tensorflow-w-r](https://github.com/sol-eng/tensorflow-w-r)
 -   [tiernanmartin/home-and-hope](https://github.com/tiernanmartin/home-and-hope)
 
 There are also multiple `drake`-powered example projects [available here](https://github.com/wlandau/drake-examples), ranging from beginner-friendly stubs to demonstrations of high-performance computing. You can generate the files for a project with `drake_example()` (e.g. `drake_example("gsp")`), and you can list the available projects with `drake_examples()`. You can contribute your own example project with a [fork and pull request](https://github.com/wlandau/drake-examples/pulls).
@@ -426,12 +438,6 @@ Presentations
 <td><a href="https://www.sib.swiss">Swiss Institute of Bioinformatics</a></td>
 <td>2018-03-05</td>
 <td><a href="https://www.sib.swiss/training/course/2018-03-remake">workshop</a>, <a href="https://krlmlr.github.io/slides/drake-sib-zurich">slides</a>, <a href="https://github.com/krlmlr/drake-sib-zurich">source</a>, <a href="https://krlmlr.github.io/slides/drake-sib-zurich/cooking.html">exercises</a></td>
-</tr>
-<tr class="even">
-<td><a href="https://github.com/krlmlr">Kirill Müller</a></td>
-<td><a href="https://www.rstudio.com/conference">RStudio Conference</a></td>
-<td>2018-02-01</td>
-<td><a href="https://krlmlr.github.io/drake-pitch">slides</a>, <a href="https://github.com/krlmlr/drake-pitch">source</a></td>
 </tr>
 </tbody>
 </table>

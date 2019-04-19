@@ -7,9 +7,9 @@ test_with_dir("lock_envir works", {
   parallelism <- scenario$parallelism
   caching <- scenario$caching
   plan <- drake_plan(
-    x = testthat::expect_error(
-      assign("a", 1, envir = parent.env(drake_envir())),
-      regexp = "binding"
+    x = try(
+      assign("a", 1L, envir = parent.env(drake_envir())),
+      silent = TRUE
     )
   )
   make(
@@ -22,6 +22,7 @@ test_with_dir("lock_envir works", {
     verbose = 1L,
     session_info = FALSE
   )
+  expect_true(inherits(readd(x), "try-error"))
   e$a <- 123
   e$plan$four <- "five"
   plan <- drake_plan(
@@ -38,6 +39,7 @@ test_with_dir("lock_envir works", {
     session_info = FALSE
   )
   expect_true("x" %in% cached())
+  expect_equal(readd(x), 1L)
 })
 
 test_with_dir("Try to modify a locked environment", {
@@ -209,6 +211,7 @@ test_with_dir("target conflicts with previous import", {
   config$plan <- bind_plans(config$plan, new_row)
   config$targets <- config$plan$target
   testrun(config)
+  config <- drake_config(config$plan)
   expect_equal(
     justbuilt(config),
     sort(c("drake_target_1", "combined", "f", "final", "yourinput"))
@@ -236,16 +239,8 @@ test_with_dir("GitHub issue 460", {
     targets = "b",
     cache = storr::storr_environment()
   )
-  expect_equal(sort(igraph::V(config$schedule)$name), sort(letters[1:2]))
-  expect_equal(
-    intersect(
-      igraph::V(config$schedule)$name,
-      igraph::V(config$imports)$name
-    ),
-    character(0)
-  )
-  expect_true(
-    encode_namespaced("base::sqrt") %in% igraph::V(config$imports)$name)
+  exp <- c(letters[1:2], encode_namespaced("base::sqrt"))
+  expect_true(all(exp %in% igraph::V(config$graph)$name))
   process_targets(config)
 })
 

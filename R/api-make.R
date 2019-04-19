@@ -73,7 +73,7 @@
 #'   because it already has everything it needs in `config`.
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan)
@@ -90,7 +90,7 @@
 #' outdated(config) # Everything is up to date again.
 #' if (requireNamespace("visNetwork", quietly = TRUE)) {
 #' vis_drake_graph(config) # See how they fit in an interactive graph.
-#' make(my_plan, cache_log_file = TRUE) # Write a text log file this time.
+#' make(my_plan, cache_log_file = TRUE) # Write a CSV log file this time.
 #' vis_drake_graph(config) # The colors changed in the graph.
 #' }
 #' clean() # Start from scratch next time around.
@@ -208,7 +208,7 @@ make <- function(
     process_imports(config)
   }
   if (is.character(config$parallelism)) {
-    config$schedule <- pretrim_schedule(config)
+    config$graph <- outdated_subgraph(config)
   }
   abort <- FALSE
   if (prompt_intv_make(config)) {

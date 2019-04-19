@@ -2,7 +2,7 @@ drake_context("priority queue")
 
 test_with_dir("empty queue", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  config <- list(schedule = igraph::make_empty_graph(), verbose = 1L)
+  config <- list(graph = igraph::make_empty_graph(), verbose = 1L)
   q <- new_priority_queue(config)
   expect_equal(sort(colnames(q$data)), sort(c("target", "ndeps", "priority")))
   expect_equal(nrow(q$data), 0)
@@ -104,16 +104,4 @@ test_with_dir("the priority queue works", {
   expect_equivalent(x$data, z[-4:-5, ])
   x$remove(c("soup", "Bob"))
   expect_equivalent(x$data, z[-4:-5, ])
-})
-
-test_with_dir("queues with priorities", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  skip_if_not_installed("knitr")
-  load_mtcars_example()
-  my_plan$priority <- seq_len(nrow(my_plan))
-  config <- drake_config(my_plan, cache = storr::storr_environment())
-  q <- new_priority_queue(config)
-  expect_true(all(diff(q$data$ndeps) >= 0))
-  expect_equal(sort(q$data$target), sort(config$plan$target))
-  expect_true(all(is.finite(q$data$priority)))
 })

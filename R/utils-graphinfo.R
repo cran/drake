@@ -111,6 +111,40 @@ configure_nodes <- function(config) {
   hover_text(config = config)
 }
 
+coord_set <- function(nodes) {
+  nodes <- coord_x(nodes)
+  nodes <- coord_y(nodes)
+  nodes
+}
+
+coord_rescale <- function(x, min, max) {
+  x <- x - min(x)
+  x <- x / max(x)
+  x <- x * (max - min)
+  x <- x + min
+  x [!is.finite(x)] <- (min + max) / 2
+  x
+}
+
+coord_x <- function(nodes, min = -1, max = 1) {
+  nodes$x <- coord_rescale(nodes$level, min = min, max = max)
+  nodes
+}
+
+coord_y <- function(nodes, min = -1, max = 1) {
+  splits <- split(nodes, nodes$x)
+  out <- lapply(splits, coord_y_stage, min = min, max = max)
+  out <- do.call(rbind, out)
+  out$y <- coord_rescale(out$y, min = min, max = max)
+  out
+}
+
+coord_y_stage <- function(nodes, min, max) {
+  y <- seq(from = min, to = max, length.out = nrow(nodes) + 2)
+  nodes$y <- y[c(-1, -length(y))]
+  nodes
+}
+
 #' @title Return the default title for graph visualizations
 #' @description For internal use only.
 #' @export
@@ -165,26 +199,44 @@ function_hover_text <- Vectorize(function(function_name, envir) {
 },
 "function_name")
 
+get_cluster_grouping <- function(config, group) {
+  vapply(
+    X = config$nodes$id,
+    FUN = function(x) {
+      out <- config$layout[[x]][[group]]
+      if (!is.character(out)) {
+        out <- safe_deparse(out)
+      }
+      out %||% NA_character_
+    },
+    FUN.VALUE = character(1)
+  )
+}
+
 get_raw_node_category_data <- function(config) {
   all_labels <- V(config$graph)$name
+  config$targets <- all_targets(config)
   config$outdated <- resolve_graph_outdated(config = config)
   config$running <- running(cache = config$cache)
   config$failed <- failed(cache = config$cache)
   config$files <- parallel_filter(
-    x = all_labels, f = is_encoded_path, jobs = config$jobs)
+    x = all_labels,
+    f = is_encoded_path,
+    jobs = config$jobs_preprocess
+  )
   config$functions <- parallel_filter(
     x = config$import_names,
     f = function(x) {
       is.function(get_import_from_memory(x, config = config))
     },
-    jobs = config$jobs
+    jobs = config$jobs_preprocess
   )
   config$missing <- parallel_filter(
     x = config$import_names,
     f = function(x) {
       missing_import(x, config = config)
     },
-    jobs = config$jobs
+    jobs = config$jobs_preprocess
   )
   config
 }
@@ -203,7 +255,7 @@ hover_text <- function(config) {
     nodes[functions, "title"] <-
       function_hover_text(function_name = functions, envir = config$envir)
     nodes[targets, "title"] <-
-      target_hover_text(targets = targets, plan = config$plan)
+      target_hover_text(targets = targets, config = config)
     nodes
   })
 }
@@ -304,7 +356,7 @@ resolve_build_times <- function(build_times) {
 
 resolve_graph_outdated <- function(config) {
   if (config$from_scratch) {
-    config$outdated <- config$plan$target
+    config$outdated <- all_targets(config)
   } else {
     config$outdated <- outdated(
       config = config,
@@ -344,9 +396,17 @@ style_nodes <- function(config) {
   })
 }
 
-target_hover_text <- function(targets, plan) {
+target_hover_text <- function(targets, config) {
+  commands <- vapply(
+    X = targets,
+    FUN = function(target) {
+      config$layout[[target]]$command_standardized
+    },
+    FUN.VALUE = character(1),
+    USE.NAMES = FALSE
+  )
   vapply(
-    X = plan$command[plan$target %in% targets],
+    X = commands,
     FUN = style_hover_text,
     FUN.VALUE = character(1),
     USE.NAMES = FALSE

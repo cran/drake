@@ -63,7 +63,7 @@ test_with_dir("deprecation: built", {
   expect_warning(built(cache = NULL))
   expect_equal(
     sort(suppressWarnings(built(search = FALSE))),
-    sort(display_keys(config$plan$target))
+    sort(display_keys(plan$target))
   )
   twopiece <- sort(
     c(
@@ -77,7 +77,7 @@ test_with_dir("deprecation: built", {
   )
   expect_equal(
     sort(suppressWarnings(built(search = TRUE))),
-    sort(display_keys(c(config$plan$target)))
+    sort(display_keys(c(plan$target)))
   )
   expect_warning(imported(search = FALSE, files_only = TRUE))
 })
@@ -136,6 +136,8 @@ test_with_dir("deprecated graphing functions", {
   skip_if_not_installed("lubridate")
   skip_if_not_installed("visNetwork")
   skip_if_not_installed("ggraph")
+  expect_warning(out <- vis_drake_graph(config = con, direction = "LR"))
+  expect_warning(out <- vis_drake_graph(config = con, layout = "sugiyama"))
   expect_warning(out <- static_drake_graph(config = con))
   expect_true(inherits(out, "gg"))
   df <- drake_graph_info(config = con)

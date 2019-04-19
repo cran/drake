@@ -8,7 +8,7 @@
 #' @author William Michael Landau \email{will.landau@@gmail.com}
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' library(drake)
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
@@ -47,7 +47,7 @@
 #'   make_empty_graph make_ego_graph set_vertex_attr simplify
 #'   topo_sort V vertex_attr
 #' @importFrom methods new setRefClass
-#' @importFrom rlang enquo eval_tidy expr quo_squash quos
+#' @importFrom rlang dots_list enquo eval_tidy expr quo_squash quos
 #' @importFrom storr storr_environment storr_rds
 #' @importFrom utils compareVersion flush.console head menu packageVersion
 #'   read.csv sessionInfo stack type.convert unzip write.table

@@ -46,7 +46,7 @@ but you can see what all the colors mean with
 }
 \examples{
 \dontrun{
-test_with_dir("Quarantine side effects.", {
+isolate_example("Quarantine side effects.", {
 load_mtcars_example() # Get the code with drake_example("mtcars").
 if (suppressWarnings(require("knitr"))) {
 if (requireNamespace("networkD3", quietly = TRUE)) {
@@ -63,15 +63,6 @@ graph <- drake_graph_info(config)
 # (as in sankey_drake_graph()) or you can create
 # your own custom visNewtork graph.
 render_sankey_drake_graph(graph, width = '100\%') # Width is passed to visNetwork.
-# Optionally visualize clusters.
-config$plan$large_data <- grepl("large", config$plan$target)
-graph <- drake_graph_info(
-config, group = "large_data", clusters = c(TRUE, FALSE))
-render_sankey_drake_graph(graph)
-# You can even use clusters given to you for free in the `graph$nodes`
-# data frame.
-graph <- drake_graph_info(config, group = "status", clusters = "imported")
-render_sankey_drake_graph(graph)
 }
 }
 }

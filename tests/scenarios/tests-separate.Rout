@@ -32,11 +32,3 @@ Loading drake
 + }
 global_clustermq_9__worker 
 global_future_9_future::multisession_master 
-global_loop_1 
-local_clustermq_2__master 
-local_future_9_future::multisession_worker 
-local_loop_1 
-> 
-> proc.time()
-    user   system  elapsed 
- 751.467  279.199 1706.696 

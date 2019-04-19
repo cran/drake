@@ -9,7 +9,8 @@ drake_ggraph(config, build_times = "build", digits = 3,
   targets_only = FALSE, main = NULL, from = NULL, mode = c("out",
   "in", "all"), order = NULL, subset = NULL, make_imports = TRUE,
   from_scratch = FALSE, full_legend = FALSE, group = NULL,
-  clusters = NULL, show_output_files = TRUE, label_nodes = FALSE)
+  clusters = NULL, show_output_files = TRUE, label_nodes = FALSE,
+  transparency = TRUE)
 }
 \arguments{
 \item{config}{A \code{\link[=drake_config]{drake_config()}} configuration list.
@@ -77,8 +78,8 @@ are printed in the legend. If \code{FALSE}, only the
 node types used are printed in the legend.}
 
 \item{group}{Optional character scalar, name of the column used to
-group nodes into columns. All the columns names of your \code{config$plan}
-are choices. The other choices (such as \code{"status"}) are column names
+group nodes into columns. All the columns names of your original \code{drake}
+plan are choices. The other choices (such as \code{"status"}) are column names
 in the \code{nodes} . To group nodes into clusters in the graph,
 you must also supply the \code{clusters} argument.}
 
@@ -92,6 +93,10 @@ that you specify in the \code{group} argument to \code{drake_graph_info()}.}
 \item{label_nodes}{Logical, whether to label the nodes.
 If \code{FALSE}, the graph will not have any text next to the nodes,
 which is recommended for large graphs with lots of targets.}
+
+\item{transparency}{Logical, whether to allow transparency in
+the rendered graph. Set to \code{FALSE} if you get warnings
+like "semi-transparency is not supported on this device".}
 }
 \value{
 A \code{ggplot2} object, which you can modify with more layers,
@@ -103,7 +108,7 @@ Install them with \code{install.packages(c("ggplot2", "ggraph"))}.
 }
 \examples{
 \dontrun{
-test_with_dir("Quarantine side effects.", {
+isolate_example("Quarantine side effects.", {
 load_mtcars_example() # Get the code with drake_example("mtcars").
 config <- drake_config(my_plan)
 # Plot the network graph representation of the workflow.

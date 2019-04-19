@@ -11,7 +11,7 @@
 #' @inheritParams render_drake_ggraph
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan)
 #' # Plot the network graph representation of the workflow.
@@ -36,7 +36,8 @@ drake_ggraph <- function(
   group = NULL,
   clusters = NULL,
   show_output_files = TRUE,
-  label_nodes = FALSE
+  label_nodes = FALSE,
+  transparency = TRUE
 ) {
   assert_pkg("ggplot2")
   assert_pkg("ggraph")
@@ -59,7 +60,12 @@ drake_ggraph <- function(
   if (is.null(main)) {
     main <- graph_info$default_title
   }
-  render_drake_ggraph(graph_info, main = main, label_nodes = label_nodes)
+  render_drake_ggraph(
+    graph_info,
+    main = main,
+    label_nodes = label_nodes,
+    transparency = transparency
+  )
 }
 
 #' @title Render a static `ggplot2`/`ggraph` visualization from
@@ -79,9 +85,12 @@ drake_ggraph <- function(
 #' @param label_nodes Logical, whether to label the nodes.
 #'   If `FALSE`, the graph will not have any text next to the nodes,
 #'   which is recommended for large graphs with lots of targets.
+#' @param transparency Logical, whether to allow transparency in
+#'   the rendered graph. Set to `FALSE` if you get warnings
+#'   like "semi-transparency is not supported on this device".
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' if (requireNamespace("ggraph", quietly = TRUE)) {
 #'   # Instead of jumpting right to vis_drake_graph(), get the data frames
@@ -97,7 +106,8 @@ drake_ggraph <- function(
 render_drake_ggraph <- function(
   graph_info,
   main = graph_info$default_title,
-  label_nodes = FALSE
+  label_nodes = FALSE,
+  transparency = TRUE
 ) {
   assert_pkg("ggplot2")
   assert_pkg("ggraph")
@@ -112,16 +122,24 @@ render_drake_ggraph <- function(
   names(shapes) <- graph_info$nodes$type
   shapes <- gsub("dot", "circle", shapes)
   layout <- ggraph::create_layout(graph, layout = "sugiyama")
-  tmp <- layout$x
-  layout$x <- -layout$y
-  layout$y <- tmp
+  layout$x <- graph_info$nodes$x
+  layout$y <- graph_info$nodes$y
   layout$label <- paste0("\n\n", layout$label)
   status <- type <- label <- node1.name <- node2.name <- NULL
-  out <- ggraph::ggraph(layout) +
+  alpha <- ifelse(transparency, 0.5, 1L)
+  out <- ggraph::ggraph(layout)
+  if (nrow(graph_info$edges)) {
+    out <- out + ggraph::geom_edge_link(
+      arrow = ggplot2::arrow(length = ggplot2::unit(2, "mm")),
+      alpha = alpha,
+      color = "gray"
+    )
+  }
+  out <- out +
     ggraph::geom_node_point(
       ggplot2::aes(color = status, shape = type),
       size = 5,
-      alpha = 0.5
+      alpha = alpha
     ) +
     ggplot2::xlim(padded_scale(layout$x)) +
     ggplot2::ylim(padded_scale(layout$y)) +
@@ -132,15 +150,11 @@ render_drake_ggraph <- function(
     ggplot2::theme_bw() +
     ggplot2::theme(
       panel.grid.major = ggplot2::element_blank(),
-      panel.grid.minor = ggplot2::element_blank()
+      panel.grid.minor = ggplot2::element_blank(),
+      axis.text = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      panel.border = ggplot2::element_blank()
     )
-  if (nrow(graph_info$edges)) {
-    out <- out + ggraph::geom_edge_link(
-      arrow = ggplot2::arrow(length = ggplot2::unit(4, "mm")),
-      alpha = 0.5,
-      color = "gray"
-    )
-  }
   if (label_nodes) {
     out <- out + ggraph::geom_node_text(ggplot2::aes(label = label))
   }

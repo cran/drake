@@ -23,6 +23,16 @@ test_with_dir("null graph", {
   expect_equal(x, null_graph())
 })
 
+test_with_dir("lang cluster cols", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("lubridate")
+  skip_if_not_installed("visNetwork")
+  plan <- drake_plan(x = target(1, col = g(f(x))))
+  config <- drake_config(plan)
+  x <- drake_graph_info(config = config, group = "col")
+  expect_equal(x$nodes$col, "g(f(x))")
+})
+
 test_with_dir("circular non-DAG drake_plans quit in error", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- drake_plan(a = b, b = c, c = a)
@@ -107,13 +117,17 @@ test_with_dir("we can generate different visNetwork dependency graphs", {
   expect_false(identical(tmp$nodes, tmp7$nodes))
   expect_true(is.data.frame(tmp$nodes))
   expect_equal(sort(outdated(config = config)),
-               sort(c(config$plan$target)))
+               sort(my_plan$target))
 })
 
 test_with_dir("clusters", {
   skip_on_cran()
-  plan <- drake_plan(x = rnorm(n__), y = rexp(n__))
-  plan <- evaluate_plan(plan, wildcard = "n__", values = 1:2, trace = TRUE)
+  plan <- drake_plan(
+    x_1 = target(command = rnorm(1), n__ = "1"),
+    x_2 = target(command = rnorm(2), n__ = "2"),
+    y_1 = target(command = rnorm(1), n__ = "1"),
+    y_2 = target(command = rnorm(2), n__ = "2")
+  )
   cache <- storr::storr_environment()
   config <- drake_config(plan, cache = cache)
   skip_if_not_installed("lubridate")
@@ -123,16 +137,17 @@ test_with_dir("clusters", {
   o2 <- drake_graph_info(config, group = "n__", clusters = "asdfae")
   o3 <- drake_graph_info(config, group = "n__")
   o4 <- drake_graph_info(config, group = "adfe")
-  for (col in c("label", "deps", "trigger")) {
+  for (col in c("label", "deps", "trigger", "n__")) {
     o1$nodes[[col]] <-
       o2$nodes[[col]] <-
       o3$nodes[[col]] <-
       o4$nodes[[col]] <-
       NULL
   }
-  expect_equal(o1$nodes, o2$nodes)
-  expect_equal(o1$nodes, o3$nodes)
-  expect_equal(o1$nodes, o4$nodes)
+  nms <- colnames(o1$nodes)
+  expect_equivalent(o1$nodes[, nms], o2$nodes[, nms])
+  expect_equivalent(o1$nodes[, nms], o3$nodes[, nms])
+  expect_equivalent(o1$nodes[, nms], o4$nodes[, nms])
   o <- drake_graph_info(config, group = "n__", clusters = "1")
   expect_equal(nrow(o$nodes), 3)
   expect_equal(

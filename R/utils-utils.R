@@ -23,6 +23,15 @@
   }
 }
 
+all_targets <- function(config) {
+  out <- V(config$graph)$name[!V(config$graph)$imported]
+  out[!is_encoded_path(out)]
+}
+
+all_imports <- function(config) {
+  V(config$graph)$name[V(config$graph)$imported]
+}
+
 assert_config_not_plan <- function(config) {
   if (!inherits(config, "drake_plan")) {
     return()
@@ -321,7 +330,7 @@ weak_as_tibble <- function(..., .force_df = FALSE) {
 }
 
 drake_bind_rows <- function(...) {
-  args <- select_nonempty(list(...))
+  args <- rlang::dots_list(..., .ignore_empty = "all")
   df_env <- new.env(parent = emptyenv())
   df_env$dfs <- list()
   flatten_df_list(args, df_env = df_env)

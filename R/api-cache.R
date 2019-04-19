@@ -53,7 +53,7 @@ force_cache_path <- function(cache = NULL) {
 #'   but customized. This feature is experimental.
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' clean(destroy = TRUE)
 #' # No cache is available.
@@ -103,7 +103,7 @@ get_cache <- function(
 #' @param directory Deprecated. Use `dir`.
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' make(my_plan) # Run the project, build the target.
@@ -200,7 +200,7 @@ drake_fetch_rds <- function(path) {
 #' @param ... other arguments to the cache constructor.
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine new_cache() side effects.", {
+#' isolate_example("Quarantine new_cache() side effects.", {
 #' clean(destroy = TRUE) # Should not be necessary.
 #' unlink("not_hidden", recursive = TRUE) # Should not be necessary.
 #' cache1 <- new_cache() # Creates a new hidden '.drake' folder.
@@ -278,9 +278,9 @@ recover_cache_ <- function(
   cache
 }
 
-# Generate a flat text log file to represent the state of the cache.
+# Generate a flat csv log file to represent the state of the cache.
 drake_cache_log_file_ <- function(
-  file = "drake_cache.log",
+  file = "drake_cache.csv",
   path = getwd(),
   search = TRUE,
   cache = drake::get_cache(path = path, search = search, verbose = verbose),
@@ -307,7 +307,8 @@ drake_cache_log_file_ <- function(
       x = out,
       file = file,
       quote = FALSE,
-      row.names = FALSE
+      row.names = FALSE,
+      sep = ","
     )
   )
 }
@@ -355,7 +356,7 @@ drake_cache_log_file_ <- function(
 #'
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' # Load drake's canonical example.
 #' load_mtcars_example() # Get the code with drake_example()
@@ -564,7 +565,7 @@ deprecate_hash_algo_args <- function(
 #'
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' if (requireNamespace("lubridate")) {
 #' load_mtcars_example() # Load drake's canonical example.

@@ -190,8 +190,8 @@
 #'   speed up tests. Apparently, `sessionInfo()` is a bottleneck
 #'   for small [make()]s.
 #'
-#' @param cache_log_file Name of the cache log file to write.
-#'   If `TRUE`, the default file name is used (`drake_cache.log`).
+#' @param cache_log_file Name of the CSV cache log file to write.
+#'   If `TRUE`, the default file name is used (`drake_cache.CSV`).
 #'   If `NULL`, no file is written.
 #'   If activated, this option writes a flat text file
 #'   to represent the state of the cache
@@ -368,7 +368,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Construct the master internal configuration list.
 #' config <- drake_config(my_plan)
@@ -513,6 +513,7 @@ drake_config <- function(
     )
   }
   plan <- sanitize_plan(plan)
+  plan_checks(plan)
   targets <- sanitize_targets(targets, plan)
   force(envir)
   unlink(console_log_file)
@@ -533,7 +534,7 @@ drake_config <- function(
     plan = plan,
     envir = envir,
     verbose = verbose,
-    jobs = jobs,
+    jobs = jobs_preprocess,
     console_log_file = console_log_file,
     trigger = trigger,
     cache = cache
@@ -547,9 +548,6 @@ drake_config <- function(
     console_log_file = console_log_file,
     verbose = verbose
   )
-  import_names <- igraph::V(graph)$name[igraph::V(graph)$imported]
-  imports <- subset_graph(graph, import_names)
-  schedule <- subset_graph(graph, plan$target)
   cache_path <- force_cache_path(cache)
   lazy_load <- parse_lazy_arg(lazy_load)
   memory_strategy <- match.arg(memory_strategy)
@@ -559,8 +557,6 @@ drake_config <- function(
   ht_encode_namespaced <- ht_new()
   ht_decode_namespaced <- ht_new()
   out <- list(
-    plan = plan,
-    targets = targets,
     envir = envir,
     eval = new.env(parent = envir),
     cache = cache,
@@ -578,8 +574,6 @@ drake_config <- function(
     ht_encode_namespaced = ht_encode_namespaced,
     ht_decode_namespaced = ht_decode_namespaced,
     graph = graph,
-    imports = imports,
-    schedule = schedule,
     seed = seed,
     trigger = trigger,
     timeout = timeout,
@@ -625,7 +619,7 @@ drake_config <- function(
 #'   package startup messages
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' # Create a master internal configuration list with prework.

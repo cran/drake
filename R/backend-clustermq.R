@@ -100,7 +100,6 @@ cmq_config <- function(config) {
     "imports",
     "layout",
     "plan",
-    "schedule",
     "targets",
     "trigger"
   )
@@ -138,6 +137,7 @@ cmq_local_build <- function(target, config) {
 #' @param target Target name.
 #' @param meta List of metadata.
 #' @param deps Named list of target dependencies.
+#' @param layout Internal, part of the full `config$layout`.
 #' @param config A [drake_config()] list.
 cmq_build <- function(target, meta, deps, layout, config) {
   config$layout <- list()

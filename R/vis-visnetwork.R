@@ -11,7 +11,7 @@
 #' @inheritParams render_drake_graph
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' config <- drake_config(my_plan)
@@ -26,13 +26,6 @@
 #'   from = c("small", "reg2"),
 #'   to = "summ_regression2_small"
 #' )
-#' # Optionally visualize clusters.
-#' config$plan$large_data <- grepl("large", config$plan$target)
-#' vis_drake_graph(
-#'   config, group = "large_data", clusters = c(TRUE, FALSE))
-#' # You can even use clusters given to you for free in the `graph$nodes`
-#' # data frame of `drake_graph_info()`.
-#' vis_drake_graph(config, group = "status", clusters = "imported")
 #' }
 #' }
 #' })
@@ -45,9 +38,9 @@ vis_drake_graph <- function(
   digits = 3,
   targets_only = FALSE,
   font_size = 20,
-  layout = "layout_with_sugiyama",
+  layout = NULL,
   main = NULL,
-  direction = "LR",
+  direction = NULL,
   hover = FALSE,
   navigationButtons = TRUE, # nolint
   from = NULL, mode = c("out", "in", "all"),
@@ -129,11 +122,7 @@ vis_drake_graph <- function(
 #'   extension, an HTML file will be saved, and you can open the
 #'   interactive graph using a web browser.
 #'
-#' @param layout Name of an igraph layout to use,
-#'   such as 'layout_with_sugiyama'
-#'   or 'layout_as_tree'.
-#'   Be careful with 'layout_as_tree': the graph is a directed
-#'   acyclic graph, but not necessarily a tree.
+#' @param layout Deprecated.
 #'
 #' @param selfcontained Logical, whether
 #'   to save the `file` as a self-contained
@@ -144,11 +133,7 @@ vis_drake_graph <- function(
 #'   PNG, PDF, or JPEG file, for instance,
 #'   the point is moot.
 #'
-#' @param direction An argument to `visNetwork::visHierarchicalLayout()`
-#'   indicating the direction of the graph.
-#'   Options include 'LR', 'RL', 'DU', and 'UD'.
-#'   At the time of writing this, the letters must be capitalized,
-#'   but this may not always be the case ;) in the future.
+#' @param direction Deprecated.
 #'
 #' @param navigationButtons Logical, whether to add navigation buttons with
 #'   `visNetwork::visInteraction(navigationButtons = TRUE)`
@@ -171,7 +156,7 @@ vis_drake_graph <- function(
 #'
 #' @examples
 #' \dontrun{
-#' test_with_dir("Quarantine side effects.", {
+#' isolate_example("Quarantine side effects.", {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
 #' if (requireNamespace("visNetwork", quietly = TRUE)) {
@@ -185,24 +170,17 @@ vis_drake_graph <- function(
 #' # (as in vis_drake_graph()) or you can create
 #' # your own custom visNewtork graph.
 #' render_drake_graph(graph, width = '100%') # Width is passed to visNetwork.
-#' # Optionally visualize clusters.
-#' config$plan$large_data <- grepl("large", config$plan$target)
-#' graph <- drake_graph_info(
-#'   config, group = "large_data", clusters = c(TRUE, FALSE))
-#' render_drake_graph(graph)
-#' # You can even use clusters given to you for free in the `graph$nodes`
-#' # data frame.
-#' graph <- drake_graph_info(
-#'   config, group = "status", clusters = "imported")
-#' render_drake_graph(graph)
 #' }
 #' }
 #' })
 #' }
 render_drake_graph <- function(
   graph_info, file = character(0),
-  layout = "layout_with_sugiyama", direction = "LR", hover = TRUE,
-  main = graph_info$default_title, selfcontained = FALSE,
+  layout = NULL,
+  direction = NULL,
+  hover = TRUE,
+  main = graph_info$default_title,
+  selfcontained = FALSE,
   navigationButtons = TRUE, # nolint
   ncol_legend = 1,
   collapse = TRUE,
@@ -212,13 +190,29 @@ render_drake_graph <- function(
   if (!hover) {
     graph_info$nodes$title <- NULL
   }
+  if (!is.null(direction)) {
+    # 2019-04-16 # nolint
+    warning(
+      "the `direction` argument of `vis_drake_graph()` ",
+      "and `render_drake_graph()` is deprecated.",
+      call. = FALSE
+    )
+  }
+  if (!is.null(layout)) {
+    # 2019-04-16 # nolint
+    warning(
+      "the `layout` argument of `vis_drake_graph()` ",
+      "and `render_drake_graph()` is deprecated.",
+      call. = FALSE
+    )
+  }
   out <- visNetwork::visNetwork(
     nodes = graph_info$nodes,
     edges = graph_info$edges,
     main = main,
     ...
   )
-  out <- visNetwork::visHierarchicalLayout(out, direction = direction)
+  out <- visNetwork::visNodes(out, physics = FALSE)
   if (collapse) {
     out <- visNetwork::visOptions(out, collapse = TRUE)
   }
@@ -230,14 +224,22 @@ render_drake_graph <- function(
       ncol = ncol_legend
     )
   }
-  if (nrow(graph_info$edges)) {
+  sugiyama <- nrow(graph_info$edges) &&
+    nrow(graph_info$nodes) > 10 &&
+    abs(diff(range(graph_info$nodes$x))) > 0.1 &&
+    abs(diff(range(graph_info$nodes$x))) > 0.1
+  if (sugiyama) {
     out <- visNetwork::visIgraphLayout(
       graph = out,
       physics = FALSE,
       randomSeed = 2017,
-      layout = layout
+      layout = "layout_with_sugiyama"
     )
+  } else {
+    out <- visNetwork::visHierarchicalLayout(out, direction = "LR")
   }
+  out$x$nodes$x <- graph_info$nodes$x
+  out$x$nodes$y <- graph_info$nodes$y
   if (navigationButtons) { # nolint
     out <- visNetwork::visInteraction(out, navigationButtons = TRUE) # nolint
   }

@@ -545,17 +545,32 @@ test_with_dir("make() writes a cache log file", {
   expect_true(file.exists("log.txt"))
 
   # Check structure of cache
-  log1 <- read.table("log.txt", header = TRUE, stringsAsFactors = FALSE)
+  log1 <- read.csv("log.txt", header = TRUE, stringsAsFactors = FALSE)
   expect_equal(log1$type, c("target", "target"))
   expect_equal(log1$name, c("a", "b"))
 
   # Change plan so cache has to change.
   plan <- drake_plan(a = TRUE, b = FALSE)
   make(plan, cache_log_file = "log.txt")
-  log2 <- read.table("log.txt", header = TRUE, stringsAsFactors = FALSE)
+  log2 <- read.csv("log.txt", header = TRUE, stringsAsFactors = FALSE)
 
   expect_equal(log1$hash[1], log2$hash[1])
 
   # Changed parts of cache are different.
   expect_false(log1$hash[2] == log2$hash[2])
+})
+
+test_with_dir("loadd(x, deps = TRUE) when x is not cached", {
+  plan <- drake_plan(x = "abc", y = x + 1)
+  expect_error(make(plan, session_info = FALSE))
+  config <- drake_config(plan, session_info = FALSE)
+  e <- new.env(parent = emptyenv())
+  expect_equal(ls(e), character(0))
+  loadd(y, envir = e, config = config, deps = TRUE)
+  expect_equal(ls(e), "x")
+  expect_equal(e$x, "abc")
+  expect_message(
+    loadd(y, envir = e, config = config, deps = TRUE, tidyselect = TRUE),
+    regexp = "Disabling"
+  )
 })
