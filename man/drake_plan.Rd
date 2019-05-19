@@ -7,7 +7,8 @@ for the \code{plan} argument of \code{\link[=make]{make()}}.}
 \usage{
 drake_plan(..., list = character(0), file_targets = NULL,
   strings_in_dots = NULL, tidy_evaluation = NULL, transform = TRUE,
-  trace = FALSE, envir = parent.frame(), tidy_eval = TRUE)
+  trace = FALSE, envir = parent.frame(), tidy_eval = TRUE,
+  max_expand = NULL)
 }
 \arguments{
 \item{...}{A collection of symbols/targets
@@ -23,11 +24,8 @@ with commands assigned to them. See the examples for details.}
 
 \item{transform}{Logical, whether to transform the plan
 into a larger plan with more targets.
-This is still an experimental feature,
-so please check your workflow with \code{vis_drake_graph()}
-before running it with \code{make()}.
-Requires the \code{transform} and \code{group} fields identified
-by \code{target()}. See the examples for details.}
+Requires the \code{transform} field in
+\code{target()}. See the examples for details.}
 
 \item{trace}{Logical, whether to add columns to show
 what happens during target transformations.}
@@ -38,6 +36,12 @@ what happens during target transformations.}
 (e.g. unquoting/\code{!!}) when resolving commands.
 Tidy evaluation in transformations is always turned on
 regardless of the value you supply to this argument.}
+
+\item{max_expand}{Positive integer, optional upper bound on the lengths
+of grouping variables for \code{map()} and \code{cross()}. Comes in handy
+when you have a massive number of targets and you want to test
+on a miniature version of your workflow before you scale up
+to production.}
 }
 \value{
 A data frame of targets, commands, and optional
@@ -92,9 +96,6 @@ head(my_plan)
 deps_code("report.Rmd")
 
 # Use transformations to generate large plans.
-# This feature is experimental, so please
-# check your workflow with `vis_drake_graph()`
-# before running `make()`.
 # Read more at
 # <https://ropenscilabs.github.io/drake-manual/plans.html#create-large-plans-the-easy-way>. # nolint
 drake_plan(

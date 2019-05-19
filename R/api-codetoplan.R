@@ -16,7 +16,7 @@
 #'   2. Once you assign an expression to a variable,
 #'     do not modify the variable any more.
 #'     The target/command binding should be permanent.
-#'   3. Keep it simple. Please use the assignment operators rather than 
+#'   3. Keep it simple. Please use the assignment operators rather than
 #'     `assign()` and similar functions.
 #' @param path A file path to an R script or `knitr` report.
 #' @examples
@@ -32,15 +32,17 @@
 #' # Here is what the script looks like.
 #' cat(readLines(file), sep = "\n")
 #' # Convert back to a drake plan.
-#' if (requireNamespace("CodeDepends")) {
-#'   code_to_plan(file)
-#' }
+#' code_to_plan(file)
 code_to_plan <- function(path) {
-  assert_pkg("CodeDepends", install = "BiocManager::install")
-  # Suppress harmless partial argument match warnings.
-  suppressWarnings(
-    nodes <- CodeDepends::getInputs(CodeDepends::readScript(path))
-  )
+  stopifnot(file.exists(path))
+  txt <- readLines(path)
+  # From CodeDepends: https://github.com/duncantl/CodeDepends/blob/7c9cf7eceffaea1d26fe25836c7a455f059e13c1/R/frags.R#L74 # nolint
+  # Checks if the file is a knitr report.
+  if (any(grepl("^(### chunk number|<<[^>]*>>=|```\\{r.*\\})", txt))) { # nolint
+    nodes <- get_tangled_frags(path)
+  } else {
+    nodes <- parse(text = txt)
+  }
   out <- lapply(nodes, node_plan)
   out <- do.call(rbind, out)
   out <- parse_custom_plan_columns(out)
@@ -49,8 +51,8 @@ code_to_plan <- function(path) {
 
 node_plan <- function(node) {
   weak_tibble(
-    target = safe_deparse(node@code[[2]]),
-    command = safe_deparse(node@code[[3]])
+    target = safe_deparse(node[[2]]),
+    command = safe_deparse(node[[3]])
   )
 }
 
@@ -86,9 +88,7 @@ node_plan <- function(node) {
 #' # Here is what the script looks like.
 #' cat(readLines(file), sep = "\n")
 #' # Convert back to a drake plan.
-#' if (requireNamespace("CodeDepends")) {
-#'   code_to_plan(file)
-#' }
+#' code_to_plan(file)
 plan_to_code <- function(plan, con = stdout()) {
   writeLines(text = plan_to_text(plan), con = con)
 }
@@ -111,7 +111,6 @@ plan_to_code <- function(plan, con = stdout()) {
 #'   2. Triggers disappear.
 #' @inheritParams plan_to_code
 #' @examples
-#' if (requireNamespace("CodeDepends")) {
 #' if (suppressWarnings(require("knitr"))) {
 #' plan <- drake_plan(
 #'   raw_data = read_excel(file_in("raw_data.xlsx")),
@@ -126,7 +125,6 @@ plan_to_code <- function(plan, con = stdout()) {
 #' cat(readLines(file), sep = "\n")
 #' # Convert back to a drake plan.
 #' code_to_plan(file)
-#' }
 #' }
 plan_to_notebook <- function(plan, con) {
   out <- c(

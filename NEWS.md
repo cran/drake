@@ -1,3 +1,31 @@
+# Version 7.3.0
+
+## Bug fixes
+
+- Accommodate `rlang`'s new interpolation operator `{{`, which was causing `make()` to fail when `drake_plan()` commands are enclosed in curly braces ([#864](https://github.com/ropensci/drake/issues/864)).
+- Move "`config$lock_envir <- FALSE`" from `loop_build()` to  `backend_loop()`. This makes sure `config$envir` is correctly locked in `make(parallelism = "clustermq")`.
+- Convert factors to characters in the optional `.data` argument of `map()` and `cross()` in the DSL.
+- In the DSL of `drake_plan()`, repair `cross(.data = !!args)`, where `args` is an optional data frame of grouping variables.
+- Handle trailing slashes in `file_in()`/`file_out()` directories for Windows ([#855](https://github.com/ropensci/drake/issues/855)).
+- Make `.id_chr` work with `combine()` in the DSL ([#867](https://github.com/ropensci/drake/issues/867)).
+- Do not try `make_spinner()` unless the version of `cli` is at least 1.1.0.
+
+## New features
+
+- Add functions `text_drake_graph()` (and `r_text_drake_graph()` and `render_text_drake_graph()`). Uses text art to print a dependency graph to the terminal window. Handy for when users SSH into remote machines without X Window support.
+- Add a new `max_expand` argument to `drake_plan()`, an optional upper bound on the lengths of grouping variables for `map()` and `cross()` in the DSL. Comes in handy when you have a massive number of targets and you want to test on a miniature version of your workflow before you scale up to production.
+
+## Enhancements
+
+- Delay the initialization of `clustermq` workers for as long as possible. Before launching them, build/check targets locally until we reach an outdated target with `hpc` equal to `FALSE`. In other words, if no targets actually require `clustermq` workers, no workers get created.
+- In `make(parallelism = "future")`, reset the `config$sleep()` backoff interval whenever a new target gets checked.
+- Add a "done" message to the console log file when the workflow has completed.
+- Replace `CodeDepends` with a base R solution in `code_to_plan()`. Fixes a CRAN note.
+- The DSL (transformations in `drake_plan()`) is no longer experimental.
+- The `callr` API (`r_make()` and friends) is no longer experimental.
+- Deprecate the wildcard/text-based functions for creating plans: `evaluate_plan()`, `expand_plan()`, `map_plan()`, `gather_plan()`, `gather_by()`, `reduce_plan()`, `reduce_by()`. 
+- Change some deprecated functions to defunct: `deps()`, `max_useful_jobs()`, and `migrate_drake_project()`.
+
 # Version 7.2.0
 
 ## Mildly breaking changes

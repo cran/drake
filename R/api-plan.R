@@ -38,11 +38,8 @@
 #' @param tidy_evaluation Deprecated. Use `tidy_eval` instead.
 #' @param transform Logical, whether to transform the plan
 #'   into a larger plan with more targets.
-#'   This is still an experimental feature,
-#'   so please check your workflow with `vis_drake_graph()`
-#'   before running it with `make()`.
-#'   Requires the `transform` and `group` fields identified
-#'   by `target()`. See the examples for details.
+#'   Requires the `transform` field in
+#'   `target()`. See the examples for details.
 #' @param trace Logical, whether to add columns to show
 #'   what happens during target transformations.
 #' @param envir Environment for tidy evaluation.
@@ -50,6 +47,11 @@
 #'   (e.g. unquoting/`!!`) when resolving commands.
 #'   Tidy evaluation in transformations is always turned on
 #'   regardless of the value you supply to this argument.
+#' @param max_expand Positive integer, optional upper bound on the lengths
+#'   of grouping variables for `map()` and `cross()`. Comes in handy
+#'   when you have a massive number of targets and you want to test
+#'   on a miniature version of your workflow before you scale up
+#'   to production.
 #' @examples
 #' isolate_example("Contain side effects", {
 #' # Create workflow plan data frames.
@@ -70,9 +72,6 @@
 #' deps_code("report.Rmd")
 #'
 #' # Use transformations to generate large plans.
-#' # This feature is experimental, so please
-#' # check your workflow with `vis_drake_graph()`
-#' # before running `make()`.
 #' # Read more at
 #' # <https://ropenscilabs.github.io/drake-manual/plans.html#create-large-plans-the-easy-way>. # nolint
 #' drake_plan(
@@ -141,7 +140,8 @@ drake_plan <- function(
   transform = TRUE,
   trace = FALSE,
   envir = parent.frame(),
-  tidy_eval = TRUE
+  tidy_eval = TRUE,
+  max_expand = NULL
 ) {
   if (length(file_targets) || length(strings_in_dots)) {
     # 2019-02-01 nolint
@@ -182,7 +182,12 @@ drake_plan <- function(
   plan$command <- commands
   plan <- parse_custom_plan_columns(plan)
   if (transform && ("transform" %in% colnames(plan))) {
-    plan <- transform_plan(plan, envir = envir, trace = trace)
+    plan <- transform_plan(
+      plan = plan,
+      envir = envir,
+      trace = trace,
+      max_expand = max_expand
+    )
   }
   if (tidy_eval) {
     for (col in setdiff(colnames(plan), c("target", "transform"))) {
@@ -575,18 +580,6 @@ drake_envir <- function() {
 
 drake_envir_marker <- "._drake_envir"
 drake_target_marker <- "._drake_target"
-
-advertise_dsl <- function() {
-  on.exit(Sys.setenv(drake_dsl_advertised = "true"))
-  if (nchar(Sys.getenv("drake_dsl_advertised"))) {
-    return(invisible())
-  }
-  message(
-    "The interface at ",
-    "https://ropenscilabs.github.io/drake-manual/plans.html#large-plans ",
-    "is better than evaluate_plan(), map_plan(), gather_by(), etc."
-  )
-}
 
 as_drake_plan <- function(plan, .force_df = FALSE) {
   no_tibble <- !suppressWarnings(requireNamespace("tibble", quietly = TRUE))

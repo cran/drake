@@ -34,11 +34,8 @@ r_assert_source <- function(source) {
   )
 }
 
-#' @title Experimental: reproducible R session management for drake functions
-#' @description A word of caution: [r_make()] and friends are still
-#'   new and experimental.
-#'
-#'   `drake` searches your environment
+#' @title Reproducible R session management for drake functions
+#' @description `drake` searches your environment
 #'   to detect dependencies, so functions like [make()], [outdated()], etc.
 #'   are designed to run in fresh clean R sessions. Wrappers [r_make()],
 #'   [r_outdated()], etc. run reproducibly even if your current R session
@@ -146,7 +143,36 @@ r_sankey_drake_graph <- function(
 #' @export
 #' @inheritParams r_make
 r_drake_ggraph <- function(..., source = NULL, r_fn = NULL, r_args = list()) {
+  assert_pkg("ggraph")
+  requireNamespace("ggraph")
   r_drake(source, drake::drake_ggraph, list(...), r_fn, r_args)
+}
+
+#' @rdname r_make
+#' @export
+#' @inheritParams r_make
+r_text_drake_graph <- function(
+  ...,
+  source = NULL,
+  r_fn = NULL,
+  r_args = list()
+) {
+  assert_pkg("txtplot")
+  args <- list(...)
+  args$crayon <- getOption("crayon.enabled") %||% TRUE
+  out <- r_drake(
+    source,
+    function(..., crayon) {
+      with_options(
+        list(crayon.enabled = crayon),
+        drake::text_drake_graph(...)
+      )
+    },
+    args,
+    r_fn,
+    r_args
+  )
+  invisible(out)
 }
 
 #' @rdname r_make
