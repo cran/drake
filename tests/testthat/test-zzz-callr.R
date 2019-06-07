@@ -23,11 +23,15 @@ test_with_dir("basic functions with default _drake.R file", {
   )
   expect_true(length(r_outdated(r_args = list(show = FALSE))) > 1)
   expect_equal(r_missed(r_args = list(show = FALSE)), character(0))
+  deps <- r_deps_target(regression1_small, r_args = list(show = FALSE))
+  expect_equal(sort(deps$name), sort(c("reg1", "small")))
+  expect_equal(unique(deps$type), "globals")
   r_make(r_args = list(show = FALSE))
+  expect_true(nrow(progress()) > 0L)
   expect_true(is.data.frame(readd(small)))
   expect_equal(r_outdated(r_args = list(show = FALSE)), character(0))
   expect_true(
-    is.data.frame(r_drake_build("small", r_args = list(show = FALSE)))
+    is.data.frame(r_drake_build(small, r_args = list(show = FALSE)))
   )
   skip_if_not_installed("visNetwork")
   info <- r_drake_graph_info(r_args = list(show = FALSE))
@@ -47,7 +51,7 @@ test_with_dir("basic functions with default _drake.R file", {
   skip_if_not_installed("networkD3")
   skip_if_not_installed("txtplot")
   expect_silent({
-    r_vis_drake_graph(r_args = list(show = FALSE))
+    graph <- r_vis_drake_graph(r_args = list(show = FALSE))
     r_vis_drake_graph(
       targets_only = TRUE,
       main = "new title",
@@ -58,6 +62,7 @@ test_with_dir("basic functions with default _drake.R file", {
     r_text_drake_graph(r_args = list(show = FALSE))
     invisible()
   })
+  expect_true(inherits(graph, "visNetwork"))
 })
 
 test_with_dir("supply the source with a global option", {
@@ -163,4 +168,28 @@ test_with_dir("configuring a background callr process", {
   expect_true(file.exists("stdout.log"))
   expect_true(is.data.frame(readd(small)))
   expect_equal(r_outdated(r_args = list(show = FALSE)), character(0))
+})
+
+test_with_dir("callr RStudio addins", {
+  skip_on_cran()
+  skip_if_not_installed("callr")
+  skip_if_not_installed("knitr")
+  if (identical(Sys.getenv("drake_skip_callr"), "true")) {
+    skip("Skipping callr tests.")
+  }
+  writeLines(
+    c(
+      "library(drake)",
+      "load_mtcars_example()",
+      "drake_config(my_plan, verbose = FALSE)"
+    ),
+    default_drake_source
+  )
+  r_args <- list(show = FALSE)
+  expect_true(length(rs_addin_r_outdated(r_args, .print = FALSE)) > 1)
+  rs_addin_r_make(r_args)
+  expect_equal(rs_addin_r_outdated(r_args, .print = FALSE), character(0))
+  skip_if_not_installed("visNetwork")
+  graph <- rs_addin_r_vis_drake_graph(r_args, .print = FALSE)
+  expect_true(inherits(graph, "visNetwork"))
 })

@@ -5,16 +5,16 @@
 \alias{loadd}
 \title{Read and return a drake target/import from the cache.}
 \usage{
-readd(target, character_only = FALSE, path = getwd(), search = TRUE,
-  cache = drake::get_cache(path = path, search = search, verbose =
-  verbose), namespace = NULL, verbose = 1L, show_source = FALSE)
+readd(target, character_only = FALSE, path = NULL, search = NULL,
+  cache = drake::drake_cache(path = path, verbose = verbose),
+  namespace = NULL, verbose = 1L, show_source = FALSE)
 
-loadd(..., list = character(0), imported_only = NULL, path = getwd(),
-  search = TRUE, cache = drake::get_cache(path = path, search = search,
-  verbose = verbose), namespace = NULL, envir = parent.frame(),
-  jobs = 1, verbose = 1L, deps = FALSE, lazy = "eager",
-  graph = NULL, replace = TRUE, show_source = FALSE,
-  tidyselect = !deps, config = NULL)
+loadd(..., list = character(0), imported_only = NULL, path = NULL,
+  search = NULL, cache = drake::drake_cache(path = path, verbose =
+  verbose), namespace = NULL, envir = parent.frame(), jobs = 1,
+  verbose = 1L, deps = FALSE, lazy = "eager", graph = NULL,
+  replace = TRUE, show_source = FALSE, tidyselect = !deps,
+  config = NULL)
 }
 \arguments{
 \item{target}{If \code{character_only} is \code{TRUE}, then
@@ -26,18 +26,13 @@ object.}
 as a character or a symbol
 (just like \code{character.only} in \code{\link[=library]{library()}}).}
 
-\item{path}{Root directory of the drake project,
-or if \code{search} is \code{TRUE}, either the
-project root or a subdirectory of the project.
-Ignored if a \code{cache} is supplied.}
+\item{path}{Path to a \code{drake} cache
+(usually a hidden \code{.drake/} folder) or \code{NULL}.}
 
-\item{search}{Logical. If \code{TRUE}, search parent directories
-to find the nearest drake cache. Otherwise, look in the
-current working directory only.
-Ignored if a \code{cache} is supplied.}
+\item{search}{Deprecated.}
 
 \item{cache}{drake cache. See \code{\link[=new_cache]{new_cache()}}.
-If supplied, \code{path} and \code{search} are ignored.}
+If supplied, \code{path} is ignored.}
 
 \item{namespace}{Optional character string,
 name of the \code{storr} namespace to read from.}
@@ -144,13 +139,21 @@ calls to \code{loadd()} and \code{readd()} in active code chunks,
 and then treat those loaded targets as dependencies.
 That way, \code{\link[=make]{make()}} will automatically (re)run the report if those
 dependencies change.
+\item If you are using \code{make(memory_strategy = "none")}
+or \code{make(memory_strategy = "unload")},
+\code{\link[=loadd]{loadd()}} and \code{\link[=readd]{readd()}} can manually load dependencies
+into memory for the target that is being built.
+If you do this, you must carefully inspect \code{\link[=deps_target]{deps_target()}}
+and \code{\link[=vis_drake_graph]{vis_drake_graph()}} before running \code{\link[=make]{make()}}
+to be sure the dependency relationships among targets
+are correct. If you do not wish to incur extra dependencies
+with \code{\link[=loadd]{loadd()}} or \code{\link[=readd]{readd()}}, you will need to use \code{\link[=ignore]{ignore()}},
+e.g. \code{drake_plan(x = 1, y = ignore(readd(x)))} or
+\code{drake_plan(x = 1, y = readd(ignore("x"), character_only = TRUE))}.
+Compare those plans to \code{drake_plan(x = 1, y = readd(x))}
+and \code{drake_plan(x = 1, y = readd("x", character_only = TRUE))}
+using \code{\link[=vis_drake_graph]{vis_drake_graph()}} and \code{\link[=deps_target]{deps_target()}}.
 }
-}
-\note{
-Please do not put calls to \code{\link[=loadd]{loadd()}} or \code{\link[=readd]{readd()}} inside
-your custom (imported) functions or the commands in your \code{\link[=drake_plan]{drake_plan()}}.
-This creates confusion inside \code{\link[=make]{make()}}, which has its own ways of
-interacting with the cache.
 }
 \examples{
 \dontrun{

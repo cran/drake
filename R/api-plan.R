@@ -11,9 +11,10 @@
 #' @details `drake` has special syntax for generating large plans.
 #'  Your code will look something like
 #'  `drake_plan(x = target(cmd, transform = f(y, z), group = g)`
-#'  where `f()` is either `map()`, `cross()`, or `combine()`
-#'  (similar to `purrr::pmap()`, `tidy::crossing()`, and `dplyr::summarize()`,
-#'  respectively). These verbs mimic Tidyverse behavior to scale up
+#'  where `f()` is either `map()`, `cross()`, `split()`, or `combine()`
+#'  (similar to `purrr::pmap()`, `tidy::crossing()`, `base::split()`,
+#'  and  `dplyr::summarize()`, respectively).
+#'  These verbs mimic Tidyverse behavior to scale up
 #'  existing plans to large numbers of targets.
 #'  You can read about this interface at
 #'  <https://ropenscilabs.github.io/drake-manual/plans.html#create-large-plans-the-easy-way>. # nolint
@@ -91,6 +92,20 @@
 #'   winners = target(
 #'     min(summ),
 #'     transform = combine(summ, .by = c(data, sum_fun))
+#'   )
+#' )
+#'
+#' # Split data among multiple targets.
+#' drake_plan(
+#'   large_data = get_data(),
+#'   slice_analysis = target(
+#'     large_data %>%
+#'       analyze(),
+#'     transform = split(large_data, slices = 4)
+#'   ),
+#'   results = target(
+#'     rbind(slice_analysis),
+#'     transform = combine(slice_analysis)
 #'   )
 #' )
 #'
@@ -257,6 +272,16 @@ complete_target_names <- function(commands_list) {
 #' @title Declare input files and directories.
 #' @description `file_in()` marks individual files
 #'   (and whole directories) that your targets depend on.
+#' @details As of `drake` 7.4.0, `file_in()` and `file_out()` have
+#'   experimental support for URLs. If the file name begins with
+#'   "http://", "https://", or "ftp://", [make()] attempts
+#'   to check the ETag to see if the data changed from last time.
+#'   If no ETag can be found, `drake` simply uses the ETag
+#'   from last [make()] and registers the file as unchanged
+#'   (which prevents your workflow from breaking if you lose
+#'   internet access). If this approach to tracking remote data
+#'   does not work for you, consider a custom trigger:
+#'   <https://ropenscilabs.github.io/drake-manual/triggers.html>.
 #' @export
 #' @seealso [file_out()], [knitr_in()], [ignore()]
 #' @return A character vector of declared input file or directory paths.
@@ -580,6 +605,10 @@ drake_envir <- function() {
 
 drake_envir_marker <- "._drake_envir"
 drake_target_marker <- "._drake_target"
+drake_markers <- c(
+  drake_envir_marker,
+  drake_target_marker
+)
 
 as_drake_plan <- function(plan, .force_df = FALSE) {
   no_tibble <- !suppressWarnings(requireNamespace("tibble", quietly = TRUE))

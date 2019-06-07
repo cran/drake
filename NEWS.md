@@ -1,3 +1,46 @@
+# Version 7.4.0
+
+## Mildly breaking changes
+
+These changes are technically breaking changes, but they should only affect advanced users.
+
+- `rescue_cache()` no longer returns a value.
+
+## Bug fixes
+
+- Restore compatibility with `clustermq` ([#898](https://github.com/ropensci/drake/issues/898)). Suggest version >= 0.8.8 but allow 0.8.7 as well.
+- Ensure `drake` recomputes `config$layout` when `knitr` reports change ([#887](https://github.com/ropensci/drake/issues/887)).
+- Do not rehash large imported files every `make()` ([#878](https://github.com/ropensci/drake/issues/878)).
+- Repair parsing of long tidy eval inputs in the DSL ([#878](https://github.com/ropensci/drake/issues/881)).
+- Clear up cache confusion when a custom cache exists adjacent to the default cache ([#883](https://github.com/ropensci/drake/issues/883)).
+- Accept targets as symbols in `r_drake_build()`.
+- Log progress during `r_make()` ([#889](https://github.com/ropensci/drake/issues/889)).
+- Repair `expose_imports()`: do not do the `environment<-` trick unless the object is a non-primitive function.
+- Use different static analyses of `assign()` vs `delayedAssign()`.
+- Fix a superfluous code analysis warning incurred by multiple `file_in()` files and other strings ([#896](https://github.com/ropensci/drake/issues/896)).
+- Make `ignore()` work inside `loadd()`, `readd()`, `file_in()`, `file_out()`, and `knitr_in()`.
+
+## New features
+
+- Add experimental support for URLs in `file_in()` and `file_out()`. `drake` now treats `file_in()`/`file_out()` files as URLS if they begin with "http://", "https://", or "ftp://". The fingerprint is a concatenation of the ETag and last-modified timestamp. If neither can be found or if there is no internet connection, `drake` throws an error.
+- Implement new memory management strategies `"unload"` and `"none"`, which do not attempt to load a target's dependencies from memory ([#897](https://github.com/ropensci/drake/issues/897)).
+- Allow users to give each target its own memory strategy ([#897](https://github.com/ropensci/drake/issues/897)).
+- Add `drake_slice()` to help split data across multiple targets. Related: [#77](https://github.com/ropensci/drake/issues/77), [#685](https://github.com/ropensci/drake/issues/685), [#833](https://github.com/ropensci/drake/issues/833).
+- Introduce a new `drake_cache()` function, which is now recommended instead of `get_cache()` ([#883](https://github.com/ropensci/drake/issues/883)).
+- Introduce a new `r_deps_target()` function.
+- Add RStudio addins for `r_make()`, `r_vis_drake_graph()`, and `r_outdated()` ([#892](https://github.com/ropensci/drake/issues/892)).
+
+## Enhancements
+
+- Deprecate `get_cache()` in favor of `drake_cache()`.
+- Show the path to the cache in the `clean()` menu prompt.
+- Stop removing the console log file on each call to `drake_config()`.
+- Log the node name (short host name) and process ID in the console log file.
+- Log the name of the calling function in the console log file, e.g. "begin make()" and "end make()". Applies to all functions that accept a `config` argument.
+- Memory management: set `use_cache` to `FALSE` in `storr` function calls for saving and loading targets. Also, at the end of `make()`, call `flush_cache()` (and then `gc()` if garbage collection is enabled).
+- Mention `callr::r()` within commands as [a safe alternative to `lock_envir = FALSE`](https://github.com/rstudio/gt/issues/297#issuecomment-497778735) in the self-invalidation section of the `make()` help file.
+- Use file size to help decide when to rehash `file_in()`/`file_out()`/`knitr_in()` files. We now rehash files if the file is less than 100 KB or the time stamp changed or the **file size** changed.
+
 # Version 7.3.0
 
 ## Bug fixes

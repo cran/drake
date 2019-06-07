@@ -50,11 +50,18 @@
 #' prior to `make()`, not in any functions or commands that get called
 #' during `make()` itself.
 #'
-#' To avoid environment-locking errors,
-#' you can run `make(plan, lock_envir = FALSE)`.
+#' For each target that is still problematic  (e.g.
+#' <https://github.com/rstudio/gt/issues/297>)
+#' you can safely run the command in its own special `callr::r()` process.
+#' Example: <https://github.com/rstudio/gt/issues/297#issuecomment-497778735>. # nolint
+#'
+#' If that fails, you can run `make(plan, lock_envir = FALSE)`
+#' to suppress environment-locking for all targets.
+#' However, this is not usually recommended.
 #' There are legitimate use cases for `lock_envir = FALSE`
 #' (example: <https://ropenscilabs.github.io/drake-manual/hpc.html#parallel-computing-within-targets>) # nolint
 #' but most workflows should stick with the default `lock_envir = TRUE`.
+#'
 #' @seealso
 #'   [drake_plan()],
 #'   [drake_config()],
@@ -107,7 +114,7 @@ make <- function(
   envir = parent.frame(),
   verbose = 1L,
   hook = NULL,
-  cache = drake::get_cache(
+  cache = drake::drake_cache(
     verbose = verbose,
     console_log_file = console_log_file
   ),
@@ -149,10 +156,14 @@ make <- function(
   template = list(),
   sleep = function(i) 0.01,
   hasty_build = NULL,
-  memory_strategy = c("speed", "memory", "lookahead"),
+  memory_strategy = c("speed", "memory", "lookahead", "unload", "none"),
   layout = NULL,
   lock_envir = TRUE
 ) {
+  log_msg(
+    "begin make()",
+    config = config %||% list(console_log_file = console_log_file)
+  )
   force(envir)
   if (is.null(config)) {
     config <- drake_config(
@@ -205,6 +216,7 @@ make <- function(
     )
   }
   assert_config_not_plan(config)
+  config$running_make <- TRUE
   initialize_session(config = config)
   config$ht_get_hash <- ht_new() # Memoize getting hashes from the cache.
   on.exit(ht_clear(config$ht_get_hash)) # Needs to be empty afterwards.
@@ -225,5 +237,6 @@ make <- function(
     process_targets(config)
   }
   conclude_session(config)
+  log_msg("end make()", config = config)
   invisible()
 }

@@ -4,6 +4,7 @@ transform_plan <- function(plan, envir, trace, max_expand) {
   }
   old_cols(plan) <- old_cols <- colnames(plan)
   plan$transform <- tidyeval_exprs(plan$transform, envir = envir)
+  plan <- convert_splits_to_maps(plan)
   plan$transform <- lapply(plan$transform, parse_transform)
   graph <- dsl_graph(plan)
   order <- igraph::topo_sort(graph)$name
@@ -437,7 +438,7 @@ explicit_new_groupings <- function(code, exclude = character(0)) {
     if (is.call(x)) {
       x <- x[-1]
     }
-    as.character(lapply(as.list(x), deparse))
+    as.character(lapply(as.list(x), long_deparse))
   })
 }
 
@@ -594,3 +595,60 @@ warn_empty_transform <- function(target) {
 }
 
 dsl_all_special <- c(".id", ".tag_in", ".tag_out")
+
+map_by <- function(.x, .by, .f, ...) {
+  splits <- split_by(.x, .by = .by)
+  out <- lapply(
+    X = splits,
+    FUN = function(split){
+      out <- .f(split, ...)
+      if (nrow(out)) {
+        out[, .by] <- split[replicate(nrow(out), 1), .by]
+      }
+      out
+    }
+  )
+  do.call(what = rbind, args = out)
+}
+
+split_by <- function(.x, .by = character(0)) {
+  if (!length(.by)) {
+    return(list(.x))
+  }
+  fact <- lapply(.x[, .by, drop = FALSE], factor, exclude = c())
+  splits <- split(x = .x, f = fact)
+  Filter(x = splits, f = nrow)
+}
+
+convert_splits_to_maps <- function(plan) {
+  fields <- c("target", "command", "transform")
+  for (i in seq_len(nrow(plan))) {
+    skip <- safe_is_na(plan$transform[[i]]) ||
+      plan$transform[[i]][[1]] != quote(split)
+    if (skip) {
+      next
+    }
+    out <- convert_split_to_map(
+      target = plan$target[[i]],
+      command = plan$command[[i]],
+      transform = plan$transform[[i]]
+    )
+    plan$command[[i]] <- out$command
+    plan$transform[[i]] <- out$transform
+  }
+  plan
+}
+
+convert_split_to_map <- function(target, command, transform) {
+  slice <- transform
+  slice[[1]] <- quote(drake_slice)
+  index <- paste0(target, "_index")
+  slice$index <- as.symbol(index)
+  slice <- match.call(drake_slice, slice)
+  sub <- list(slice = slice)
+  names(sub) <- safe_deparse(slice$data)
+  command <- eval(call("substitute", command, sub), envir = baseenv())
+  transform <- as.call(c(quote(map), slice$data))
+  transform[[index]] <- as.numeric(seq_len(slice$slices))
+  list(command = command, transform = transform)
+}

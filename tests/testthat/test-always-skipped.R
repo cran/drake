@@ -2,6 +2,68 @@ if (FALSE) {
 
 drake_context("always skipped")
 
+test_with_dir("imported online file with no internet", {
+  # Disconnect from the internet.
+  plan <- drake_plan(
+    x = file_in("https://github.com/ropensci/drake/archive/v7.3.0.tar.gz")
+  )
+  expect_error(make(plan), regexp = "no internet. Cannot check url")
+})
+
+test_with_dir("time stamps and large files", {
+  # Reconnect to the internet.
+  skip_if_not_installed("downloader")
+  dir_csv <- tempfile()
+  file_zip <- tempfile()
+  file_csv <- tempfile()
+  file_large <- tempfile()
+  log1 <- tempfile()
+  log2 <- tempfile()
+  log3 <- tempfile()
+  log4 <- tempfile()
+  downloader::download(
+    "http://eforexcel.com/wp/wp-content/uploads/2017/07/1500000%20Sales%20Records.zip", # nolint
+    file_zip,
+    quiet = TRUE
+  )
+  dir.create(dir_csv)
+  utils::unzip(file_zip, exdir = dir_csv)
+  tmp <- file.rename(
+    file.path(dir_csv, list.files(dir_csv, pattern = "csv$")[1]),
+    file_csv
+  )
+  for (i in 1:58) {
+    message(i)
+    file.append(file_large, file_csv)
+  }
+  plan <- drake_plan(x = file_in(!!file_large))
+  cache <- storr::storr_rds(tempfile())
+  config <- drake_config(plan, cache = cache)
+  make(plan, cache = cache, console_log_file = log1)
+  expect_equal(justbuilt(config), "x")
+  make(plan, cache = cache, console_log_file = log2)
+  expect_equal(justbuilt(config), character(0))
+  tmp <- file.append(file_large, file_csv)
+  make(plan, cache = cache, console_log_file = log3)
+  expect_equal(justbuilt(config), "x")
+  system2("touch", file_large)
+  make(plan, cache = cache, console_log_file = log4)
+  expect_equal(justbuilt(config), character(0))
+  # Now, compare the times stamps on the logs.
+  # Make sure the imported file takes a long time to process the first time
+  # but is instantaneous the second time.
+  # The third time, the file changed, so the processing time
+  # should be longer. Likewise for the fourth time because
+  # the file was touched.
+  message(paste(readLines(log1), collapse = "\n"))
+  message(paste(readLines(log2), collapse = "\n"))
+  message(paste(readLines(log3), collapse = "\n"))
+  message(paste(readLines(log4), collapse = "\n"))
+  # Now remove those huge files!
+  files <- c(dir_csv, file_zip, file_csv, file_large)
+  unlink(files, recursive = TRUE, force = TRUE)
+})
+
 test_with_dir("use_drake()", {
   # Load drake with library(drake)
   # and not with devtools::load_all().
@@ -27,7 +89,12 @@ test_with_dir("can keep going in parallel", {
     b = a + 1
   )
   make(
-    plan, jobs = 2, session_info = FALSE, keep_going = TRUE, verbose = 0L)
+    plan,
+    jobs = 2,
+    session_info = FALSE,
+    keep_going = TRUE,
+    verbose = 0L
+  )
   expect_error(readd(a))
   expect_equal(readd(b), numeric(0))
 })
@@ -92,7 +159,7 @@ test_with_dir("forks + lock_envir = informative error msg", {
   plan <- drake_plan(
     # install.packages("furrr") # nolint
     # Not in "Suggests"
-    x = eval(parse(text = "furrr::future_map(1:2, identity)"))
+    x = eval(parse(text = "furrr::future_map(1:2, function(x) Sys.getpid())"))
   )
   expect_error(
     make(plan, envir = globalenv(), lock_envir = TRUE),
@@ -103,7 +170,7 @@ test_with_dir("forks + lock_envir = informative error msg", {
 test_with_dir("make() in interactive mode", {
   # Must run this test in a fresh new interactive session.
   # Cannot be fully automated like the other tests.
-  options(drake_make_menu = TRUE)
+  options(drake_make_menu = TRUE, drake_clean_menu = TRUE)
   load_mtcars_example()
   config <- drake_config(my_plan)
   make(my_plan) # Select 2.
@@ -137,6 +204,7 @@ test_with_dir("make() in interactive mode", {
 test_with_dir("clean() in interactive mode", {
   # Must run this test in a fresh new interactive session.
   # Cannot be fully automated like the other tests.
+  options(drake_make_menu = TRUE, drake_clean_menu = TRUE)
   load_mtcars_example()
   config <- drake_config(my_plan)
   make(my_plan) # Select 1.
@@ -202,6 +270,30 @@ test_with_dir("r_make() + multicore future", {
   r_make()
   expect_true(is.data.frame(readd(small)))
   expect_equal(r_outdated(), character(0))
+})
+
+test_with_dir("Output from the callr RStudio addins", {
+  skip_on_cran()
+  skip_if_not_installed("callr")
+  skip_if_not_installed("knitr")
+  if (identical(Sys.getenv("drake_skip_callr"), "true")) {
+    skip("Skipping callr tests.")
+  }
+  writeLines(
+    c(
+      "library(drake)",
+      "load_mtcars_example()",
+      "drake_config(my_plan, verbose = FALSE)"
+    ),
+    default_drake_source
+  )
+  r_args <- list(show = FALSE)
+  expect_true(length(rs_addin_r_outdated(r_args)) > 1) # Should print.
+  rs_addin_r_make(r_args)
+  expect_equal(rs_addin_r_outdated(r_args), character(0)) # Should print.
+  skip_if_not_installed("visNetwork")
+  graph <- rs_addin_r_vis_drake_graph(r_args) # Should show a graph.
+  expect_true(inherits(graph, "visNetwork"))
 })
 
 }

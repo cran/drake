@@ -50,6 +50,7 @@ deps
 dereferenced
 deterministically
 devtools
+discoverability
 Dobbyn
 dplyr
 DSL
@@ -62,11 +63,13 @@ else's
 eng
 envir
 ETag
+eval
 Factual's
 Falster
 faq
 FitzJohn
 flowlines
+ftp
 Genotype
 ggplot
 github
@@ -77,6 +80,7 @@ Halotype
 hotfix
 HPC
 hpc
+http
 https
 igraph
 Igraph
@@ -154,6 +158,8 @@ Quickstart
 RDS
 README
 Recombinant
+reimagine
+reimagining
 reimplement
 replicability
 reproducibility
@@ -174,6 +180,7 @@ Sankey
 Saunak
 scalability
 scalable
+Schratz
 shinyapps
 Sina
 SLURM
@@ -217,6 +224,7 @@ whitelist
 widehat
 withTimeout
 wlandau
+workflowr
 YAML
 Yub
 zeromq

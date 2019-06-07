@@ -43,14 +43,33 @@ cmq_set_common_data <- function(config) {
     export <- as.list(config$envir, all.names = TRUE) # nocov
   }
   export$config <- cmq_config(config)
-  config$workers$set_common_data(
-    export = export,
-    fun = identity,
-    const = list(),
-    rettype = list(),
-    common_seed = config$seed,
-    token = "set_common_data_token"
-  )
+  use_pkgs <- utils::compareVersion(
+    paste0(utils::packageVersion("clustermq"), collapse = "."),
+    "0.8.8"
+  ) >= 0L
+  if (use_pkgs) {
+    config$workers$set_common_data(
+      export = export,
+      fun = identity,
+      const = list(),
+      rettype = list(),
+      pkgs = character(0),
+      common_seed = config$seed,
+      token = "set_common_data_token"
+    )
+  } else {
+    # Need to test manually with old clustermq.
+    # nocov start
+    config$workers$set_common_data(
+      export = export,
+      fun = identity,
+      const = list(),
+      rettype = list(),
+      common_seed = config$seed,
+      token = "set_common_data_token"
+    )
+    # nocov end
+  }
 }
 
 cmq_master <- function(config) {
@@ -98,7 +117,7 @@ cmq_send_target <- function(target, config) {
   }
   announce_build(target = target, meta = meta, config = config)
   if (identical(config$caching, "master")) {
-    manage_memory(targets = target, config = config, jobs = 1)
+    manage_memory(target = target, config = config, jobs = 1)
     deps <- cmq_deps_list(target = target, config = config)
   } else {
     deps <- NULL
@@ -169,7 +188,7 @@ cmq_build <- function(target, meta, deps, layout, config) {
       config$eval[[dep]] <- deps[[dep]]
     }
   } else {
-    manage_memory(targets = target, config = config, jobs = 1)
+    manage_memory(target = target, config = config, jobs = 1)
   }
   build <- build_target(target = target, meta = meta, config = config)
   if (identical(config$caching, "master")) {

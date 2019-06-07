@@ -114,7 +114,7 @@
 #'   `make(..., log_progress = FALSE)`.
 #'
 #' @param cache drake cache as created by [new_cache()].
-#'   See also [get_cache()].
+#'   See also [drake_cache()].
 #'
 #' @param fetch_cache Deprecated.
 #'
@@ -250,43 +250,65 @@
 #' @param pruning_strategy Deprecated. See `memory_strategy`.
 #'
 #' @param memory_strategy Character scalar, name of the
-#'   strategy `drake` uses to manage targets in memory. For more direct
-#'   control over which targets `drake` keeps in memory, see the
-#'   help file examples of [drake_envir()]. The `memory_strategy` argument
-#'   to `make()` and `drake_config()` is an attempt at an automatic
-#'   catch-all solution. These are the choices.
+#'   strategy `drake` uses to load/unload a target's dependencies in memory.
+#'   You can give each target its own memory strategy,
+#'   (e.g. `drake_plan(x = 1, y = target(f(x), memory_strategy = "lookahead"))`)
+#'   to override the global memory strategy. Choices:
 #'
-#' - `"speed"`: Once a target is loaded in memory, just keep it there.
+#' - `"speed"`: Once a target is newly built or loaded in memory,
+#'   just keep it there.
 #'   This choice maximizes speed and hogs memory.
 #' - `"memory"`: Just before building each new target,
 #'   unload everything from memory except the target's direct dependencies.
+#'   After a target is built, keep it in memory until `drake` determines
+#'   they can be unloaded.
 #'   This option conserves memory, but it sacrifices speed because
 #'   each new target needs to reload
 #'   any previously unloaded targets from storage.
 #' - `"lookahead"`: Just before building each new target,
 #'   search the dependency graph to find targets that will not be
 #'   needed for the rest of the current `make()` session.
+#'   After a target is built, keep it in memory until the next
+#'   memory management stage.
 #'   In this mode, targets are only in memory if they need to be loaded,
 #'   and we avoid superfluous reads from the cache.
 #'   However, searching the graph takes time,
 #'   and it could even double the computational overhead for large projects.
+#' - `"unload"`: Just before building each new target,
+#'   unload all targets from memory.
+#'   After a target is built, **do not** keep it in memory.
+#'   This mode aggressively optimizes for both memory and speed,
+#'   but in commands and triggers,
+#'   you have to manually load any dependencies you need using `readd()`.
+#' - `"none"`: Do not manage memory at all.
+#'   Do not load or unload anything before building targets.
+#'   After a target is built, **do not** keep it in memory.
+#'   This mode aggressively optimizes for both memory and speed,
+#'   but in commands and triggers,
+#'   you have to manually load any dependencies you need using `readd()`.
 #'
-#' Each strategy has a weakness.
-#' `"speed"` is memory-hungry, `"memory"` wastes time reloading
-#' targets from storage, and `"lookahead"` wastes time
-#' traversing the entire dependency graph on every [make()]. For a better
-#' compromise and more control, see the examples in the help file
-#' of [drake_envir()].
+#' For even more direct
+#' control over which targets `drake` keeps in memory, see the
+#' help file examples of [drake_envir()].
+#' Also see the `garbage_collection` argument of `make()` and
+#' `drake_config()`.
 #'
-#' @param makefile_path Path to the `Makefile` for
-#'   `make(parallelism = "Makefile")`. If you set this argument to a
-#'   non-default value, you are responsible for supplying this same
-#'   path to the `args` argument so `make` knows where to find it.
-#'   Example: `make(parallelism = "Makefile", makefile_path = ".drake/.makefile", command = "make", args = "--file=.drake/.makefile")`
+#' @param makefile_path Deprecated.
 #'
 #' @param console_log_file Optional character scalar of a file name or
 #'   connection object (such as `stdout()`) to dump maximally verbose
-#'   log information for [make()]. Independent of the `verbose` argument.
+#'   log information for [make()] and other functions (all functions that
+#'   accept a `config` argument, plus `drake_config()`).
+#'   If you choose to use a text file as the console log,
+#'   it will persist over multiple function calls
+#'   until you delete it manually.
+#'   Fields in each row the log file, from left to right:
+#'       - The node name (short host name) of the
+#'         computer (from `Sys.info()["nodename"]`).
+#'       - The process ID (from `Sys.getpid()`).
+#'       - A timestamp with the date and time (in microseconds).
+#'       - A brief description of what `drake` was doing.`
+#'   The fields are separated by pipe symbols (`"|"`).
 #'
 #' @param ensure_workers Logical, whether the master process
 #'   should wait for the workers to post before assigning them
@@ -390,7 +412,7 @@ drake_config <- function(
   envir = parent.frame(),
   verbose = 1L,
   hook = NULL,
-  cache = drake::get_cache(
+  cache = drake::drake_cache(
     verbose = verbose, console_log_file = console_log_file),
   fetch_cache = NULL,
   parallelism = "loop",
@@ -408,7 +430,7 @@ drake_config <- function(
   elapsed = Inf,
   retries = 0,
   force = FALSE,
-  log_progress = FALSE,
+  log_progress = TRUE,
   graph = NULL,
   trigger = drake::trigger(),
   skip_targets = FALSE,
@@ -429,10 +451,14 @@ drake_config <- function(
   template = list(),
   sleep = function(i) 0.01,
   hasty_build = NULL,
-  memory_strategy = c("speed", "memory", "lookahead"),
+  memory_strategy = c("speed", "memory", "lookahead", "unload", "none"),
   layout = NULL,
   lock_envir = TRUE
 ) {
+  log_msg(
+    "begin drake_config()",
+    config = list(console_log_file = console_log_file)
+  )
   deprecate_fetch_cache(fetch_cache)
   if (!is.null(hook)) {
     warning(
@@ -516,7 +542,6 @@ drake_config <- function(
   plan_checks(plan)
   targets <- sanitize_targets(targets, plan)
   force(envir)
-  unlink(console_log_file)
   trigger <- convert_old_trigger(trigger)
   sleep <- `environment<-`(sleep, new.env(parent = globalenv()))
   if (is.null(cache)) {
@@ -602,6 +627,7 @@ drake_config <- function(
   )
   out <- enforce_compatible_config(out)
   config_checks(out)
+  log_msg("end drake_config()", config = out)
   out
 }
 

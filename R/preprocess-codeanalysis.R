@@ -70,7 +70,24 @@ analyze_assign <- function(expr, results, locals, allowed_globals) {
   expr <- match.call(definition = assign, call = expr)
   if (is.character(expr$x)) {
     ht_set(results$strings, expr$x)
-    if (is.null(expr$pos) || identical(expr$pos, formals(assign)$pos)) {
+    is_local <- is.null(expr$pos) || identical(expr$pos, formals(assign)$pos)
+    if (is_local) {
+      ht_set(locals, expr$x)
+    }
+  } else {
+    analyze_global(expr$x, results, locals, allowed_globals)
+  }
+  expr$x <- NULL
+  walk_call(expr, results, locals, allowed_globals)
+}
+
+analyze_delayed_assign <- function(expr, results, locals, allowed_globals) {
+  expr <- match.call(definition = delayedAssign, call = expr)
+  if (is.character(expr$x)) {
+    ht_set(results$strings, expr$x)
+    is_local <- is.null(expr$assign.env) ||
+      identical(expr$assign.env, formals(delayedAssign)$assign.env)
+    if (is_local) {
       ht_set(locals, expr$x)
     }
   } else {
@@ -81,6 +98,7 @@ analyze_assign <- function(expr, results, locals, allowed_globals) {
 }
 
 analyze_loadd <- function(expr, results) {
+  expr <- ignore_ignore(expr)
   expr <- match.call(drake::loadd, as.call(expr))
   expr <- expr[-1]
   ht_set(results$loadd, analyze_strings(expr["list"]))
@@ -93,12 +111,14 @@ analyze_loadd <- function(expr, results) {
 }
 
 analyze_readd <- function(expr, results, allowed_globals) {
+  expr <- ignore_ignore(expr)
   expr <- match.call(drake::readd, as.call(expr))
   ht_set(results$readd, analyze_strings(expr["target"]))
   ht_set(results$readd, safe_all_vars(expr["target"]))
 }
 
 analyze_file_in <- function(expr, results) {
+  expr <- ignore_ignore(expr)
   x <- analyze_strings(expr[-1])
   x <- file.path(x)
   x <- encode_path(x)
@@ -106,6 +126,7 @@ analyze_file_in <- function(expr, results) {
 }
 
 analyze_file_out <- function(expr, results) {
+  expr <- ignore_ignore(expr)
   x <- analyze_strings(expr[-1])
   x <- file.path(x)
   x <- encode_path(x)
@@ -113,6 +134,7 @@ analyze_file_out <- function(expr, results) {
 }
 
 analyze_knitr_in <- function(expr, results) {
+  expr <- ignore_ignore(expr)
   files <- analyze_strings(expr[-1])
   lapply(files, analyze_knitr_file, results = results)
   ht_set(results$knitr_in, encode_path(files))
@@ -159,8 +181,10 @@ walk_code <- function(expr, results, locals, allowed_globals) {
       analyze_for(expr, results, locals, allowed_globals)
     } else if (name == "function") {
       analyze_function(eval(expr), results, locals, allowed_globals)
-    } else if (name %in% c("assign", "delayedAssign")) {
+    } else if (name == "assign") {
       analyze_assign(expr, results, locals, allowed_globals)
+    } else if (name == "delayedAssign") {
+      analyze_delayed_assign(expr, results, locals, allowed_globals)
     } else if (name %in% loadd_fns) {
       analyze_loadd(expr, results)
     } else if (name %in% readd_fns) {
@@ -194,9 +218,8 @@ walk_strings <- function(expr, ht) {
     walk_strings(formals(expr), ht)
     walk_strings(body(expr), ht)
   } else if (is.character(expr)) {
-    if (nzchar(expr)) {
-      ht_set(ht, expr)
-    }
+    expr <- Filter(x = expr, f = nzchar)
+    ht_set(ht, expr)
   } else if (is.pairlist(expr) || is_callish(expr)) {
     lapply(expr, walk_strings, ht = ht)
   }

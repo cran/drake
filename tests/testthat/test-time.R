@@ -5,15 +5,11 @@ test_with_dir("can ignore a bad time", {
   skip_if_not_installed("lubridate")
   x <- drake_plan(a = 1, b = 2)
   make(x, verbose = 0L)
-  cache <- get_cache()
+  cache <- drake_cache()
   expect_equal(nrow(build_times()), 2)
-  set_in_subspaces(
-    key = "a",
-    subspaces = "time_build",
-    namespace = "meta",
-    values = NA,
-    cache = cache
-  )
+  meta <- diagnose(a)
+  meta$time_build <- NA
+  cache$set(key = "a", value = meta, namespace = "meta")
   expect_equal(nrow(build_times()), 1)
 })
 
@@ -21,18 +17,12 @@ test_with_dir("proc_time runtimes can be fetched", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("lubridate")
   cache <- storr::storr_rds("cache")
-  key <- "x"
   t <- system.time({
     z <- 1
   })
-  set_in_subspaces(
-    key = key,
-    values = list(x = t),
-    subspaces = "time_build",
-    namespace = "meta",
-    cache = cache
-  )
-  y <- fetch_runtime(key = key, cache = cache, type = "build")
+  meta <- list(time_build = t)
+  cache$set(key = "x", value = meta, namespace = "meta")
+  y <- fetch_runtime(key = "x", cache = cache, type = "build")
   expect_true(nrow(y) > 0)
 })
 
@@ -40,11 +30,11 @@ test_with_dir("build times works if no targets are built", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("lubridate")
   expect_equal(cached(), character(0))
-  expect_equal(nrow(build_times(search = FALSE)), 0)
+  expect_equal(nrow(build_times()), 0)
   my_plan <- drake_plan(x = 1)
   con <- drake_config(my_plan, verbose = 0L)
   process_imports(con)
-  expect_equal(nrow(build_times(search = FALSE)), 0)
+  expect_equal(nrow(build_times()), 0)
 })
 
 test_with_dir("build time the same after superfluous make", {
@@ -54,13 +44,13 @@ test_with_dir("build time the same after superfluous make", {
   make(x, verbose = 0L, session_info = FALSE)
   c1 <- drake_config(x, verbose = 0L, session_info = FALSE)
   expect_equal(justbuilt(c1), "y")
-  b1 <- build_times(search = FALSE)
+  b1 <- build_times()
   expect_true(all(complete.cases(b1)))
 
   make(x, verbose = 0L, session_info = FALSE)
   c2 <- drake_config(x, verbose = 0L, session_info = FALSE)
   expect_equal(justbuilt(c2), character(0))
-  b2 <- build_times(search = FALSE)
+  b2 <- build_times()
   expect_true(all(complete.cases(b2)))
   expect_equal(b1[b1$target == "y", ], b2[b2$target == "y", ])
 })

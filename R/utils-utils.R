@@ -1,3 +1,6 @@
+# From testthat
+drake_tol <- .Machine$double.eps ^ 0.5
+
 # From lintr
 `%||%` <- function(x, y) {
   if (is.null(x) || length(x) <= 0) {
@@ -160,21 +163,6 @@ is_imported <- function(target, config) {
   config$layout[[target]]$imported %||% TRUE
 }
 
-map_by <- function(.x, .by, .f, ...) {
-  splits <- split_by(.x, .by = .by)
-  out <- lapply(
-    X = splits,
-    FUN = function(split){
-      out <- .f(split, ...)
-      if (nrow(out)) {
-        out[, .by] <- split[replicate(nrow(out), 1), .by]
-      }
-      out
-    }
-  )
-  do.call(what = rbind, args = out)
-}
-
 na_omit <- function(x) {
   x[!is.na(x)]
 }
@@ -230,15 +218,6 @@ select_valid <- function(x) {
     FUN.VALUE = logical(1)
   )
   x[index]
-}
-
-split_by <- function(.x, .by = character(0)) {
-  if (!length(.by)) {
-    return(list(.x))
-  }
-  fact <- lapply(.x[, .by, drop = FALSE], factor, exclude = c())
-  splits <- split(x = .x, f = fact)
-  Filter(x = splits, f = nrow)
 }
 
 standardize_key <- function(text) {
@@ -355,6 +334,10 @@ fill_cols <- function(x, cols) {
     x[[col]] <- rep(NA, nrow(x))
   }
   x
+}
+
+long_deparse <- function(x, collapse = "\n") {
+  paste(deparse(x), collapse = collapse)
 }
 
 safe_deparse <- function(x, collapse = "\n") {

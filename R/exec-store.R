@@ -17,7 +17,10 @@ store_outputs <- function(target, value, meta, config) {
   }
   if (!is.null(meta$trigger$change)) {
     config$cache$set(
-      key = target, value = meta$trigger$value, namespace = "change"
+      key = target,
+      value = meta$trigger$value,
+      namespace = "change",
+      use_cache = FALSE
     )
     meta$trigger$value <- NULL
   }
@@ -31,8 +34,7 @@ store_outputs <- function(target, value, meta, config) {
     target = target,
     value = value,
     meta = meta,
-    config = config,
-    verbose = TRUE
+    config = config
   )
   set_progress(
     target = target,
@@ -42,7 +44,7 @@ store_outputs <- function(target, value, meta, config) {
   )
 }
 
-store_single_output <- function(target, value, meta, config, verbose = FALSE) {
+store_single_output <- function(target, value, meta, config) {
   if (meta$isfile) {
     store_file(
       target = target,
@@ -66,33 +68,41 @@ store_single_output <- function(target, value, meta, config, verbose = FALSE) {
   }
   finalize_storage(
     target = target,
-    value = value,
     meta = meta,
-    config = config,
-    verbose = verbose
+    config = config
   )
 }
 
-finalize_storage <- function(target, value, meta, config, verbose) {
+finalize_storage <- function(target, meta, config) {
   meta <- finalize_times(
     target = target,
     meta = meta,
     config = config
   )
-  config$cache$set(key = target, value = meta, namespace = "meta")
-  if (!meta$imported && verbose) {
+  config$cache$set(
+    key = target,
+    value = meta,
+    namespace = "meta",
+    use_cache = FALSE
+  )
+  if (!meta$imported && !is_encoded_path(target)) {
     console_time(target, meta, config)
   }
 }
 
 store_object <- function(target, value, meta, config) {
-  config$cache$set(key = target, value = value)
+  config$cache$set(key = target, value = value, use_cache = FALSE)
 }
 
 store_file <- function(target, meta, config) {
+  if (meta$imported) {
+    value <- storage_hash(target = target, config = config)
+  } else {
+    value <- rehash_storage(target = target, config = config)
+  }
   store_object(
     target = target,
-    value = safe_rehash_storage(target = target, config = config),
+    value = value,
     meta = meta,
     config = config
   )
@@ -127,12 +137,12 @@ store_failure <- function(target, meta, config) {
     value = "failed",
     config = config
   )
-  subspaces <- intersect(c("messages", "warnings", "error"), names(meta))
-  set_in_subspaces(
+  fields <- intersect(c("messages", "warnings", "error"), names(meta))
+  meta <- meta[fields]
+  config$cache$set(
     key = target,
-    values = meta[subspaces],
-    subspaces = subspaces,
+    value = meta,
     namespace = "meta",
-    cache = config$cache
+    use_cache = FALSE
   )
 }

@@ -51,14 +51,24 @@ For details, visit
 
 \item{console_log_file}{Optional character scalar of a file name or
 connection object (such as \code{stdout()}) to dump maximally verbose
-log information for \code{\link[=make]{make()}}. Independent of the \code{verbose} argument.}
+log information for \code{\link[=make]{make()}} and other functions (all functions that
+accept a \code{config} argument, plus \code{drake_config()}).
+If you choose to use a text file as the console log,
+it will persist over multiple function calls
+until you delete it manually.
+Fields in each row the log file, from left to right:
+- The node name (short host name) of the
+computer (from \code{Sys.info()["nodename"]}).
+- The process ID (from \code{Sys.getpid()}).
+- A timestamp with the date and time (in microseconds).
+- A brief description of what \code{drake} was doing.\code{ The fields are separated by pipe symbols (}"|"`).}
 
 \item{trigger}{Name of the trigger to apply to all targets.
 Ignored if \code{plan} has a \code{trigger} column.
 See \code{\link[=trigger]{trigger()}} for details.}
 
 \item{cache}{drake cache as created by \code{\link[=new_cache]{new_cache()}}.
-See also \code{\link[=get_cache]{get_cache()}}.}
+See also \code{\link[=drake_cache]{drake_cache()}}.}
 }
 \value{
 An \code{igraph} object.

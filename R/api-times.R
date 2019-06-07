@@ -30,16 +30,17 @@
 #' }
 build_times <- function(
   ...,
-  path = getwd(),
-  search = TRUE,
+  path = NULL,
+  search = NULL,
   digits = 3,
-  cache = get_cache(path = path, search = search, verbose = verbose),
+  cache = drake_cache(path = path, verbose = verbose),
   targets_only = NULL,
   verbose = 1L,
   jobs = 1,
   type = c("build", "command"),
   list = character(0)
 ) {
+  deprecate_search(search)
   deprecate_targets_only(targets_only) # 2019-01-03 # nolint
   if (is.null(cache)) {
     return(weak_as_tibble(empty_times()))
@@ -88,10 +89,9 @@ build_times <- function(
 }
 
 fetch_runtime <- function(key, cache, type) {
-  x <- get_from_subspace(
+  x <- read_from_meta(
     key = key,
-    subspace = paste0("time_", type),
-    namespace = "meta",
+    field = paste0("time_", type),
     cache = cache
   )
   if (is_bad_time(x)) {

@@ -2399,3 +2399,131 @@ test_with_dir("max_expand with a .data grid for cross()", {
   )
   equivalent_plans(out, exp)
 })
+
+test_with_dir("basic splitting", {
+  out <- drake_plan(
+    large_data = get_data(),
+    slice_analysis = target(
+      large_data %>%
+        analyze(),
+      transform = split(large_data, slices = 4)
+    ),
+    results = target(
+      rbind(slice_analysis),
+      transform = combine(slice_analysis)
+    )
+  )
+  exp <- drake_plan(
+    large_data = get_data(),
+    slice_analysis_1 = drake_slice(
+      data = large_data, slices = 4, index = 1) %>% analyze(),
+    slice_analysis_2 = drake_slice(
+      data = large_data, slices = 4, index = 2) %>% analyze(),
+    slice_analysis_3 = drake_slice(
+      data = large_data, slices = 4, index = 3) %>% analyze(),
+    slice_analysis_4 = drake_slice(
+      data = large_data, slices = 4, index = 4) %>% analyze(),
+    results = rbind(
+      slice_analysis_1, slice_analysis_2, slice_analysis_3,
+      slice_analysis_4
+    )
+  )
+  equivalent_plans(out, exp)
+})
+
+test_with_dir("splitting with all args", {
+  out <- drake_plan(
+    large_data = get_data(),
+    slice_analysis = target(
+      large_data %>%
+        analyze(),
+      transform = split(large_data, margin = 2, drop = TRUE, slices = 4)
+    ),
+    results = target(
+      rbind(slice_analysis),
+      transform = combine(slice_analysis)
+    )
+  )
+  exp <- drake_plan(
+    large_data = get_data(),
+    slice_analysis_1 = drake_slice(
+      data = large_data, slices = 4, index = 1, margin = 2,
+      drop = TRUE
+    ) %>% analyze(),
+    slice_analysis_2 = drake_slice(
+      data = large_data, slices = 4, index = 2, margin = 2,
+      drop = TRUE
+    ) %>% analyze(),
+    slice_analysis_3 = drake_slice(
+      data = large_data, slices = 4, index = 3, margin = 2,
+      drop = TRUE
+    ) %>% analyze(),
+    slice_analysis_4 = drake_slice(
+      data = large_data, slices = 4, index = 4, margin = 2,
+      drop = TRUE
+    ) %>% analyze(),
+    results = rbind(
+      slice_analysis_1, slice_analysis_2, slice_analysis_3,
+      slice_analysis_4
+    )
+  )
+  equivalent_plans(out, exp)
+})
+
+test_with_dir("splitting with tidy eval", {
+  s <- 4
+  out <- drake_plan(
+    large_data = get_data(),
+    slice_analysis = target(
+      large_data %>%
+        analyze(),
+      transform = split(large_data, slices = !!s)
+    ),
+    results = target(
+      rbind(slice_analysis),
+      transform = combine(slice_analysis)
+    )
+  )
+  exp <- drake_plan(
+    large_data = get_data(),
+    slice_analysis_1 = drake_slice(
+      data = large_data, slices = 4, index = 1) %>% analyze(),
+    slice_analysis_2 = drake_slice(
+      data = large_data, slices = 4, index = 2) %>% analyze(),
+    slice_analysis_3 = drake_slice(
+      data = large_data, slices = 4, index = 3) %>% analyze(),
+    slice_analysis_4 = drake_slice(
+      data = large_data, slices = 4, index = 4) %>% analyze(),
+    results = rbind(
+      slice_analysis_1, slice_analysis_2, slice_analysis_3,
+      slice_analysis_4
+    )
+  )
+  equivalent_plans(out, exp)
+})
+
+test_with_dir("parse long tidyeval inputs", {
+  l <- lapply(100, function(x) rep("a", x))
+  out <- drake_plan(
+    a = target(
+      length(x),
+      transform = map(x = !!l, y = !!seq_along(l), .id = y)
+    )
+  )
+  exp <- drake_plan(
+    a_1L = length(
+      c(
+        "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+        "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+        "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+        "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+        "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+        "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+        "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+        "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+        "a", "a", "a", "a", "a"
+      )
+    )
+  )
+  equivalent_plans(out, exp)
+})

@@ -26,10 +26,20 @@
 #'   and then treat those loaded targets as dependencies.
 #'   That way, [make()] will automatically (re)run the report if those
 #'   dependencies change.
-#' @note Please do not put calls to [loadd()] or [readd()] inside
-#' your custom (imported) functions or the commands in your [drake_plan()].
-#' This creates confusion inside [make()], which has its own ways of
-#' interacting with the cache.
+#' 3. If you are using `make(memory_strategy = "none")`
+#'   or `make(memory_strategy = "unload")`,
+#'   [loadd()] and [readd()] can manually load dependencies
+#'   into memory for the target that is being built.
+#'   If you do this, you must carefully inspect [deps_target()]
+#'   and [vis_drake_graph()] before running [make()]
+#'   to be sure the dependency relationships among targets
+#'   are correct. If you do not wish to incur extra dependencies
+#'   with [loadd()] or [readd()], you will need to use [ignore()],
+#'   e.g. `drake_plan(x = 1, y = ignore(readd(x)))` or
+#'   `drake_plan(x = 1, y = readd(ignore("x"), character_only = TRUE))`.
+#'   Compare those plans to `drake_plan(x = 1, y = readd(x))`
+#'   and `drake_plan(x = 1, y = readd("x", character_only = TRUE))`
+#'   using [vis_drake_graph()] and [deps_target()].
 #' @seealso [cached()], [drake_plan()], [make()]
 #' @export
 #' @return The cached value of the `target`.
@@ -63,14 +73,15 @@
 readd <- function(
   target,
   character_only = FALSE,
-  path = getwd(),
-  search = TRUE,
-  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  path = NULL,
+  search = NULL,
+  cache = drake::drake_cache(path = path, verbose = verbose),
   namespace = NULL,
   verbose = 1L,
   show_source = FALSE
 ) {
-  # if the cache is null after trying get_cache:
+  deprecate_search(search)
+  # if the cache is null after trying drake_cache:
   if (is.null(cache)) {
     stop("cannot find drake cache.")
   }
@@ -90,7 +101,7 @@ readd <- function(
   cache$get(
     standardize_key(target),
     namespace = namespace,
-    use_cache = TRUE
+    use_cache = FALSE
   )
 }
 
@@ -186,9 +197,9 @@ loadd <- function(
   ...,
   list = character(0),
   imported_only = NULL,
-  path = getwd(),
-  search = TRUE,
-  cache = drake::get_cache(path = path, search = search, verbose = verbose),
+  path = NULL,
+  search = NULL,
+  cache = drake::drake_cache(path = path, verbose = verbose),
   namespace = NULL,
   envir = parent.frame(),
   jobs = 1,
@@ -201,6 +212,7 @@ loadd <- function(
   tidyselect = !deps,
   config = NULL
 ) {
+  deprecate_search(search)
   force(envir)
   lazy <- parse_lazy_arg(lazy)
   if (!is.null(graph)) {
@@ -335,7 +347,11 @@ load_target <- function(target, cache, namespace, envir, verbose, lazy) {
 #' @export
 #' @inheritParams loadd
 eager_load_target <- function(target, cache, namespace, envir, verbose) {
-  value <- cache$get(key = target, namespace = namespace)
+  value <- cache$get(
+    key = target,
+    namespace = namespace,
+    use_cache = FALSE
+  )
   assign(x = target, value = value, envir = envir)
   local <- environment()
   rm(value, envir = local)
@@ -346,7 +362,11 @@ promise_load_target <- function(target, cache, namespace, envir, verbose) {
   eval_env <- environment()
   delayedAssign(
     x = target,
-    value = cache$get(key = target, namespace = namespace),
+    value = cache$get(
+      key = target,
+      namespace = namespace,
+      use_cache = FALSE
+    ),
     eval.env = eval_env,
     assign.env = envir
   )
@@ -374,7 +394,7 @@ bind_load_target <- function(target, cache, namespace, envir, verbose) {
       cache$get(
         key = as.character(key),
         namespace = as.character(namespace),
-        use_cache = TRUE
+        use_cache = FALSE
       )
     },
     cache = cache,
@@ -428,13 +448,14 @@ bind_load_target <- function(target, cache, namespace, envir, verbose) {
 #' read_drake_seed(cache = cache)
 #' readd(target2, cache = cache)
 read_drake_seed <- function(
-  path = getwd(),
-  search = TRUE,
+  path = NULL,
+  search = NULL,
   cache = NULL,
   verbose = 1L
 ) {
+  deprecate_search(search)
   if (is.null(cache)) {
-    cache <- get_cache(path = path, search = search, verbose = verbose)
+    cache <- drake_cache(path = path, verbose = verbose)
   }
   if (is.null(cache)) {
     stop("cannot find drake cache.")
