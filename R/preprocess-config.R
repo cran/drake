@@ -5,12 +5,17 @@
 #'   the plan, packages,
 #'   the environment of functions and initial data objects,
 #'   parallel computing instructions,
-#'   verbosity level, etc. Other functions such as [outdated()],
+#'   verbosity level, etc.
+#' @details Once you create a list with [drake_config()],
+#'   do not modify it by hand.
+#'
+#'   Utility functions such as [outdated()],
 #'   [vis_drake_graph()], and [predict_runtime()] require output from
 #'   [drake_config()] for the `config` argument.
 #'   If you supply a [drake_config()] object to the `config`
 #'   argument of [make()], then `drake` will ignore all the other arguments
 #'   because it already has everything it needs in `config`.
+#' @inheritSection recoverable Recovery
 #' @export
 #' @return The master internal configuration list of a project.
 #' @seealso [make()], [drake_plan()], [vis_drake_graph()]
@@ -108,10 +113,10 @@
 #'
 #' @param log_progress Logical, whether to log the progress
 #'   of individual targets as they are being built. Progress logging
-#'   creates a lot of little files in the cache, and it may make builds
-#'   a tiny bit slower. So you may see gains in storage efficiency
-#'   and speed with
-#'   `make(..., log_progress = FALSE)`.
+#'   creates extra files in the cache (usually the `.drake/` folder)
+#'   and slows down `make()` a little.
+#'   If you need to reduce or limit the number of files in the cache,
+#'   call `make(log_progress = FALSE, recover = FALSE)`.
 #'
 #' @param cache drake cache as created by [new_cache()].
 #'   See also [drake_cache()].
@@ -258,7 +263,14 @@
 #' - `"speed"`: Once a target is newly built or loaded in memory,
 #'   just keep it there.
 #'   This choice maximizes speed and hogs memory.
-#' - `"memory"`: Just before building each new target,
+#' - `"autoclean"`: Just before building each new target,
+#'   unload everything from memory except the target's direct dependencies.
+#'   After a target is built, discard it from memory.
+#'   (Set `garbage_collection = TRUE` to make sure it is really gone.)
+#'   This option conserves memory, but it sacrifices speed because
+#'   each new target needs to reload
+#'   any previously unloaded targets from storage.
+#' - `"preclean"`: Just before building each new target,
 #'   unload everything from memory except the target's direct dependencies.
 #'   After a target is built, keep it in memory until `drake` determines
 #'   they can be unloaded.
@@ -310,14 +322,7 @@
 #'       - A brief description of what `drake` was doing.`
 #'   The fields are separated by pipe symbols (`"|"`).
 #'
-#' @param ensure_workers Logical, whether the master process
-#'   should wait for the workers to post before assigning them
-#'   targets. Should usually be `TRUE`. Set to `FALSE`
-#'   for `make(parallelism = "future_lapply", jobs = n)`
-#'   (`n > 1`) when combined with `future::plan(future::sequential)`.
-#'   This argument only applies to parallel computing with persistent workers
-#'   (`make(parallelism = x)`, where `x` could be `"mclapply"`,
-#'   `"parLapply"`, or `"future_lapply"`).
+#' @param ensure_workers Deprecated.
 #'
 #' @param garbage_collection Logical, whether to call `gc()` each time
 #'   a target is built during [make()].
@@ -388,6 +393,48 @@
 #'   `lock_envir` will be set to a default of `TRUE` in `drake` version
 #'   7.0.0 and higher.
 #'
+#' @param history Logical, whether to record the build history
+#'   of your targets. You can also supply a
+#'   [`txtq`](https://github.com/wlandau/txtq), which is
+#'   how `drake` records history.
+#'   Must be `TRUE` for [drake_history()] to work later.
+#'
+#' @param recover Logical, whether to activate automated data recovery.
+#'   The default is `FALSE` because
+#'
+#'   1. Automated data recovery is still experimental.
+#'   2. It has reproducibility issues.
+#'   Targets recovered from the distant past may have been generated
+#'   with earlier versions of R and earlier package environments
+#'   that no longer exist.
+#'
+#'   How it works: if `recover` is `TRUE`,
+#'   `drake` tries to salvage old target values from the cache
+#'   instead of running commands from the plan.
+#'   A target is recoverable if
+#'
+#'   1. There is an old value somewhere in the cache that
+#'      shares the command, dependencies, etc.
+#'      of the target about to be built.
+#'   2. The old value was generated with `make(recoverable = TRUE)`.
+#'
+#'   If both conditions are met, `drake` will
+#'
+#'   1. Assign the most recently-generated admissible data to the target, and
+#'   2. skip the target's command.
+#'
+#'   Functions [recoverable()] and [r_recoverable()] show the most upstream
+#'   outdated targets that will be recovered in this way in the next
+#'   [make()] or [r_make()].
+#'
+#' @param recoverable Logical, whether to make target values recoverable
+#'   with `make(recover = TRUE)`.
+#'   This requires writing extra files to the cache,
+#'   and it prevents old metadata from being removed with garbage collection
+#'   (`clean(garbage_collection = TRUE)`, `gc()` in `storr`s).
+#'   If you need to limit the cache size or the number of files in the cache,
+#'   consider `make(recoverable = FALSE, progress = FALSE)`.
+#'
 #' @examples
 #' \dontrun{
 #' isolate_example("Quarantine side effects.", {
@@ -446,14 +493,17 @@ drake_config <- function(
   pruning_strategy = NULL,
   makefile_path = NULL,
   console_log_file = NULL,
-  ensure_workers = TRUE,
+  ensure_workers = NULL,
   garbage_collection = FALSE,
   template = list(),
   sleep = function(i) 0.01,
   hasty_build = NULL,
-  memory_strategy = c("speed", "memory", "lookahead", "unload", "none"),
+  memory_strategy = "speed",
   layout = NULL,
-  lock_envir = TRUE
+  lock_envir = TRUE,
+  history = TRUE,
+  recover = FALSE,
+  recoverable = TRUE
 ) {
   log_msg(
     "begin drake_config()",
@@ -523,6 +573,15 @@ drake_config <- function(
       call. = FALSE
     )
   }
+  if (!is.null(ensure_workers)) {
+    # Deprecated on 2018-12-18.
+    warning(
+      "The ", sQuote("ensure_workers"),
+      " argument of make() and drake_config() ",
+      "is deprecated.",
+      call. = FALSE
+    )
+  }
   if (
     !is.null(command) ||
     !is.null(args) ||
@@ -538,10 +597,20 @@ drake_config <- function(
       # 2019-01-03 # nolint
     )
   }
-  plan <- sanitize_plan(plan)
+  memory_strategy <- match.arg(memory_strategy, choices = memory_strategies())
+  if (memory_strategy == "memory") {
+    memory_strategy <- "preclean"
+    warning(
+      "make(memory_strategy = \"memory\") is deprecated. ",
+      "Use make(memory_strategy = \"preclean\") instead",
+      call. = FALSE
+      # 2019-06-22 # nolint
+    )
+  }
+  force(envir)
+  plan <- sanitize_plan(plan, envir = envir)
   plan_checks(plan)
   targets <- sanitize_targets(targets, plan)
-  force(envir)
   trigger <- convert_old_trigger(trigger)
   sleep <- `environment<-`(sleep, new.env(parent = globalenv()))
   if (is.null(cache)) {
@@ -574,18 +643,23 @@ drake_config <- function(
     verbose = verbose
   )
   cache_path <- force_cache_path(cache)
+  hash_algorithm <- cache_hash_algorithm(cache)
+  history <- initialize_history(history, cache_path)
   lazy_load <- parse_lazy_arg(lazy_load)
-  memory_strategy <- match.arg(memory_strategy)
   caching <- match.arg(caching)
+  recover <- as.logical(recover)
+  recoverable <- as.logical(recoverable)
   ht_encode_path <- ht_new()
   ht_decode_path <- ht_new()
   ht_encode_namespaced <- ht_new()
   ht_decode_namespaced <- ht_new()
+  progress_hashmap <- progress_hashmap(cache)
   out <- list(
     envir = envir,
     eval = new.env(parent = envir),
     cache = cache,
     cache_path = cache_path,
+    hash_algorithm = hash_algorithm,
     parallelism = parallelism,
     jobs = jobs,
     jobs_preprocess = jobs_preprocess,
@@ -609,21 +683,23 @@ drake_config <- function(
     skip_imports = skip_imports,
     skip_safety_checks = skip_safety_checks,
     log_progress = log_progress,
+    progress_hashmap = progress_hashmap,
     lazy_load = lazy_load,
     session_info = session_info,
     cache_log_file = cache_log_file,
     caching = caching,
     keep_going = keep_going,
-    session = session,
     memory_strategy = memory_strategy,
     console_log_file = console_log_file,
-    ensure_workers = ensure_workers,
     garbage_collection = garbage_collection,
     template = template,
     sleep = sleep,
     hasty_build = hasty_build,
     lock_envir = lock_envir,
-    force = force
+    force = force,
+    history = history,
+    recover = recover,
+    recoverable = recoverable
   )
   out <- enforce_compatible_config(out)
   config_checks(out)
@@ -683,4 +759,24 @@ do_prework <- function(config, verbose_packages) {
     lapply(config$prework, eval, envir = config$eval)
   }
   invisible()
+}
+
+sanitize_targets <- function(targets, plan) {
+  if (is.null(try(targets, silent = TRUE))) {
+    return(plan$target)
+  }
+  targets <- make.names(targets, unique = FALSE, allow_ = TRUE)
+  not_found <- setdiff(targets, plan$target)
+  if (length(not_found)) {
+    warning(
+      "ignoring targets not in the drake plan:\n",
+      multiline_message(not_found),
+      call. = FALSE
+    )
+  }
+  out <- unique(intersect(targets, plan$target))
+  if (!length(out)) {
+    stop("no valid targets specified.", call. = FALSE)
+  }
+  out
 }

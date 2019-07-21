@@ -4,7 +4,7 @@ store_outputs <- function(target, value, meta, config) {
   if (inherits(meta$error, "error")) {
     return()
   }
-  log_msg("store", target, config = config)
+  log_msg("store", target = target, config = config)
   layout <- config$layout[[target]]
   if (is.null(meta$command)) {
     meta$command <- layout$command_standardized
@@ -22,7 +22,6 @@ store_outputs <- function(target, value, meta, config) {
       namespace = "change",
       use_cache = FALSE
     )
-    meta$trigger$value <- NULL
   }
   store_output_files(layout$deps_build$file_out, meta, config)
   if (length(file_out) || is.null(file_out)) {
@@ -46,48 +45,83 @@ store_outputs <- function(target, value, meta, config) {
 
 store_single_output <- function(target, value, meta, config) {
   if (meta$isfile) {
-    store_file(
+    hash <- store_file(
       target = target,
       meta = meta,
       config = config
     )
   } else if (is.function(value)) {
-    store_function(
+    hash <- store_function(
       target = target,
       value = value,
       meta = meta,
       config = config
     )
   } else {
-    store_object(
+    hash <- store_object(
       target = target,
       value = value,
       meta = meta,
       config = config
     )
   }
-  finalize_storage(
+  store_meta(
     target = target,
     meta = meta,
+    hash = hash,
     config = config
   )
 }
 
-finalize_storage <- function(target, meta, config) {
-  meta <- finalize_times(
+store_meta <- function(target, meta, hash, config) {
+  meta <- finalize_meta(
     target = target,
     meta = meta,
+    hash = hash,
     config = config
   )
-  config$cache$set(
+  meta_lite <- meta
+  meta_lite$trigger$value <- NULL
+  meta_hash <- config$cache$set(
     key = target,
-    value = meta,
+    value = meta_lite,
     namespace = "meta",
     use_cache = FALSE
   )
+  is_target <- !meta$imported && !is_encoded_path(target)
+  if (is_target && is_history(config$history)) {
+    config$history$push(title = target, message = meta_hash)
+  }
+  if (is_target && config$recoverable) {
+    store_recovery(target, meta, meta_hash, config)
+  }
+}
+
+store_recovery <- function(target, meta, meta_hash, config) {
+  key <- recovery_key(target = target, meta = meta, config = config)
+  config$cache$driver$set_hash(
+    key = key,
+    namespace = "recover",
+    hash = meta_hash
+  )
+}
+
+finalize_meta <- function(target, meta, hash, config) {
+  meta$time_command <- runtime_entry(
+    runtime = meta$time_command,
+    target = target
+  )
+  meta$time_build <- runtime_entry(
+    runtime = proc.time() - meta$time_start,
+    target = target
+  )
+  meta$time_start <- NULL
+  meta$date <- microtime()
   if (!meta$imported && !is_encoded_path(target)) {
     console_time(target, meta, config)
   }
+  meta$hash <- hash
+  meta
 }
 
 store_object <- function(target, value, meta, config) {

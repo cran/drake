@@ -1,7 +1,19 @@
+memory_strategies <- function() {
+  c(
+    "speed",
+    "autoclean",
+    "preclean",
+    "lookahead",
+    "unload",
+    "none",
+    "memory" # deprecated on 2019-06-22
+  )
+}
+
 assign_to_envir <- function(target, value, config) {
   memory_strategy <- config$layout[[target]]$memory_strategy %||NA%
     config$memory_strategy
-  if (memory_strategy %in% c("unload", "none")) {
+  if (memory_strategy %in% c("autoclean", "unload", "none")) {
     return()
   }
   if (
@@ -25,8 +37,6 @@ assign_to_envir <- function(target, value, config) {
 #' @param downstream Optional, character vector of any targets
 #'   assumed to be downstream.
 #' @param jobs Number of jobs for local parallel computing
-#' @examples
-#' # Users should use make().
 manage_memory <- function(target, config, downstream = NULL, jobs = 1) {
   stopifnot(length(target) == 1L)
   if (identical(config$garbage_collection, TRUE)) {
@@ -54,18 +64,20 @@ manage_deps.speed <- function(target, config, downstream, jobs) {
   try_load(targets = target_deps, config = config, jobs = jobs)
 }
 
-manage_deps.memory <- function(target, config, downstream, jobs) {
+manage_deps.autoclean <- function(target, config, downstream, jobs) {
   already_loaded <- setdiff(names(config$eval), drake_markers)
   target_deps <- deps_memory(targets = target, config = config)
   discard_these <- setdiff(x = already_loaded, y = target_deps)
   if (length(discard_these)) {
-    log_msg("unload", discard_these, config = config)
+    log_msg("unload", discard_these, target = target, config = config)
     rm(list = discard_these, envir = config$eval)
   }
   target_deps <- setdiff(target_deps, target)
   target_deps <- setdiff(target_deps, already_loaded)
   try_load(targets = target_deps, config = config, jobs = jobs)
 }
+
+manage_deps.preclean <- manage_deps.autoclean
 
 manage_deps.lookahead <- function(target, config, downstream, jobs) {
   downstream <- downstream %||% downstream_nodes(config$graph, target)
@@ -75,7 +87,7 @@ manage_deps.lookahead <- function(target, config, downstream, jobs) {
   keep_these <- c(target_deps, downstream_deps)
   discard_these <- setdiff(x = already_loaded, y = keep_these)
   if (length(discard_these)) {
-    log_msg("unload", discard_these, config = config)
+    log_msg("unload", discard_these, target = target, config = config)
     rm(list = discard_these, envir = config$eval)
   }
   target_deps <- setdiff(target_deps, target)
@@ -86,7 +98,7 @@ manage_deps.lookahead <- function(target, config, downstream, jobs) {
 manage_deps.unload <- function(target, config, downstream, jobs) {
   discard_these <- setdiff(names(config$eval), drake_markers)
   if (length(discard_these)) {
-    log_msg("unload", discard_these, config = config)
+    log_msg("unload", discard_these, target = target, config = config)
     rm(list = discard_these, envir = config$eval)
   }
 }

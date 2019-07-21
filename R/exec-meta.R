@@ -6,7 +6,9 @@ drake_meta_ <- function(target, config) {
     target = target,
     imported = layout$imported %||% TRUE,
     missing = !target_exists(target = target, config = config),
-    seed = seed_from_basic_types(config$seed, target),
+    seed = as.integer(
+      layout$seed %||NA% seed_from_basic_types(config$seed, target)
+    ),
     time_start = proc.time(),
     file_out = layout$deps_build$file_out
   )
@@ -75,7 +77,7 @@ dependency_hash <- function(target, config) {
   out <- paste(out, collapse = "")
   digest::digest(
     out,
-    algo = config$cache$driver$hash_algorithm,
+    algo = config$hash_algorithm,
     serialize = FALSE
   )
 }
@@ -108,7 +110,7 @@ input_file_hash <- function(
   out <- paste(out, collapse = "")
   digest::digest(
     out,
-    algo = config$cache$driver$hash_algorithm,
+    algo = config$hash_algorithm,
     serialize = FALSE
   )
 }
@@ -133,7 +135,7 @@ output_file_hash <- function(
   out <- paste(out, collapse = "")
   digest::digest(
     out,
-    algo = config$cache$driver$hash_algorithm,
+    algo = config$hash_algorithm,
     serialize = FALSE
   )
 }
@@ -161,7 +163,7 @@ rehash_storage <- function(target, file = NULL, config) {
 rehash_file <- function(file, config) {
   digest::digest(
     object = file,
-    algo = config$cache$driver$hash_algorithm,
+    algo = config$hash_algorithm,
     file = TRUE,
     serialize = FALSE
   )
@@ -184,7 +186,7 @@ rehash_dir <- function(dir, config) {
   out <- paste(out, collapse = "")
   digest::digest(
     out,
-    algo = config$cache$driver$hash_algorithm,
+    algo = config$hash_algorithm,
     serialize = FALSE
   )
 }

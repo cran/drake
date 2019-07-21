@@ -7,9 +7,9 @@
 isolate_example(desc, ...)
 }
 \arguments{
-\item{desc}{Character, description of the test.}
+\item{desc}{Character, description of the example.}
 
-\item{...}{Code to test.}
+\item{...}{Code to run.}
 }
 \value{
 Nothing.

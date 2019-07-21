@@ -33,6 +33,7 @@ runtime_checks <- function(config) {
   }
   missing_input_files(config = config)
   subdirectory_warning(config = config)
+  assert_outside_cache(config = config)
 }
 
 missing_input_files <- function(config) {
@@ -131,6 +132,20 @@ check_parallelism <- function(parallelism, jobs) {
   }
 }
 
+check_make_call <- function(call) {
+  x <- names(call)
+  if ("config" %in% names(call) && sum(nzchar(x)) > 1L) {
+    warning(
+      "if you supply a ", shQuote("config"),
+      " argument to ", shQuote("make()"),
+      " then all additional arguments are ignored. ",
+      "For example, in ", shQuote("make(config = config, verbose = 0L)"),
+      "verbosity remains at ", shQuote("config$verbose"), ".",
+      call. = FALSE
+    )
+  }
+}
+
 subdirectory_warning <- function(config) {
   if (identical(Sys.getenv("drake_warn_subdir"), "false")) {
     return()
@@ -164,4 +179,19 @@ subdirectory_warning <- function(config) {
     "  cache directory:     ", dir_cache,
     call. = FALSE
   )
+}
+
+assert_outside_cache <- function(config) {
+  work_dir <- normalizePath(getwd(), mustWork = FALSE)
+  cache_dir <- normalizePath(config$cache_path, mustWork = FALSE)
+  if (identical(work_dir, cache_dir)) {
+    stop(
+      "cannot run make() from inside the cache: ", shQuote(cache_dir),
+      ". The cache path must be different from your working directory. ",
+      "If your drake project lives at ", shQuote("/your/project/root/"), # nolint
+      " then you should run ", shQuote("make()"), " from this directory, ",
+      "and your cache should be in a subfolder, e.g. ",
+      shQuote("/your/project/root/.drake/") # nolint
+    )
+  }
 }

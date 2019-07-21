@@ -32,6 +32,10 @@
 #'   non-file dependency changes.
 #' @param file Logical, whether to rebuild the target
 #'   if a [file_in()]/[file_out()]/[knitr_in()] file changes.
+#' @param seed Logical, whether to rebuild the target
+#'   if the seed changes. Only makes a difference if you set
+#'   a custom `seed` column in your [drake_plan()] at some point
+#'   in your workflow.
 #' @param condition R code (expression or language object)
 #'   that returns a logical. The target will rebuild
 #'   if the code evaluates to `TRUE`.
@@ -88,6 +92,7 @@ trigger <- function(
   command = TRUE,
   depend = TRUE,
   file = TRUE,
+  seed = TRUE,
   condition = FALSE,
   change = NULL,
   mode = c("whitelist", "blacklist", "condition")
@@ -99,6 +104,7 @@ trigger <- function(
     command = command,
     depend = depend,
     file = file,
+    seed = seed,
     condition = rlang::quo_squash(rlang::enquo(condition)),
     change = rlang::quo_squash(rlang::enquo(change)),
     mode = match.arg(mode)
@@ -165,6 +171,15 @@ file_trigger <- function(target, meta, config) {
   FALSE
 }
 
+seed_trigger <- function(target, meta, config) {
+  seed <- read_from_meta(
+    key = target,
+    field = "seed",
+    cache = config$cache
+  )
+  !identical(seed, meta$seed)
+}
+
 condition_trigger <- function(target, meta, config) {
   if (!length(target) || !length(config) || !length(meta)) {
     return(FALSE)
@@ -204,7 +219,7 @@ change_trigger <- function(target, meta, config) {
     return(FALSE)
   }
   if (!config$cache$exists(key = target, namespace = "change")) {
-    return(FALSE) # nocov
+    return(TRUE) # nocov
   }
   old_value <- config$cache$get(key = target, namespace = "change")
   !identical(old_value, meta$trigger$value)
@@ -215,31 +230,51 @@ should_build_target <- function(target, meta, config) {
     return(TRUE)
   }
   if (meta$missing) {
+    log_msg("trigger missing", target = target, config = config)
     return(TRUE)
   }
   condition <- condition_trigger(target = target, meta = meta, config = config)
   if (is.logical(condition)) {
+    if (condition) {
+      log_msg("trigger condition", target = target, config = config)
+    }
     return(condition)
   }
   if (identical(meta$trigger$command, TRUE)) {
     if (command_trigger(target = target, meta = meta, config = config)) {
+      log_msg("trigger command", target = target, config = config)
       return(TRUE)
     }
   }
   if (identical(meta$trigger$depend, TRUE)) {
     if (depend_trigger(target = target, meta = meta, config = config)) {
+      log_msg("trigger depend", target = target, config = config)
       return(TRUE)
     }
   }
   if (identical(meta$trigger$file, TRUE)) {
     if (file_trigger(target = target, meta = meta, config = config)) {
+      log_msg("trigger file", target = target, config = config)
+      return(TRUE)
+    }
+  }
+  if (identical(meta$trigger$seed, TRUE)) {
+    if (seed_trigger(target = target, meta = meta, config = config)) {
+      log_msg("trigger seed", target = target, config = config)
       return(TRUE)
     }
   }
   if (!is.null(meta$trigger$change)) {
     if (change_trigger(target = target, meta = meta, config = config)) {
+      log_msg("trigger change", target = target, config = config)
       return(TRUE)
     }
   }
+  log_msg("skip", target = target, config = config)
   FALSE
+}
+
+skip_command <- function(target, meta, config) {
+  !should_build_target(target, meta, config) ||
+    recover_target(target, meta, config)
 }

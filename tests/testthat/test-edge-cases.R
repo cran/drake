@@ -359,3 +359,25 @@ test_with_dir("Trailing slashes in file paths on Windows", {
   )
   expect_true(file.exists("out/out.txt"))
 })
+
+test_with_dir("make() with config + non-config args", {
+  plan <- drake_plan(x = 1)
+  config <- drake_config(
+    plan,
+    session_info = FALSE,
+    cache = storr::storr_environment()
+  )
+  expect_warning(
+    make(plan = plan, config = config),
+    regexp = "additional arguments are ignored"
+  )
+})
+
+test_with_dir("make() from inside the cache", {
+  cache <- storr::storr_rds(getwd())
+  plan <- drake_plan(x = 1)
+  expect_error(
+    make(plan, cache = cache),
+    regexp = "from inside the cache"
+  )
+})

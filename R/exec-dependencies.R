@@ -68,8 +68,11 @@ deps_target <- function(
   config,
   character_only = FALSE
 ) {
-  log_msg("begin deps_target()", config = config)
-  on.exit(log_msg("end deps_target()", config = config), add = TRUE)
+  log_msg("begin deps_target()", target = target, config = config)
+  on.exit(
+    log_msg("end deps_target()", target = target, config = config),
+    add = TRUE
+  )
   if (!character_only) {
     target <- as.character(substitute(target))
   }
@@ -93,17 +96,21 @@ display_deps_list <- function(x) {
 #' @description The dependency profile can give you
 #'   a hint as to why a target is out of date.
 #'   It can tell you if
+#'   - the command changed
+#'     ([deps_profile()] reports the *hash* of the command,
+#'     not the command itself)
 #'   - at least one input file changed,
 #'   - at least one output file changed,
 #'   - or a non-file dependency changed. For this last part,
 #'     the imports need to be up to date in the cache,
 #'     which you can do with `outdated()` or
 #'     `make(skip_targets = TRUE)`.
+#'   - the pseudo-random number generator seed changed.
 #'   Unfortunately, `deps_profile()` does not
 #'   currently get more specific than that.
-#' @return A data frame of the old hashes and
-#'   new hashes of the data frame, along with
-#'   an indication of which hashes changed since
+#' @return A data frame of old and new values for each
+#'   of the main triggers, along with
+#'   an indication of which values changed since
 #'   the last [make()].
 #' @export
 #' @seealso [diagnose()],
@@ -149,35 +156,39 @@ deps_profile <- function(
   if (!length(meta$command)) {
     meta$command <- NA_character_
   }
-  old_hashes <- meta[c(
+  old_values <- meta[c(
     "command",
     "dependency_hash",
     "input_file_hash",
-    "output_file_hash"
+    "output_file_hash",
+    "seed"
   )]
-  old_hashes <- unlist(old_hashes)
-  old_hashes <- unname(old_hashes)
-  old_hashes[1] <- digest::digest(
-    paste(old_hashes[1], collapse = ""),
-    algo = config$cache$driver$hash_algorithm,
+  old_values <- unlist(old_values)
+  old_values <- unname(old_values)
+  old_values[1] <- digest::digest(
+    paste(old_values[1], collapse = ""),
+    algo = config$hash_algorithm,
     serialize = FALSE
   )
   layout <- config$layout[[target]]
-  new_hashes <- c(
+  new_values <- c(
     digest::digest(
       paste(layout$command_standardized, collapse = ""),
-      algo = config$cache$driver$hash_algorithm,
+      algo = config$hash_algorithm,
       serialize = FALSE
     ),
     dependency_hash(target, config),
     input_file_hash(target, config),
-    output_file_hash(target, config)
+    output_file_hash(target, config),
+    as.integer(
+      layout$seed %||NA% seed_from_basic_types(config$seed, target)
+    )
   )
   weak_tibble(
-    hash = c("command", "depend", "file_in", "file_out"),
-    changed = old_hashes != new_hashes,
-    old_hash = old_hashes,
-    new_hash = new_hashes
+    name = c("command", "depend", "file_in", "file_out", "seed"),
+    changed = old_values != new_values,
+    old = old_values,
+    new = new_values
   )
 }
 

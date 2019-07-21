@@ -208,6 +208,10 @@ test_with_dir("deprecated arguments", {
   expect_error(expect_warning(loadd(list = "a", deps = TRUE)))
   expect_warning(loadd(imported_only = TRUE), regexp = "deprecated")
   expect_warning(cached(list = "x"), regexp = "deprecated")
+  expect_warning(
+    drake_config(plan = pl, ensure_workers = TRUE),
+    regexp = "deprecated"
+  )
 })
 
 test_with_dir("example template files (deprecated)", {
@@ -1462,4 +1466,17 @@ test_with_dir("get_cache", {
   tmp2 <- expect_warning(get_cache(search = FALSE), regexp = "deprecated")
   expect_true(inherits(tmp1, "storr"))
   expect_true(inherits(tmp2, "storr"))
+})
+
+test_with_dir("deprecated memory strategies", {
+  plan <- drake_plan(x = 1)
+  expect_warning(
+    make(
+      plan,
+      cache = storr::storr_environment(),
+      session_info = FALSE,
+      memory_strategy = "memory"
+    ),
+    regexp = "preclean"
+  )
 })

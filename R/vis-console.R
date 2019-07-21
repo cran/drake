@@ -1,6 +1,12 @@
-log_msg <- function(..., config, tier = 2L, color = colors["default"]) {
+log_msg <- function(
+  ...,
+  target = character(0),
+  config,
+  tier = 2L,
+  color = colors["default"]
+) {
   assert_config_not_plan(config)
-  drake_log(..., config = config)
+  drake_log(..., target = target, config = config)
   if (is.null(config$verbose) || as.integer(config$verbose) < tier) {
     return()
   }
@@ -20,7 +26,7 @@ log_msg <- function(..., config, tier = 2L, color = colors["default"]) {
   message(crop_text(paste(msg, collapse = " ")))
 }
 
-drake_log <- function(..., config) {
+drake_log <- function(..., target = character(0), config) {
   if (is.null(config$console_log_file)) {
     return()
   }
@@ -29,7 +35,9 @@ drake_log <- function(..., config) {
     "|",
     Sys.getpid(),
     "|",
-    microtimestamp(),
+    microtime(),
+    "|",
+    target,
     "|",
     ...
   )
@@ -49,7 +57,7 @@ console_time <- function(target, meta, config) {
   } else {
     tail <- " (install lubridate)" # nocov
   }
-  log_msg("time ", target, tail = tail, config = config)
+  log_msg("time", tail = tail, target = target, config = config)
 }
 
 drake_warning <- function(..., config) {
@@ -98,11 +106,15 @@ multiline_message <- function(x) {
 #'   `target` as a symbol (`FALSE`) or character vector
 #'   (`TRUE`).
 #' @examples
+#' \dontrun{
+#' isolate_example("contain side effects", {
 #' plan <- drake_plan(x = sample.int(15))
 #' cache <- storr::storr_environment() # custom in-memory cache
 #' make(plan, cache = cache)
 #' config <- drake_config(plan, cache = cache)
 #' show_source(x, config)
+#' })
+#' }
 show_source <- function(target, config, character_only = FALSE) {
   if (!character_only) {
     target <- as.character(substitute(target))

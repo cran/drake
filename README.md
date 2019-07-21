@@ -4,7 +4,6 @@
 <center>
 <img src="https://ropensci.github.io/drake/figures/infographic.svg" alt="infographic" align="center" style = "border: none; float: center;">
 </center>
-
 <table class="table">
 <thead>
 <tr class="header">
@@ -211,14 +210,19 @@ Except for files like `report.html`, your output is stored in a hidden
 ``` r
 readd(data) # See also loadd().
 #> # A tibble: 150 x 5
-#>   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
-#>          <dbl>       <dbl>        <dbl>       <dbl> <fct>  
-#> 1          5.1         3.5          1.4         0.2 setosa 
-#> 2          4.9         3            1.4         0.2 setosa 
-#> 3          4.7         3.2          1.3         0.2 setosa 
-#> 4          4.6         3.1          1.5         0.2 setosa 
-#> 5          5           3.6          1.4         0.2 setosa 
-#> # … with 145 more rows
+#>    Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+#>           <dbl>       <dbl>        <dbl>       <dbl> <fct>  
+#>  1          5.1         3.5          1.4         0.2 setosa 
+#>  2          4.9         3            1.4         0.2 setosa 
+#>  3          4.7         3.2          1.3         0.2 setosa 
+#>  4          4.6         3.1          1.5         0.2 setosa 
+#>  5          5           3.6          1.4         0.2 setosa 
+#>  6          5.4         3.9          1.7         0.4 setosa 
+#>  7          4.6         3.4          1.4         0.3 setosa 
+#>  8          5           3.4          1.5         0.2 setosa 
+#>  9          4.4         2.9          1.4         0.2 setosa 
+#> 10          4.9         3.1          1.5         0.1 setosa 
+#> # … with 140 more rows
 ```
 
 You may look back on your work and see room for improvement, but it’s
@@ -324,6 +328,121 @@ make(plan) # Independently re-create the results from the code and input data.
 #> target report
 ```
 
+## History and provenance
+
+As of version 7.5.0, `drake` tracks the history and provenance of your
+targets: what you built, when you built it, how you built it, the
+arguments you used in your function calls, and how to get the data back.
+(Disable with `make(history = FALSE)`)
+
+``` r
+history <- drake_history(analyze = TRUE)
+history
+#> # A tibble: 12 x 10
+#>    target time  hash  exists command  runtime   seed latest quiet
+#>    <chr>  <chr> <chr> <lgl>  <chr>      <dbl>  <int> <lgl>  <lgl>
+#>  1 data   2019… e580… TRUE   raw_da… 0.001    1.29e9 FALSE  NA   
+#>  2 data   2019… e580… TRUE   raw_da… 0        1.29e9 TRUE   NA   
+#>  3 fit    2019… 62a1… TRUE   lm(Sep… 0.002    1.11e9 FALSE  NA   
+#>  4 fit    2019… 62a1… TRUE   lm(Sep… 0.001000 1.11e9 TRUE   NA   
+#>  5 hist   2019… 10bc… TRUE   create… 0.006    2.10e8 FALSE  NA   
+#>  6 hist   2019… 5252… TRUE   create… 0.004    2.10e8 FALSE  NA   
+#>  7 hist   2019… 00fa… TRUE   create… 0.007    2.10e8 TRUE   NA   
+#>  8 raw_d… 2019… 6317… TRUE   "readx… 0.009    1.20e9 FALSE  NA   
+#>  9 raw_d… 2019… 6317… TRUE   "readx… 0.00600  1.20e9 TRUE   NA   
+#> 10 report 2019… 3e2b… TRUE   "rmark… 0.481    1.30e9 FALSE  TRUE 
+#> 11 report 2019… 3e2b… TRUE   "rmark… 0.358    1.30e9 FALSE  TRUE 
+#> 12 report 2019… 3e2b… TRUE   "rmark… 0.356    1.30e9 TRUE   TRUE 
+#> # … with 1 more variable: output_file <chr>
+```
+
+Remarks:
+
+  - The `quiet` column appears above because one of the `drake_plan()`
+    commands has `knit(quiet = TRUE)`.
+  - The `hash` column identifies all the previous the versions of your
+    targets. As long as `exists` is `TRUE`, you can recover old data.
+  - Advanced: if you use `make(cache_log_file = TRUE)` and put the cache
+    log file under version control, you can match the hashes from
+    `drake_history()` with the `git` commit history of your code.
+
+Let’s use the history to recover the oldest histogram.
+
+``` r
+hash <- history %>%
+  filter(target == "hist") %>%
+  pull(hash) %>%
+  head(n = 1)
+cache <- drake_cache()
+cache$get_value(hash)
+#> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+<img src="https://ropensci.github.io/drake/figures/hist1.png" alt="hist1" align="center" style = "border: none; float: center;" width = "600px">
+
+## Automated recovery and renaming
+
+Note: this feature is still experimental.
+
+In `drake` version 7.5.0 and above, `make(recover = TRUE)` can salvage
+old targets from the distant past. This may not be a good idea if your
+external dependencies have changed a lot over time (R version, package
+environment, etc) but it can be useful under the right circumstances.
+
+``` r
+# Is the data really gone?
+clean() # garbage_collection = FALSE
+
+# Nope!
+make(plan, recover = TRUE) # The report still builds since report.md is gone.
+#> recover raw_data
+#> recover data
+#> recover fit
+#> recover hist
+#> target report
+
+# When was the raw data *really* first built?
+diagnose(raw_data)$date
+#> [1] "2019-07-18 20:19:48.110163 -0400 GMT"
+```
+
+You can even rename your targets\! All you have to do is use the same  target seed as last time. Just be aware that this invalidates downstream
+targets.
+
+``` r
+# Get the old seed.
+old_seed <- diagnose(data)$seed
+
+# Now rename the data and supply the old seed.
+plan <- drake_plan(
+  raw_data = readxl::read_excel(file_in("raw_data.xlsx")),
+  
+  # Previously just named "data".
+  iris_data = target(
+    raw_data %>%
+      mutate(Species = forcats::fct_inorder(Species)),
+    seed = !!old_seed
+  ),
+
+  # `iris_data` will be recovered from `data`,
+  # but `hist` and `fit` have changed commands,
+  # so they will build from scratch.
+  hist = create_plot(iris_data),
+  fit = lm(Sepal.Width ~ Petal.Width + Species, iris_data),
+  report = rmarkdown::render(
+    knitr_in("report.Rmd"),
+    output_file = file_out("report.html"),
+    quiet = TRUE
+  )
+)
+
+make(plan, recover = TRUE)
+#> recover iris_data
+#> target fit
+#> target hist
+#> target report
+```
+
 ## Independent replication
 
 With even more evidence and confidence, you can invest the time to
@@ -348,12 +467,12 @@ understand it. `drake` helps in several ways.
     computing (HPC) for you. That means the HPC code is no longer
     tangled up with the code that actually expresses your ideas.
   - You can [generate large collections of
-    targets](https://ropenscilabs.github.io/drake-manual/mtcars.html#generate-the-workflow-plan)
+    targets](https://ropenscilabs.github.io/drake-manual/gsp.html)
     without necessarily changing your code base of imported functions,
     another nice separation between the concepts and the execution of
     your workflow
 
-# Aggressively scale up.
+# Scale up and out.
 
 Not every project can complete in a single R session on your laptop.
 Some projects need more speed or computing power. Some require a few
@@ -403,6 +522,8 @@ all the available functions. Here are the most important ones.
 
   - `drake_plan()`: create a workflow data frame (like `my_plan`).
   - `make()`: build your project.
+  - `drake_history()`: show what you built, when you built it, and the
+    function arguments you used.
   - `r_make()`: launch a fresh
     [`callr::r()`](https://github.com/r-lib/callr) process to build your
     project. Called from an interactive R session, `r_make()` is more
@@ -413,6 +534,8 @@ all the available functions. Here are the most important ones.
     user-side functions.
   - `vis_drake_graph()`: show an interactive visual network
     representation of your workflow.
+  - `recoverable()`: Which targets can we salvage using `make(recover =
+    TRUE)` (experimental).
   - `outdated()`: see which targets will be built in the next `make()`.
   - `deps()`: check the dependencies of a command or function.
   - `failed()`: list the targets that failed to build in the last
@@ -431,6 +554,12 @@ all the available functions. Here are the most important ones.
     R/Shiny app to help learn `drake` and create new projects. Run
     locally with `drakeplanner::drakeplanner()` or access it at
     <https://wlandau.shinyapps.io/drakeplanner>.
+  - [`learndrake`](https://github.com/wlandau/learndrake), an R package
+    for teaching an extended `drake` workshop. It contains notebooks,
+    slides, Shiny apps, the latter two of which are publicly deployed.
+    See the
+    [README](https://github.com/wlandau/learndrake/blob/master/README.md)
+    for instructions and links.
   - Presentations and workshops by [Will
     Landau](https://github.com/wlandau), [Kirill
     Müller](https://github.com/krlmlr), [Amanda
@@ -456,6 +585,7 @@ applications of `drake` in real-world
   - [efcaguab/demografia-del-voto](https://github.com/efcaguab/demografia-del-voto)
   - [efcaguab/great-white-shark-nsw](https://github.com/efcaguab/great-white-shark-nsw)
   - [IndianaCHE/Detailed-SSP-Reports](https://github.com/IndianaCHE/Detailed-SSP-Reports)
+  - [joelnitta/pleurosoriopsis](https://github.com/joelnitta/pleurosoriopsis)
   - [pat-s/pathogen-modeling](https://github.com/pat-s/pathogen-modeling)
   - [sol-eng/tensorflow-w-r](https://github.com/sol-eng/tensorflow-w-r)
   - [tiernanmartin/home-and-hope](https://github.com/tiernanmartin/home-and-hope)
@@ -469,7 +599,7 @@ The following resources document many known issues and challenges.
   - [Cautionary notes and edge
     cases](https://ropenscilabs.github.io/drake-manual/caution.html)
   - [Debugging and testing drake
-    projects](https://ropenscilabs.github.io/drake-manual/debug.html)
+    projects](https://ropenscilabs.github.io/drake-manual/debugging.html)
   - [Other known issues](https://github.com/ropensci/drake/issues)
     (please search both open and closed ones).
 
@@ -621,6 +751,32 @@ plan](https://ropenscilabs.github.io/drake-manual/plans.html), and use
 `loadd()` and `readd()` to refer to targets in the report itself. See an
 [example
 here](https://github.com/wlandau/drake-examples/tree/master/main).
+
+### Version control
+
+`drake` is not a version control tool. However, it is fully compatible
+with [`git`](https://git-scm.com/),
+[`svn`](https://en.wikipedia.org/wiki/Apache_Subversion), and similar
+software. In fact, it is good practice to use
+[`git`](https://git-scm.com/) alongside `drake` for reproducible
+workflows.
+
+However, data poses a challenge. The datasets created by `make()` can
+get large and numerous, and it is not recommended to put the `.drake/`
+cache or the `.drake_history/` logs under version control. Instead, it
+is recommended to use a data storage solution such as
+[DropBox](https://www.dropbox.com/) or
+[OSF](https://osf.io/ka7jv/wiki/home/).
+
+### Containerization and R package environments
+
+`drake` does not track R packages or system dependencies for changes.
+Instead, it defers to tools like [Docker](https://www.docker.com),
+[Singularity](https://sylabs.io/singularity/),
+[`renv`](https://github.com/rstudio/renv), and
+[`packrat`](https://github.com/rstudio/packrat), which create
+self-contained portable environments to reproducibly isolate and ship
+data analysis projects. `drake` is fully compatible with these tools.
 
 ### workflowr
 

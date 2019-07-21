@@ -74,15 +74,14 @@ future_build <- function(target, meta, config, layout, protect) {
 }
 
 future_local_build <- function(target, config, queue, protect) {
-  log_msg("local target", target, config = config)
+  log_msg("local target", target = target, config = config)
   loop_build(target, config, downstream = protect)
   decrease_revdep_keys(queue, target, config)
 }
 
 new_worker <- function(id, target, config, ft_config, protect) {
   meta <- drake_meta_(target = target, config = config)
-  if (!should_build_target(target, meta, config)) {
-    log_msg("skip", target, config = config)
+  if (skip_command(target, meta, config)) {
     return(empty_worker(target = target))
   }
   if (identical(config$caching, "master")) {

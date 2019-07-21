@@ -18,10 +18,11 @@ drake_config(plan, targets = NULL, envir = parent.frame(),
   lazy_load = "eager", session_info = TRUE, cache_log_file = NULL,
   seed = NULL, caching = c("master", "worker"), keep_going = FALSE,
   session = NULL, pruning_strategy = NULL, makefile_path = NULL,
-  console_log_file = NULL, ensure_workers = TRUE,
+  console_log_file = NULL, ensure_workers = NULL,
   garbage_collection = FALSE, template = list(), sleep = function(i)
-  0.01, hasty_build = NULL, memory_strategy = c("speed", "memory",
-  "lookahead", "unload", "none"), layout = NULL, lock_envir = TRUE)
+  0.01, hasty_build = NULL, memory_strategy = "speed", layout = NULL,
+  lock_envir = TRUE, history = TRUE, recover = FALSE,
+  recoverable = TRUE)
 }
 \arguments{
 \item{plan}{Workflow plan data frame.
@@ -151,10 +152,10 @@ rather than rerun all your targets from scratch.}
 
 \item{log_progress}{Logical, whether to log the progress
 of individual targets as they are being built. Progress logging
-creates a lot of little files in the cache, and it may make builds
-a tiny bit slower. So you may see gains in storage efficiency
-and speed with
-\code{make(..., log_progress = FALSE)}.}
+creates extra files in the cache (usually the \code{.drake/} folder)
+and slows down \code{make()} a little.
+If you need to reduce or limit the number of files in the cache,
+call \code{make(log_progress = FALSE, recover = FALSE)}.}
 
 \item{graph}{An \code{igraph} object from the previous \code{make()}.
 Supplying a pre-built graph could save time.}
@@ -286,14 +287,7 @@ computer (from \code{Sys.info()["nodename"]}).
 - A timestamp with the date and time (in microseconds).
 - A brief description of what \code{drake} was doing.\code{ The fields are separated by pipe symbols (}"|"`).}
 
-\item{ensure_workers}{Logical, whether the master process
-should wait for the workers to post before assigning them
-targets. Should usually be \code{TRUE}. Set to \code{FALSE}
-for \code{make(parallelism = "future_lapply", jobs = n)}
-(\code{n > 1}) when combined with \code{future::plan(future::sequential)}.
-This argument only applies to parallel computing with persistent workers
-(\code{make(parallelism = x)}, where \code{x} could be \code{"mclapply"},
-\code{"parLapply"}, or \code{"future_lapply"}).}
+\item{ensure_workers}{Deprecated.}
 
 \item{garbage_collection}{Logical, whether to call \code{gc()} each time
 a target is built during \code{\link[=make]{make()}}.}
@@ -359,7 +353,14 @@ to override the global memory strategy. Choices:
 \item \code{"speed"}: Once a target is newly built or loaded in memory,
 just keep it there.
 This choice maximizes speed and hogs memory.
-\item \code{"memory"}: Just before building each new target,
+\item \code{"autoclean"}: Just before building each new target,
+unload everything from memory except the target's direct dependencies.
+After a target is built, discard it from memory.
+(Set \code{garbage_collection = TRUE} to make sure it is really gone.)
+This option conserves memory, but it sacrifices speed because
+each new target needs to reload
+any previously unloaded targets from storage.
+\item \code{"preclean"}: Just before building each new target,
 unload everything from memory except the target's direct dependencies.
 After a target is built, keep it in memory until \code{drake} determines
 they can be unloaded.
@@ -408,6 +409,51 @@ This is extremely important for ensuring the purity of your functions
 and the reproducibility/credibility/trust you can place in your project.
 \code{lock_envir} will be set to a default of \code{TRUE} in \code{drake} version
 7.0.0 and higher.}
+
+\item{history}{Logical, whether to record the build history
+of your targets. You can also supply a
+\href{https://github.com/wlandau/txtq}{txtq}, which is
+how \code{drake} records history.
+Must be \code{TRUE} for \code{\link[=drake_history]{drake_history()}} to work later.}
+
+\item{recover}{Logical, whether to activate automated data recovery.
+The default is \code{FALSE} because
+\enumerate{
+\item Automated data recovery is still experimental.
+\item It has reproducibility issues.
+Targets recovered from the distant past may have been generated
+with earlier versions of R and earlier package environments
+that no longer exist.
+}
+
+How it works: if \code{recover} is \code{TRUE},
+\code{drake} tries to salvage old target values from the cache
+instead of running commands from the plan.
+A target is recoverable if
+\enumerate{
+\item There is an old value somewhere in the cache that
+shares the command, dependencies, etc.
+of the target about to be built.
+\item The old value was generated with \code{make(recoverable = TRUE)}.
+}
+
+If both conditions are met, \code{drake} will
+\enumerate{
+\item Assign the most recently-generated admissible data to the target, and
+\item skip the target's command.
+}
+
+Functions \code{\link[=recoverable]{recoverable()}} and \code{\link[=r_recoverable]{r_recoverable()}} show the most upstream
+outdated targets that will be recovered in this way in the next
+\code{\link[=make]{make()}} or \code{\link[=r_make]{r_make()}}.}
+
+\item{recoverable}{Logical, whether to make target values recoverable
+with \code{make(recover = TRUE)}.
+This requires writing extra files to the cache,
+and it prevents old metadata from being removed with garbage collection
+(\code{clean(garbage_collection = TRUE)}, \code{gc()} in \code{storr}s).
+If you need to limit the cache size or the number of files in the cache,
+consider \code{make(recoverable = FALSE, progress = FALSE)}.}
 }
 \value{
 The master internal configuration list of a project.
@@ -418,13 +464,50 @@ parameters and settings that \code{\link[=make]{make()}} needs to do its job:
 the plan, packages,
 the environment of functions and initial data objects,
 parallel computing instructions,
-verbosity level, etc. Other functions such as \code{\link[=outdated]{outdated()}},
+verbosity level, etc.
+}
+\details{
+Once you create a list with \code{\link[=drake_config]{drake_config()}},
+do not modify it by hand.
+
+Utility functions such as \code{\link[=outdated]{outdated()}},
 \code{\link[=vis_drake_graph]{vis_drake_graph()}}, and \code{\link[=predict_runtime]{predict_runtime()}} require output from
 \code{\link[=drake_config]{drake_config()}} for the \code{config} argument.
 If you supply a \code{\link[=drake_config]{drake_config()}} object to the \code{config}
 argument of \code{\link[=make]{make()}}, then \code{drake} will ignore all the other arguments
 because it already has everything it needs in \code{config}.
 }
+\section{Recovery}{
+
+\code{make(recover = TRUE, recoverable = TRUE)}
+powers automated data recovery.
+The default of \code{recover} is \code{FALSE} because
+\enumerate{
+\item Automated data recovery is still experimental.
+\item It has reproducibility issues.
+Targets recovered from the distant past may have been generated
+with earlier versions of R and earlier package environments
+that no longer exist.
+}
+
+How it works: if \code{recover} is \code{TRUE},
+\code{drake} tries to salvage old target values from the cache
+instead of running commands from the plan.
+A target is recoverable if
+\enumerate{
+\item There is an old value somewhere in the cache that
+shares the command, dependencies, etc.
+of the target about to be built.
+\item The old value was generated with \code{make(recoverable = TRUE)}.
+}
+
+If both conditions are met, \code{drake} will
+\enumerate{
+\item Assign the most recently-generated admissible data to the target, and
+\item skip the target's command.
+}
+}
+
 \examples{
 \dontrun{
 isolate_example("Quarantine side effects.", {

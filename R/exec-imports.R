@@ -12,8 +12,6 @@ process_imports <- function(config) {
 #' @keywords internal
 #' @param import Character, name of an import to process
 #' @param config [drake_config()] object
-#' @examples
-#' # Not a user-side function.
 process_import <- function(import, config) {
   meta <- drake_meta_(import, config)
   if (meta$isfile) {
@@ -27,12 +25,12 @@ process_import <- function(import, config) {
   if (is_missing) {
     log_msg(
       "missing",
-      display_key(import, config),
+      target = display_key(import, config),
       config = config,
       color = colors["missing"]
     )
   } else {
-    log_msg("import", display_key(import, config), config = config)
+    log_msg("import", target = display_key(import, config), config = config)
   }
   store_single_output(
     target = import,

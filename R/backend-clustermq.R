@@ -1,5 +1,5 @@
 backend_clustermq <- function(config) {
-  assert_pkg("clustermq", version = "0.8.5")
+  assert_pkg("clustermq", version = "0.8.8")
   config$queue <- new_priority_queue(
     config = config,
     jobs = config$jobs_preprocess
@@ -28,10 +28,9 @@ cmq_local_master <- function(config) {
       next
     }
     meta <- drake_meta_(target = target, config = config)
-    if (should_build_target(target, meta, config)) {
+    if (!skip_command(target, meta, config)) {
       return()
     }
-    log_msg("skip", target, config = config)
     config$queue$pop0()
     cmq_conclude_target(target, config)
   }
@@ -43,33 +42,15 @@ cmq_set_common_data <- function(config) {
     export <- as.list(config$envir, all.names = TRUE) # nocov
   }
   export$config <- cmq_config(config)
-  use_pkgs <- utils::compareVersion(
-    paste0(utils::packageVersion("clustermq"), collapse = "."),
-    "0.8.8"
-  ) >= 0L
-  if (use_pkgs) {
-    config$workers$set_common_data(
-      export = export,
-      fun = identity,
-      const = list(),
-      rettype = list(),
-      pkgs = character(0),
-      common_seed = config$seed,
-      token = "set_common_data_token"
-    )
-  } else {
-    # Need to test manually with old clustermq.
-    # nocov start
-    config$workers$set_common_data(
-      export = export,
-      fun = identity,
-      const = list(),
-      rettype = list(),
-      common_seed = config$seed,
-      token = "set_common_data_token"
-    )
-    # nocov end
-  }
+  config$workers$set_common_data(
+    export = export,
+    fun = identity,
+    const = list(),
+    rettype = list(),
+    pkgs = character(0),
+    common_seed = config$seed,
+    token = "set_common_data_token"
+  )
 }
 
 cmq_master <- function(config) {
@@ -109,8 +90,7 @@ cmq_next_target <- function(config) {
 
 cmq_send_target <- function(target, config) {
   meta <- drake_meta_(target = target, config = config)
-  if (!should_build_target(target, meta, config)) {
-    log_msg("skip", target, config = config)
+  if (skip_command(target, meta, config)) {
     cmq_conclude_target(target = target, config = config)
     config$workers$send_wait()
     return()
@@ -163,7 +143,7 @@ cmq_deps_list <- function(target, config) {
 }
 
 cmq_local_build <- function(target, config) {
-  log_msg("build", target, "locally", config = config)
+  log_msg("build", "locally", target = target, config = config)
   loop_build(target, config, downstream = NULL)
   cmq_conclude_target(target = target, config = config)
 }
@@ -179,7 +159,7 @@ cmq_local_build <- function(target, config) {
 #' @param layout Internal, part of the full `config$layout`.
 #' @param config A [drake_config()] list.
 cmq_build <- function(target, meta, deps, layout, config) {
-  log_msg("build", target, "on an hpc worker", config = config)
+  log_msg("build", "on an hpc worker", target = target, config = config)
   config$layout <- list()
   config$layout[[target]] <- layout
   do_prework(config = config, verbose_packages = FALSE)

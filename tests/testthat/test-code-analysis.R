@@ -236,3 +236,34 @@ test_with_dir("code analysis error handling", {
   e <- list(1, 2)
   expect_error(get_assigned_var(e), regexp = "not a symbol")
 })
+
+test_with_dir("character vectors inside language objects", {
+  y <- c("a", "b")
+  plan <- drake::drake_plan(
+    out = data.frame(x = 1:2, y = !!y)
+  )
+  expect_silent(
+    drake_config(plan, cache = storr::storr_environment(), session_info = FALSE)
+  )
+  expect_equal(
+    sort(analyze_code(plan$command[[1]])$strings),
+    sort(c("a", "b"))
+  )
+})
+
+test_with_dir("dollar sign (#938)", {
+  expect_equal(analyze_code(quote(x$y))$globals, "x")
+  f <- function(target, cache) {
+    exists <- cache$exists(key = target) && (
+      imported <- diagnose(
+        target = target,
+        character_only = TRUE,
+        cache = cache
+      )$imported %||%
+        FALSE
+    )
+  }
+  out <- sort(analyze_code(f)$globals)
+  exp <- sort(c("diagnose", "%||%"))
+  expect_equal(out, exp)
+})

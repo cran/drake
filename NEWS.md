@@ -1,3 +1,52 @@
+# Version 7.5.2
+
+## Bug fixes
+
+- Eliminate accidental creations of `.drake_history` in `plan_to_code()`, `plan_to_notebook()`, and the examples in the help files.
+
+
+# Version 7.5.1
+
+## Bug fixes
+
+- Change \.drake_history$ to ^\.drake_history$ in .Rbuildignore appease CRAN checks. 
+- Repair help file examples.
+
+
+# Version 7.5.0
+
+## New features
+
+- Add automated data recovery (#945). This is still experimental and disabled by default. Requires `make(recover = TRUE)`.
+- Add new functions `recoverable()` and `r_recoverable()` to show targets that are outdated but recoverable via `make(recover = TRUE)`.
+- Track the history and provenance of targets, viewable with `drake_history()`. Powered by [`txtq`](https://github.com/wlandau/txtq) (#918, #920).
+- Add a new `no_deps()` function, similar to `ignore()`. `no_deps()` suppresses dependency detection but still tracks changes to the literal code ([#910](https://github.com/ropensci/drake/issues/910)).
+- Add a new "autoclean" memory strategy (#917).
+- Export `transform_plan()`.
+- Allow a custom `seed` column of `drake` plans to set custom seeds (#947).
+- Add a new `seed` trigger to optionally ignore changes to the target seed (#947).
+
+## Enhancements
+
+- In `drake_plan()`, interpret custom columns as non-language objects (#942).
+- Suggest and assert `clustermq` >= 0.8.8.
+- Log the target name in a special column in the console log file ([#909](https://github.com/ropensci/drake/issues/909)).
+- Rename the "memory" memory strategy to "preclean" (with deprecation; #917).
+- Deprecate `ensure_workers` in `drake_config()` and `make()`.
+- Warn when the user supplies additional arguments to `make()` after `config` is already supplied.
+- Prevent users from running `make()` from inside the cache (#927).
+- Add `CITATION` file with JOSS paper.
+- In `deps_profile()`, include the seed and change the names.
+- Allow the user to set a different seed in `make()`. All this does is invalidate old targets.
+- Use `set_hash()` and `get_hash()` in `storr` to double the speed of progress tracking.
+
+## Bug fixes
+
+- In the static code analysis for dependency detection, ignore list elements referenced with `$` (#938).
+- Minor: handle strings embedded in language objects (#934).
+- Minor: supply `xxhash64` as the default hash algorithm for non-`storr` hashing if the driver does not have a hash algorithm.
+
+
 # Version 7.4.0
 
 ## Mildly breaking changes

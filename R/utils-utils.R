@@ -140,12 +140,7 @@ drake_tidyselect_cache <- function(
   c(out, list)
 }
 
-factor_to_character <- function(x) {
-  if (is.factor(x)) {
-    x <- as.character(x)
-  }
-  x
-}
+
 
 file_extn <- function(x) {
   x <- basename(x)
@@ -198,17 +193,6 @@ select_nonempty <- function(x) {
   x[keep]
 }
 
-select_valid_lang <- function(x) {
-  discard <- vapply(
-    X = x,
-    FUN = function(y) {
-      identical(y, substitute())
-    },
-    FUN.VALUE = logical(1)
-  )
-  x[!discard]
-}
-
 select_valid <- function(x) {
   index <- vapply(
     X = x,
@@ -225,28 +209,6 @@ standardize_key <- function(text) {
     text <- encode_namespaced(text)
   }
   text
-}
-
-is_vectorized <- function(funct) {
-  if (!is.function(funct)) {
-    return(FALSE)
-  }
-  if (!is.environment(environment(funct))) {
-    return(FALSE)
-  }
-  vectorized_names <- "FUN" # Chose not to include other names.
-  if (!all(vectorized_names %in% names(environment(funct)))) {
-    return(FALSE)
-  }
-  f <- environment(funct)[["FUN"]]
-  is.function(f)
-}
-
-unwrap_function <- function(funct) {
-  if (is_vectorized(funct)) {
-    funct <- environment(funct)[["FUN"]]
-  }
-  funct
 }
 
 lock_environment <- function(envir) {
@@ -277,82 +239,12 @@ unhidden_names <- function(envir) {
   out
 }
 
-is_unnamed <- function(x) {
-  if (!length(names(x))) {
-    rep(TRUE, length(x))
-  } else {
-    !nzchar(names(x))
-  }
-}
 
-# weak_tibble - use tibble() if available but fall back to
-# data.frame() if necessary
-weak_tibble <- function(..., .force_df = FALSE) {
-  no_tibble <- !suppressWarnings(requireNamespace("tibble", quietly = TRUE))
 
-  if (.force_df || no_tibble) {
-    data.frame(..., stringsAsFactors = FALSE)
-  } else {
-    tibble::tibble(...)
-  }
-}
 
-# weak_as_tibble - use as_tibble() if available but fall back to
-# as.data.frame() if necessary
-weak_as_tibble <- function(..., .force_df = FALSE) {
-  no_tibble <- !suppressWarnings(requireNamespace("tibble", quietly = TRUE))
-  if (.force_df || no_tibble) {
-    as.data.frame(..., stringsAsFactors = FALSE)
-  } else {
-    tibble::as_tibble(...)
-  }
-}
-
-drake_bind_rows <- function(...) {
-  args <- rlang::dots_list(..., .ignore_empty = "all")
-  df_env <- new.env(parent = emptyenv())
-  df_env$dfs <- list()
-  flatten_df_list(args, df_env = df_env)
-  dfs <- df_env$dfs
-  cols <- lapply(dfs, colnames)
-  cols <- Reduce(f = union, x = cols)
-  dfs <- lapply(dfs, fill_cols, cols = cols)
-  do.call(rbind, dfs)
-}
-
-flatten_df_list <- function(args, df_env){
-  if (!is.null(dim(args))) {
-    index <- length(df_env$dfs) + 1
-    df_env$dfs[[index]] <- weak_as_tibble(args)
-  } else {
-    lapply(args, flatten_df_list, df_env = df_env)
-  }
-}
-
-fill_cols <- function(x, cols) {
-  for (col in setdiff(cols, colnames(x))) {
-    x[[col]] <- rep(NA, nrow(x))
-  }
-  x
-}
 
 long_deparse <- function(x, collapse = "\n") {
   paste(deparse(x), collapse = collapse)
-}
-
-safe_deparse <- function(x, collapse = "\n") {
-  paste(
-    deparse(x, control = c("keepInteger", "keepNA")),
-    collapse = collapse
-  )
-}
-
-safe_parse <- function(x) {
-  out <- parse(text = x, keep.source = FALSE)
-  if (length(out)) {
-    out <- out[[1]]
-  }
-  out
 }
 
 named <- function(x, exclude = character(0)) {
@@ -365,23 +257,6 @@ unnamed <- function(x) {
   x[!nzchar(names(x))]
 }
 
-sub_in_plan <- function(plan, rows, index) {
-  plan <- drake_bind_rows(
-    plan[seq_len(index - 1), ],
-    rows,
-    plan[-seq_len(index), ]
-  )
-  plan
-}
-
-tidyeval_exprs <- function(expr_list, envir) {
-  lapply(expr_list, tidyeval_expr, envir = envir)
-}
-
-tidyeval_expr <- function(expr, envir) {
-  call <- as.call(c(quote(rlang::expr), expr))
-  eval(call, envir = envir)
-}
 
 # From https://stackoverflow.com/a/54623901/3704549
 splice_inner <- function(x, replacements) {
@@ -451,6 +326,6 @@ make_unique <- function(x) {
   y[order(ord)]
 }
 
-microtimestamp <- function() {
-  format(Sys.time(), "%Y-%m-%d %H:%M:%OS9")
+microtime <- function() {
+  format(Sys.time(), "%Y-%m-%d %H:%M:%OS9 %z GMT")
 }

@@ -995,200 +995,70 @@ test_with_dir("dsl with differently typed group levels", {
 })
 
 test_with_dir("tidy eval in the DSL", {
-  sms <- rlang::syms(letters)
+  h <- function(x) {
+    x
+  }
   out <- drake_plan(
     x = target(
       f(char),
       trigger = trigger(condition = g(char)),
       custom = h(char),
-      transform = map(char = !!sms)
+      transform = map(char = !!letters[1:2])
     )
   )
   exp <- drake_plan(
     x_a = target(
-      command = f(a),
+      command = f("a"),
       trigger = trigger(
-        condition = g(a)
+        condition = g("a")
       ),
-      custom = h(a)
+      custom = "a"
     ),
     x_b = target(
-      command = f(b),
+      command = f("b"),
       trigger = trigger(
-        condition = g(b)
+        condition = g("b")
       ),
-      custom = h(b)
-    ),
-    x_c = target(
-      command = f(c),
-      trigger = trigger(
-        condition = g(c)
-      ),
-      custom = h(c)
-    ),
-    x_d = target(
-      command = f(d),
-      trigger = trigger(
-        condition = g(d)
-      ),
-      custom = h(d)
-    ),
-    x_e = target(
-      command = f(e),
-      trigger = trigger(
-        condition = g(e)
-      ),
-      custom = h(e)
-    ),
-    x_f = target(
-      command = f(f),
-      trigger = trigger(
-        condition = g(f)
-      ),
-      custom = h(f)
-    ),
-    x_g = target(
-      command = f(g),
-      trigger = trigger(
-        condition = g(g)
-      ),
-      custom = h(g)
-    ),
-    x_h = target(
-      command = f(h),
-      trigger = trigger(
-        condition = g(h)
-      ),
-      custom = h(h)
-    ),
-    x_i = target(
-      command = f(i),
-      trigger = trigger(
-        condition = g(i)
-      ),
-      custom = h(i)
-    ),
-    x_j = target(
-      command = f(j),
-      trigger = trigger(
-        condition = g(j)
-      ),
-      custom = h(j)
-    ),
-    x_k = target(
-      command = f(k),
-      trigger = trigger(
-        condition = g(k)
-      ),
-      custom = h(k)
-    ),
-    x_l = target(
-      command = f(l),
-      trigger = trigger(
-        condition = g(l)
-      ),
-      custom = h(l)
-    ),
-    x_m = target(
-      command = f(m),
-      trigger = trigger(
-        condition = g(m)
-      ),
-      custom = h(m)
-    ),
-    x_n = target(
-      command = f(n),
-      trigger = trigger(
-        condition = g(n)
-      ),
-      custom = h(n)
-    ),
-    x_o = target(
-      command = f(o),
-      trigger = trigger(
-        condition = g(o)
-      ),
-      custom = h(o)
-    ),
-    x_p = target(
-      command = f(p),
-      trigger = trigger(
-        condition = g(p)
-      ),
-      custom = h(p)
-    ),
-    x_q = target(
-      command = f(q),
-      trigger = trigger(
-        condition = g(q)
-      ),
-      custom = h(q)
-    ),
-    x_r = target(
-      command = f(r),
-      trigger = trigger(
-        condition = g(r)
-      ),
-      custom = h(r)
-    ),
-    x_s = target(
-      command = f(s),
-      trigger = trigger(
-        condition = g(s)
-      ),
-      custom = h(s)
-    ),
-    x_t = target(
-      command = f(t),
-      trigger = trigger(
-        condition = g(t)
-      ),
-      custom = h(t)
-    ),
-    x_u = target(
-      command = f(u),
-      trigger = trigger(
-        condition = g(u)
-      ),
-      custom = h(u)
-    ),
-    x_v = target(
-      command = f(v),
-      trigger = trigger(
-        condition = g(v)
-      ),
-      custom = h(v)
-    ),
-    x_w = target(
-      command = f(w),
-      trigger = trigger(
-        condition = g(w)
-      ),
-      custom = h(w)
-    ),
-    x_x = target(
-      command = f(x),
-      trigger = trigger(
-        condition = g(x)
-      ),
-      custom = h(x)
-    ),
-    x_y = target(
-      command = f(y),
-      trigger = trigger(
-        condition = g(y)
-      ),
-      custom = h(y)
-    ),
-    x_z = target(
-      command = f(z),
-      trigger = trigger(
-        condition = g(z)
-      ),
-      custom = h(z)
+      custom = "b"
     )
   )
   equivalent_plans(out, exp)
+})
+
+test_with_dir("resource column is not a language object (#942)", {
+  mem <- 1024
+  x <- "b"
+  out <- drake_plan(
+    data = target(
+      download_data(),
+      resources = list(cores = 1, gpus = 0, mem = !!mem),
+      x = "a"
+    ),
+    model = target(
+      big_machine_learning_model(data),
+      resources = list(cores = 4, gpus = 1, mem = !!mem),
+      x = !!x
+    )
+  )
+  exp <- drake_plan(
+    data = target(
+      command = download_data(),
+      resources = list(cores = 1, gpus = 0, mem = 1024),
+      x = "a"
+    ),
+    model = target(
+      command = big_machine_learning_model(data),
+      resources = list(cores = 4, gpus = 1, mem = 1024),
+      x = "b"
+    )
+  )
+  equivalent_plans(out, exp)
+  out <- out$resources
+  exp <- list(
+    list(cores = 1, gpus = 0, mem = 1024),
+    list(cores = 4, gpus = 1, mem = 1024)
+  )
+  expect_equal(out, exp)
 })
 
 test_with_dir("dsl: exact same plan as mtcars", {
@@ -2277,7 +2147,7 @@ test_with_dir("max_expand", {
     ),
     analysis = target(
       fn(data, param),
-      transform = cross(data, fn = !!letters, param = !!seq_len(100)),
+      transform = cross(data, fn = !!letters, param = !!seq_len(100))
     ),
     result = target(
       bind_rows(analysis),
@@ -2526,4 +2396,46 @@ test_with_dir("parse long tidyeval inputs", {
     )
   )
   equivalent_plans(out, exp)
+})
+
+test_with_dir("transform_plan() on its own", {
+  i <- 0L
+  out1 <- drake_plan(
+    y = target(
+      f(x, !!i),
+      transform = map(x = c(1, 2))
+    ),
+    transform = FALSE,
+    tidy_eval = FALSE
+  )
+  out2 <- drake_plan(
+    z = target(
+      g(y, !!i),
+      transform = map(y, .id = x)
+    ),
+    transform = FALSE,
+    tidy_eval = FALSE
+  )
+  out3 <- transform_plan(bind_plans(out1, out2))
+  exp1 <- drake_plan(
+    y = target(
+      command = f(x, !!i),
+      transform = map(x = c(1, 2))
+    ),
+    transform = FALSE
+  )
+  exp2 <- drake_plan(
+    z = target(
+      command = g(y, !!i),
+      transform = map(y, .id = x)
+    ),
+    transform = FALSE
+  )
+  exp3 <- drake_plan(
+    y_1 = f(1, 0L),
+    y_2 = f(2, 0L),
+    z_1 = g(y_1, 0L),
+    z_2 = g(y_2, 0L)
+  )
+  equivalent_plans(out3, exp3)
 })
