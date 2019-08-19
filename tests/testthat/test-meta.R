@@ -1,0 +1,107 @@
+drake_context("meta")
+
+test_with_dir("stress test storage hash", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("knitr")
+  load_mtcars_example()
+  con <- drake_config(
+    my_plan, verbose = 0L, session_info = FALSE,
+    cache = storr::storr_environment()
+  )
+  make(config = con)
+  # Can debug storage_hash() to make sure hashing is skipped
+  # at the appropriate times.
+  for (file in file_store(c("report.Rmd"))) {
+    expect_true(is.character(storage_hash(file, config = con, 0)))
+    expect_true(is.character(storage_hash(file, config = con, Inf)))
+  }
+})
+
+test_with_dir("same with a directory", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  dir.create("dir")
+  writeLines("123", "dir/a.txt")
+  writeLines("456", "dir/b.txt")
+  plan <- drake_plan(x = file_in("dir"))
+  con <- drake_config(
+    plan, verbose = 0L, session_info = FALSE,
+    cache = storr::storr_environment()
+  )
+  make(config = con)
+  # Can debug storage_hash() to make sure hashing is skipped
+  # at the appropriate times.
+  for (file in file_store("dir")) {
+    expect_true(is.character(storage_hash(file, config = con, 0)))
+    expect_true(is.character(storage_hash(file, config = con, Inf)))
+  }
+})
+
+test_with_dir("hashing decisions", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  expect_true(
+    should_rehash_storage(
+      new_mtime = 0,
+      old_mtime = 0,
+      old_size = 0,
+      new_size = 0,
+      size_threshold = Inf
+    )
+  )
+  for (i in c(0, 1)) {
+    expect_false(
+      should_rehash_storage(
+        new_mtime = 0,
+        old_mtime = i,
+        old_size = 0,
+        new_size = 0,
+        size_threshold = -Inf
+      )
+    )
+    expect_true(
+      should_rehash_storage(
+        new_mtime = 0,
+        old_mtime = i,
+        old_size = 0,
+        new_size = 0,
+        size_threshold = Inf
+      )
+    )
+  }
+  for (s in c(-Inf, Inf)) {
+    expect_true(
+      should_rehash_storage(
+        new_mtime = 1,
+        old_mtime = 0,
+        old_size = 0,
+        new_size = 0,
+        size_threshold = s
+      )
+    )
+    expect_true(
+      should_rehash_storage(
+        new_mtime = 0,
+        old_mtime = 0,
+        old_size = 1,
+        new_size = 0,
+        size_threshold = s
+      )
+    )
+    expect_true(
+      should_rehash_storage(
+        new_mtime = 0,
+        old_mtime = 0,
+        old_size = 0,
+        new_size = 1,
+        size_threshold = s
+      )
+    )
+  }
+})
+
+test_with_dir("storage hash of a non-existent path", {
+  expect_false(file.exists("asdf"))
+  expect_true(is.na(storage_hash("asdf", config = list())))
+  expect_true(is.na(rehash_storage("asdf", config = list())))
+  expect_true(is.na(storage_hash(encode_path("asdf"), config = list())))
+  expect_true(is.na(rehash_storage(encode_path("asdf"), config = list())))
+})

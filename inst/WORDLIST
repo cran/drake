@@ -6,6 +6,7 @@ acyclic
 addin
 advisor
 algo
+ALTREP
 Ane
 args
 Args
@@ -48,6 +49,7 @@ DataFest
 del
 demografia
 deps
+deregister
 dereferenced
 deterministically
 devtools
@@ -71,6 +73,7 @@ Falster
 faq
 FitzJohn
 flowlines
+fst
 ftp
 Genotype
 ggplot
@@ -79,6 +82,8 @@ globals
 gridlines
 gsp
 Halotype
+HDF
+HDF5
 hotfix
 HPC
 hpc
@@ -95,13 +100,16 @@ Jeroen
 joelnitta
 JOSS
 Karthik
-Kendon
 kbroman
+Kendon
+Keras
+keras
 Kirill
 Kirill's
 knitr
 Knitr
 lapply
+lifecycle
 loadd
 Loadd
 Lowndes
@@ -142,6 +150,7 @@ parallelization
 parallelize
 parallelizing
 parLapply
+passwd
 Payseur
 PhantomJS
 Pharma
@@ -206,6 +215,7 @@ tensorflow
 tibble
 tibbles
 tidyeval
+tidyselect
 Tidyverse
 tidyverse
 tiernanmartin
@@ -219,6 +229,7 @@ unhandled
 Univa
 unparsable
 untimed
+untransformed
 vectorization
 vectorized
 VignetteEncoding
@@ -234,6 +245,7 @@ widehat
 withTimeout
 wlandau
 workflowr
+workplan
 YAML
 Yub
 zeromq

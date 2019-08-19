@@ -1,5 +1,16 @@
 drake_context("dsl")
 
+# Keep test_that(). test_with_dir() somehow fools the
+# hpc test suite into thinking combine() does not come from drake.
+test_with_dir("dsl placeholders", {
+  # nolint start
+  expect_error(drake:::map(), regexp = "must be called inside target")
+  expect_error(drake:::split(), regexp = "must be called inside target")
+  expect_error(drake:::cross(), regexp = "must be called inside target")
+  expect_error(drake:::combine(), regexp = "must be called inside target")
+  # nolint end
+})
+
 test_with_dir("nothing to transform", {
   exp <- drake_plan(a = 1)
   out <- transform_plan(exp)
@@ -1198,12 +1209,18 @@ test_with_dir("trace has correct provenance", {
     ),
     d_b_a_1_3_c_b_a_1_3_2 = target(
       command = b_a_1_3,
+      x = "1",
+      y = "3",
+      a = "a_1_3",
       b = "b_a_1_3",
       c = "c_b_a_1_3_2",
       d = "d_b_a_1_3_c_b_a_1_3_2"
     ),
     d_b_a_1_3_2_c_b_a_1_3 = target(
       command = b_a_1_3_2,
+      x = "1",
+      y = "3",
+      a = "a_1_3_2",
       b = "b_a_1_3_2",
       c = "c_b_a_1_3",
       d = "d_b_a_1_3_2_c_b_a_1_3"
@@ -1801,10 +1818,10 @@ test_with_dir("unequal trace vars are not duplicated in map()", {
   out <- drake_plan(
     wide1 = target(
       ez_parallel(a),
-      transform = map(a = !!inputs, type = !!types) ),
+      transform = map(a = !!inputs, type = !!types)),
     prelim = target(
       preliminary(wide1),
-      transform = combine(wide1, .by = type) ),
+      transform = combine(wide1, .by = type)),
     main = target(
       expensive_calc(prelim),
       transform = map(prelim)
@@ -2438,4 +2455,337 @@ test_with_dir("transform_plan() on its own", {
     z_2 = g(y_2, 0L)
   )
   equivalent_plans(out3, exp3)
+})
+
+test_with_dir("splice_args()", {
+  out <- splice_args(
+    quote(1 + g(f(h(y), z), z)),
+    list(y = list(1, 2), z = list(4, quote(x)))
+  )
+  expect_equal(deparse(out), "1 + g(f(h(1, 2), 4, x), 4, x)")
+  out <- splice_args(
+    quote(f(x, 5)),
+    list(x = list(a = 1, b = quote(sym), c = "char"))
+  )
+  expect_equal(deparse(out), "f(a = 1, b = sym, c = \"char\", 5)")
+})
+
+test_with_dir("make_unique()", {
+  skip_on_cran()
+  expect_equal(make_unique(character(0)), character(0))
+  expect_equal(make_unique(letters), letters)
+  x <- c("d", "c", "b", "b", "b", "d", "a", "a", "c", "d")
+  out <- make_unique(x)
+  exp <- c("d", "c", "b", "b_2", "b_3", "d_2", "a", "a_2", "c_2", "d_3")
+  expect_equal(out, exp)
+  set.seed(0)
+  x <- sample(letters[seq_len(4)], size = 1e3, replace = TRUE)
+  out <- make_unique(x)
+  out <- vapply(
+    out,
+    function(x) {
+      y <- strsplit(x, split = "_")[[1]]
+      if (length(y) == 1L) {
+        return(y)
+      }
+      suffix <- as.integer(y[2])
+      expect_true(suffix > 1L)
+      paste(y[1], suffix - 1L, sep = ".")
+    },
+    FUN.VALUE = character(1),
+    USE.NAMES = FALSE
+  )
+  exp <- make.unique(x, sep = ".")
+  expect_equal(out, exp)
+})
+
+test_with_dir("slice_indices", {
+  all_slices <- function(length, slices) {
+    lapply(seq_len(slices), slice_indices, length = length, slices = slices)
+  }
+  for (i in seq_len(50)) {
+    for (j in seq_len(i + 2)) {
+      s <- all_slices(i, j)
+      expect_equal(sort(unlist(s)), seq_len(i))
+      lengths <- vapply(s, length, FUN.VALUE = integer(1))
+      diff <- max(lengths) - min(lengths)
+      expect_true(diff <= 1L)
+    }
+  }
+})
+
+test_with_dir("slice_indices edge cases", {
+  expect_equal(slice_indices(100, slices = 1, index = 1), seq_len(100))
+  expect_equal(slice_indices(100, slices = 1, index = 2), integer(0))
+  expect_equal(slice_indices(100, slices = 2, index = 3), integer(0))
+  for (i in c(0, 100)) {
+    for (j in c(0, 1)) {
+      for (k in c(0, 1)) {
+        if (i > 0L && j > 0L && k > 0L) {
+          next
+        }
+        expect_equal(slice_indices(i, slices = j, index = k), integer(0))
+      }
+    }
+  }
+})
+
+test_with_dir("drake_slice edge cases", {
+  expect_error(
+    drake_slice(mtcars, margin = 1:2),
+    regexp = "must each have length 1"
+  )
+})
+
+test_with_dir("drake_slice on a vector", {
+  expect_equal(drake_slice(letters, slices = 3, index = 1), letters[1:9])
+  expect_equal(drake_slice(letters, slices = 3, index = 2), letters[10:18])
+  expect_equal(drake_slice(letters, slices = 3, index = 3), letters[19:26])
+})
+
+test_with_dir("drake_slice on a list", {
+  x <- as.list(letters)
+  expect_equal(drake_slice(x, slices = 3, index = 1), x[1:9])
+  expect_equal(drake_slice(x, slices = 3, index = 2), x[10:18])
+  expect_equal(drake_slice(x, slices = 3, index = 3), x[19:26])
+})
+
+test_with_dir("drake_slice on arrays", {
+  skip_if_not_installed("abind")
+  for (ndim in 1:4) {
+    dim <- seq(from = 8, length.out = ndim)
+    x <- array(seq_len(prod(dim)), dim = dim)
+    for (slices in c(3, 4, 5)) {
+      for (margin in seq_len(ndim)) {
+        lst <- lapply(
+          seq_len(slices),
+          function(i) {
+            drake_slice(data = x, slices = slices, margin = margin, index = i)
+          }
+        )
+        lst$along <- margin
+        # unfixable partial arg match warnings:
+        out <- suppressWarnings(do.call(abind::abind, lst))
+        expect_equivalent(x, out)
+      }
+    }
+  }
+})
+
+test_with_dir("drake_slice on a data frame", {
+  lst <- lapply(
+    seq_len(4),
+    function(i) {
+      drake_slice(data = mtcars, slices = 4, margin = 1, index = i)
+    }
+  )
+  out <- do.call(rbind, lst)
+  expect_equal(out, mtcars)
+})
+
+test_with_dir("drake_slice and drop", {
+  x <- matrix(seq_len(20), nrow = 5)
+  out <- drake_slice(x, slices = 3, margin = 2, index = 2)
+  expect_equal(out, matrix(11:15, ncol = 1))
+  out <- drake_slice(x, slices = 3, margin = 2, index = 2, drop = TRUE)
+  expect_equal(out, 11:15)
+})
+
+test_with_dir("slice(), grouping vars, and .id (#963)", {
+  x <- data.frame(
+    var = letters[5:8],
+    id = letters[1:4],
+    stringsAsFactors = FALSE
+  )
+  out <- drake_plan(
+    y = target(
+      f(x),
+      transform = split(x, slices = !!nrow(x), id = !!x$id, .id = id)
+    )
+  )
+  exp <- drake_plan(
+    y_a = f(drake_slice(data = x, slices = 4L, index = 1)),
+    y_b = f(drake_slice(data = x, slices = 4L, index = 2)),
+    y_c = f(drake_slice(data = x, slices = 4L, index = 3)),
+    y_d = f(drake_slice(data = x, slices = 4L, index = 4))
+  )
+  equivalent_plans(out, exp)
+})
+
+test_with_dir("complete_cases()", {
+  for (empty in list(data.frame(), mtcars[NULL, ], mtcars[, NULL])) {
+    expect_equivalent(complete_cases(empty), logical(0))
+  }
+  x <- data.frame(a = letters, b = LETTERS)
+  expect_equal(complete_cases(x), rep(TRUE, length(letters)))
+  x <- data.frame(a = 1:6, b = c(1:3, rep(NA_integer_, 3)))
+  expect_equal(complete_cases(x), rep(c(TRUE, FALSE), each = 3))
+})
+
+test_with_dir("side-by-side map keeps grouping vars (#983)", {
+  out <- drake_plan(
+    trace = TRUE,
+    data = target(simulate(nrow), transform = map(nrow = c(5, 10))),
+    data2 = target(simulate(ncol), transform = map(ncol = c(51, 101))),
+    data3 = target(somefun(data, data2), transform = map(data, data2)),
+  )
+  exp <- drake_plan(
+    data_5 = target(
+      command = simulate(5),
+      nrow = "5",
+      data = "data_5"
+    ),
+    data_10 = target(
+      command = simulate(10),
+      nrow = "10",
+      data = "data_10"
+    ),
+    data2_51 = target(
+      command = simulate(51),
+      ncol = "51",
+      data2 = "data2_51"
+    ),
+    data2_101 = target(
+      command = simulate(101),
+      ncol = "101",
+      data2 = "data2_101"
+    ),
+    data3_data_10_data2_101 = target(
+      command = somefun(data_10, data2_101),
+      nrow = "10",
+      data = "data_10",
+      ncol = "101",
+      data2 = "data2_101",
+      data3 = "data3_data_10_data2_101"
+    ),
+    data3_data_5_data2_51 = target(
+      command = somefun(data_5, data2_51),
+      nrow = "5",
+      data = "data_5",
+      ncol = "51",
+      data2 = "data2_51",
+      data3 = "data3_data_5_data2_51"
+    )
+  )
+  equivalent_plans(out, exp)
+})
+
+test_with_dir("side-by-side cross keeps grouping vars (#983)", {
+  out <- drake_plan(
+    trace = TRUE,
+    data = target(simulate(nrow), transform = map(nrow = c(5, 10))),
+    data2 = target(simulate(ncol), transform = map(ncol = c(51, 101))),
+    data3 = target(somefun(data, data2), transform = cross(data, data2)),
+  )
+  exp <- drake_plan(
+    data_5 = target(
+      command = simulate(5),
+      nrow = "5",
+      data = "data_5"
+    ),
+    data_10 = target(
+      command = simulate(10),
+      nrow = "10",
+      data = "data_10"
+    ),
+    data2_51 = target(
+      command = simulate(51),
+      ncol = "51",
+      data2 = "data2_51"
+    ),
+    data2_101 = target(
+      command = simulate(101),
+      ncol = "101",
+      data2 = "data2_101"
+    ),
+    data3_data_5_data2_101 = target(
+      command = somefun(data_5, data2_101),
+      nrow = "5",
+      data = "data_5",
+      ncol = "101",
+      data2 = "data2_101",
+      data3 = "data3_data_5_data2_101"
+    ),
+    data3_data_10_data2_101 = target(
+      command = somefun(data_10, data2_101),
+      nrow = "10",
+      data = "data_10",
+      ncol = "101",
+      data2 = "data2_101",
+      data3 = "data3_data_10_data2_101"
+    ),
+    data3_data_5_data2_51 = target(
+      command = somefun(data_5, data2_51),
+      nrow = "5",
+      data = "data_5",
+      ncol = "51",
+      data2 = "data2_51",
+      data3 = "data3_data_5_data2_51"
+    ),
+    data3_data_10_data2_51 = target(
+      command = somefun(data_10, data2_51),
+      nrow = "10",
+      data = "data_10",
+      ncol = "51",
+      data2 = "data2_51",
+      data3 = "data3_data_10_data2_51"
+    )
+  )
+  equivalent_plans(out, exp)
+})
+
+test_with_dir("side-by-side cross of nested vars (#983)", {
+  out <- drake_plan(
+    a = target(x, transform = map(x = c(1, 1), y = c(3, 3))),
+    b = target(a, transform = map(a)),
+    c = target(b, transform = map(b)),
+    d = target(list(b, c), transform = cross(b, c)),
+  )
+  exp <- drake_plan(
+    a_1_3 = 1,
+    a_1_3_2 = 1,
+    b_a_1_3 = a_1_3,
+    b_a_1_3_2 = a_1_3_2,
+    c_b_a_1_3 = b_a_1_3,
+    c_b_a_1_3_2 = b_a_1_3_2,
+    d_b_a_1_3_c_b_a_1_3 = list(b_a_1_3, c_b_a_1_3),
+    d_b_a_1_3_2_c_b_a_1_3 = list(b_a_1_3_2, c_b_a_1_3),
+    d_b_a_1_3_c_b_a_1_3_2 = list(b_a_1_3, c_b_a_1_3_2),
+    d_b_a_1_3_2_c_b_a_1_3_2 = list(b_a_1_3_2, c_b_a_1_3_2)
+  )
+  equivalent_plans(out, exp)
+})
+
+test_with_dir("cross finds the correct combinations (#986)", {
+  out <- drake_plan(
+    radar = target(
+      get_radar_info(radar),
+      transform = map(radar = c("a", "b"))
+    ),
+    set = target(
+      get_data(year, month),
+      transform = cross(year = c(2015, 2016), month = c(9, 10))
+    ),
+    cut = target(
+      some_crop_function(set, radar),
+      transform = cross(radar, set)
+    )
+  )
+  exp <- drake_plan(
+    radar_a = get_radar_info("a"),
+    radar_b = get_radar_info("b"),
+    set_2015_9 = get_data(2015, 9),
+    set_2016_9 = get_data(2016, 9),
+    set_2015_10 = get_data(2015, 10),
+    set_2016_10 = get_data(2016, 10),
+    cut_radar_a_set_2015_9 = some_crop_function(set_2015_9, radar_a),
+    cut_radar_b_set_2015_9 = some_crop_function(set_2015_9, radar_b),
+    cut_radar_a_set_2016_9 = some_crop_function(set_2016_9, radar_a),
+    cut_radar_b_set_2016_9 = some_crop_function(set_2016_9, radar_b),
+    cut_radar_a_set_2015_10 = some_crop_function(set_2015_10, radar_a),
+    cut_radar_b_set_2015_10 = some_crop_function(set_2015_10, radar_b),
+    cut_radar_a_set_2016_10 = some_crop_function(set_2016_10, radar_a),
+    cut_radar_b_set_2016_10 = some_crop_function(set_2016_10, radar_b)
+  )
+  equivalent_plans(out, exp)
 })

@@ -22,6 +22,7 @@ test_with_dir("clean() removes the correct files", {
     cache = cache,
     session_info = FALSE
   )
+  clean(cache = cache)
   expect_true(file.exists("a.txt"))
   expect_true(file.exists("b.txt"))
   expect_true(file.exists("d.rds"))
@@ -29,7 +30,13 @@ test_with_dir("clean() removes the correct files", {
   expect_true(dir.exists("xyz"))
   expect_true(file.exists("abc/c.txt"))
   expect_true(file.exists("xyz/e.txt"))
-  clean(cache = cache)
+  make(
+    plan,
+    cache = cache,
+    session_info = FALSE,
+    recover = TRUE
+  )
+  clean(cache = cache, garbage_collection = TRUE)
   expect_true(file.exists("a.txt"))
   expect_true(file.exists("b.txt"))
   expect_false(file.exists("d.rds"))
@@ -105,8 +112,7 @@ test_with_dir("dependency profile", {
 test_with_dir("Missing cache", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   s <- storr::storr_rds("s")
-  unlink(s$driver$path, recursive = TRUE)
-  expect_error(assert_cache(s), regexp = "drake cache missing")
+  unlink(s$path, recursive = TRUE)
   expect_equal(cached(), character(0))
 })
 
@@ -195,19 +201,19 @@ test_with_dir("drake_cache() can search", {
     file.path("w", "x", "y", "z"),
     drake_cache()
   )
-  expect_true(inherits(cache, "storr"))
+  expect_true(inherits(cache, "refclass_decorated_storr"))
   cache <- drake_cache(file.path("w", "x", ".drake"))
-  expect_true(inherits(cache, "storr"))
+  expect_true(inherits(cache, "refclass_decorated_storr"))
   cache <- with_dir(
     file.path("w", "x", ".drake", "keys"),
     drake_cache()
   )
-  expect_true(inherits(cache, "storr"))
+  expect_true(inherits(cache, "refclass_decorated_storr"))
   cache <- with_dir(
     file.path("w", "x"),
     drake_cache()
   )
-  expect_true(inherits(cache, "storr"))
+  expect_true(inherits(cache, "refclass_decorated_storr"))
 })
 
 test_with_dir("neighboring caches", {
@@ -349,8 +355,8 @@ test_with_dir("cache functions work from various working directories", {
     prog <- progress()
     expect_equal(sort(prog$target), sort(config$plan$target))
     expect_true(all(prog$progress == "done"))
-    prog <- progress(nothing)
-    expect_equal(prog, weak_tibble(target = "nothing", progress = "none"))
+    prog2 <- progress(nothing)
+    expect_equal(prog, prog2)
 
     # cached and diagnose
     expect_equal(sort(diagnose()), sort(config$cache$list()))
@@ -454,7 +460,7 @@ test_with_dir("run make() from subdir", {
   with_dir("subdir", {
     expect_warning(make(plan), regexp = "subdirectory")
     expect_warning(make(plan), regexp = "subdirectory")
-    make(plan, cache = y)
+    expect_warning(make(plan, cache = y), regexp = "subdirectory")
     new_cache(".drake")
     make(plan)
     make(plan, cache = storr::storr_environment())
@@ -478,38 +484,40 @@ test_with_dir("loadd() does not load imports", {
   )
 })
 
-test_with_dir("can filter progress", {
+test_with_dir("selection and filtering in progress", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  plan <- drake_plan(a = TRUE, b = TRUE, c = stop())
+  plan <- drake_plan(x_a = TRUE, y_b = TRUE, x_c = stop())
   expect_error(make(plan))
-
-  out <- progress(a, b, c, d)
+  out <- progress(x_a, y_b, x_c, d)
   exp <- weak_tibble(
-    target = c("a", "b", "c", "d"),
-    progress = c("done", "done", "failed", "none")
-  )
-  expect_equivalent(out, exp)
-
-  exp1 <- weak_tibble(
-    target = c("a", "b", "c"),
+    target = c("x_a", "y_b", "x_c"),
     progress = c("done", "done", "failed")
   )
+  expect_equivalent(out, exp)
+  exp1 <- weak_tibble(
+    target = c("x_a", "x_c", "y_b"),
+    progress = c("done", "failed", "done")
+  )
   exp2 <- weak_tibble(
-    target = c("a", "b"),
+    target = c("x_a", "y_b"),
     progress = c("done", "done")
   )
   exp3 <- weak_tibble(
-    target = "c",
+    target = "x_c",
     progress = "failed"
   )
-
+  exp4 <- weak_tibble(
+    target = c("x_a", "x_c"),
+    progress = c("done", "failed")
+  )
   expect_equivalent(progress(progress = c("done", "failed")), exp1)
   expect_equivalent(progress(progress = "done"), exp2)
   expect_equivalent(progress(progress = "failed"), exp3)
-
-  expect_error(
-    progress(progress = "stuck"),
-    "should be one of")
+  expect_error(progress(progress = "stuck"), "should be one of")
+  skip_if_not_installed("tidyselect")
+  expect_equivalent(progress(tidyselect::starts_with("x_")), exp4)
+  cache <- drake_cache()
+  expect_equal(get_progress_single("12345", cache), "none")
 })
 
 test_with_dir("make() writes a cache log file", {
@@ -548,4 +556,309 @@ test_with_dir("loadd(x, deps = TRUE) when x is not cached", {
     loadd(y, envir = e, config = config, deps = TRUE, tidyselect = TRUE),
     regexp = "Disabling"
   )
+})
+
+test_with_dir("clean: garbage_collection and destroy", {
+  skip_on_cran()
+  plan <- drake_plan(x = file.create(file_out("abc")))
+  make(plan)
+  expect_true(file.exists(".drake"))
+  expect_true(file.exists("abc"))
+  clean(garbage_collection = TRUE, destroy = TRUE)
+  expect_false(file.exists(".drake"))
+  expect_false(file.exists("abc"))
+})
+
+test_with_dir("fancy cache features, bad paths", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  saveRDS(1, file = "exists")
+  suppressWarnings(expect_error(x <- new_cache("exists")))
+})
+
+test_with_dir("Pick the hash", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  x <- new_cache("new", hash_algorithm = "murmur32")
+  expect_true(file.exists("new"))
+  y <- storr::storr_rds(path = "new")
+  expect_true(file.exists("new"))
+  expect_equal(x$hash_algorithm, "murmur32")
+  y <- storr::storr_rds(path = "new")
+  z <- drake_cache("new")
+  expect_true(file.exists("new"))
+  expect_equal(z$hash_algorithm, "murmur32")
+})
+
+test_with_dir("totally off the default cache", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  saveRDS("stuff", file = "some_file")
+  con <- dbug()
+  unlink(default_cache_path(), recursive = TRUE)
+  con$plan <- data.frame(target = "a", command = "file_in(\"some_file\")")
+  con$targets <- con$plan$target
+  con$cache <- new_cache(
+    path = "my_new_cache",
+    hash_algorithm = "murmur32"
+  )
+  make(
+    con$plan,
+    cache = con$cache,
+    verbose = 0L,
+    parallelism = get_testing_scenario()$parallelism,
+    jobs = get_testing_scenario()$jobs,
+    session_info = FALSE
+  )
+  expect_false(file.exists(default_cache_path()))
+})
+
+test_with_dir("use two differnt file system caches", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  saveRDS("stuff", file = "some_file")
+  targ <- "DRAKE_TEST_target"
+  my_plan <- data.frame(
+    target = targ,
+    command = "my_function(file_in(\"some_file\"))"
+  )
+  scenario <- get_testing_scenario()
+  parallelism <- scenario$parallelism
+  jobs <- scenario$jobs
+  envir <- eval(parse(text = scenario$envir))
+  if (targ %in% ls(envir)) {
+    rm(list = targ, envir = envir)
+  }
+  envir$my_function <- function(x) {
+    x
+  }
+  cache <- new_cache(path = "cache1", hash_algorithm = "murmur32")
+  make(
+    my_plan,
+    cache = cache,
+    envir = envir,
+    verbose = 0L,
+    parallelism = parallelism,
+    jobs = jobs,
+    session_info = FALSE
+  )
+  con <- drake_config(
+    my_plan,
+    cache = cache,
+    envir = envir,
+    verbose = 0L,
+    parallelism = parallelism,
+    jobs = jobs,
+    session_info = FALSE
+  )
+
+  o1 <- outdated(con)
+
+  expect_equal(o1, character(0))
+  expect_equal(
+    cache$hash_algorithm,
+    "murmur32"
+  )
+
+  cache2 <- new_cache(
+    path = "my_new_cache",
+    hash_algorithm = "crc32"
+  )
+  con2 <- con
+  con2$cache <- cache2
+  o2 <- outdated(con2)
+  make(
+    my_plan,
+    cache = cache2,
+    envir = envir,
+    verbose = 0L,
+    parallelism = parallelism,
+    jobs = jobs,
+    session_info = FALSE
+  )
+  con2 <- drake_config(
+    my_plan,
+    cache = cache2,
+    envir = envir,
+    verbose = 0L,
+    parallelism = parallelism,
+    jobs = jobs,
+    session_info = FALSE
+  )
+  o3 <- outdated(con2)
+  expect_equal(o2, targ)
+  expect_equal(o3, character(0))
+  expect_equal(
+    cache2$hash_algorithm,
+    "crc32"
+  )
+  expect_false(file.exists(".drake"))
+  expect_true(file.exists("cache1"))
+  expect_true(file.exists("my_new_cache"))
+  expect_true(grepl("my_new_cache", con2$cache$path, fixed = TRUE))
+  expect_true(grepl("my_new_cache", cache2$path, fixed = TRUE))
+})
+
+test_with_dir("storr_environment is usable", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  x <- decorate_storr(storr_environment(hash_algorithm = "murmur32"))
+  expect_false(file.exists(default_cache_path()))
+  expect_equal(x$hash_algorithm, "murmur32")
+  expect_error(drake_get_session_info(cache = x))
+  pln <- drake_plan(y = 1)
+  make(pln, cache = x, verbose = 0L, session_info = FALSE)
+  config <- drake_config(
+    pln, cache = x, verbose = 0L, session_info = FALSE)
+  expect_equal(cached(cache = x), "y")
+  cached_data <- file.path(default_cache_path(), "data")
+  expect_false(file.exists(cached_data))
+  expect_equal(outdated(config), character(0))
+  expect_false(file.exists(cached_data))
+})
+
+test_with_dir("arbitrary storr in-memory cache", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  skip_if_not_installed("lubridate")
+  expect_false(file.exists(default_cache_path()))
+  parallelism <- "loop"
+  jobs <- 1
+  envir <- eval(parse(text = get_testing_scenario()$envir))
+  cache <- storr::storr_environment(hash_algorithm = "murmur32")
+  load_mtcars_example(envir = envir)
+  my_plan <- envir$my_plan
+  my_plan <- my_plan[my_plan$target != "report", ]
+  make(
+    my_plan,
+    envir = envir,
+    cache = cache,
+    parallelism = parallelism,
+    jobs = jobs,
+    verbose = 0L
+  )
+  con <- drake_config(
+    my_plan,
+    envir = envir,
+    cache = cache,
+    parallelism = parallelism,
+    jobs = jobs,
+    verbose = 0L
+  )
+  envir$reg2 <- function(d) {
+    d$x3 <- d$x ^ 3
+    lm(y ~ x3, data = d)
+  }
+  cached_data <- file.path(default_cache_path(), "data")
+  expect_false(file.exists(cached_data))
+  expect_equal(con$cache$hash_algorithm, "murmur32")
+
+  targets <- my_plan$target
+  expect_true(all(targets %in% cached(cache = cache, verbose = 0L)))
+  expect_false(file.exists(cached_data))
+
+  expect_true(is.list(drake_get_session_info(cache = cache, verbose = 0L)))
+  expect_false(file.exists(cached_data))
+
+  imp <- setdiff(cached(cache = cache, targets_only = FALSE),
+                 cached(cache = cache, targets_only = TRUE))
+  expect_true(length(imp) > 0)
+  expect_false(file.exists(cached_data))
+
+  expect_true(length(cached(cache = cache)) > 0)
+  expect_false(file.exists(cached_data))
+
+  expect_true(nrow(build_times(cache = cache)) > 0)
+  expect_false(file.exists(cached_data))
+
+  o1 <- outdated(con)
+  expect_equal(length(o1), 6)
+  expect_false(file.exists(cached_data))
+
+  p1 <- progress(verbose = 0L)
+  unlink(default_cache_path(), recursive = TRUE)
+  p2 <- progress(cache = cache, verbose = 0L)
+  expect_true(nrow(p2) > nrow(p1))
+  expect_false(file.exists(cached_data))
+
+  expect_error(readd(small, verbose = 0L))
+  expect_true(is.data.frame(readd(small, cache = cache, verbose = 0L)))
+  expect_false(file.exists(cached_data))
+
+  expect_error(loadd(large, verbose = 0L))
+  expect_silent(loadd(large, cache = cache, verbose = 0L))
+  expect_true(nrow(large) > 0)
+  rm(large)
+  expect_false(file.exists(cached_data))
+})
+
+test_with_dir("safe_get", {
+  config <- drake_config(drake_plan(a = 1))
+  expect_true(is.na(safe_get("a", "b", config)))
+  expect_true(is.na(safe_get_hash("a", "b", config)))
+})
+
+test_with_dir("clean a nonexistent cache", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  clean(list = "no_cache")
+  expect_false(file.exists(default_cache_path()))
+})
+
+test_with_dir("make() from inside the cache", {
+  cache <- storr::storr_rds(getwd())
+  plan <- drake_plan(x = 1)
+  expect_error(
+    make(plan, cache = cache),
+    regexp = "from inside the cache"
+  )
+})
+
+test_with_dir("cache log files, gc, and make()", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  x <- drake_plan(a = 1)
+  make(x, session_info = FALSE, garbage_collection = TRUE)
+  expect_false(file.exists("drake_cache.csv"))
+  make(x, session_info = FALSE)
+  expect_false(file.exists("drake_cache.csv"))
+  make(x, session_info = FALSE, cache_log_file = TRUE)
+  expect_true(file.exists("drake_cache.csv"))
+  make(x, session_info = FALSE, cache_log_file = "my.log")
+  expect_true(file.exists("my.log"))
+})
+
+test_with_dir("try_build() does not need to access cache", {
+  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
+  config <- drake_config(drake_plan(x = 1), lock_envir = FALSE)
+  meta <- drake_meta_(target = "x", config = config)
+  config$cache <- NULL
+  build <- try_build(target = "x", meta = meta, config = config)
+  expect_equal(1, build$value)
+  expect_error(
+    drake_build(target = "x", config = config),
+    regexp = "cannot find drake cache"
+  )
+})
+
+test_with_dir("running()", {
+  skip_on_cran()
+  plan <- drake_plan(a = 1)
+  cache <- storr::storr_environment()
+  make(plan, session_info = FALSE, cache = cache)
+  expect_equal(running(cache = cache), character(0))
+  config <- drake_config(plan, cache = cache, log_progress = TRUE)
+  config$running_make <- TRUE
+  set_progress(
+    target = "a",
+    meta = list(imported = FALSE),
+    value = "running",
+    config = config
+  )
+  expect_equal(running(cache = cache), "a")
+})
+
+test_with_dir("need a storr for a decorated storr", {
+  expect_error(decorate_storr(123), regexp = "not a storr")
+})
+
+test_with_dir("dir_create()", {
+  x <- tempfile()
+  dir_create(x)
+  expect_true(dir.exists(x))
+  x <- tempfile()
+  file.create(x)
+  expect_error(dir_create(x), regexp = "cannot create directory")
 })

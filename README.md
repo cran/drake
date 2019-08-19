@@ -235,7 +235,7 @@ readd(hist)
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-<img src="https://ropensci.github.io/drake/figures/hist1.png" alt="hist1" align="center" style = "border: none; float: center;" width = "500px">
+![](man/figures/readdhist-1.png)<!-- -->
 
 So let’s fix the plotting function.
 
@@ -270,7 +270,7 @@ loadd(hist)
 hist
 ```
 
-<img src="https://ropensci.github.io/drake/figures/hist2.png" alt="hist1" align="center" style = "border: none; float: center;" width = "500px">
+![](man/figures/hist2-1.png)<!-- -->
 
 # Reproducibility with confidence
 
@@ -298,6 +298,8 @@ quick and easy to find out.
 
 ``` r
 make(plan)
+#> Unloading targets from environment:
+#>   hist
 #> All targets are already up to date.
 
 config <- drake_config(plan)
@@ -328,9 +330,34 @@ make(plan) # Independently re-create the results from the code and input data.
 #> target report
 ```
 
+## Big data efficiency
+
+Select specialized data formats to increase speed and reduce memory consumption. In version 7.5.2.9000 and above, the available formats are ["fst"](https://github.com/fstpackage/fst) for data frames (example below) and "keras" for [Keras](https://keras.rstudio.com/) models ([example here](https://ropenscilabs.github.io/drake-manual/churn.html#plan)).
+
+```{r, eval = FALSE}
+library(drake)
+n <- 1e8 # Each target is 1.6 GB in memory.
+plan <- drake_plan(
+  data_fst = target(
+    data.frame(x = runif(n), y = runif(n)),
+    format = "fst"
+  ),
+  data_old = data.frame(x = runif(n), y = runif(n))
+)
+make(plan)
+#> target data_fst
+#> target data_old
+build_times(type = "build")
+#> # A tibble: 2 x 4
+#>   target   elapsed              user                 system    
+#>   <chr>    <Duration>           <Duration>           <Duration>
+#> 1 data_fst 13.93s               37.562s              7.954s    
+#> 2 data_old 184s (~3.07 minutes) 177s (~2.95 minutes) 4.157s
+```
+
 ## History and provenance
 
-As of version 7.5.0, `drake` tracks the history and provenance of your
+As of version 7.5.2, `drake` tracks the history and provenance of your
 targets: what you built, when you built it, how you built it, the
 arguments you used in your function calls, and how to get the data back.
 (Disable with `make(history = FALSE)`)
@@ -339,20 +366,20 @@ arguments you used in your function calls, and how to get the data back.
 history <- drake_history(analyze = TRUE)
 history
 #> # A tibble: 12 x 10
-#>    target time  hash  exists command  runtime   seed latest quiet
-#>    <chr>  <chr> <chr> <lgl>  <chr>      <dbl>  <int> <lgl>  <lgl>
-#>  1 data   2019… e580… TRUE   raw_da… 0.001    1.29e9 FALSE  NA   
-#>  2 data   2019… e580… TRUE   raw_da… 0        1.29e9 TRUE   NA   
-#>  3 fit    2019… 62a1… TRUE   lm(Sep… 0.002    1.11e9 FALSE  NA   
-#>  4 fit    2019… 62a1… TRUE   lm(Sep… 0.001000 1.11e9 TRUE   NA   
-#>  5 hist   2019… 10bc… TRUE   create… 0.006    2.10e8 FALSE  NA   
-#>  6 hist   2019… 5252… TRUE   create… 0.004    2.10e8 FALSE  NA   
-#>  7 hist   2019… 00fa… TRUE   create… 0.007    2.10e8 TRUE   NA   
-#>  8 raw_d… 2019… 6317… TRUE   "readx… 0.009    1.20e9 FALSE  NA   
-#>  9 raw_d… 2019… 6317… TRUE   "readx… 0.00600  1.20e9 TRUE   NA   
-#> 10 report 2019… 3e2b… TRUE   "rmark… 0.481    1.30e9 FALSE  TRUE 
-#> 11 report 2019… 3e2b… TRUE   "rmark… 0.358    1.30e9 FALSE  TRUE 
-#> 12 report 2019… 3e2b… TRUE   "rmark… 0.356    1.30e9 TRUE   TRUE 
+#>    target current built exists hash  command   seed  runtime quiet
+#>    <chr>  <lgl>   <chr> <lgl>  <chr> <chr>    <int>    <dbl> <lgl>
+#>  1 data   TRUE    2019… TRUE   e580… raw_da… 1.29e9 0.002    NA   
+#>  2 data   TRUE    2019… TRUE   e580… raw_da… 1.29e9 0.001    NA   
+#>  3 fit    TRUE    2019… TRUE   62a1… lm(Sep… 1.11e9 0.003    NA   
+#>  4 fit    TRUE    2019… TRUE   62a1… lm(Sep… 1.11e9 0.001000 NA   
+#>  5 hist   FALSE   2019… TRUE   10bc… create… 2.10e8 0.006    NA   
+#>  6 hist   TRUE    2019… TRUE   00fa… create… 2.10e8 0.004    NA   
+#>  7 hist   TRUE    2019… TRUE   00fa… create… 2.10e8 0.00600  NA   
+#>  8 raw_d… TRUE    2019… TRUE   6317… "readx… 1.20e9 0.01     NA   
+#>  9 raw_d… TRUE    2019… TRUE   6317… "readx… 1.20e9 0.00500  NA   
+#> 10 report TRUE    2019… TRUE   1f41… "rmark… 1.30e9 0.484    TRUE 
+#> 11 report TRUE    2019… TRUE   1f41… "rmark… 1.30e9 0.39     TRUE 
+#> 12 report TRUE    2019… TRUE   1f41… "rmark… 1.30e9 0.357    TRUE 
 #> # … with 1 more variable: output_file <chr>
 ```
 
@@ -378,36 +405,74 @@ cache$get_value(hash)
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-<img src="https://ropensci.github.io/drake/figures/hist1.png" alt="hist1" align="center" style = "border: none; float: center;" width = "600px">
+![](man/figures/histhistory-1.png)<!-- -->
 
-## Automated recovery and renaming
+## Reproducible data recovery and renaming
 
-Note: this feature is still experimental.
+Remember how we made that change to our histogram? What if we want to
+change it back? If we revert `create_plot()`, `make(plan, recover =
+TRUE)` restores the original plot.
 
-In `drake` version 7.5.0 and above, `make(recover = TRUE)` can salvage
-old targets from the distant past. This may not be a good idea if your
-external dependencies have changed a lot over time (R version, package
-environment, etc) but it can be useful under the right circumstances.
+``` r
+create_plot <- function(data) {
+  ggplot(data, aes(x = Petal.Width, fill = Species)) +
+    geom_histogram()
+}
+
+# The report still needs to run in order to restore report.html.
+make(plan, recover = TRUE)
+#> recover hist
+#> target report
+
+readd(hist) # old histogram
+#> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+![](man/figures/recoverhist-1.png)<!-- -->
+
+`drake`’s data recovery feature is another way to avoid rerunning
+commands. It is useful if:
+
+  - You want to revert to your old code.
+  - You accidentally `clean()` a target and want to get it back.
+  - You want to rename an expensive target.
+
+In version 7.5.2 and above, `make(recover = TRUE)` can salvage the
+values of old targets. Before building a target, `drake` checks if you
+have ever built something else with the same command, dependencies,
+seed, etc. that you have right now. If appropriate, `drake` assigns the
+old value to the new target instead of rerunning the command.
+
+Caveats:
+
+1.  This feature is still experimental.
+2.  Recovery may not be a good idea if your external dependencies have
+    changed a lot over time (R version, package environment, etc.).
+
+### Undoing `clean()`
 
 ``` r
 # Is the data really gone?
-clean() # garbage_collection = FALSE
+clean()
 
-# Nope!
-make(plan, recover = TRUE) # The report still builds since report.md is gone.
+# Nope! You need clean(garbage_collection = TRUE) to delete stuff.
+make(plan, recover = TRUE)
 #> recover raw_data
 #> recover data
 #> recover fit
 #> recover hist
-#> target report
+#> recover report
 
 # When was the raw data *really* first built?
 diagnose(raw_data)$date
-#> [1] "2019-07-18 20:19:48.110163 -0400 GMT"
+#> [1] "2019-07-24 20:58:22.465591 -0400 GMT"
 ```
 
-You can even rename your targets\! All you have to do is use the same  target seed as last time. Just be aware that this invalidates downstream
-targets.
+### Renaming
+
+You can use recovery to rename a target. The trick is to supply the
+random number generator seed that `drake` used with the old target name.
+Also, renaming a target unavoidably invalidates downstream targets.
 
 ``` r
 # Get the old seed.
@@ -784,12 +849,7 @@ The [`workflowr`](https://github.com/jdblischak/workflowr) package is a
 project manager that focuses on literate programming, sharing over the
 web, file organization, and version control. Its brand of
 reproducibility is all about transparency, communication, and
-discoverability. For an example of
-[`workflowr`](https://github.com/jdblischak/workflowr) and `drake`
-working together, see [this machine learning
-project](https://2019-feature-selection.pjs-web.de/report-defoliation.html)
-by [Patrick Schratz](https://github.com/pat-s)
-([source](https://github.com/pat-s/2019-feature-selection)).
+discoverability. For an example of [`workflowr`](https://github.com/jdblischak/workflowr) and `drake` working together, see [this machine learning project](https://github.com/pat-s/2019-feature-selection) by [Patrick Schratz](https://github.com/pat-s).
 
 # Acknowledgements
 

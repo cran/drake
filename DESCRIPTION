@@ -1,98 +1,104 @@
 Package: drake
 Title: A Pipeline Toolkit for Reproducible Computation at Scale
-Description: A general-purpose computational engine for data analysis,
-  drake rebuilds intermediate data objects when their dependencies change,
-  and it skips work when the results are already up to date.
-  Not every execution starts from scratch,
-  there is native support for parallel and distributed computing,
-  and completed projects have tangible evidence
-  that they are reproducible.
-  Extensive documentation, from beginner-friendly tutorials
-  to practical examples and more, is available at the reference website
-  <https://ropensci.github.io/drake/> and the online manual
-  <https://ropenscilabs.github.io/drake-manual/>.
-Version: 7.5.2
-License: GPL-3
-URL: https://github.com/ropensci/drake
-BugReports: https://github.com/ropensci/drake/issues
+Version: 7.6.1
 Authors@R: c(
   person(
-    family = "Landau",
     given = c("William", "Michael"),
-    email = "will.landau@gmail.com",
+    family = "Landau",
     role = c("aut", "cre"),
+    email = "will.landau@gmail.com",
     comment = c(ORCID = "0000-0003-1878-3253")
   ),
   person(
-    family = "Axthelm",
     given = "Alex",
-    email = "aaxthelm@che.IN.gov",
-    role = "ctb"
-  ),
-  person(
-    family = "Clarkberg",
-    given = "Jasper",
-    email = "jasper@clarkberg.org",
-    role = "ctb"
-  ),
-  person(
-    family = "Müller",
-    given = "Kirill",
-    email = "krlmlr+r@mailbox.org",
-    role = "ctb"
-  ),
-  person(
-    family = "Bond-Lamberty",
-    given = "Ben",
-    email = "bondlamberty@pnnl.gov",
+    family = "Axthelm",
     role = "ctb",
+    email = "aaxthelm@che.IN.gov"
+  ),
+  person(
+    given = "Jasper",
+    family = "Clarkberg",
+    role = "ctb",
+    email = "jasper@clarkberg.org"
+  ),
+  person(
+    given = "Kirill",
+    family = "Müller",
+    role = "ctb",
+    email = "krlmlr+r@mailbox.org"
+  ),
+  person(
+    given = "Ben",
+    family = "Bond-Lamberty",
+    role = "ctb",
+    email = "bondlamberty@pnnl.gov",
     comment = c(ORCID = "0000-0001-9525-4633")
   ),
   person(
-    family = "Mahr",
     given = "Tristan",
-    email = "tristan.mahr@wisc.edu",
+    family = "Mahr",
     role = "ctb",
+    email = "tristan.mahr@wisc.edu",
     comment = c(ORCID = "0000-0002-8890-5116")
   ),
   person(
-    family = "McBain",
     given = "Miles",
-    email = "miles.mcbain@gmail.com",
+    family = "McBain",
     role = "ctb",
+    email = "miles.mcbain@gmail.com",
     comment = c(ORCID = "0000-0003-2865-2548")
   ),
   person(
-    family = "Marwick",
-    given = "Ben",
-    email = "bmarwick@uw.edu",
-    role = "rev"
+    given = "Noam",
+    family = "Ross",
+    role = "ctb",
+    email = "noam.ross@gmail.com",
+    comment = c(ORCID = "0000-0002-2136-0000")
   ),
   person(
-    family = "Slaughter",
+    given = "Ben",
+    family = "Marwick",
+    role = "rev",
+    email = "bmarwick@uw.edu"
+  ),
+  person(
     given = "Peter",
-    email = "slaughter@nceas.ucsb.edu",
-    role = "rev"
+    family = "Slaughter",
+    role = "rev",
+    email = "slaughter@nceas.ucsb.edu"
   ),
   person(
     family = "Eli Lilly and Company",
     role = "cph"
   ))
+Description: A general-purpose computational engine for data
+  analysis, drake rebuilds intermediate data objects when their
+  dependencies change, and it skips work when the results are already up
+  to date.  Not every execution starts from scratch, there is native
+  support for parallel and distributed computing, and completed projects
+  have tangible evidence that they are reproducible.  Extensive
+  documentation, from beginner-friendly tutorials to practical examples
+  and more, is available at the reference website
+  <https://ropensci.github.io/drake/> and the online manual
+  <https://ropenscilabs.github.io/drake-manual/>.
+License: GPL-3
+URL: https://github.com/ropensci/drake
+BugReports: https://github.com/ropensci/drake/issues
 Depends: R (>= 3.3.0)
 Imports: base64url, digest, igraph, methods, rlang (>= 0.2.0), storr
         (>= 1.1.0), txtq (>= 0.1.3), utils
 Suggests: abind, bindr, callr, cli (>= 1.1.0), clustermq (>= 0.8.8),
-        crayon, curl (>= 2.7), datasets, downloader, future, ggplot2,
-        ggraph, grDevices, knitr, lubridate, networkD3, parallel,
-        prettycode, Rcpp, rmarkdown, rstudioapi, stats, styler,
-        testthat (>= 2.1.0), tibble, tidyselect (>= 0.2.4), txtplot,
-        usethis, visNetwork, webshot
+        crayon, curl (>= 2.7), datasets, downloader, fst, future,
+        ggplot2, ggraph, grDevices, keras, knitr, lubridate, networkD3,
+        parallel, prettycode, Rcpp, rmarkdown, rstudioapi, stats,
+        styler, testthat (>= 2.1.0), tibble, tidyselect (>= 0.2.4),
+        txtplot, usethis, visNetwork, webshot
 VignetteBuilder: knitr
 Encoding: UTF-8
 Language: en-US
 RoxygenNote: 6.1.1
 NeedsCompilation: yes
-Packaged: 2019-07-21 14:49:59 UTC; landau
+Packaged: 2019-08-19 13:22:38 UTC; c240390
 Author: William Michael Landau [aut, cre]
     (<https://orcid.org/0000-0003-1878-3253>),
   Alex Axthelm [ctb],
@@ -101,9 +107,10 @@ Author: William Michael Landau [aut, cre]
   Ben Bond-Lamberty [ctb] (<https://orcid.org/0000-0001-9525-4633>),
   Tristan Mahr [ctb] (<https://orcid.org/0000-0002-8890-5116>),
   Miles McBain [ctb] (<https://orcid.org/0000-0003-2865-2548>),
+  Noam Ross [ctb] (<https://orcid.org/0000-0002-2136-0000>),
   Ben Marwick [rev],
   Peter Slaughter [rev],
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2019-07-21 15:30:02 UTC
+Date/Publication: 2019-08-19 18:00:08 UTC

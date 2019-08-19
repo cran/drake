@@ -15,6 +15,10 @@ test_with_dir("Recursive functions are okay", {
   expect_equal(readd(output, cache = cache), factorial(10))
 })
 
+test_with_dir("empty deps_graph()", {
+  expect_equal(deps_graph(NULL, 1, 2), character(0))
+})
+
 test_with_dir("null graph", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("lubridate")
@@ -157,7 +161,7 @@ test_with_dir("clusters", {
   node <- o$nodes[o$nodes$id == "n__: 1", ]
   expect_equal(node$id, "n__: 1")
   expect_equal(node$type, "cluster")
-  expect_equal(node$shape, unname(shape_of("cluster")))
+  expect_equal(node$shape, unname(node_shape("cluster")))
   o <- drake_graph_info(config, group = "n__", clusters = c("1", "2", "bla"))
   expect_equal(nrow(o$nodes), 2)
   expect_equal(
@@ -168,7 +172,7 @@ test_with_dir("clusters", {
     node <- o$nodes[o$nodes$id == x, ]
     expect_equal(node$id, x)
     expect_equal(node$type, "cluster")
-    expect_equal(node$shape, unname(shape_of("cluster")))
+    expect_equal(node$shape, unname(node_shape("cluster")))
   }
   make(plan, targets = c("x_1", "y_2"), cache = cache, session_info = FALSE)
   o <- drake_graph_info(config, group = "status", clusters = "up to date")
@@ -180,7 +184,7 @@ test_with_dir("clusters", {
   node <- o$nodes[o$nodes$id == "status: up to date", ]
   expect_equal(node$id, "status: up to date")
   expect_equal(node$type, "cluster")
-  expect_equal(node$shape, unname(shape_of("cluster")))
+  expect_equal(node$shape, unname(node_shape("cluster")))
 })
 
 test_with_dir("can get the graph info when a file is missing", {
@@ -457,4 +461,16 @@ test_with_dir("text graph", {
   expect_message(text_drake_graph(config))
   expect_message(text_drake_graph(config, nchar = 0L))
   expect_message(text_drake_graph(config, nchar = 5L))
+})
+
+test_with_dir("GitHub issue 460", {
+  plan <- drake_plan(a = base::sqrt(1), b = a, c = b)
+  config <- drake_config(
+    plan,
+    targets = "b",
+    cache = storr::storr_environment()
+  )
+  exp <- c(letters[1:2], encode_namespaced("base::sqrt"))
+  expect_true(all(exp %in% igraph::V(config$graph)$name))
+  process_targets(config)
 })

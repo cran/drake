@@ -1,3 +1,38 @@
+# Version 7.6.1
+
+## Bug fixes
+
+- CRAN hotfix: remove a broken link in the README.
+
+# Version 7.6.0
+
+## Bug fixes
+
+- Make `drake_plan(transform = slice())` understand `.id` and grouping variables (#963).
+- Repair `clean(garbage_collection = TRUE, destroy = TRUE)`. Previously it destroyed the cache before trying to collect garbage.
+- Ensure that `r_make()` passes informative error messages back to the calling process (#969).
+- Avoid downloading full contents of URLs when rehashing (#982)
+- Retain upstream grouping variables of `map()` and `cross()` on topologically side-by-side targets (#983).
+- Manually enforce the correct ordering in `dsl_left_outer_join()` so `cross()` selects the right combinations of existing targets (#986). This bug was probably introduced in the solution to #983.
+- Make the output of `progress()` more consistent, less dependent on whether `tidyselect` is installed.
+
+## New features
+
+- Support specialized data storage via a decorated cache and `format` argument of `target()` (#971). This allows users to leverage faster ways to save and load targets, such as `write_fst()` for data frames and `save_model_hdf5()` for Keras models. It also improves memory because it prevents `storr` from making a serialized in-memory copy of large data objects.
+- Add `tidyselect` functionality for `...` in `progress()`, analogous to `loadd()`, `build_times()`, and `clean()`.
+- Support S3 for user-defined generics (#959). If the generic `do_stuff()` and the method `stuff.your_class()` are defined in `envir`, and if `do_stuff()` has a call to `UseMethod("stuff")`, then `drake`'s code analysis will detect `stuff.your_class()` as a dependency of `do_stuff()`.
+- Add authentication support for `file_in()` URLs. Requires the new `curl_handles` argument of `make()` and `drake_config()` (#981).
+
+## Enhancements
+
+- Document DSL keywords as if they were true functions: `target()`, `map()`, `split()`, `cross()`, and `combine()` (#979).
+- Do garbage collection between the unloading and loading phases of memory management.
+- Keep `file_out()` files in `clean()` unless `garbage_collection` is `TRUE`. That way, `make(recover = TRUE)` is a true "undo button" for `clean()`. `clean(garbage_collection = TRUE)` still removes data in the cache, as well as any `file_out()` files from targets currently being cleaned.
+- The menu in `clean()` only appears if `garbage_collection` is `TRUE`. Also, this menu is added to `rescue_cache(garbage_collection = TRUE)`.
+- Reorganize the internal code files and functions to make development easier.
+- Move the history inside the cache folder `.drake/`. The old `.drake_history/` folder was awkward. Old histories are migrated during `drake_config()`, and `drake_history()`.
+- Add lifecycle badges to exported functions.
+
 # Version 7.5.2
 
 ## Bug fixes
