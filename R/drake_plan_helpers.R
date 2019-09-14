@@ -9,6 +9,11 @@
 #' @return A one-row workflow plan data frame with the named
 #' arguments as columns.
 #' @param command The command to build the target.
+#' @param transform A call to [map()], [split()],
+#'   [cross()], or [combine()] to create or aggregate
+#'   multiple targets at once.
+#'   Details:
+#'   <https://ropenscilabs.github.io/drake-manual/plans.html#large-plans>
 #' @param ... Optional columns of the plan for a given target.
 #'   See the Columns section of this help file for a selection
 #'   of special columns that `drake` understands.
@@ -46,25 +51,27 @@
 #' if (requireNamespace("styler", quietly = TRUE)) {
 #'   print(drake_plan_source(plan))
 #' }
-target <- function(command = NULL, ...) {
-  # TODO: remove this warning when we unexport target().
+target <- function(
+  command = NULL,
+  transform = NULL,
+  ...
+) {
   if (!nzchar(Sys.getenv("drake_target_silent"))) {
-    .Deprecated(
-      "target",
-      package = "drake",
-      msg = paste(
-        "target() is deprecated as a user-side function.",
-        "Use target from inside drake_plan(). See",
-        "https://ropenscilabs.github.io/drake-manual/plans.html#large-plans",
-        "for details."
-      )
+    warning(
+      "target() in drake is not a standalone user-side function. ",
+      "It must be called from inside drake_plan(). Details: ",
+      "https://ropenscilabs.github.io/drake-manual/plans.html#large-plans",
+      call. = FALSE
     )
   }
   call <- match.call(expand.dots = FALSE)
-  lst <- call$...
+  lst <- c(
+    command = call$command,
+    transform = call$transform,
+    call$...
+  )
   lst <- select_nonempty(lst)
   lst <- lst[nzchar(names(lst))]
-  lst <- c(command = call$command, lst)
   out <- data.frame(command = NA, stringsAsFactors = FALSE)
   for (col in names(lst)) {
     if (is.language(lst[[col]])) {
@@ -734,7 +741,7 @@ bind_plans <- function(...) {
 
 #' @title Turn an R script file or `knitr` / R Markdown report
 #'   into a `drake` plan.
-#' \lifecycle{stable}
+#' \lifecycle{questioning}
 #' @export
 #' @seealso [drake_plan()], [make()], [plan_to_code()],
 #'   [plan_to_notebook()]
@@ -774,10 +781,9 @@ code_to_plan <- function(path) {
   # From CodeDepends: https://github.com/duncantl/CodeDepends/blob/7c9cf7eceffaea1d26fe25836c7a455f059e13c1/R/frags.R#L74 # nolint
   # Checks if the file is a knitr report.
   if (any(grepl("^(### chunk number|<<[^>]*>>=|```\\{r.*\\})", txt))) { # nolint
-    nodes <- get_tangled_frags(path)
-  } else {
-    nodes <- parse(text = txt)
+    txt <- get_tangled_text(path)
   }
+  nodes <- parse(text = txt)
   out <- lapply(nodes, node_plan)
   out <- do.call(rbind, out)
   out <- parse_custom_plan_columns(out)
@@ -792,7 +798,7 @@ node_plan <- function(node) {
 }
 
 #' @title Turn a `drake` plan into a plain R script file.
-#' \lifecycle{stable}
+#' \lifecycle{questioning}
 #' @export
 #' @seealso [drake_plan()], [make()], [code_to_plan()],
 #'   [plan_to_notebook()]
@@ -829,7 +835,7 @@ plan_to_code <- function(plan, con = stdout()) {
 }
 
 #' @title Turn a `drake` plan into an R notebook.
-#' \lifecycle{stable}
+#' \lifecycle{questioning}
 #' @export
 #' @seealso [drake_plan()], [make()], [code_to_plan()],
 #'   [plan_to_code()]
@@ -895,7 +901,7 @@ plan_to_text <- function(plan) {
   }
   text <- paste(plan$target, "<-", plan$command)
   if (requireNamespace("styler")) {
-    text <- styler::style_text(text)
+    try(text <- styler::style_text(text), silent = TRUE)
   }
   text
 }
@@ -1026,7 +1032,8 @@ style_recursive_loop <- function(expr) {
 }
 
 style_leaf <- function(name, expr, append_comma) {
-  text <- styler::style_text(safe_deparse(expr))
+  text <- safe_deparse(expr)
+  try(text <- styler::style_text(text), silent = TRUE)
   text[1] <- paste(name, "=", text[1])
   if (append_comma) {
     text[length(text)] <- paste0(text[length(text)], ",")

@@ -30,8 +30,23 @@
 #' - `format`: set a storage format to save big targets more efficiently.
 #'   Most formats are faster than ordinary storage, and they consume
 #'   far less memory. Available formats:
-#'   - `"fst"`: save big data frames fast. The target must be a data frame,
-#'     and you must have the `fst` package installed.
+#'   - `"fst"`: save big data frames fast. Requirements:
+#'       1. The `fst` package must be installed.
+#'       2. The target's value must be a plain data frame. If it is not a
+#'         plain data frame (for example, a tibble or data.table)
+#'         then drake will coerce it to a plain data frame with
+#'         `as.data.frame()`.
+#'         All non-data-frame-specific attributes are lost
+#'         when `drake` saves the target.
+#'   - `"fst_dt"`: Like `"fst"` format, but for `data.table` objects.
+#'      Requirements:
+#'       1. The `data.table` and `fst` packages must be installed.
+#'       2. The target's value must be a data.table object. If it is not a
+#'         data.table object (for example, a data frame or tibble)
+#'         then drake will coerce it to a data.table object using
+#'         `data.table::as.data.table()`.
+#'         All non-data-table-specific attributes are lost
+#'         when `drake` saves the target.
 #'   - `"keras"`: save Keras models as HDF5 files.
 #'     Requires the `keras` package.
 #'   - `"rds"`: save any object. This is similar to the default storage
@@ -49,6 +64,11 @@
 #'   See
 #'   <https://ropenscilabs.github.io/drake-manual/hpc.html#advanced-options>
 #'   for details.
+#' - `caching`: overrides the `caching` argument of [make()] for each target
+#'   individually. Possible values:
+#'   - "master": tell the master process to store the target in the cache.
+#'   - "worker": tell the HPC worker to store the target in the cache.
+#'   - NA: default to the `caching` argument of [make()].
 #' - `elapsed` and `cpu`: number of seconds to wait for the target to build
 #'   before timing out (`elapsed` for elapsed time and `cpu` for CPU time).
 #' - `retries`: number of times to retry building a target

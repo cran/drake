@@ -511,7 +511,7 @@ test_with_dir("bad knitr report", {
 
 test_with_dir("empty cases", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  expect_equal(safe_get_tangled_frags(NULL), character(0))
+  expect_equal(get_tangled_frags(NULL), character(0))
   expect_silent(tmp <- analyze_knitr_file(NULL, NULL))
 })
 
@@ -541,7 +541,7 @@ test_with_dir("deps_knitr() works", {
   expect_false(file.exists("test.md"))
   expect_warning(x <- deps_knitr("report.Rmd"))
   expect_warning(expect_equal(x$name, sort(
-    deps_knitr(encode_path("report.Rmd"))$name)))
+    deps_knitr(reencode_path("report.Rmd"))$name)))
   expect_true(!nrow(x))
   load_mtcars_example()
   w <- deps_code("funct(knitr_in(report.Rmd))")

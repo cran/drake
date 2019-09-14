@@ -10,11 +10,15 @@
 #' @param envir Environment for tidy evaluation.
 #' @param trace Logical, whether to add columns to show
 #'   what happens during target transformations.
-#' @param max_expand Positive integer, optional upper bound on the lengths
-#'   of grouping variables for `map()` and `cross()`. Comes in handy
-#'   when you have a massive number of targets and you want to test
-#'   on a miniature version of your workflow before you scale up
-#'   to production.
+#' @param max_expand Positive integer, optional.
+#'   Maximum number of targets to generate in each
+#'   `map()`, `split()`, or `cross()` transform.
+#'   If massive number of targets, consider setting `max_expand`
+#'   to a small number. That way, you can test and visualize
+#'   your workflow before scaling up to production.
+#'   Note: `max_expand` is not for production workflows.
+#'   When it comes time to generate the end product,
+#'   either unset `max_expand` or manually set it to `NULL`.
 #' @param tidy_eval Logical, whether to use tidy evaluation
 #'   (e.g. unquoting/`!!`) when resolving commands.
 #'   Tidy evaluation in transformations is always turned on
@@ -469,7 +473,6 @@ dsl_transform.map <- dsl_transform.cross <- function(
   max_expand
 ) {
   groupings <- groupings(transform)
-  groupings <- thin_groupings(groupings, max_expand)
   cols <- upstream_trace_vars(target, plan, graph)
   grid <- dsl_grid(transform, groupings)
   if (any(dim(grid) < 1L)) {
@@ -501,7 +504,8 @@ dsl_transform.map <- dsl_transform.cross <- function(
     }
   }
   grid$.id_chr <- NULL
-  cbind(out, grid)
+  out <- cbind(out, grid)
+  df_max_expand(out, max_expand)
 }
 
 group_names <- function(transform) {
@@ -513,9 +517,15 @@ dsl_left_outer_join <- function(x, y) {
   if (!length(by)) {
     return(x)
   }
-  # The output must have the same number of rows as x.
+  # The output must have the same number of rows as x,
+  # and the ID variables must all be nonmissing.
   rows_keep <- complete_cases(y[, by, drop = FALSE])
   y <- y[rows_keep,, drop = FALSE] # nolint
+  # Drop the columns that only partially tag along.
+  # These grouping variables never truly belonged to the
+  # ID variables in x.
+  cols_keep <- !vapply(y, anyNA, FUN.VALUE = logical(1))
+  y <- y[, cols_keep, drop = FALSE]
   # Just a precaution. We should actually be okay by now.
   y <- y[!duplicated(y[, by, drop = FALSE]),, drop = FALSE] # nolint
   # Need to recover the original row order
@@ -546,19 +556,19 @@ upstream_trace_vars <- function(target, plan, graph) {
   intersect(out, colnames(plan))
 }
 
-thin_groupings <- function(groupings, max_expand) {
+df_max_expand <- function(df, max_expand) {
   if (is.null(max_expand)) {
-    return(groupings)
+    return(df)
   }
-  lapply(groupings, thin_grouping, max_expand = max_expand)
+  rows <- seq_max_expand(nrow(df), max_expand)
+  df[rows,, drop = FALSE] # nolint
 }
 
-thin_grouping <- function(x, max_expand) {
-  len <- min(length(x), max_expand)
-  i <- seq(from = 1L, to = length(x), length.out = len)
+seq_max_expand <- function(n, max_expand) {
+  max_expand <- min(n, max_expand)
+  i <- seq(from = 1L, to = n, length.out = max_expand)
   i <- floor(i)
-  i <- unique(i)
-  x[i]
+  unique(i)
 }
 
 dsl_transform.combine <- function(transform, target, row, plan, graph, ...) {
@@ -623,7 +633,7 @@ map_by <- function(.x, .by, .f, ...) {
       out
     }
   )
-  do.call(what = rbind, args = out)
+  do.call(what = drake_bind_rows, args = out)
 }
 
 split_by <- function(.x, .by = character(0)) {
@@ -725,6 +735,10 @@ combine_step <- function(plan, row, transform, old_cols) {
       out[[col]] <- row[[col]]
     }
   }
+  groupings <- combine_tagalongs(plan, transform, old_cols)
+  if (nrow(groupings) == 1L) {
+    out <- cbind(out, groupings)
+  }
   out
 }
 
@@ -782,6 +796,18 @@ splice_inner <- function(x, replacements) {
   } else {
     list(x)
   }
+}
+
+combine_tagalongs <- function(plan, transform, old_cols) {
+  combined_plan <- plan[, dsl_combine(transform), drop = FALSE]
+  out <- plan[complete_cases(combined_plan),, drop = FALSE] # nolint
+  drop <- c(old_cols, dsl_combine(transform), dsl_by(transform))
+  keep <- setdiff(colnames(out), drop)
+  out <- out[, keep, drop = FALSE]
+  keep <- !vapply(out, anyNA, FUN.VALUE = logical(1))
+  out <- out[, keep, drop = FALSE]
+  keep <- vapply(out, num_unique, FUN.VALUE = integer(1)) == 1L
+  utils::head(out[, keep, drop = FALSE], n = 1)
 }
 
 dsl_deps <- function(transform) UseMethod("dsl_deps")
@@ -875,16 +901,40 @@ find_old_groupings.map <- function(transform, plan) {
   group_names <- as.character(unnamed(lang(transform))[-1])
   group_names <- intersect(group_names, names(plan))
   subplan <- plan[, group_names, drop = FALSE]
+  keep <- apply(subplan, 1, function(x) {
+    !all(is.na(x))
+  })
+  subplan <- subplan[keep,, drop = FALSE] # nolint
   if (any(dim(subplan) < 1L)) {
     return(list())
   }
-  out <- select_nonempty(lapply(subplan, na_omit))
+  # Look for blocks of nested grouping variables.
+  blocks <- column_components(subplan)
+  blocks <- lapply(blocks, function(x) {
+    as.list(x[complete_cases(x),, drop = FALSE]) # nolint
+  })
+  out <- do.call(c, set_names(blocks, NULL))
+  out <- select_nonempty(lapply(out, na_omit))
   min_length <- min(vapply(out, length, FUN.VALUE = integer(1)))
   out <- as.data.frame(
     lapply(out, head, n = min_length),
     stringsAsFactors = FALSE
   )
   as.list(out[!duplicated(out),, drop = FALSE]) # nolint
+}
+
+column_components <- function(x) {
+  adj <- crossprod(!is.na(x)) > 0L
+  graph <- igraph::graph_from_adjacency_matrix(adj)
+  membership <- sort(igraph::components(graph)$membership)
+  tapply(
+    X = names(membership),
+    INDEX = membership,
+    function(cols) {
+      x[, cols, drop = FALSE]
+    },
+    simplify = FALSE
+  )
 }
 
 find_old_groupings.cross <- function(transform, plan) {

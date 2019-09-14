@@ -1,5 +1,31 @@
 drake_context("interactive")
 
+test_with_dir("logger", {
+  # testthat suppresses messages,
+  # so we need to inspect the console output manually.
+  files <- list.files()
+  x <- logger(verbose = 0L, file = NULL)
+  x$major("abc") # Should be empty.
+  x$minor("abc") # Should be empty.
+  x <- logger(verbose = 1L, file = NULL)
+  x$major("abc") # Should show "abc".
+  x$minor("abc") # Should be empty.
+  x <- logger(verbose = 2L, file = NULL)
+  x$major("abc") # Should show "abc".
+  x$minor("abc") # Should show the spinner.
+  expect_equal(files, list.files())
+  for (verbose in c(0L, 1L, 2L)) {
+    tmp <- tempfile()
+    x <- logger(verbose = 0L, file = tmp)
+    expect_equal(x$file, tmp)
+    expect_false(file.exists(tmp))
+    x$major("abc")
+    expect_equal(length(readLines(tmp)), 1L)
+    x$minor("abc")
+    expect_equal(length(readLines(tmp)), 2L)
+  }
+})
+
 if (FALSE) {
 
 test_with_dir("imported online file with no internet", {
@@ -297,53 +323,6 @@ test_with_dir("Output from the callr RStudio addins", {
   skip_if_not_installed("visNetwork")
   graph <- rs_addin_r_vis_drake_graph(r_args) # Should show a graph.
   expect_true(inherits(graph, "visNetwork"))
-})
-
-test_with_dir("custom keras format", {
-  skip_if_not_installed("keras")
-  keras_model <- function() {
-    model <- keras_model_sequential() %>%
-      layer_conv_2d(
-        filters = 32,
-        kernel_size = c(3, 3),
-        activation = "relu",
-        input_shape = c(28, 28, 1)
-      ) %>%
-      layer_conv_2d(
-        filters = 64,
-        kernel_size = c(3, 3),
-        activation = "relu"
-      ) %>%
-      layer_max_pooling_2d(pool_size = c(2, 2)) %>%
-      layer_dropout(rate = 0.25) %>%
-      layer_flatten() %>%
-      layer_dense(units = 128, activation = "relu") %>%
-      layer_dropout(rate = 0.5) %>%
-      layer_dense(units = 10, activation = "softmax")
-    compile(
-      model,
-      loss = "categorical_crossentropy",
-      optimizer = optimizer_adadelta(),
-      metrics = c("accuracy")
-    )
-    model
-  }
-  plan <- drake_plan(x = target(keras_model(), format = "keras"))
-  make(plan, packages = "keras")
-  out <- readd(x)
-  expect_true(inherits(out, "keras.engine.training.Model"))
-  cache <- drake_cache()
-  expect_true(
-    inherits(
-      cache$get_value(cache$get_hash("x")),
-      "keras.engine.training.Model"
-    )
-  )
-  ref <- cache$storr$get("x")
-  expect_true(inherits(ref, "drake_format_keras"))
-  expect_equal(length(ref), 1L)
-  expect_true(nchar(ref) < 100)
-  expect_false(is.list(ref))
 })
 
 }

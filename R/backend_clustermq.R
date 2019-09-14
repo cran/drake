@@ -12,7 +12,7 @@ backend_clustermq <- function(config) {
     n_jobs = config$jobs,
     template = config$template
   )
-  log_msg("setting common data", config = config)
+  config$logger$minor("set common data")
   cmq_set_common_data(config)
   config$counter <- new.env(parent = emptyenv())
   config$counter$remaining <- config$queue$size()
@@ -70,12 +70,12 @@ cmq_config <- function(config) {
 
 cmq_master <- function(config) {
   on.exit(config$workers$finalize())
-  log_msg("begin scheduling targets", config = config)
+  config$logger$minor("begin scheduling targets")
   while (config$counter$remaining > 0) {
     msg <- config$workers$receive_data()
     cmq_conclude_build(msg = msg, config = config)
     if (!identical(msg$token, "set_common_data_token")) {
-      log_msg("sending common data", config = config)
+      config$logger$minor("sending common data")
       config$workers$send_common_data()
     } else if (!config$queue$empty()) {
       cmq_next_target(config)
@@ -97,13 +97,16 @@ cmq_conclude_build <- function(msg, config) {
     stop(attr(build, "condition")$message, call. = FALSE) # nocov
   }
   cmq_conclude_target(target = build$target, config = config)
-  if (identical(config$caching, "worker")) {
+  caching <- caching(build$target, config)
+  if (identical(caching, "worker")) {
     wait_checksum(
       target = build$target,
       checksum = build$checksum,
       config = config
     )
     return()
+  } else {
+    build <- unserialize_build(build)
   }
   wait_outfile_checksum(
     target = build$target,
@@ -136,7 +139,8 @@ cmq_send_target <- function(target, config) {
     return()
   }
   announce_build(target = target, meta = meta, config = config)
-  if (identical(config$caching, "master")) {
+  caching <- caching(target, config)
+  if (identical(caching, "master")) {
     manage_memory(target = target, config = config, jobs = 1)
     deps <- cmq_deps_list(target = target, config = config)
   } else {
@@ -179,11 +183,12 @@ cmq_deps_list <- function(target, config) {
 #' @param layout Internal, part of the full `config$layout`.
 #' @param config A [drake_config()] list.
 cmq_build <- function(target, meta, deps, layout, config) {
-  log_msg("build", "on an hpc worker", target = target, config = config)
+  config$logger$minor("build on an hpc worker", target = target)
   config$layout <- list()
   config$layout[[target]] <- layout
   do_prework(config = config, verbose_packages = FALSE)
-  if (identical(config$caching, "master")) {
+  caching <- caching(target, config)
+  if (identical(caching, "master")) {
     for (dep in names(deps)) {
       config$eval[[dep]] <- deps[[dep]]
     }
@@ -191,16 +196,23 @@ cmq_build <- function(target, meta, deps, layout, config) {
     manage_memory(target = target, config = config, jobs = 1)
   }
   build <- try_build(target = target, meta = meta, config = config)
-  if (identical(config$caching, "master")) {
+  if (identical(caching, "master")) {
     build$checksum <- get_outfile_checksum(target, config)
+    build <- classify_build(build, config)
+    build <- serialize_build(build)
     return(build)
   }
   conclude_build(build = build, config = config)
   list(target = target, checksum = get_checksum(target, config))
 }
 
+caching <- function(target, config) {
+  out <- config$layout[[target]]$caching %||NA% config$caching
+  match.arg(out, choices = c("master", "worker"))
+}
+
 cmq_local_build <- function(target, config) {
-  log_msg("build", "locally", target = target, config = config)
+  config$logger$minor("build locally", target = target)
   local_build(target, config, downstream = NULL)
   cmq_conclude_target(target = target, config = config)
 }

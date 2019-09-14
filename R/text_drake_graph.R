@@ -43,8 +43,6 @@ text_drake_graph <- function(
   nchar = 1L,
   print = TRUE
 ) {
-  log_msg("begin text_drake_graph()", config = config)
-  on.exit(log_msg("end text_drake_graph()", config = config), add = TRUE)
   assert_pkg("visNetwork")
   graph_info <- drake_graph_info(
     config = config,
@@ -64,6 +62,8 @@ text_drake_graph <- function(
     show_output_files = show_output_files,
     hover = FALSE
   )
+  config$logger$minor("begin text_drake_graph()")
+  on.exit(config$logger$minor("end text_drake_graph()"), add = TRUE)
   render_text_drake_graph(
     graph_info = graph_info,
     nchar = nchar,
@@ -126,7 +126,7 @@ render_text_drake_graph <- function(graph_info, nchar = 1L, print = TRUE) {
     X = graph_info$nodes,
     MARGIN = 1,
     FUN = function(node) {
-      id <- display_keys(node["id"])
+      id <- redisplay_keys(node["id"])
       id <- substr(x = id, start = 0L, stop = nchar)
       id <- ifelse(nchar > 0, id, " ")
       if (requireNamespace("crayon", quietly = TRUE)) {
