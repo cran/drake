@@ -1,6 +1,6 @@
 local_build <- function(target, config, downstream) {
   meta <- drake_meta_(target = target, config = config)
-  if (handle_trigger(target, meta, config)) {
+  if (handle_triggers(target, meta, config)) {
     return()
   }
   announce_build(target, meta, config)
@@ -347,6 +347,28 @@ sanitize_format.drake_format_fst_dt <- function(x, target, config) { # nolint
     config$logger$minor(msg, target = target)
   }
   x$value <- data.table::as.data.table(x$value)
+  x
+}
+
+sanitize_format.drake_format_diskframe <- function(x, target, config) { # nolint
+  assert_pkg("disk.frame")
+  if (!inherits(x$value, "disk.frame")) {
+    msg <- paste0(
+      "You selected disk.frame format for target ", target,
+      ", so drake will try to convert it from class ",
+      safe_deparse(class(x$value)),
+      " to a disk.frame object. For optimal performance ",
+      "please create disk.frame objects yourself using an outdir ",
+      "on the same drive as drake's cache ",
+      "(say, with as.disk.frame(outdir = drake_tempfile()))."
+    )
+    warning(msg, call. = FALSE)
+    config$logger$minor(msg, target = target)
+    x$value <- disk.frame::as.disk.frame(
+      df = x$value,
+      outdir = config$cache$file_tmp()
+    )
+  }
   x
 }
 

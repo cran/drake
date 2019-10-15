@@ -216,28 +216,14 @@ loadd <- function(
   config = NULL
 ) {
   deprecate_search(search)
+  deprecate_arg(graph, "graph") # 2019-01-04 # nolint
+  deprecate_arg(imported_only, "imported_only") # 2019-01-01 # nolint
   force(envir)
   lazy <- parse_lazy_arg(lazy)
-  if (!is.null(graph)) {
-    warning(
-      "argument `graph` is deprecated.",
-      call. = FALSE
-    ) # 2019-01-04 # nolint
-  }
-  if (is.null(cache)) {
-    stop("cannot find drake cache.")
-  }
+  assert_cache(cache)
   cache <- decorate_storr(cache)
-  if (is.null(namespace)) {
-    namespace <- cache$default_namespace
-  }
-  if (tidyselect && deps) {
-    tidyselect <- FALSE
-    message(
-      "Disabling `tidyselect` in `loadd()` because `deps` is `TRUE`. ",
-      "For details, see the `deps` argument in the `loadd()` help file."
-    )
-  }
+  namespace <- namespace %||% cache$default_namespace
+  tidyselect <- loadd_use_tidyselect(tidyselect, deps)
   if (tidyselect && requireNamespace("tidyselect", quietly = TRUE)) {
     targets <- drake_tidyselect_cache(
       ...,
@@ -248,31 +234,12 @@ loadd <- function(
   } else {
     targets <- c(as.character(match.call(expand.dots = FALSE)$...), list)
   }
-  if (!length(targets) && !length(list(...))) {
-    targets <- cache$list()
-  }
-  if (!is.null(imported_only)) {
-    warning(
-      "The `imported_only` argument of `loadd()` is deprecated. ",
-      "In drake >= 7.0.0, loadd() only loads targets listed in the plan. ",
-      "Do not give the names of imports or files ",
-      "except to list them as dependencies ",
-      "from within an R Markdown/knitr report. ",
-      "Otherwise, imports and files are deliberately ignored.",
-      call. = FALSE
-    )
-  }
-  if (deps) {
-    if (is.null(config)) {
-      stop(
-        "In `loadd(deps = TRUE)`, you must supply a `drake_config()` ",
-        "object to the `config` argument.",
-        call. = FALSE
-      )
-    }
-    assert_config_not_plan(config)
-    targets <- deps_memory(targets = targets, config = config)
-  }
+  targets <- loadd_handle_empty_targets(
+    targets = targets,
+    cache = cache,
+    ...
+  )
+  targets <- loadd_use_deps(targets = targets, config = config, deps = deps)
   exists <- lightly_parallelize(
     X = targets,
     FUN = cache$exists,
@@ -281,29 +248,79 @@ loadd <- function(
   exists <- unlist(exists)
   targets <- targets[exists]
   targets <- targets_only(targets, cache = cache, jobs = jobs)
-  if (!length(targets) && !deps) {
-    if (verbose) {
-      message("No targets to load in loadd().")
-    }
-    stop(return(invisible))
+  if (!loadd_any_targets(targets, deps, verbose)) {
+    return(invisible())
   }
-  if (!replace) {
-    targets <- setdiff(targets, names(envir))
-  }
-  if (show_source) {
-    lapply(
-      X = targets,
-      FUN = show_source,
-      config = list(cache = cache),
-      character_only = TRUE
-    )
-  }
+  targets <- loadd_handle_replace(targets, envir, replace)
+  loadd_show_source(targets, cache = cache, show_source = show_source)
   lightly_parallelize(
     X = targets, FUN = load_target, cache = cache,
     namespace = namespace, envir = envir,
     verbose = verbose, lazy = lazy
   )
   invisible()
+}
+
+loadd_handle_empty_targets <- function(targets, cache, ...) {
+  if (!length(targets) && !length(list(...))) {
+    targets <- cache$list()
+  }
+  targets
+}
+
+loadd_use_tidyselect <- function(tidyselect, deps) {
+  if (tidyselect && deps) {
+    message(
+      "Disabling `tidyselect` in `loadd()` because `deps` is `TRUE`. ",
+      "For details, see the `deps` argument in the `loadd()` help file."
+    )
+    return(FALSE)
+  }
+  tidyselect
+}
+
+loadd_use_deps <- function(targets, config, deps) {
+  if (!deps) {
+    return(targets)
+  }
+  if (is.null(config)) {
+    stop(
+      "In `loadd(deps = TRUE)`, you must supply a `drake_config()` ",
+      "object to the `config` argument.",
+      call. = FALSE
+    )
+  }
+  assert_config_not_plan(config)
+  targets <- deps_memory(targets = targets, config = config)
+}
+
+loadd_show_source <- function(targets, cache, show_source) {
+  if (!show_source) {
+    return()
+  }
+  lapply(
+    X = targets,
+    FUN = show_source,
+    config = list(cache = cache),
+    character_only = TRUE
+  )
+}
+
+loadd_handle_replace <- function(targets, envir, replace) {
+  if (!replace) {
+    targets <- setdiff(targets, names(envir))
+  }
+  targets
+}
+
+loadd_any_targets <- function(targets, deps, verbose) {
+  if (!length(targets) && !deps) {
+    if (verbose) {
+      message("No targets to load in loadd().")
+    }
+    return(FALSE)
+  }
+  TRUE
 }
 
 parse_lazy_arg <- function(lazy) {
@@ -531,8 +548,6 @@ read_drake_seed <- function(
 #'   targets or cached or a character vector listing all cached
 #'   items, depending on whether any targets are specified.
 #'
-#' @inheritParams drake_config
-#'
 #' @param ... Deprecated. Do not use.
 #'   Objects to load from the cache, as names (unquoted)
 #'   or character strings (quoted). Similar to `...` in
@@ -647,12 +662,28 @@ is_imported_cache <- Vectorize(function(target, cache) {
 #' @details `drake_cache()` actually returns a *decorated* `storr`,
 #'   an object that *contains* a `storr` (plus bells and whistles).
 #'   To get the *actual* inner `storr`, use `drake_cache()$storr`.
+#'   Most methods are delegated to the inner `storr`.
+#'   Some methods and objects are new or overwritten. Here
+#'   are the ones relevant to users.
+#'   - `history`: `drake`'s history (which powers [drake_history()])
+#'     is a [`txtq`](https://github.com/wlandau/txtq). Access it
+#'     with `drake_cache()$history`.
+#'   - `import()`: The `import()` method is a function that can import
+#'     targets, function dependencies, etc. from one decorated `storr`
+#'     to another. History is not imported. For that, you have to work
+#'     with the history `txtq`s themselves, Arguments to `import()`:
+#'     - `...` and `list`: specify targets to import just like with [loadd()].
+#'       Leave these blank to import everything.
+#'     - `from`: the decorated `storr` from which to import targets.
+#'     - `jobs`: number of local processes for parallel computing.
+#'     - `gc`: `TRUE` or `FALSE`, whether to run garbage collection for memory
+#'       after importing each target. Recommended, but slow.
+#'   - `export()`: Same as `import()`, except the `from` argument is replaced
+#'     by `to`: the decorated `storr` where the targets end up.
 #' @seealso [new_cache()], [drake_config()]
 #' @export
 #' @return A drake/storr cache in a folder called `.drake/`,
 #'   if available. `NULL` otherwise.
-#' @inheritParams cached
-#' @inheritParams drake_config
 #' @param path Character.
 #'   Set `path` to the path of a `storr::storr_rds()` cache
 #'   to retrieve a specific cache generated by `storr::storr_rds()`
@@ -678,6 +709,25 @@ is_imported_cache <- Vectorize(function(target, cache) {
 #' # The *real* storr is inside.
 #' drake_cache()$storr
 #' }
+#' # You can import and export targets to and from decorated storrs.
+#' plan1 <- drake_plan(w = "w", x = "x")
+#' plan2 <- drake_plan(a = "a", x = "x2")
+#' cache1 <- new_cache("cache1")
+#' cache2 <- new_cache("cache2")
+#' make(plan1, cache = cache1)
+#' make(plan2, cache = cache2)
+#' cache1$import(cache2, a)
+#' cache1$get("a")
+#' cache1$get("x")
+#' cache1$import(cache2)
+#' cache1$get("x")
+#' # With txtq >= 0.1.6.9002, you can import history from one cache into
+#' # another.
+#' # nolint start
+#' # drake_history(cache = cache1)
+#' # cache1$history$import(cache2$history)
+#' # drake_history(cache = cache1)
+#' # nolint end
 #' })
 #' }
 drake_cache <- function(
@@ -692,7 +742,6 @@ drake_cache <- function(
   }
   this_cache_(path = path)
 }
-
 
 #' @title Search up the file system for the nearest drake cache.
 #' \lifecycle{stable}
@@ -747,8 +796,6 @@ find_cache <- function(
 #' from the `storr` package.
 #' @export
 #' @return A newly created drake cache as a storr object.
-#' @inheritParams cached
-#' @inheritParams drake_config
 #' @seealso [make()]
 #' @param path File path to the cache if the cache
 #'   is a file system cache.
@@ -838,14 +885,14 @@ drake_fetch_rds <- function(path) {
   decorate_storr(storr::storr_rds(path = path))
 }
 
-cache_vers_stop <- function(cache){
+cache_vers_stop <- function(cache) {
   msg <- cache_vers_check(cache)
   if (length(msg)) {
     stop(msg, call. = FALSE)
   }
 }
 
-cache_vers_warn <- function(cache){
+cache_vers_warn <- function(cache) {
   msg <- cache_vers_check(cache)
   if (length(msg)) {
     warning(msg, call. = FALSE)
@@ -1322,6 +1369,7 @@ memo_expr <- function(expr, cache, ...) {
     return(force(expr))
   }
   lang <- match.call(expand.dots = FALSE)$expr
+  lang <- safe_deparse(lang)
   key <- digest::digest(list(lang, ...), algo = cache$hash_algorithm)
   if (cache$exists(key = key, namespace = "memoize")) {
     return(cache$get(key = key, namespace = "memoize", use_cache = TRUE))
@@ -1368,35 +1416,18 @@ list_multiple_namespaces <- function(cache, namespaces, jobs = 1) {
 }
 
 read_from_meta <- function(key, field, cache) {
-  object <- safe_get(
-    key = key,
-    namespace = "meta",
-    config = list(cache = cache)
-  )
-  if (field %in% names(object)) {
-    object[[field]]
+  meta <- old_meta(key = key, cache = cache)
+  meta_elt(field, meta)
+}
+
+old_meta <- function(key, cache) {
+  cache$safe_get(key = key, namespace = "meta")
+}
+
+meta_elt <- function(field, meta) {
+  if (field %in% names(meta)) {
+    meta[[field]]
   } else {
     NA_character_
   }
-}
-
-safe_get <- function(key, namespace, config) {
-  out <- just_try(config$cache$get(key = key, namespace = namespace))
-  if (inherits(out, "try-error")) {
-    out <- NA_character_
-  }
-  out
-}
-
-safe_get_hash <- function(key, namespace, config) {
-  out <- just_try(config$cache$get_hash(key = key, namespace = namespace))
-  if (inherits(out, "try-error")) {
-    out <- NA_character_
-  }
-  out
-}
-
-# Should be used as sparingly as possible.
-just_try <- function(code) {
-  try(suppressWarnings(code), silent = TRUE)
 }

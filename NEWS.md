@@ -1,3 +1,26 @@
+# Version 7.7.0
+
+## Bug fixes
+
+- Take the sum instead of the max in `dir_size()`. Incurs rehashing for some workflows, but should not invalidate any targets.
+
+## New features
+
+- Add a new `which_clean()` function to preview which targets will be invalidated by `clean()` (#1014, @pat-s).
+- Add serious import and export methods for the decorated `storr` (#1015, @billdenney, @noamross).
+- Add a new `"diskframe"` format for larger-than-memory data (#1004, @xiaodaigh).
+- Add a new `drake_tempfile()` function to help with `"diskframe"` format. It makes sure we are not copying large datasets across different physical storage media (#1004, @xiaodaigh).
+- Add new function `code_to_function()` to allow for parsing script based workflows into functions so `drake_plan()` can begin to manage the workflow and track dependencies. (#994, @thebioengineer)
+
+## Enhancements
+
+- Coerce seeds to integers in `seed_trigger()` (#1013, @CreRecombinase).
+- Hard wrap long labels in graph visuals (#1017).
+- Nest the history `txtq` API inside decorated `storr` API (#1020).
+- Reduce cyclomatic complexity of internal functions.
+- Reduce retrievals of old target metadata to try to improve performance (#1027).
+
+
 # Version 7.6.2
 
 ## Bug fixes

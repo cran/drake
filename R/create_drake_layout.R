@@ -62,11 +62,7 @@ cdl_get_knitr_hash <- function(config, layout) {
   if (!config$cache$exists(key = "knitr", namespace = "memoize")) {
     return(NA_character_)
   }
-  knitr_files <- safe_get(
-    key = "knitr",
-    namespace = "memoize",
-    config = config
-  )
+  knitr_files <- config$cache$safe_get(key = "knitr", namespace = "memoize")
   knitr_hashes <- lightly_parallelize(
     X = knitr_files,
     FUN = storage_hash,
@@ -174,7 +170,7 @@ cdl_analyze_commands <- function(config) {
   out
 }
 
-cdl_prepare_layout <- function(config, layout, ht_targets){
+cdl_prepare_layout <- function(config, layout, ht_targets) {
   config$logger$minor("analyze", target = layout$target)
   layout$deps_build <- cdl_command_dependencies(
     command = layout$command,
@@ -186,7 +182,7 @@ cdl_prepare_layout <- function(config, layout, ht_targets){
     layout$command,
     config = config
   )
-  if (is.null(layout$trigger) || all(is.na(layout$trigger))){
+  if (is.null(layout$trigger) || all(is.na(layout$trigger))) {
     layout$trigger <- config$trigger
     layout$deps_condition <- config$default_condition_deps
     layout$deps_change <- config$default_change_deps

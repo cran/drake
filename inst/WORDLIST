@@ -1,10 +1,11 @@
 ’
 ’s
 Acknowledgements
-ailProbPaper
 acyclic
 addin
 advisor
+ailProbPaper
+al
 algo
 ALTREP
 Ane
@@ -45,6 +46,7 @@ CRAN
 CRAN's
 creatable
 customizable
+cyclomatic
 DataFest
 del
 demografia
@@ -60,6 +62,7 @@ DSL
 drakeplanner
 DropBox
 dt
+Ebihara
 Ecdat
 Econometrics
 econometrics
@@ -67,6 +70,7 @@ efcaguab
 else's
 eng
 envir
+et
 ETag
 eval
 Factual's
@@ -76,9 +80,11 @@ FitzJohn
 flowlines
 fst
 ftp
+Gametophytes
 Genotype
 ggplot
 github
+GitLab
 globals
 gridlines
 gsp
@@ -117,6 +123,7 @@ Lowndes
 Maëlle
 Makefile
 Makefiles
+makinoi
 Marwick
 mbostock
 mc
@@ -129,6 +136,7 @@ memoize
 memoization
 Memoization
 memoized
+Nitta
 modularity
 mtcars
 Müller
@@ -159,6 +167,8 @@ Phylogenetic
 phyloQTLpaper
 Pinnoi
 pleurosoriopsis
+Pleurorosiopsis
+Polypodiaceae
 pre
 preCCProbPaper
 preclean
@@ -207,10 +217,12 @@ Stawitz
 storr
 Storr
 subcomponents
+subfolder
 subgraphs
 Subgraphs
 sugiyama
 Sungjin
+tempfile
 templating
 tensorflow
 tibble

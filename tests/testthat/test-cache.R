@@ -125,12 +125,6 @@ test_with_dir("Cache namespaces", {
   expect_false(all(y %in% z))
 })
 
-test_with_dir("safe_get", {
-  skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  con <- list(cache = storr::storr_environment())
-  expect_true(is.na(safe_get(key = "x", namespace = "y", config = con)))
-})
-
 test_with_dir("clean() works if there is no cache already", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   clean(list = "no_cache")
@@ -787,12 +781,6 @@ test_with_dir("arbitrary storr in-memory cache", {
   expect_false(file.exists(cached_data))
 })
 
-test_with_dir("safe_get", {
-  config <- drake_config(drake_plan(a = 1))
-  expect_true(is.na(safe_get("a", "b", config)))
-  expect_true(is.na(safe_get_hash("a", "b", config)))
-})
-
 test_with_dir("clean a nonexistent cache", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   clean(list = "no_cache")
@@ -825,7 +813,7 @@ test_with_dir("try_build() does not need to access cache", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   config <- drake_config(drake_plan(x = 1), lock_envir = FALSE)
   meta <- drake_meta_(target = "x", config = config)
-  config$cache <- NULL
+  config$cache <- config$cache_log_file <- NULL
   build <- try_build(target = "x", meta = meta, config = config)
   expect_equal(1, build$value)
   expect_error(
@@ -862,4 +850,16 @@ test_with_dir("dir_create()", {
   x <- tempfile()
   file.create(x)
   expect_error(dir_create(x), regexp = "cannot create directory")
+})
+
+test_with_dir("which_clean() (#1014)", {
+  cache <- storr::storr_environment()
+  expect_equal(which_clean(cache = cache), character(0))
+  plan <- drake_plan(x = 1, y = 2, z = 3)
+  cache <- storr::storr_environment()
+  make(plan, cache = cache, session_info = FALSE, history = FALSE)
+  expect_equal(sort(c("x", "y", "z")), sort(cached(cache = cache)))
+  expect_equal(sort(which_clean(x, y, cache = cache)), sort(c("x", "y")))
+  clean(x, y, cache = cache)       # Invalidates targets x and y.
+  expect_equal(cached(cache = cache), "z")
 })

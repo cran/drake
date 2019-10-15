@@ -265,7 +265,7 @@ append_output_file_nodes <- function(config) {
     cols <- setdiff(colnames(nodes), c("id", "label", "level", "shape", "type"))
     for (target in intersect(names(file_out), nodes$id)) {
       files <- intersect(file_out[[target]], nodes$id)
-      if (length(files)){
+      if (length(files)) {
         for (col in cols) {
           nodes[files, col] <- nodes[target, col]
         }
@@ -452,6 +452,7 @@ configure_nodes <- function(config) {
   config$nodes <- categorize_nodes(config = config)
   config$nodes <- style_nodes(config = config)
   config$nodes <- resolve_levels(config = config)
+  config$nodes <- wrap_labels(config = config)
   if (config$build_times != "none") {
     config$nodes <- append_build_times(config = config)
   }
@@ -484,6 +485,11 @@ resolve_levels <- function(config) {
     config$nodes[leaves, "level"] <- level
     graph <- igraph::delete_vertices(graph = graph, v = leaves)
   }
+  config$nodes
+}
+
+wrap_labels <- function(config) {
+  config$nodes$label <- hard_wrap(config$nodes$label, width = hover_width)
   config$nodes
 }
 

@@ -528,93 +528,20 @@ drake_config <- function(
   logger <- logger(verbose = verbose, file = console_log_file)
   logger$minor("begin drake_config()")
   deprecate_fetch_cache(fetch_cache)
-  if (!is.null(hook)) {
-    warning(
-      "Argument `hook` is deprecated.",
-      call. = FALSE
-    ) # 2018-10-25 # nolint
-  }
-  if (!is.null(pruning_strategy)) {
-    warning(
-      "Argument `pruning_strategy` is deprecated. ",
-      "Use `memory_strategy` instead.",
-      call. = FALSE
-    ) # 2018-11-01 # nolint
-  }
-  if (!is.null(timeout)) {
-    warning(
-      "Argument `timeout` is deprecated. ",
-      "Use `elapsed` and/or `cpu` instead.",
-      call. = FALSE
-      # 2018-12-07 # nolint
-    )
-  }
-  if (!is.null(graph)) {
-    warning(
-      "Argument `graph` is deprecated. Instead, ",
-      "the preprocessing of the graph is memoized to save time.",
-      call. = FALSE
-      # 2018-12-19 # nolint
-    )
-  }
-  if (!is.null(layout)) {
-    warning(
-      "Argument `layout` is deprecated. Instead, ",
-      "the preprocessing of the layout is memoized to save time.",
-      call. = FALSE
-      # 2018-12-19 # nolint
-    )
-  }
-  if (!is.null(timeout)) {
-    warning(
-      "Argument `timeout` is deprecated. ",
-      "Use `elapsed` and/or `cpu` instead.",
-      call. = FALSE
-      # 2018-12-07 # nolint
-    )
-  }
-  if (!is.null(hasty_build)) {
-    warning(
-      "Argument `hasty_build` is deprecated. ",
-      "Check out https://github.com/wlandau/drake.hasty instead.",
-      call. = FALSE
-      # 2018-12-07 # nolint
-    )
-  }
-  if (!is.null(session)) {
-    # Deprecated on 2018-12-18.
-    warning(
-      "The ", sQuote("session"), " argument of make() and drake_config() ",
-      "is deprecated. make() will NOT run in a separate callr session. ",
-      "For reproducibility, you may wish to try make(lock_envir = TRUE). ",
-      "Details: https://github.com/ropensci/drake/issues/623.",
-      call. = FALSE
-    )
-  }
-  if (!is.null(ensure_workers)) {
-    # Deprecated on 2018-12-18.
-    warning(
-      "The ", sQuote("ensure_workers"),
-      " argument of make() and drake_config() ",
-      "is deprecated.",
-      call. = FALSE
-    )
-  }
-  if (
-    !is.null(command) ||
-    !is.null(args) ||
-    !is.null(recipe_command) ||
-    !is.null(prepend) ||
-    !is.null(makefile_path)
-  ) {
-    warning(
-      "Arguments `command`, `args`, `prepend`, `makefile_path`, ",
-      "`recipe_command` are deprecated ",
-      "because Makefile parallelism is no longer supported.",
-      call. = FALSE
-      # 2019-01-03 # nolint
-    )
-  }
+  deprecate_arg(hook, "hook") # 2018-10-25 # nolint
+  # 2018-11-01 # nolint
+  deprecate_arg(pruning_strategy, "pruning_strategy", "memory_strategy")
+  deprecate_arg(timeout, "timeout", "elapsed and/or cpu")
+  deprecate_arg(graph, "graph")
+  deprecate_arg(layout, "layout")
+  deprecate_arg(hasty_build, "hasty_build")
+  deprecate_arg(session, "session")
+  deprecate_arg(ensure_workers, "ensure_workers")
+  deprecate_arg(command, "command")
+  deprecate_arg(args, "args")
+  deprecate_arg(recipe_command, "recipe_command")
+  deprecate_arg(prepend, "prepend")
+  deprecate_arg(makefile_path, "makefile_path")
   memory_strategy <- match.arg(memory_strategy, choices = memory_strategies())
   if (memory_strategy == "memory") {
     memory_strategy <- "preclean"
@@ -635,6 +562,7 @@ drake_config <- function(
     cache <- new_cache()
   }
   cache <- decorate_storr(cache)
+  cache$set_history(history)
   logger$minor("cache", cache$path)
   seed <- choose_seed(supplied = seed, cache = cache)
   if (identical(force, TRUE)) {
@@ -656,7 +584,6 @@ drake_config <- function(
     jobs = jobs_preprocess,
     logger = logger
   )
-  history <- initialize_history(history, cache)
   lazy_load <- parse_lazy_arg(lazy_load)
   caching <- match.arg(caching)
   recover <- as.logical(recover)
@@ -696,7 +623,6 @@ drake_config <- function(
     hasty_build = hasty_build,
     lock_envir = lock_envir,
     force = force,
-    history = history,
     recover = recover,
     recoverable = recoverable,
     curl_handles = curl_handles
@@ -752,32 +678,6 @@ get_previous_seed <- function(cache) {
   }
 }
 
-initialize_history <- function(history, cache) {
-  migrate_history(history, cache)
-  if (identical(history, TRUE)) {
-    history <- default_history_queue(cache)
-  }
-  if (!is.null(history) && !identical(history, FALSE)) {
-    stopifnot(is_history(history))
-  }
-  history
-}
-
-migrate_history <- function(history, cache) {
-  if (is_history(history)) {
-    return()
-  }
-  old_path <- file.path(dirname(cache$path), ".drake_history")
-  if (file.exists(old_path)) {
-    dir_create(file.path(cache$path, "drake"))
-    file.rename(old_path, file.path(cache$path, "drake", "history"))
-  }
-}
-
-is_history <- function(history) {
-  inherits(history, "R6_txtq")
-}
-
 # Load an existing drake files system cache if it exists
 # or create a new one otherwise.
 # TO DO: remove all the arguments when we make recover_cache() defunct.
@@ -824,15 +724,17 @@ plan_check_format_col <- function(plan) {
   }
   format <- plan$format
   format <- format[!is.na(format)]
-  formats <- c("fst", "fst_dt", "keras", "rds")
+  formats <- c("fst", "fst_dt", "diskframe", "keras", "rds")
   illegal <- setdiff(unique(format), formats)
   if (!length(illegal)) {
     return()
   }
+  formats_str <- paste0("\"", formats, "\"")
+  formats_str <- paste(formats_str, collapse = ", ")
   stop(
     "the format column of your drake plan can only have values ",
-    "\"fst\", \"fst_dt\", \"keras\", \"rds\", or NA. ",
-    "Illegal values found:\n",
+    formats_str,
+    ", or NA. Illegal values found:\n",
     multiline_message(illegal),
     call. = FALSE
   )

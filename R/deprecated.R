@@ -538,7 +538,6 @@ deprecate_targets_only <- function(targets_only) {
 #' the files `report.Rmd` and `raw_data.xlsx`.
 #' @export
 #' @return A [drake_config()] configuration list.
-#' @inheritParams drake_config
 #' @param envir The environment to load the example into.
 #'   Defaults to your workspace.
 #'   For an insulated workspace,
@@ -2527,4 +2526,15 @@ deprecate_console_log_file <- function(console_log_file) {
       call. = FALSE
     )
   }
+}
+
+deprecate_arg <- function(value, name, alt = NULL) {
+  if (is.null(value)) {
+    return()
+  }
+  msg <- paste("argument", name, "is deprecated.")
+  if (!is.null(alt)) {
+    msg <- paste(msg, "Use", alt, "instead.")
+  }
+  warning(msg, call. = FALSE)
 }

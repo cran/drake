@@ -101,11 +101,11 @@ drake_history <- function(
     stop("cannot find drake cache.")
   }
   cache <- decorate_storr(cache)
-  migrate_history(history, cache)
-  if (is.null(history)) {
-    history <- default_history_queue(cache)
+  cache$set_history(history)
+  if (is.null(cache$history)) {
+    stop("no history. Call make(history = TRUE) next time.", call. = FALSE)
   }
-  from_txtq <- history$list()
+  from_txtq <- cache$history$list()
   from_cache <- lapply(from_txtq$message, history_from_cache, cache = cache)
   from_cache <- do.call(drake_bind_rows, from_cache)
   if (!nrow(from_txtq)) {
@@ -128,11 +128,10 @@ drake_history <- function(
   )
   out <- out[order(out$target, out$built), ]
   current_hash <- vapply(
-    out$target,
-    safe_get_hash,
+    X = out$target,
+    FUN = cache$safe_get_hash,
     FUN.VALUE = character(1),
-    namespace = cache$default_namespace,
-    config = list(cache = cache)
+    namespace = cache$default_namespace
   )
   out$current <- out$hash == current_hash
   out$current[is.na(out$current)] <- FALSE
@@ -154,13 +153,6 @@ drake_history <- function(
   }
   out$DRAKE_HISTORY_NA_ <- NULL
   weak_as_tibble(out)
-}
-
-default_history_queue <- function(cache) {
-  history_dir <- file.path(cache$path, "drake")
-  dir_create(history_dir)
-  history_path <- file.path(history_dir, "history")
-  txtq::txtq(history_path)
 }
 
 history_from_cache <- function(meta_hash, cache) {
