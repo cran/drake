@@ -54,7 +54,7 @@
 #' to suppress environment-locking for all targets.
 #' However, this is not usually recommended.
 #' There are legitimate use cases for `lock_envir = FALSE`
-#' (example: <https://ropenscilabs.github.io/drake-manual/hpc.html#parallel-computing-within-targets>) # nolint
+#' (example: <https://books.ropensci.org/drake/hpc.html#parallel-computing-within-targets>) # nolint
 #' but most workflows should stick with the default `lock_envir = TRUE`.
 #'
 #' @seealso
@@ -108,6 +108,19 @@
 #' }
 #' clean() # Start from scratch next time around.
 #' }
+#' # Dynamic branching
+#' plan <- drake_plan(
+#'   w = c("a", "a", "b", "b"),
+#'   x = seq_len(4),
+#'   y = target(x + 1, dynamic = map(x)),
+#'   z = target(list(y = y, w = w), dynamic = group(y, .by = w))
+#' )
+#' make(plan)
+#' subtargets(y)
+#' readd(subtargets(y)[1], character_only = TRUE)
+#' readd(subtargets(y)[2], character_only = TRUE)
+#' readd(subtargets(z)[1], character_only = TRUE)
+#' readd(subtargets(z)[2], character_only = TRUE)
 #' })
 #' }
 make <- function(
@@ -161,7 +174,8 @@ make <- function(
   history = TRUE,
   recover = FALSE,
   recoverable = TRUE,
-  curl_handles = list()
+  curl_handles = list(),
+  max_expand = NULL
 ) {
   check_make_call(match.call())
   force(envir)
@@ -216,16 +230,20 @@ make <- function(
       history = history,
       recover = recover,
       recoverable = recoverable,
-      curl_handles = curl_handles
+      curl_handles = curl_handles,
+      max_expand = max_expand
     )
   }
   config$logger$minor("begin make()")
   runtime_checks(config = config)
   config$running_make <- TRUE
+  config$ht_dynamic <- ht_new()
+  config$ht_dynamic_size <- ht_new()
+  config$envir_loaded <- new.env(hash = FALSE, parent = emptyenv())
   config$cache$reset_memo_hash()
   on.exit(config$cache$reset_memo_hash())
+  config$envir_subtargets[[drake_envir_marker]] <- TRUE
   config$cache$set(key = "seed", value = config$seed, namespace = "session")
-  config$eval[[drake_envir_marker]] <- TRUE
   if (config$log_progress) {
     config$cache$clear(namespace = "progress")
   }
@@ -235,7 +253,8 @@ make <- function(
     process_imports(config)
   }
   if (is.character(config$parallelism)) {
-    config$graph <- outdated_subgraph(config)
+    config$envir_graph <- new.env(parent = emptyenv())
+    config$envir_graph$graph <- outdated_subgraph(config)
   }
   r_make_message(force = FALSE)
   if (!config$skip_targets) {
@@ -246,7 +265,17 @@ make <- function(
     cache = config$cache,
     jobs = config$jobs_preprocess
   )
-  remove(list = names(config$eval), envir = config$eval)
+  envirs <- c(
+    "envir_graph",
+    "envir_targets",
+    "envir_subtargets",
+    "envir_loaded",
+    "ht_dynamic",
+    "ht_dynamic_size"
+  )
+  for (key in envirs) {
+    remove(list = names(config[[key]]), envir = config[[key]])
+  }
   config$cache$flush_cache()
   if (config$garbage_collection) {
     gc()
@@ -268,14 +297,16 @@ run_native_backend <- function(config) {
     config$parallelism,
     c("loop", "clustermq", "future")
   )
-  if (igraph::gorder(config$graph)) {
-    get(
-      paste0("backend_", parallelism),
-      envir = getNamespace("drake")
-    )(config)
+  if (igraph::gorder(config$envir_graph$graph)) {
+    class(config) <- c(class(config), parallelism)
+    drake_backend(config)
   } else {
-    config$logger$major("All targets are already up to date.")
+    config$logger$major("All targets are already up to date.", color = NULL)
   }
+}
+
+drake_backend <- function(config) {
+  UseMethod("drake_backend")
 }
 
 run_external_backend <- function(config) {
@@ -365,15 +396,21 @@ do_prework <- function(config, verbose_packages) {
     if (verbose_packages) {
       expr <- as.call(c(quote(suppressPackageStartupMessages), expr))
     }
-    eval(expr, envir = config$eval)
+    eval(expr, envir = config$envir_targets)
   }
   if (is.character(config$prework)) {
     config$prework <- parse(text = config$prework)
   }
   if (is.language(config$prework)) {
-    eval(config$prework, envir = config$eval)
+    eval(config$prework, envir = config$envir_targets)
   } else if (is.list(config$prework)) {
-    lapply(config$prework, eval, envir = config$eval)
+    lapply(config$prework, eval, envir = config$envir_targets)
+  } else if (length(config$prework)) {
+    stop(
+      "prework must be an expression ",
+      "or a list of expressions",
+      call. = FALSE
+    )
   }
   invisible()
 }
@@ -464,8 +501,8 @@ subdirectory_warning <- function(config) {
   if (identical(Sys.getenv("drake_warn_subdir"), "false")) {
     return()
   }
-  dir <- dirname(config$cache$path)
-  wd <- getwd()
+  dir <- normalizePath(dirname(config$cache$path), mustWork = FALSE)
+  wd <- normalizePath(getwd(), mustWork = FALSE)
   if (!length(dir) || wd == dir || is.na(pmatch(dir, wd))) {
     return()
   }

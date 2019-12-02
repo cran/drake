@@ -9,11 +9,12 @@
 #' @return A one-row workflow plan data frame with the named
 #' arguments as columns.
 #' @param command The command to build the target.
-#' @param transform A call to [map()], [split()],
-#'   [cross()], or [combine()] to create or aggregate
-#'   multiple targets at once.
-#'   Details:
-#'   <https://ropenscilabs.github.io/drake-manual/plans.html#large-plans>
+#' @param transform A call to [map()], [split()], [cross()], or [combine()]
+#'   to apply a *static* transformation. Details:
+#'   <https://books.ropensci.org/drake/static.html>
+#' @param dynamic A call to [map()], [cross()], or [group()]
+#'   to apply a *dynamic* transformation. Details:
+#'   <https://books.ropensci.org/drake/dynamic.html>
 #' @param ... Optional columns of the plan for a given target.
 #'   See the Columns section of this help file for a selection
 #'   of special columns that `drake` understands.
@@ -54,13 +55,14 @@
 target <- function(
   command = NULL,
   transform = NULL,
+  dynamic = NULL,
   ...
 ) {
   if (!nzchar(Sys.getenv("drake_target_silent"))) {
     warning(
       "target() in drake is not a standalone user-side function. ",
       "It must be called from inside drake_plan(). Details: ",
-      "https://ropenscilabs.github.io/drake-manual/plans.html#large-plans",
+      "https://books.ropensci.org/drake/static.html",
       call. = FALSE
     )
   }
@@ -68,6 +70,7 @@ target <- function(
   lst <- c(
     command = call$command,
     transform = call$transform,
+    dynamic = call$dynamic,
     call$...
   )
   lst <- select_nonempty(lst)
@@ -83,199 +86,6 @@ target <- function(
   out
 }
 
-#' @title Define multiple targets at once
-#' \lifecycle{maturing}
-#' @description Similar to `pmap()` from `purrr`, except `drake`'s
-#'   `map()` defines new targets.
-#' @details Only valid within a call to [target()] in
-#'   [drake_plan()]. See the examples below.
-#' @inheritSection drake_plan Keywords
-#' @seealso split, cross, combine, drake_plan, target
-#' @param ... Grouping variables. New grouping variables must be
-#'   supplied with their names and values, existing grouping variables
-#'   can be given as symbols without any values assigned.
-#' @param .data A data frame of new grouping variables with
-#'   grouping variable names as column names and values as elements.
-#' @param .id Symbol or vector of symbols naming grouping variables
-#'   to incorporate into target names. Useful for creating short target
-#'   names. Set `.id = FALSE` to use integer indices as target name suffixes.
-#' @param .tag_in A symbol or vector of symbols. Tags assign targets
-#'   to grouping variables. Use `.tag_in` to assign *untransformed*
-#'   targets to grouping variables.
-#' @param .tag_out Just like `.tag_in`, except that `.tag_out`
-#'   assigns *transformed* targets to grouping variables.
-#' @examples
-#' models <- c("glm", "hierarchical")
-#' plan <- drake_plan(
-#'   data = target(
-#'     get_data(x),
-#'     transform = map(x = c("simulated", "survey"))
-#'   ),
-#'   analysis = target(
-#'     analyze_data(data, model),
-#'     transform = cross(data, model = !!models, .id = c(x, model))
-#'   ),
-#'   summary = target(
-#'     summarize_analysis(analysis),
-#'     transform = map(analysis, .id = c(x, model))
-#'   ),
-#'   results = target(
-#'     bind_rows(summary),
-#'     transform = combine(summary, .by = data)
-#'   )
-#' )
-#' plan
-#' if (requireNamespace("styler")) {
-#'   print(drake_plan_source(plan))
-#' }
-#' # Tags:
-#' drake_plan(
-#'   x = target(
-#'     command,
-#'     transform = map(y = c(1, 2), .tag_in = from, .tag_out = c(to, out))
-#'   ),
-#'   trace = TRUE
-#' )
-#' plan <- drake_plan(
-#'   survey = target(
-#'     survey_data(x),
-#'     transform = map(x = c(1, 2), .tag_in = source, .tag_out = dataset)
-#'   ),
-#'   download = target(
-#'     download_data(),
-#'     transform = map(y = c(5, 6), .tag_in = source, .tag_out = dataset)
-#'   ),
-#'   analysis = target(
-#'     analyze(dataset),
-#'     transform = map(dataset)
-#'   ),
-#'   results = target(
-#'     bind_rows(analysis),
-#'     transform = combine(analysis, .by = source)
-#'   )
-#' )
-#' plan
-#' if (requireNamespace("styler", quietly = TRUE)) {
-#'   print(drake_plan_source(plan))
-#' }
-map <- function(..., .data, .id, .tag_in, .tag_out) {
-  stop(
-    "map() in drake must be called inside target() in drake_plan()",
-    call. = FALSE
-  )
-}
-
-#' @title Define a target for each subset of data
-#' \lifecycle{maturing}
-#' @description Similar `group_map()`, from `dplyr`, except it
-#'   defines new targets in `drake`.
-#' @details Only valid within a call to [target()] in
-#'   [drake_plan()]. See the examples below.
-#' @inheritSection drake_plan Keywords
-#' @seealso map, cross, combine, drake_plan, target, drake_slice
-#' @inheritParams map
-#' @inheritParams drake_slice
-#' @examples
-#' plan <- drake_plan(
-#'   analysis = target(
-#'     analyze(data),
-#'     transform = split(data, slices = 3L, margin = 1L, drop = FALSE)
-#'   )
-#' )
-#' print(plan)
-#' if (requireNamespace("styler", quietly = TRUE)) {
-#'   print(drake_plan_source(plan))
-#' }
-split <- function(..., .id, .tag_in, .tag_out) {
-  stop(
-    "split() in drake must be called inside target() in drake_plan()",
-    call. = FALSE
-  )
-}
-
-#' @title Define a target for each combination of values
-#' \lifecycle{maturing}
-#' @description Similar `crossing()`, from `tidyr`, except it
-#'   defines new targets in `drake`.
-#' @details Only valid within a call to [target()] in
-#'   [drake_plan()]. See the examples below.
-#' @inheritSection drake_plan Keywords
-#' @seealso map, split, combine, drake_plan, target
-#' @inheritParams map
-#' @examples
-#' models <- c("glm", "hierarchical")
-#' plan <- drake_plan(
-#'   data = target(
-#'     get_data(x),
-#'     transform = map(x = c("simulated", "survey"))
-#'   ),
-#'   analysis = target(
-#'     analyze_data(data, model),
-#'     transform = cross(data, model = !!models, .id = c(x, model))
-#'   ),
-#'   summary = target(
-#'     summarize_analysis(analysis),
-#'     transform = map(analysis, .id = c(x, model))
-#'   ),
-#'   results = target(
-#'     bind_rows(summary),
-#'     transform = combine(summary, .by = data)
-#'   )
-#' )
-#' plan
-#' if (requireNamespace("styler", quietly = TRUE)) {
-#'   print(drake_plan_source(plan))
-#' }
-cross <- function(..., .data, .id, .tag_in, .tag_out) {
-  stop(
-    "cross() in drake must be called inside target() in drake_plan()",
-    call. = FALSE
-  )
-}
-
-#' @title Define aggregates of other targets
-#' \lifecycle{maturing}
-#' @description Similar `summarize()`, from `dplyr`, except it
-#'   defines new targets in `drake`.
-#' @details Only valid within a call to [target()] in
-#'   [drake_plan()]. See the examples below.
-#' @inheritSection drake_plan Keywords
-#' @seealso map, split, cross, drake_plan, target
-#' @inheritParams map
-#' @param .by Symbol or vector of symbols of grouping variables.
-#'   `combine()` aggregates/groups targets by the grouping variables
-#'   in `.by`
-#' @examples
-#' models <- c("glm", "hierarchical")
-#' plan <- drake_plan(
-#'   data = target(
-#'     get_data(x),
-#'     transform = map(x = c("simulated", "survey"))
-#'   ),
-#'   analysis = target(
-#'     analyze_data(data, model),
-#'     transform = cross(data, model = !!models, .id = c(x, model))
-#'   ),
-#'   summary = target(
-#'     summarize_analysis(analysis),
-#'     transform = map(analysis, .id = c(x, model))
-#'   ),
-#'   results = target(
-#'     bind_rows(summary),
-#'     transform = combine(summary, .by = data)
-#'   )
-#' )
-#' plan
-#' if (requireNamespace("styler", quietly = TRUE)) {
-#'   print(drake_plan_source(plan))
-#' }
-combine <- function(..., .by, .id, .tag_in, .tag_out) {
-  stop(
-    "combine() in drake must be called inside target() in drake_plan()",
-    call. = FALSE
-  )
-}
-
 #' @title Customize the decision rules for rebuilding targets
 #' \lifecycle{stable}
 #' @description  Use this function inside a target's command
@@ -283,7 +93,7 @@ combine <- function(..., .by, .id, .tag_in, .tag_out) {
 #'   [make()] or [drake_config()].
 #'   For details, see the chapter on triggers
 #'   in the user manual:
-#'   <https://ropenscilabs.github.io/drake-manual>
+#'   <https://books.ropensci.org/drake/triggers.html>
 #' @details
 #'   A target always builds if it has not been built before.
 #'   Triggers allow you to customize the conditions
@@ -410,7 +220,9 @@ trigger <- function(
 #' @inheritSection drake_plan Keywords
 #' @seealso [file_out()], [knitr_in()], [ignore()], [no_deps()]
 #' @return A character vector of declared input file or directory paths.
-#' @param ... Character vector, paths to files and directories.
+#' @param ... Character vector, paths to files and directories. Use
+#'   `.id_chr` to refer to the current target by name. `.id_chr` is not
+#'    limited to use in `file_in()` and `file_out()`.
 #' @export
 #' @examples
 #' \dontrun{
@@ -430,6 +242,18 @@ trigger <- function(
 #'
 #' make(plan)
 #' file.exists("mtcars.csv")
+#'
+#' # You may use `.id_chr` inside `file_out()` and `file_in()`
+#' # to refer  to the current target. This works inside
+#' # static `map()`, `combine()`, `split()`, and `cross()`.
+#'
+#' plan <- drake::drake_plan(
+#'   data = target(
+#'     write.csv(data, file_out(paste0(.id_chr, ".csv"))),
+#'     transform = map(data = c(iris, mtcars))
+#'   )
+#' )
+#' plan
 #'
 #' # You can also work with entire directories this way.
 #' # However, in `file_out("your_directory")`, the directory
@@ -465,9 +289,9 @@ file_in <- function(...) {
 #'   (and whole directories) that your targets create.
 #' @export
 #' @inheritSection drake_plan Keywords
-#' @seealso [file_out()], [knitr_in()], [ignore()], [no_deps()]
+#' @seealso [file_in()], [knitr_in()], [ignore()], [no_deps()]
 #' @return A character vector of declared output file or directory paths.
-#' @param ... Character vector, paths to files and directories.
+#' @inheritParams file_in
 #' @export
 #' @examples
 #' \dontrun{
@@ -487,6 +311,19 @@ file_in <- function(...) {
 #'
 #' make(plan)
 #' file.exists("mtcars.csv")
+#'
+#'  # You may use `.id_chr` inside `file_out()` and `file_in()`
+#'  # to refer  to the current target. This works inside `map()`,
+#'  # `combine()`, `split()`, and `cross()`.
+#'
+#' plan <- drake::drake_plan(
+#'   data = target(
+#'     write.csv(data, file_out(paste0(.id_chr, ".csv"))),
+#'     transform = map(data = c(iris, mtcars))
+#'   )
+#' )
+#'
+#' plan
 #'
 #' # You can also work with entire directories this way.
 #' # However, in `file_out("your_directory")`, the directory
@@ -534,6 +371,7 @@ file_out <- file_in
 #' @examples
 #' \dontrun{
 #' isolate_example("contain side effects", {
+#' if (requireNamespace("knitr", quietly = TRUE)) {
 #' # `knitr_in()` is like `file_in()`
 #' # except that it analyzes active code chunks in your `knitr`
 #' # source file and detects non-file dependencies.
@@ -553,6 +391,7 @@ file_out <- file_in
 #' # to analyze the active code chunks. There, it spotted
 #' # where `small`, `large`, and `coef_regression2_small`
 #' # were read from the cache using calls to `loadd()` and `readd()`.
+#' }
 #' })
 #' }
 knitr_in <- file_in
@@ -658,6 +497,54 @@ no_deps <- function(x = NULL) {
   x
 }
 
+#' @title Name of the current target \lifecycle{maturing}
+#' @export
+#' @description `id_chr()` gives you the name of the current target
+#'   while [make()] is running. For static branching in [drake_plan()],
+#'   use the `.id_chr` symbol instead. See the examples for details.
+#' @inheritSection drake_plan Keywords
+#' @return The name of the current target.
+#' @examples
+#' try(id_chr()) # Do not use outside the plan.
+#' \dontrun{
+#' isolate_example("id_chr()", {
+#' plan <- drake_plan(x = id_chr())
+#' make(plan)
+#' readd(x)
+#' # Dynamic branching
+#' plan <- drake_plan(
+#'   x = seq_len(4),
+#'   y = target(id_chr(), dynamic = map(x))
+#' )
+#' make(plan)
+#' ys <- subtargets(y)
+#' ys
+#' readd(ys[1], character_only = TRUE)
+#' # Static branching
+#' plan <- drake_plan(
+#'   y = target(c(x, .id_chr), transform = map(x = !!seq_len(4)))
+#' )
+#' plan
+#' })
+#' }
+id_chr <- function() {
+  envir <- environment()
+  for (i in seq_len(getOption("expressions"))) {
+    if (exists(drake_target_marker, envir = envir, inherits = FALSE)) {
+      return(envir[[drake_target_marker]])
+    }
+    if (identical(envir, globalenv())) {
+      break # nocov
+    }
+    envir <- parent.frame(n = i)
+  }
+  stop(
+    "Could not find the name of the current target. ",
+    "You should only use id_chr() in your drake plan.",
+    call. = FALSE
+  )
+}
+
 #' @title Get the environment where drake builds targets
 #' \lifecycle{questioning}
 #' @description Call this function inside the commands in your plan
@@ -665,6 +552,9 @@ no_deps <- function(x = NULL) {
 #'   That way, you can strategically remove targets from memory
 #'   while [make()] is running. That way, you can limit the
 #'   amount of computer memory you use.
+#' @details `drake_envir()` is where `drake` puts the dependencies
+#'   of *dynamic sub-targets*. To manage ordinary dependencies,
+#'   you need `parent.env(drake_envir())`.
 #' @export
 #' @inheritSection drake_plan Keywords
 #' @seealso [from_plan()]
@@ -677,10 +567,10 @@ no_deps <- function(x = NULL) {
 #'   large_data_2 = sample.int(1e4),
 #'   subset = c(large_data_1[seq_len(10)], large_data_2[seq_len(10)]),
 #'   summary = {
-#'     print(ls(envir = drake_envir()))
+#'     print(ls(envir = parent.env(drake_envir())))
 #'     # We don't need the large_data_* targets in memory anymore.
-#'     rm(large_data_1, large_data_2, envir = drake_envir())
-#'     print(ls(envir = drake_envir()))
+#'     rm(large_data_1, large_data_2, envir = parent.env(drake_envir()))
+#'     print(ls(envir = parent.env(drake_envir())))
 #'     mean(subset)
 #'   }
 #' )
@@ -700,14 +590,13 @@ drake_envir <- function() {
   }
   stop(
     "Could not find the environment where drake builds targets. ",
-    "drake_envir() should only be called inside commands ",
-    "in your workflow plan data frame.",
+    "You should only use drake_envir() in your drake plan.",
     call. = FALSE
   )
 }
 
 drake_envir_marker <- "._drake_envir"
-drake_target_marker <- "._drake_target"
+drake_target_marker <- ".id_chr"
 drake_markers <- c(
   drake_envir_marker,
   drake_target_marker
@@ -1071,6 +960,7 @@ is_trigger_call <- function(expr) {
 #' @examples
 #' \dontrun{
 #' isolate_example("contain side effects", {
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
 #' # The `code_to_function()` function creates a function that makes it
 #' # available for drake to process as part of the workflow.
 #' # The main purpose is to allow pre-existing workflows to incorporate drake
@@ -1139,6 +1029,7 @@ is_trigger_call <- function(expr) {
 #' config <- drake_config(plan)
 #' if (requireNamespace("visNetwork", quietly = TRUE)) {
 #'   vis_drake_graph(config)
+#' }
 #' }
 #' })
 #' }

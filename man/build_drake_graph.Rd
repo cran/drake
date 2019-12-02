@@ -5,9 +5,16 @@
 \title{Function \code{build_drake_graph}
 \lifecycle{deprecated}}
 \usage{
-build_drake_graph(plan, targets = plan$target, envir = parent.frame(),
-  verbose = 1L, jobs = 1, console_log_file = NULL,
-  trigger = drake::trigger(), cache = NULL)
+build_drake_graph(
+  plan,
+  targets = plan$target,
+  envir = parent.frame(),
+  verbose = 1L,
+  jobs = 1,
+  console_log_file = NULL,
+  trigger = drake::trigger(),
+  cache = NULL
+)
 }
 \arguments{
 \item{plan}{Workflow plan data frame.
@@ -48,7 +55,7 @@ then reproducibly tracked as dependencies.}
 You can experiment with \code{\link[=predict_runtime]{predict_runtime()}}
 to help decide on an appropriate number of jobs.
 For details, visit
-\url{https://ropenscilabs.github.io/drake-manual/time.html}.}
+\url{https://books.ropensci.org/drake/time.html}.}
 
 \item{console_log_file}{Optional character scalar of a file name or
 connection object (such as \code{stdout()}) to dump maximally verbose
@@ -62,7 +69,7 @@ Fields in each row the log file, from left to right:
 computer (from \code{Sys.info()["nodename"]}).
 - The process ID (from \code{Sys.getpid()}).
 - A timestamp with the date and time (in microseconds).
-- A brief description of what \code{drake} was doing.\code{ The fields are separated by pipe symbols (}"|"`).}
+- A brief description of what \code{drake} was doing.\verb{ The fields are separated by pipe symbols (}"|"`).}
 
 \item{trigger}{Name of the trigger to apply to all targets.
 Ignored if \code{plan} has a \code{trigger} column.

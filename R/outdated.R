@@ -3,6 +3,7 @@
 #' @description Only shows the most upstream updated targets.
 #'   Whether downstream targets are recoverable depends on
 #'   the eventual values of the upstream targets in the next [make()].
+#'   Does not show dynamic sub-targets.
 #' @section Recovery:
 #'  `make(recover = TRUE, recoverable = TRUE)`
 #'   powers automated data recovery.
@@ -97,7 +98,7 @@ is_recoverable <- function(target, config) {
 #' @title List the targets that are out of date.
 #' \lifecycle{stable}
 #' @description Outdated targets will be rebuilt in the next
-#'   [make()].
+#'   [make()]. `outdated()` does not show dynamic sub-targets.
 #' @export
 #' @seealso [r_outdated()], [drake_config()], [missed()], [drake_plan()],
 #'   [make()]
@@ -152,34 +153,49 @@ outdated <-  function(
 first_outdated <- function(config) {
   config$cache$reset_memo_hash()
   on.exit(config$cache$reset_memo_hash())
-  out <- character(0)
-  old_leaves <- NULL
-  config$graph <- subset_graph(config$graph, all_targets(config))
-  while (TRUE) {
-    config$logger$minor("find more outdated targets")
-    new_leaves <- setdiff(leaf_nodes(config$graph), out)
-    do_build <- lightly_parallelize(
-      X = new_leaves,
-      FUN = function(target) {
-        if (!config$cache$exists(key = target)) {
-          return(TRUE)
-        }
-        meta <- drake_meta_(target, config)
-        meta_old <- old_meta(key = target, cache = config$cache)
-        any_triggers(target, meta, meta_old, config)
-      },
-      jobs = config$jobs_preprocess
-    )
-    do_build <- unlist(do_build)
-    out <- c(out, new_leaves[do_build])
-    if (all(do_build)) {
-      break
-    } else {
-      config$graph <- delete_vertices(config$graph, v = new_leaves[!do_build])
-    }
-    old_leaves <- new_leaves
+  envir <- new.env(parent = emptyenv())
+  envir$graph <- subset_graph(config$graph, all_targets(config))
+  envir$continue <- TRUE
+  while (envir$continue) {
+    stage_outdated(envir, config)
   }
-  out
+  envir$outdated
+}
+
+stage_outdated <- function(envir, config) {
+  config$logger$minor("find more outdated targets")
+  new_leaves <- setdiff(leaf_nodes(envir$graph), envir$outdated)
+  do_build <- lightly_parallelize(
+    X = new_leaves,
+    FUN = is_outdated,
+    jobs = config$jobs_preprocess,
+    config = config
+  )
+  do_build <- unlist(do_build)
+  envir$outdated <- c(envir$outdated, new_leaves[do_build])
+  if (all(do_build)) {
+    envir$continue <- FALSE
+  } else {
+    envir$graph <- delete_vertices(envir$graph, v = new_leaves[!do_build])
+  }
+}
+
+is_outdated <- function(target, config) {
+  if (target_missing(target, config)) {
+    return(TRUE)
+  }
+  meta <- drake_meta_(target, config)
+  meta_old <- old_meta(key = target, cache = config$cache)
+  any_static_triggers(target, meta, meta_old, config) ||
+    check_trigger_dynamic(target, meta, meta_old, config) ||
+    missing_subtargets(target, meta_old, config)
+}
+
+missing_subtargets <- function(target, meta, config) {
+  if (!is_dynamic(target, config)) {
+    return(FALSE)
+  }
+  any(target_missing(meta$subtargets, config))
 }
 
 #' @title Report any import objects required by your drake_plan
@@ -213,10 +229,9 @@ missed <- function(config) {
   imports <- all_imports(config)
   is_missing <- lightly_parallelize(
     X = imports,
-    FUN = function(x) {
-      missing_import(x, config = config)
-    },
-    jobs = config$jobs_preprocess
+    FUN = missing_import,
+    jobs = config$jobs_preprocess,
+    config = config
   )
   is_missing <- as.logical(is_missing)
   if (!any(is_missing)) {

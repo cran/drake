@@ -5,8 +5,15 @@
 \title{Run a single target's command in debug mode.'
 \lifecycle{maturing}}
 \usage{
-drake_debug(target = NULL, config = NULL, character_only = FALSE,
-  envir = NULL, jobs = 1, replace = FALSE, verbose = TRUE)
+drake_debug(
+  target = NULL,
+  config = NULL,
+  character_only = FALSE,
+  envir = NULL,
+  jobs = 1,
+  replace = FALSE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{target}{Name of the target.}
@@ -37,6 +44,7 @@ you are debugging.}
 The value of the target right after it is built.
 }
 \description{
+Not valid for dynamic branching.
 \code{drake_debug()} loads a target's dependencies
 and then runs its command in debug mode (see \code{browser()},
 \code{debug()}, and \code{debugonce()}). This function does not

@@ -6,14 +6,35 @@
 of your drake project.
 \lifecycle{maturing}}
 \usage{
-vis_drake_graph(config, file = character(0), selfcontained = FALSE,
-  build_times = "build", digits = 3, targets_only = FALSE,
-  font_size = 20, layout = NULL, main = NULL, direction = NULL,
-  hover = FALSE, navigationButtons = TRUE, from = NULL,
-  mode = c("out", "in", "all"), order = NULL, subset = NULL,
-  ncol_legend = 1, full_legend = FALSE, make_imports = TRUE,
-  from_scratch = FALSE, group = NULL, clusters = NULL,
-  show_output_files = TRUE, collapse = TRUE, ...)
+vis_drake_graph(
+  config,
+  file = character(0),
+  selfcontained = FALSE,
+  build_times = "build",
+  digits = 3,
+  targets_only = FALSE,
+  font_size = 20,
+  layout = NULL,
+  main = NULL,
+  direction = NULL,
+  hover = FALSE,
+  navigationButtons = TRUE,
+  from = NULL,
+  mode = c("out", "in", "all"),
+  order = NULL,
+  subset = NULL,
+  ncol_legend = 1,
+  full_legend = FALSE,
+  make_imports = TRUE,
+  from_scratch = FALSE,
+  group = NULL,
+  clusters = NULL,
+  show_output_files = TRUE,
+  collapse = TRUE,
+  on_select_col = NULL,
+  on_select = NULL,
+  ...
+)
 }
 \arguments{
 \item{config}{A \code{\link[=drake_config]{drake_config()}} configuration list.
@@ -25,7 +46,7 @@ the graph is rendered and displayed within R.
 If the file ends in a \code{.png}, \code{.jpg}, \code{.jpeg}, or \code{.pdf} extension,
 then a static image will be saved. In this case,
 the webshot package and PhantomJS are required:
-\code{install.packages("webshot"); webshot::install_phantomjs()}.
+\verb{install.packages("webshot"); webshot::install_phantomjs()}.
 If the file does not end in a \code{.png}, \code{.jpg}, \code{.jpeg}, or \code{.pdf}
 extension, an HTML file will be saved, and you can open the
 interactive graph using a web browser.}
@@ -133,6 +154,16 @@ if you double click on them.
 Analogous to \code{visNetwork::visOptions(collapse = TRUE)} or
 \code{visNetwork::visOptions(collapse = TRUE)}.}
 
+\item{on_select_col}{Optional string corresponding to the column name
+in the plan that should provide data for the \code{on_select} event.}
+
+\item{on_select}{defines node selection event handling.
+Either a string of valid JavaScript that may be passed to
+\code{visNetwork::visEvents()}, or one of the following:
+\code{TRUE}, \code{NULL}/\code{FALSE}. If \code{TRUE} , enables the default behavior of
+opening the link specified by the \code{on_select_col} given to
+\code{drake_graph_info()}. \code{NULL}/\code{FALSE} disables the behavior.}
+
 \item{...}{Arguments passed to \code{visNetwork()}.}
 }
 \value{
@@ -151,7 +182,7 @@ load_mtcars_example() # Get the code with drake_example("mtcars").
 config <- drake_config(my_plan)
 # Plot the network graph representation of the workflow.
 if (requireNamespace("visNetwork", quietly = TRUE)) {
-vis_drake_graph(config, width = '100\%') # The width is passed to visNetwork
+vis_drake_graph(config)
 make(my_plan) # Run the project, build the targets.
 vis_drake_graph(config) # The red nodes from before are now green.
 # Plot a subgraph of the workflow.

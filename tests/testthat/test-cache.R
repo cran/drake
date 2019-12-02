@@ -70,8 +70,9 @@ test_with_dir("dependency profile", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   skip_if_not_installed("knitr")
   b <- 1
-  make(drake_plan(a = b), session_info = FALSE)
-  config <- drake_config(drake_plan(a = b), session_info = FALSE)
+  plan <- drake_plan(a = b)
+  make(plan, session_info = FALSE)
+  config <- drake_config(plan, session_info = FALSE)
   expect_error(
     deps_profile(target = missing, config = config),
     regexp = "no recorded metadata"
@@ -84,13 +85,13 @@ test_with_dir("dependency profile", {
   dp <- deps_profile(target = a, config = config)
   expect_true(as.logical(dp[dp$name == "depend", "changed"]))
   expect_equal(sum(dp$changed), 1)
-  config$plan$command <- "b + c"
+  plan$command <- "b + c"
   config$layout <- create_drake_layout(
-    plan = config$plan,
+    plan = plan,
     envir = config$envir,
     cache = config$cache,
     logger = config$logger
-  )$layout
+  )
   dp <- deps_profile(target = a, config = config)
   expect_true(as.logical(dp[dp$name == "command", "changed"]))
   expect_equal(sum(dp$changed), 2)
@@ -308,7 +309,7 @@ test_with_dir("cache functions work from various working directories", {
 
     # cached, diagnose, rescue
     expect_true(length(diagnose()) > length(config$plan$target))
-    expect_error(diagnose("xyz", cache = config$cache), regexp = "diagnostic")
+    expect_error(diagnose("xyz", cache = config$cache), regexp = "metadata")
     expect_equal(
       sort(cached(targets_only = TRUE)),
       sort(builds)
@@ -343,7 +344,7 @@ test_with_dir("cache functions work from various working directories", {
       dir.create(file.path("searchfrom", "here"))
     }
   })
-  s <- normalizePath(file.path(scratch, "searchfrom", "here"))
+  s <- file.path(scratch, "searchfrom", "here")
   with_dir(s, {
     # progress, session
     expect_true(is.list(drake_get_session_info()))
@@ -424,8 +425,11 @@ test_with_dir("master caching, environment caches and parallelism", {
   skip_on_cran()
   skip_if_not_installed("knitr")
   skip_if_not_installed("future")
+  if (!grepl("loop", get_testing_scenario_name())) {
+    skip("avoid conflicts with other hpc scenarios")
+  }
   load_mtcars_example()
-  future::plan(future::multiprocess)
+  future::plan(future::multisession)
   cache <- storr::storr_environment() # not thread-safe
   make(
     my_plan,
@@ -481,7 +485,7 @@ test_with_dir("loadd() does not load imports", {
 
 test_with_dir("selection and filtering in progress", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
-  plan <- drake_plan(x_a = TRUE, y_b = TRUE, x_c = stop())
+  plan <- drake_plan(x_a = TRUE, y_b = x_a, x_c = stop(y_b))
   expect_error(make(plan))
   out <- progress(x_a, y_b, x_c, d)
   exp <- weak_tibble(
@@ -816,10 +820,7 @@ test_with_dir("try_build() does not need to access cache", {
   config$cache <- config$cache_log_file <- NULL
   build <- try_build(target = "x", meta = meta, config = config)
   expect_equal(1, build$value)
-  expect_error(
-    drake_build(target = "x", config = config),
-    regexp = "cannot find drake cache"
-  )
+  expect_error(drake_build(target = "x", config = config))
 })
 
 test_with_dir("running()", {
@@ -832,7 +833,6 @@ test_with_dir("running()", {
   config$running_make <- TRUE
   set_progress(
     target = "a",
-    meta = list(imported = FALSE),
     value = "running",
     config = config
   )
@@ -862,4 +862,14 @@ test_with_dir("which_clean() (#1014)", {
   expect_equal(sort(which_clean(x, y, cache = cache)), sort(c("x", "y")))
   clean(x, y, cache = cache)       # Invalidates targets x and y.
   expect_equal(cached(cache = cache), "z")
+})
+
+test_with_dir("ignore storrs (#1071)", {
+  cache <- new_cache(tempfile())
+  cache$set("x", "val")
+  plan <- drake_plan(x = c(cache$get("x"), "target"))
+  make(plan)
+  expect_equal(readd(x), c("val", "target"))
+  expect_equal(cache$get("x"), "val")
+  expect_equal(readd(cache), "storr")
 })

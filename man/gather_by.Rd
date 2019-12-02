@@ -5,8 +5,15 @@
 \title{Gather multiple groupings of targets
 \lifecycle{deprecated}}
 \usage{
-gather_by(plan, ..., prefix = "target", gather = "list",
-  append = TRUE, filter = NULL, sep = "_")
+gather_by(
+  plan,
+  ...,
+  prefix = "target",
+  gather = "list",
+  append = TRUE,
+  filter = NULL,
+  sep = "_"
+)
 }
 \arguments{
 \item{plan}{Workflow plan data frame of prespecified targets.}
@@ -44,7 +51,7 @@ A workflow plan data frame.
 \description{
 Deprecated on 2019-05-16. Use \code{\link[=drake_plan]{drake_plan()}}
 transformations instead. See
-\url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}
+\url{https://books.ropensci.org/drake/plans.html#large-plans}
 for the details.
 }
 \details{

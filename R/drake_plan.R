@@ -9,7 +9,7 @@
 #'
 #' @details Besides `"target"` and `"command"`, [drake_plan()]
 #'   understands a special set of optional columns. For details, visit
-#'   <https://ropenscilabs.github.io/drake-manual/plans.html#special-custom-columns-in-your-plan> # nolint
+#'   <https://books.ropensci.org/drake/plans.html#special-custom-columns-in-your-plan> # nolint
 #'
 #' @seealso make, drake_config, transform_plan, map, split, cross, combine
 #'
@@ -26,19 +26,19 @@
 #' but `drake` looks for them at various points in the workflow.
 #' - `transform`: a call to [map()], [split()], [cross()], or
 #'   [combine()] to create and manipulate large collections of targets.
-#'   Details: (<https://ropenscilabs.github.io/drake-manual/plans.html#large-plans>). # nolint
+#'   Details: (<https://books.ropensci.org/drake/plans.html#large-plans>). # nolint
 #' - `format`: set a storage format to save big targets more efficiently.
 #'   See the "Formats" section of this help file for more details.
 #' - `trigger`: rule to decide whether a target needs to run.
 #'   It is recommended that you define this one with `target()`.
-#'   Details: <https://ropenscilabs.github.io/drake-manual/triggers.html>.
+#'   Details: <https://books.ropensci.org/drake/triggers.html>.
 #' - `hpc`: logical values (`TRUE`/`FALSE`/`NA`) whether to send each target
 #'   to parallel workers.
-#'   Visit <https://ropenscilabs.github.io/drake-manual/hpc.html#selectivity>
+#'   Visit <https://books.ropensci.org/drake/hpc.html#selectivity>
 #'   to learn more.
 #' - `resources`: target-specific lists of resources for a computing cluster.
 #'   See
-#'   <https://ropenscilabs.github.io/drake-manual/hpc.html#advanced-options>
+#'   <https://books.ropensci.org/drake/hpc.html#advanced-options>
 #'   for details.
 #' - `caching`: overrides the `caching` argument of [make()] for each target
 #'   individually. Possible values:
@@ -103,16 +103,9 @@
 #' with its own help file.
 #' - [target()]: give the target more than just a command.
 #'   Using [target()], you can apply a transformation
-#'   (examples: <https://ropenscilabs.github.io/drake-manual/plans.html#large-plans>), # nolint
-#'   supply a trigger (<https://ropenscilabs.github.io/drake-manual/triggers.html>), # nolint
+#'   (examples: <https://books.ropensci.org/drake/plans.html#large-plans>), # nolint
+#'   supply a trigger (<https://books.ropensci.org/drake/triggers.html>), # nolint
 #'   or set any number of custom columns.
-#' - [map()]: create multiple targets. Called inside [target()].
-#' - [split()]: create a target for each subset of data.
-#'   Called inside [target()].
-#' - [cross()]: create a target for each combination of values.
-#'   Called inside [target()].
-#' - [combine()]: aggregate groups of targets into other targets.
-#'   Called inside [target()].
 #' - [file_in()]: declare an input file dependency.
 #' - [file_out()]: declare an output file to be produced
 #'   when the target is built.
@@ -122,20 +115,13 @@
 #'   do not track it for changes and do not analyze it for dependencies.
 #' - [no_deps()]: tell `drake` to not track the dependencies
 #'   of a piece of code. `drake` still tracks the code itself for changes.
+#' - [id_chr()]: Get the name of the current target.
 #' - [drake_envir()]: get the environment where drake builds targets.
 #'   Intended for advanced custom memory management.
 #'
-#' @section DSL:
-#'  `drake` has special syntax for generating large plans.
-#'  Your code will look something like
-#'  `drake_plan(x = target(cmd, transform = f(y, z), group = g)`
-#'  where `f()` is either `map()`, `cross()`, `split()`, or `combine()`
-#'  (similar to `purrr::pmap()`, `tidy::crossing()`, `base::split()`,
-#'  and  `dplyr::summarize()`, respectively).
-#'  These verbs mimic Tidyverse behavior to scale up
-#'  existing plans to large numbers of targets.
-#'  You can read about this interface at
-#'  <https://ropenscilabs.github.io/drake-manual/plans.html#large-plans>. # nolint
+#' @inheritSection transformations Transformations
+#' @inheritSection transformations Static branching
+#' @inheritSection transformations Dynamic branching
 #'
 #' @export
 #' @return A data frame of targets, commands, and optional
@@ -155,13 +141,16 @@
 #' \dontrun{
 #' isolate_example("contain side effects", {
 #' # For more examples, visit
-#' # https://ropenscilabs.github.io/drake-manual/plans.html.
+#' # https://books.ropensci.org/drake/plans.html.
 #'
 #' # Create drake plans:
 #' mtcars_plan <- drake_plan(
 #'   write.csv(mtcars[, c("mpg", "cyl")], file_out("mtcars.csv")),
 #'   value = read.csv(file_in("mtcars.csv"))
 #' )
+#' if (requireNamespace("visNetwork", quietly = TRUE)) {
+#'   plot(mtcars_plan) # fast simplified call to vis_drake_graph()
+#' }
 #' mtcars_plan
 #' make(mtcars_plan) # Makes `mtcars.csv` and then `value`
 #' head(readd(value))
@@ -169,7 +158,9 @@
 #'
 #' load_mtcars_example()
 #' head(my_plan)
-#'
+#' if (requireNamespace("knitr", quietly = TRUE)) {
+#'   plot(my_plan)
+#' }
 #' # The `knitr_in("report.Rmd")` tells `drake` to dive into the active
 #' # code chunks to find dependencies.
 #' # There, `drake` sees that `small`, `large`, and `coef_regression2_small`
@@ -190,7 +181,7 @@
 #'
 #' # Use transformations to generate large plans.
 #' # Read more at
-#' # <https://ropenscilabs.github.io/drake-manual/plans.html#create-large-plans-the-easy-way>. # nolint
+#' # <https://books.ropensci.org/drake/plans.html#create-large-plans-the-easy-way>. # nolint
 #' drake_plan(
 #'   data = target(
 #'     simulate(nrows),
@@ -215,8 +206,7 @@
 #' drake_plan(
 #'   large_data = get_data(),
 #'   slice_analysis = target(
-#'     large_data %>%
-#'       analyze(),
+#'     analyze(large_data),
 #'     transform = split(large_data, slices = 4)
 #'   ),
 #'   results = target(
@@ -261,6 +251,20 @@
 #' # Tidy evaluation can help generate super large plans.
 #' sms <- rlang::syms(letters) # To sub in character args, skip this.
 #' drake_plan(x = target(f(char), transform = map(char = !!sms)))
+#'
+#' # Dynamic branching
+#' plan <- drake_plan(
+#'   w = c("a", "a", "b", "b"),
+#'   x = seq_len(4),
+#'   y = target(x + 1, dynamic = map(x)),
+#'   z = target(list(y = y, w = w), dynamic = group(y, .by = w))
+#' )
+#' make(plan)
+#' subtargets(y)
+#' readd(subtargets(y)[1], character_only = TRUE)
+#' readd(subtargets(y)[2], character_only = TRUE)
+#' readd(subtargets(z)[1], character_only = TRUE)
+#' readd(subtargets(z)[2], character_only = TRUE)
 #' })
 #' }
 drake_plan <- function(
@@ -322,10 +326,13 @@ parse_custom_plan_row <- function(row, envir) {
   if (!length(expr) || !is_target_call(expr[[1]])) {
     return(row)
   }
+  expr[[1]][[1]] <- namespaced_target
   out <- eval(expr[[1]], envir = envir)
   out$target <- row$target
   out
 }
+
+namespaced_target <- parse(text = ("drake:::target"))[[1]]
 
 is_target_call <- function(expr) {
   tryCatch(
@@ -551,6 +558,29 @@ as_drake_plan <- function(plan, .force_df = FALSE) {
 
 #' @export
 #' @keywords internal
+plot.drake_plan <- function(x, ...) {
+  config <- drake_config(
+    x,
+    envir = new.env(parent = baseenv()),
+    verbose = 0L,
+    cache = storr::storr_environment(),
+    history = FALSE,
+    recoverable = FALSE,
+    session_info = FALSE
+  )
+  vis_drake_graph(
+    config,
+    build_times = "none",
+    targets_only = TRUE,
+    main = "",
+    hover = FALSE,
+    make_imports = FALSE,
+    from_scratch = TRUE
+  )
+}
+
+#' @export
+#' @keywords internal
 print.drake_plan <- function(x, ...) {
   x <- deparse_lang_cols(x)
   NextMethod(object = x)
@@ -599,9 +629,9 @@ deparse_lang_col <- function(x) {
 }
 
 lang_cols <- function(plan) {
-  intersect(colnames(plan), c("command", "trigger", "transform"))
+  intersect(colnames(plan), c("command", "dynamic", "trigger", "transform"))
 }
 
 non_lang_cols <- function(plan) {
-  setdiff(colnames(plan), c("command", "trigger", "transform"))
+  setdiff(colnames(plan), c("command", "dynamic", "trigger", "transform"))
 }

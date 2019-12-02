@@ -1,3 +1,38 @@
+# Version 7.8.0
+
+## Bug fixes
+
+- Prevent `drake::drake_plan(x = target(...))` from throwing an error if `drake` is not loaded (#1039, @mstr3336).
+- Move the `transformations` lifecycle badge to the proper location in the docstring (#1040, @jeroen).
+- Prevent `readd()` / `loadd()` from turning an imported function into a target (#1067).
+- Align in-memory `disk.frame` targets with their stored values (#1077, @brendanf).
+
+## New features
+
+- Implement dynamic branching (#685).
+- Add a new `subtargets()` function to get the cached names of the sub-targets of a dynamic target.
+- Add new `subtargets` arguments to `loadd()` and `readd()` to retrieve specific sub-targets from a parent dynamic target.
+- Add new `get_trace()` and `read_trace()` functions to help track which values of grouping variables go into the making of dynamic sub-targets.
+- Add a new `id_chr()` function to get the name of the target while `make()` is running.
+- Implement `plot(plan)` (#1036).
+- `vis_drake_graph()`, `drake_graph_info()`, and `render_drake_graph()` now 
+  take arguments that allow behavior to be defined upon selection of nodes. (#1031, @mstr3336).
+- Add a new `max_expand` argument to `make()` and `drake_config()` to scale down dynamic branching (#1050, @hansvancalster).
+
+## Enhancements
+
+- Document transformation functions in a way that avoids having to create true functions (#979).
+- Avoid always invalidating the memoized layout when we set the knitr hash.
+- Change the names of environments in `drake_config()` objects.
+- Assert that `prework` is a language object, list of language objects, or character vector (#1 at pat-s/multicore-debugging on GitHub, @pat-s).
+- Use an environment instead of a list for `config$layout`. Supports internal modifications by reference. Required for #685.
+- Clean up the code of the parallel backends.
+- Make `dynamic` a formal argument of `target()`.
+- Always lock/unlock the environment target by target, allowing informative error messages to appear more readily (#1062, @PedramNavid)
+- Automatically ignore `storr`s and decorated `storr`s (#1071).
+- Speed up memory management by avoiding a call to `setdiff()` and avoiding `names(config$envir_targets)`.
+
+
 # Version 7.7.0
 
 ## Bug fixes

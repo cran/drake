@@ -6,10 +6,18 @@
 for the \code{plan} argument of \code{\link[=make]{make()}}.
 \lifecycle{maturing}}
 \usage{
-drake_plan(..., list = NULL, file_targets = NULL,
-  strings_in_dots = NULL, tidy_evaluation = NULL, transform = TRUE,
-  trace = FALSE, envir = parent.frame(), tidy_eval = TRUE,
-  max_expand = NULL)
+drake_plan(
+  ...,
+  list = NULL,
+  file_targets = NULL,
+  strings_in_dots = NULL,
+  tidy_evaluation = NULL,
+  transform = TRUE,
+  trace = FALSE,
+  envir = parent.frame(),
+  tidy_eval = TRUE,
+  max_expand = NULL
+)
 }
 \arguments{
 \item{...}{A collection of symbols/targets
@@ -34,19 +42,20 @@ what happens during target transformations.}
 \item{envir}{Environment for tidy evaluation.}
 
 \item{tidy_eval}{Logical, whether to use tidy evaluation
-(e.g. unquoting/\code{!!}) when resolving commands.
+(e.g. unquoting/\verb{!!}) when resolving commands.
 Tidy evaluation in transformations is always turned on
 regardless of the value you supply to this argument.}
 
 \item{max_expand}{Positive integer, optional.
-Maximum number of targets to generate in each
+\code{max_expand} is the maximum number of targets to generate in each
 \code{map()}, \code{split()}, or \code{cross()} transform.
-If massive number of targets, consider setting \code{max_expand}
-to a small number. That way, you can test and visualize
-your workflow before scaling up to production.
-Note: \code{max_expand} is not for production workflows.
-When it comes time to generate the end product,
-either unset \code{max_expand} or manually set it to \code{NULL}.}
+Useful if you have a massive plan and you want to
+test and visualize a strategic subset of targets
+before scaling up.
+Note: the \code{max_expand} argument of \code{drake_plan()} and
+\code{transform_plan()} is for static branching only.
+The dynamic branching \code{max_expand}
+is an argument of \code{make()} and \code{drake_config()}.}
 }
 \value{
 A data frame of targets, commands, and optional
@@ -61,7 +70,7 @@ R code to produce it.
 \details{
 Besides \code{"target"} and \code{"command"}, \code{\link[=drake_plan]{drake_plan()}}
 understands a special set of optional columns. For details, visit
-\url{https://ropenscilabs.github.io/drake-manual/plans.html#special-custom-columns-in-your-plan} # nolint
+\url{https://books.ropensci.org/drake/plans.html#special-custom-columns-in-your-plan} # nolint
 }
 \section{Columns}{
 
@@ -78,19 +87,19 @@ but \code{drake} looks for them at various points in the workflow.
 \itemize{
 \item \code{transform}: a call to \code{\link[=map]{map()}}, \code{\link[=split]{split()}}, \code{\link[=cross]{cross()}}, or
 \code{\link[=combine]{combine()}} to create and manipulate large collections of targets.
-Details: (\url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}). # nolint
+Details: (\url{https://books.ropensci.org/drake/plans.html#large-plans}). # nolint
 \item \code{format}: set a storage format to save big targets more efficiently.
 See the "Formats" section of this help file for more details.
 \item \code{trigger}: rule to decide whether a target needs to run.
 It is recommended that you define this one with \code{target()}.
-Details: \url{https://ropenscilabs.github.io/drake-manual/triggers.html}.
+Details: \url{https://books.ropensci.org/drake/triggers.html}.
 \item \code{hpc}: logical values (\code{TRUE}/\code{FALSE}/\code{NA}) whether to send each target
 to parallel workers.
-Visit \url{https://ropenscilabs.github.io/drake-manual/hpc.html#selectivity}
+Visit \url{https://books.ropensci.org/drake/hpc.html#selectivity}
 to learn more.
 \item \code{resources}: target-specific lists of resources for a computing cluster.
 See
-\url{https://ropenscilabs.github.io/drake-manual/hpc.html#advanced-options}
+\url{https://books.ropensci.org/drake/hpc.html#advanced-options}
 for details.
 \item \code{caching}: overrides the \code{caching} argument of \code{\link[=make]{make()}} for each target
 individually. Possible values:
@@ -148,7 +157,7 @@ when \code{drake} saves the target.
 Store larger-than-memory data as a \code{disk.frame} object.
 Uses the \code{fst} backend. Requires the \code{disk.frame} and \code{fst} packages.
 Note: \code{disk.frame}s get moved to the \code{drake} cache
-(a subfolder of \code{.drake/} for most workflows). It is best to
+(a subfolder of \verb{.drake/} for most workflows). It is best to
 create \code{disk.frame} objects that initially reside on the same storage
 drive as the cache. \code{\link[=drake_tempfile]{drake_tempfile()}} can help with this,
 e.g. \code{as.disk.frame(your_dataset, outdir = drake_tempfile())}.
@@ -169,55 +178,96 @@ with its own help file.
 \itemize{
 \item \code{\link[=target]{target()}}: give the target more than just a command.
 Using \code{\link[=target]{target()}}, you can apply a transformation
-(examples: \url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}), # nolint
-supply a trigger (\url{https://ropenscilabs.github.io/drake-manual/triggers.html}), # nolint
+(examples: \url{https://books.ropensci.org/drake/plans.html#large-plans}), # nolint
+supply a trigger (\url{https://books.ropensci.org/drake/triggers.html}), # nolint
 or set any number of custom columns.
-\item \code{\link[=map]{map()}}: create multiple targets. Called inside \code{\link[=target]{target()}}.
-\item \code{\link[=split]{split()}}: create a target for each subset of data.
-Called inside \code{\link[=target]{target()}}.
-\item \code{\link[=cross]{cross()}}: create a target for each combination of values.
-Called inside \code{\link[=target]{target()}}.
-\item \code{\link[=combine]{combine()}}: aggregate groups of targets into other targets.
-Called inside \code{\link[=target]{target()}}.
 \item \code{\link[=file_in]{file_in()}}: declare an input file dependency.
 \item \code{\link[=file_out]{file_out()}}: declare an output file to be produced
 when the target is built.
 \item \code{\link[=knitr_in]{knitr_in()}}: declare a \code{knitr} file dependency such as an
-R Markdown (\code{*.Rmd}) or R LaTeX (\code{*.Rnw}) file.
+R Markdown (\verb{*.Rmd}) or R LaTeX (\verb{*.Rnw}) file.
 \item \code{\link[=ignore]{ignore()}}: force \code{drake} to entirely ignore a piece of code:
 do not track it for changes and do not analyze it for dependencies.
 \item \code{\link[=no_deps]{no_deps()}}: tell \code{drake} to not track the dependencies
 of a piece of code. \code{drake} still tracks the code itself for changes.
+\item \code{\link[=id_chr]{id_chr()}}: Get the name of the current target.
 \item \code{\link[=drake_envir]{drake_envir()}}: get the environment where drake builds targets.
 Intended for advanced custom memory management.
 }
 }
 
-\section{DSL}{
+\section{Transformations}{
 
 \code{drake} has special syntax for generating large plans.
 Your code will look something like
-\code{drake_plan(x = target(cmd, transform = f(y, z), group = g)}
-where \code{f()} is either \code{map()}, \code{cross()}, \code{split()}, or \code{combine()}
-(similar to \code{purrr::pmap()}, \code{tidy::crossing()}, \code{base::split()},
-and  \code{dplyr::summarize()}, respectively).
-These verbs mimic Tidyverse behavior to scale up
-existing plans to large numbers of targets.
+\verb{drake_plan(y = target(f(x), transform = map(x = c(1, 2, 3)))}
 You can read about this interface at
-\url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}. # nolint
+\url{https://books.ropensci.org/drake/plans.html#large-plans}. # nolint
+}
+
+\section{Static branching}{
+
+In static branching, you define batches of targets
+based on information you know in advance.
+Overall usage looks like
+\verb{drake_plan(<x> = target(<...>, transform = <call>)},
+where
+\itemize{
+\item \verb{<x>} is the name of the target or group of targets.
+\item \verb{<...>} is optional arguments to \code{\link[=target]{target()}}.
+\item \verb{<call>} is a call to one of the transformation functions.
+}
+
+Transformation function usage:
+\itemize{
+\item \code{map(..., .data, .id, .tag_in, .tag_out)}
+\item \code{split(..., slices, margin = 1L, drop = FALSE, .tag_in, .tag_out)}
+\item \code{cross(..., .data, .id, .tag_in, .tag_out)}
+\item \code{combine(..., .by, .id, .tag_in, .tag_out)}
+}
+}
+
+\section{Dynamic branching}{
+
+Dynamic branching is not yet implemented,
+but this is what it usage will look like.
+\itemize{
+\item \code{map(..., .trace)}
+\item \code{cross(..., .trace)}
+\item \code{group(..., .by, .trace)}
+}
+
+\code{map()} and \code{cross()} create dynamic sub-targets from the variables
+supplied to the dots. As with static branching, the variables
+supplied to \code{map()} must all have equal length.
+\code{group(f(data), .by = x)} makes new dynamic
+sub-targets from \code{data}. Here, \code{data} can be either static or dynamic.
+If \code{data} is dynamic, \code{group()} aggregates existing sub-targets.
+If \code{data} is static, \code{group()} splits \code{data} into multiple
+subsets based on the groupings from \code{.by}.
+
+Differences from static branching:
+\itemize{
+\item \code{...} must contain \emph{unnamed} symbols with no values supplied,
+and they must be the names of targets.
+\item Arguments \code{.id}, \code{.tag_in}, and \code{.tag_out} no longer apply.
+}
 }
 
 \examples{
 \dontrun{
 isolate_example("contain side effects", {
 # For more examples, visit
-# https://ropenscilabs.github.io/drake-manual/plans.html.
+# https://books.ropensci.org/drake/plans.html.
 
 # Create drake plans:
 mtcars_plan <- drake_plan(
   write.csv(mtcars[, c("mpg", "cyl")], file_out("mtcars.csv")),
   value = read.csv(file_in("mtcars.csv"))
 )
+if (requireNamespace("visNetwork", quietly = TRUE)) {
+  plot(mtcars_plan) # fast simplified call to vis_drake_graph()
+}
 mtcars_plan
 make(mtcars_plan) # Makes `mtcars.csv` and then `value`
 head(readd(value))
@@ -225,7 +275,9 @@ head(readd(value))
 
 load_mtcars_example()
 head(my_plan)
-
+if (requireNamespace("knitr", quietly = TRUE)) {
+  plot(my_plan)
+}
 # The `knitr_in("report.Rmd")` tells `drake` to dive into the active
 # code chunks to find dependencies.
 # There, `drake` sees that `small`, `large`, and `coef_regression2_small`
@@ -246,7 +298,7 @@ plan <- drake_plan(
 
 # Use transformations to generate large plans.
 # Read more at
-# <https://ropenscilabs.github.io/drake-manual/plans.html#create-large-plans-the-easy-way>. # nolint
+# <https://books.ropensci.org/drake/plans.html#create-large-plans-the-easy-way>. # nolint
 drake_plan(
   data = target(
     simulate(nrows),
@@ -271,8 +323,7 @@ drake_plan(
 drake_plan(
   large_data = get_data(),
   slice_analysis = target(
-    large_data \%>\%
-      analyze(),
+    analyze(large_data),
     transform = split(large_data, slices = 4)
   ),
   results = target(
@@ -317,6 +368,20 @@ drake_plan(
 # Tidy evaluation can help generate super large plans.
 sms <- rlang::syms(letters) # To sub in character args, skip this.
 drake_plan(x = target(f(char), transform = map(char = !!sms)))
+
+# Dynamic branching
+plan <- drake_plan(
+  w = c("a", "a", "b", "b"),
+  x = seq_len(4),
+  y = target(x + 1, dynamic = map(x)),
+  z = target(list(y = y, w = w), dynamic = group(y, .by = w))
+)
+make(plan)
+subtargets(y)
+readd(subtargets(y)[1], character_only = TRUE)
+readd(subtargets(y)[2], character_only = TRUE)
+readd(subtargets(z)[1], character_only = TRUE)
+readd(subtargets(z)[2], character_only = TRUE)
 })
 }
 }

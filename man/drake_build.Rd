@@ -5,8 +5,15 @@
 \title{Build/process a single target or import.
 \lifecycle{maturing}}
 \usage{
-drake_build(target, config = NULL, meta = NULL,
-  character_only = FALSE, envir = NULL, jobs = 1, replace = FALSE)
+drake_build(
+  target,
+  config = NULL,
+  meta = NULL,
+  character_only = FALSE,
+  envir = NULL,
+  jobs = 1,
+  replace = FALSE
+)
 }
 \arguments{
 \item{target}{Name of the target.}
@@ -36,7 +43,7 @@ will not be replaced.}
 The value of the target right after it is built.
 }
 \description{
-Also load the target's dependencies beforehand.
+Not valid for dynamic branching.
 }
 \examples{
 \dontrun{

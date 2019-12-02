@@ -57,7 +57,7 @@
 #'
 #' @param parallelism Character scalar, type of parallelism to use.
 #'   For detailed explanations, see the
-#'   [high-performance computing chapter](https://ropenscilabs.github.io/drake-manual/hpc.html) # nolint
+#'   [high-performance computing chapter](https://books.ropensci.org/drake/hpc.html) # nolint
 #'   of the user manual.
 #'
 #'   You could also supply your own scheduler function
@@ -77,7 +77,7 @@
 #'   You can experiment with [predict_runtime()]
 #'   to help decide on an appropriate number of jobs.
 #'   For details, visit
-#'   <https://ropenscilabs.github.io/drake-manual/time.html>.
+#'   <https://books.ropensci.org/drake/time.html>.
 #'
 #' @param jobs_preprocess Number of parallel jobs for processing the imports
 #'   and doing other preprocessing tasks.
@@ -170,12 +170,6 @@
 #'     `bindr::populate_env()`.
 #'   - `TRUE`: same as `"promise"`.
 #'   - `FALSE`: same as `"eager"`.
-#'
-#'   `lazy_load` should not be `"promise"`
-#'   for `"parLapply"` parallelism combined with `jobs` greater than 1.
-#'   For local multi-session parallelism and lazy loading, try
-#'   `library(future); future::plan(multisession)` and then
-#'   `make(..., parallelism = "future_lapply", lazy_load = "bind")`.
 #'
 #'   If `lazy_load` is `"eager"`,
 #'   drake prunes the execution environment before each target/stage,
@@ -455,6 +449,16 @@
 #'   `"http://httpbin.org/basic-auth/"`). If you have multiple handles
 #'   whose names match your URL, `drake` will choose the closest match.
 #'
+#' @param max_expand Positive integer, optional.
+#'   `max_expand` is the maximum number of targets to generate in each
+#'   `map()`, `cross()`, or `group()` dynamic transform.
+#'   Useful if you have a massive number of dynamic sub-targets and you want to
+#'   work with only the first few sub-targets before scaling up.
+#'   Note: the `max_expand` argument of `make()` and
+#'   `drake_config()` is for dynamic branching only.
+#'   The static branching `max_expand`
+#'   is an argument of `drake_plan()` and `transform_plan()`.
+#'
 #' @examples
 #' \dontrun{
 #' isolate_example("Quarantine side effects.", {
@@ -523,7 +527,8 @@ drake_config <- function(
   history = TRUE,
   recover = FALSE,
   recoverable = TRUE,
-  curl_handles = list()
+  curl_handles = list(),
+  max_expand = NULL
 ) {
   logger <- logger(verbose = verbose, file = console_log_file)
   logger$minor("begin drake_config()")
@@ -576,6 +581,7 @@ drake_config <- function(
     trigger = trigger,
     cache = cache
   )
+  ht_dynamic_deps <- new_ht_dynamic_deps(layout)
   graph <- create_drake_graph(
     plan = plan,
     layout = layout,
@@ -588,9 +594,12 @@ drake_config <- function(
   caching <- match.arg(caching)
   recover <- as.logical(recover)
   recoverable <- as.logical(recoverable)
+  envir_targets <- new.env(parent = envir)
   out <- list(
     envir = envir,
-    eval = new.env(parent = envir),
+    envir_graph = new.env(parent = emptyenv()),
+    envir_targets = envir_targets,
+    envir_subtargets = new.env(parent = envir_targets),
     cache = cache,
     parallelism = parallelism,
     jobs = jobs,
@@ -625,11 +634,23 @@ drake_config <- function(
     force = force,
     recover = recover,
     recoverable = recoverable,
-    curl_handles = curl_handles
+    curl_handles = curl_handles,
+    ht_dynamic_deps = ht_dynamic_deps,
+    max_expand = max_expand
   )
   config_checks(out)
   logger$minor("end drake_config()")
   out
+}
+
+new_ht_dynamic_deps <- function(layout) {
+  ht <- ht_new()
+  lapply(layout, log_ht_dynamic_deps, ht = ht)
+  ht
+}
+
+log_ht_dynamic_deps <- function(layout, ht) {
+  ht_set(ht, layout$deps_dynamic)
 }
 
 sanitize_targets <- function(targets, plan) {

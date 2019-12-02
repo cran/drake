@@ -1,14 +1,26 @@
 handle_triggers <- function(target, meta, config) {
+  if (is_subtarget(target, config)) {
+    return(FALSE)
+  }
+  if (is_registered_dynamic(target, config)) {
+    return(FALSE)
+  }
   meta_old <- old_meta(key = target, cache = config$cache)
-  !any_triggers(target, meta, meta_old, config) ||
+  static_ok <- !any_static_triggers(target, meta, meta_old, config) ||
     recover_target(target, meta, config)
+  if (!is_dynamic(target, config)) {
+    return(static_ok)
+  }
+  dynamic_ok <- !check_trigger_dynamic(target, meta, meta_old, config)
+  register_subtargets(target, static_ok, dynamic_ok, config)
+  TRUE
 }
 
 recover_target <- function(target, meta, config) {
   if (!config$recover) {
     return(FALSE)
   }
-  key <- recovery_key(target = target, meta = meta, config = config)
+  key <- recovery_key_impl(target = target, meta = meta, config = config)
   if (!config$cache$exists(key, namespace = "recover")) {
     return(FALSE)
   }
@@ -20,12 +32,14 @@ recover_target <- function(target, meta, config) {
   if (!exists_data) {
     return(FALSE) # nocov # Should not happen, just to be safe...
   }
-  config$logger$major(
-    "recover",
-    target,
-    target = target,
-    color = "recover"
-  )
+  if (!is_dynamic(target, config)) {
+    config$logger$major(
+      "recover",
+      target,
+      target = target,
+      color = "recover"
+    )
+  }
   config$logger$minor(
     "recovered target originally stored on",
     recovery_meta$date,
@@ -43,14 +57,34 @@ recover_target <- function(target, meta, config) {
   )
   set_progress(
     target = target,
-    meta = list(imported = FALSE),
     value = "done",
     config = config
   )
   TRUE
 }
 
+recover_subtarget <- function(subtarget, config) {
+  meta <- drake_meta_(subtarget, config)
+  class(subtarget) <- "subtarget"
+  recover_target(subtarget, meta, config)
+}
+
 recovery_key <- function(target, meta, config) {
+  if (is_subtarget(target, config)) {
+    class(target) <- "subtarget"
+  }
+  recovery_key_impl(target, meta, config)
+}
+
+recovery_key_impl <- function(target, meta, config) {
+  UseMethod("recovery_key_impl")
+}
+
+recovery_key_impl.subtarget <- function(target, meta, config) {
+  unclass(target)
+}
+
+recovery_key_impl.default <- function(target, meta, config) {
   if (is.null(meta$trigger$value)) {
     change_hash <- NA_character_
   } else {
@@ -77,7 +111,11 @@ recovery_key <- function(target, meta, config) {
   )
 }
 
-any_triggers <- function(target, meta, meta_old, config) {
+recovery_key_impl.subtarget <- function(target, meta, config) {
+  unclass(target)
+}
+
+any_static_triggers <- function(target, meta, meta_old, config) {
   if (check_triggers_stage1(target, meta, config)) {
     return(TRUE)
   }
@@ -198,6 +236,10 @@ check_trigger_change <- function(target, meta, config) {
   FALSE
 }
 
+check_trigger_dynamic <- function(target, meta, meta_old, config) {
+  trigger_dynamic(target, meta, meta_old, config)
+}
+
 trigger_command <- function(target, meta, meta_old, config) {
   if (is.null(meta$command)) {
     return(FALSE)
@@ -258,7 +300,7 @@ trigger_condition <- function(target, meta, config) {
   }
   if (is.language(meta$trigger$condition)) {
     try_load(config$layout[[target]]$deps_condition$memory, config = config)
-    value <- eval(meta$trigger$condition, envir = config$eval)
+    value <- eval(meta$trigger$condition, envir = config$envir_targets)
   } else {
     value <- meta$trigger$condition
   }
@@ -304,4 +346,18 @@ trigger_change <- function(target, meta, config) {
   }
   old_value <- config$cache$get(key = target, namespace = "change")
   !identical(old_value, meta$trigger$value)
+}
+
+trigger_dynamic <- function(target, meta, meta_old, config) {
+  if (!is_dynamic(target, config)) {
+    return(FALSE)
+  }
+  old_hash <- meta_elt(field = "dynamic_dependency_hash", meta = meta_old)
+  if (!identical(meta$dynamic_dependency_hash, old_hash)) {
+    return(TRUE)
+  }
+  if (!identical(meta$max_expand, meta_old$max_expand)) {
+    return(TRUE)
+  }
+  FALSE
 }

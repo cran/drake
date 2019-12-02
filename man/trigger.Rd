@@ -5,9 +5,15 @@
 \title{Customize the decision rules for rebuilding targets
 \lifecycle{stable}}
 \usage{
-trigger(command = TRUE, depend = TRUE, file = TRUE, seed = TRUE,
-  condition = FALSE, change = NULL, mode = c("whitelist",
-  "blacklist", "condition"))
+trigger(
+  command = TRUE,
+  depend = TRUE,
+  file = TRUE,
+  seed = TRUE,
+  condition = FALSE,
+  change = NULL,
+  mode = c("whitelist", "blacklist", "condition")
+)
 }
 \arguments{
 \item{command}{Logical, whether to rebuild the target if the
@@ -61,7 +67,7 @@ in your \code{\link[=drake_plan]{drake_plan()}} or the \code{trigger} argument t
 \code{\link[=make]{make()}} or \code{\link[=drake_config]{drake_config()}}.
 For details, see the chapter on triggers
 in the user manual:
-\url{https://ropenscilabs.github.io/drake-manual}
+\url{https://books.ropensci.org/drake/triggers.html}
 }
 \details{
 A target always builds if it has not been built before.

@@ -28,25 +28,19 @@ with its own help file.
 \itemize{
 \item \code{\link[=target]{target()}}: give the target more than just a command.
 Using \code{\link[=target]{target()}}, you can apply a transformation
-(examples: \url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}), # nolint
-supply a trigger (\url{https://ropenscilabs.github.io/drake-manual/triggers.html}), # nolint
+(examples: \url{https://books.ropensci.org/drake/plans.html#large-plans}), # nolint
+supply a trigger (\url{https://books.ropensci.org/drake/triggers.html}), # nolint
 or set any number of custom columns.
-\item \code{\link[=map]{map()}}: create multiple targets. Called inside \code{\link[=target]{target()}}.
-\item \code{\link[=split]{split()}}: create a target for each subset of data.
-Called inside \code{\link[=target]{target()}}.
-\item \code{\link[=cross]{cross()}}: create a target for each combination of values.
-Called inside \code{\link[=target]{target()}}.
-\item \code{\link[=combine]{combine()}}: aggregate groups of targets into other targets.
-Called inside \code{\link[=target]{target()}}.
 \item \code{\link[=file_in]{file_in()}}: declare an input file dependency.
 \item \code{\link[=file_out]{file_out()}}: declare an output file to be produced
 when the target is built.
 \item \code{\link[=knitr_in]{knitr_in()}}: declare a \code{knitr} file dependency such as an
-R Markdown (\code{*.Rmd}) or R LaTeX (\code{*.Rnw}) file.
+R Markdown (\verb{*.Rmd}) or R LaTeX (\verb{*.Rnw}) file.
 \item \code{\link[=ignore]{ignore()}}: force \code{drake} to entirely ignore a piece of code:
 do not track it for changes and do not analyze it for dependencies.
 \item \code{\link[=no_deps]{no_deps()}}: tell \code{drake} to not track the dependencies
 of a piece of code. \code{drake} still tracks the code itself for changes.
+\item \code{\link[=id_chr]{id_chr()}}: Get the name of the current target.
 \item \code{\link[=drake_envir]{drake_envir()}}: get the environment where drake builds targets.
 Intended for advanced custom memory management.
 }

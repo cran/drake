@@ -142,7 +142,7 @@ test_with_dir("drake_debug()", {
     character_only = TRUE
   )
   expect_true(is.data.frame(out))
-  for (i in 1:2) {
+  for (i in seq_len(2)) {
     clean(destroy = TRUE)
     load_mtcars_example()
     make(my_plan)
@@ -175,13 +175,14 @@ test_with_dir("forks + lock_envir = informative error msg", {
   # Don't run this test for real because (1) we would have to add
   # furrr to "Suggests" and (2) at some point, base R may be patched
   # so forking in the parallel package does not give this warning anyway.
+  # Also, it needs to run outside the RStudio IDE so we can fork processes.
   regexp <- "workaround"
   plan <- drake_plan(x = parallel::mclapply(1:2, identity, mc.cores = 2))
   expect_warning(
     make(plan, envir = globalenv(), lock_envir = TRUE),
     regexp = regexp
   )
-  future::plan(future::multicore)
+  future::plan(future::multicore, workers = 2)
   plan <- drake_plan(
     # install.packages("furrr") # nolint
     # Not in "Suggests"
@@ -279,6 +280,7 @@ test_with_dir("r_make() + clustermq", {
   expect_equal(r_outdated(), character(0))
 })
 
+# Needs to run outside the RStudio IDE to fork processes.
 test_with_dir("r_make() + multicore future", {
   skip_on_cran()
   skip_on_os("windows")
@@ -290,7 +292,7 @@ test_with_dir("r_make() + multicore future", {
     c(
       "library(drake)",
       "load_mtcars_example()",
-      "future::plan(future::multicore)",
+      "future::plan(future::multicore, workers = 2)",
       "drake_config(my_plan, parallelism = \"future\", jobs = 2)"
     ),
     "_drake.R"

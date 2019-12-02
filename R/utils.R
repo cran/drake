@@ -95,6 +95,14 @@ weak_tibble <- function(..., .force_df = FALSE) {
   }
 }
 
+# Get a row of expand_grid from tidyr
+# without actually expanding the grid.
+grid_index <- function(index, size) {
+  reps <- prod(size) / cumprod(size)
+  inc <- ceiling(index / reps) - 1L
+  (inc %% size) + 1L
+}
+
 error_false <- function(e) {
   FALSE
 }
@@ -284,7 +292,10 @@ dir_create <- function(x) {
 }
 
 `%||NA%` <- function(x, y) {
-  if (is.null(x) || length(x) < 1 || anyNA(x)) {
+  return_y <- is.null(x) ||
+    length(x) < 1L ||
+    (is.atomic(x) && anyNA(x))
+  if (return_y) {
     y
   } else {
     x

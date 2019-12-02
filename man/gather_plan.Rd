@@ -5,8 +5,7 @@
 \title{Combine targets
 \lifecycle{deprecated}}
 \usage{
-gather_plan(plan = NULL, target = "target", gather = "list",
-  append = FALSE)
+gather_plan(plan = NULL, target = "target", gather = "list", append = FALSE)
 }
 \arguments{
 \item{plan}{Workflow plan data frame of prespecified targets.}
@@ -28,7 +27,7 @@ prespecified targets into one additional target downstream.
 \description{
 Deprecated on 2019-05-16. Use \code{\link[=drake_plan]{drake_plan()}}
 transformations instead. See
-\url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}
+\url{https://books.ropensci.org/drake/plans.html#large-plans}
 for the details.
 }
 \details{

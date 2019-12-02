@@ -5,8 +5,13 @@
 \title{Specialized wildcard for summaries
 \lifecycle{deprecated}}
 \usage{
-plan_summaries(plan, analyses, datasets, gather = rep("list",
-  nrow(plan)), sep = "_")
+plan_summaries(
+  plan,
+  analyses,
+  datasets,
+  gather = rep("list", nrow(plan)),
+  sep = "_"
+)
 }
 \arguments{
 \item{plan}{Workflow plan data frame with commands for the summaries.
@@ -33,7 +38,7 @@ analyses of multiple datasets in multiple ways.
 }
 \description{
 Use \code{\link[=drake_plan]{drake_plan()}} with transformations instead. See
-\url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}
+\url{https://books.ropensci.org/drake/plans.html#large-plans}
 for details.
 }
 \details{

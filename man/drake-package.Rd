@@ -18,6 +18,7 @@ if (suppressWarnings(require("knitr"))) {
 library(drake)
 load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Build everything.
+plot(my_plan) # fast call to vis_drake_graph()
 make(my_plan) # Nothing is done because everything is already up to date.
 reg2 = function(d) { # Change one of your functions.
   d$x3 = d$x^3
@@ -31,6 +32,19 @@ readd(small)
 loadd(large)
 head(large)
 }
+# Dynamic branching
+plan <- drake_plan(
+  w = c("a", "a", "b", "b"),
+  x = seq_len(4),
+  y = target(x + 1, dynamic = map(x)),
+  z = target(list(y = y, w = w), dynamic = group(y, .by = w))
+)
+make(plan)
+subtargets(y)
+readd(subtargets(y)[1], character_only = TRUE)
+readd(subtargets(y)[2], character_only = TRUE)
+readd(subtargets(z)[1], character_only = TRUE)
+readd(subtargets(z)[2], character_only = TRUE)
 })
 }
 }

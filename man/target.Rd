@@ -5,16 +5,18 @@
 \title{Customize a target in \code{\link[=drake_plan]{drake_plan()}}.
 \lifecycle{maturing}}
 \usage{
-target(command = NULL, transform = NULL, ...)
+target(command = NULL, transform = NULL, dynamic = NULL, ...)
 }
 \arguments{
 \item{command}{The command to build the target.}
 
-\item{transform}{A call to \code{\link[=map]{map()}}, \code{\link[=split]{split()}},
-\code{\link[=cross]{cross()}}, or \code{\link[=combine]{combine()}} to create or aggregate
-multiple targets at once.
-Details:
-\url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}}
+\item{transform}{A call to \code{\link[=map]{map()}}, \code{\link[=split]{split()}}, \code{\link[=cross]{cross()}}, or \code{\link[=combine]{combine()}}
+to apply a \emph{static} transformation. Details:
+\url{https://books.ropensci.org/drake/static.html}}
+
+\item{dynamic}{A call to \code{\link[=map]{map()}}, \code{\link[=cross]{cross()}}, or \code{\link[=group]{group()}}
+to apply a \emph{dynamic} transformation. Details:
+\url{https://books.ropensci.org/drake/dynamic.html}}
 
 \item{...}{Optional columns of the plan for a given target.
 See the Columns section of this help file for a selection
@@ -43,19 +45,19 @@ but \code{drake} looks for them at various points in the workflow.
 \itemize{
 \item \code{transform}: a call to \code{\link[=map]{map()}}, \code{\link[=split]{split()}}, \code{\link[=cross]{cross()}}, or
 \code{\link[=combine]{combine()}} to create and manipulate large collections of targets.
-Details: (\url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}). # nolint
+Details: (\url{https://books.ropensci.org/drake/plans.html#large-plans}). # nolint
 \item \code{format}: set a storage format to save big targets more efficiently.
 See the "Formats" section of this help file for more details.
 \item \code{trigger}: rule to decide whether a target needs to run.
 It is recommended that you define this one with \code{target()}.
-Details: \url{https://ropenscilabs.github.io/drake-manual/triggers.html}.
+Details: \url{https://books.ropensci.org/drake/triggers.html}.
 \item \code{hpc}: logical values (\code{TRUE}/\code{FALSE}/\code{NA}) whether to send each target
 to parallel workers.
-Visit \url{https://ropenscilabs.github.io/drake-manual/hpc.html#selectivity}
+Visit \url{https://books.ropensci.org/drake/hpc.html#selectivity}
 to learn more.
 \item \code{resources}: target-specific lists of resources for a computing cluster.
 See
-\url{https://ropenscilabs.github.io/drake-manual/hpc.html#advanced-options}
+\url{https://books.ropensci.org/drake/hpc.html#advanced-options}
 for details.
 \item \code{caching}: overrides the \code{caching} argument of \code{\link[=make]{make()}} for each target
 individually. Possible values:
@@ -85,25 +87,19 @@ with its own help file.
 \itemize{
 \item \code{\link[=target]{target()}}: give the target more than just a command.
 Using \code{\link[=target]{target()}}, you can apply a transformation
-(examples: \url{https://ropenscilabs.github.io/drake-manual/plans.html#large-plans}), # nolint
-supply a trigger (\url{https://ropenscilabs.github.io/drake-manual/triggers.html}), # nolint
+(examples: \url{https://books.ropensci.org/drake/plans.html#large-plans}), # nolint
+supply a trigger (\url{https://books.ropensci.org/drake/triggers.html}), # nolint
 or set any number of custom columns.
-\item \code{\link[=map]{map()}}: create multiple targets. Called inside \code{\link[=target]{target()}}.
-\item \code{\link[=split]{split()}}: create a target for each subset of data.
-Called inside \code{\link[=target]{target()}}.
-\item \code{\link[=cross]{cross()}}: create a target for each combination of values.
-Called inside \code{\link[=target]{target()}}.
-\item \code{\link[=combine]{combine()}}: aggregate groups of targets into other targets.
-Called inside \code{\link[=target]{target()}}.
 \item \code{\link[=file_in]{file_in()}}: declare an input file dependency.
 \item \code{\link[=file_out]{file_out()}}: declare an output file to be produced
 when the target is built.
 \item \code{\link[=knitr_in]{knitr_in()}}: declare a \code{knitr} file dependency such as an
-R Markdown (\code{*.Rmd}) or R LaTeX (\code{*.Rnw}) file.
+R Markdown (\verb{*.Rmd}) or R LaTeX (\verb{*.Rnw}) file.
 \item \code{\link[=ignore]{ignore()}}: force \code{drake} to entirely ignore a piece of code:
 do not track it for changes and do not analyze it for dependencies.
 \item \code{\link[=no_deps]{no_deps()}}: tell \code{drake} to not track the dependencies
 of a piece of code. \code{drake} still tracks the code itself for changes.
+\item \code{\link[=id_chr]{id_chr()}}: Get the name of the current target.
 \item \code{\link[=drake_envir]{drake_envir()}}: get the environment where drake builds targets.
 Intended for advanced custom memory management.
 }

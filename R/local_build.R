@@ -1,38 +1,58 @@
 local_build <- function(target, config, downstream) {
-  meta <- drake_meta_(target = target, config = config)
+  meta <- drake_meta_(target, config)
   if (handle_triggers(target, meta, config)) {
     return()
   }
-  announce_build(target, meta, config)
+  announce_build(target, config)
   manage_memory(
     target,
     config,
     downstream = downstream,
     jobs = config$jobs_preprocess
   )
-  build <- try_build(target = target, meta = meta, config = config)
-  conclude_build(build = build, config = config)
-  invisible()
+  build <- try_build(target, meta, config)
+  conclude_build(build, config)
 }
 
-announce_build <- function(target, meta, config) {
+announce_build <- function(target, config) {
+  if (is_dynamic(target, config)) {
+    announce_dynamic(target, config)
+    return()
+  }
   set_progress(
     target = target,
-    meta = meta,
     value = "running",
     config = config
   )
+  color <- ifelse(is_subtarget(target, config), "subtarget", "target")
   config$logger$major(
-    "target",
+    color,
     target,
     target = target,
-    color = "target"
+    color = color
+  )
+}
+
+announce_dynamic <- function(target, config) {
+  msg <- ifelse(
+    is_registered_dynamic(target, config),
+    "aggregate",
+    "dynamic"
+  )
+  config$logger$major(
+    msg,
+    target,
+    target = target,
+    color = "dynamic"
   )
 }
 
 try_build <- function(target, meta, config) {
   if (identical(config$garbage_collection, TRUE)) {
     on.exit(gc())
+  }
+  if (is_dynamic(target, config)) {
+    return(dynamic_build(target, meta, config))
   }
   retries <- 0L
   layout <- config$layout[[target]] %||% list()
@@ -196,7 +216,7 @@ prepend_fork_advice <- function(msg) {
     "\n Having problems with parallel::mclapply(),",
     "future::future(), or furrr::future_map() in drake?",
     "Try one of the workarounds at",
-    "https://ropenscilabs.github.io/drake-manual/hpc.html#parallel-computing-within-targets", # nolint
+    "https://books.ropensci.org/drake/hpc.html#parallel-computing-within-targets", # nolint
     "or https://github.com/ropensci/drake/issues/675. \n\n"
   )
   c(out, msg)
@@ -230,11 +250,17 @@ with_call_stack <- function(target, config) {
     lock_environment(config$envir)
     on.exit(unlock_environment(config$envir))
   }
-  config$eval[[drake_target_marker]] <- target
-  tidy_expr <- eval(expr = expr, envir = config$eval) # tidy eval prep
+  config$envir_subtargets[[drake_target_marker]] <- target
+  tidy_expr <- eval(
+    expr = expr,
+    envir = config$envir_subtargets
+  ) # tidy eval prep
   tryCatch(
     withCallingHandlers(
-      eval(expr = tidy_expr, envir <- config$eval), # pure eval
+      eval(
+        expr = tidy_expr,
+        envir = config$envir_subtargets
+      ), # pure eval
       error = capture_calls
     ),
     error = identity
@@ -302,12 +328,16 @@ conclude_build <- function(build, config) {
 }
 
 assign_format <- function(target, value, format, config) {
-  if (is.null(format) || is.na(format) || is.null(value)) {
+  drop_format <- is.null(format) ||
+    is.na(format) ||
+    is.null(value) ||
+    (is_dynamic(target, config) && !is_subtarget(target, config))
+  if (drop_format) {
     return(value)
   }
   config$logger$minor("format", format, target = target)
   out <- list(value = value)
-  class(out) <- paste0("drake_format_", format)
+  class(out) <- c(paste0("drake_format_", format), "drake_format")
   sanitize_format(x = out, target = target, config = config)
 }
 
@@ -373,27 +403,43 @@ sanitize_format.drake_format_diskframe <- function(x, target, config) { # nolint
 }
 
 assign_to_envir <- function(target, value, config) {
-  memory_strategy <- config$layout[[target]]$memory_strategy %||NA%
-    config$memory_strategy
-  if (memory_strategy %in% c("autoclean", "unload", "none")) {
+  if (is_subtarget(target, config)) {
     return()
   }
-  if (
-    identical(config$lazy_load, "eager") &&
+  memory_strategy <- config$layout[[target]]$memory_strategy %||NA%
+    config$memory_strategy
+  skip_memory <- memory_strategy %in% c("autoclean", "unload", "none")
+  if (skip_memory) {
+    return()
+  }
+  do_assign <- identical(config$lazy_load, "eager") &&
     !is_encoded_path(target) &&
     !is_imported(target, config)
-  ) {
-    assign(x = target, value = value_format(value), envir = config$eval)
+  if (do_assign) {
+    assign(
+      x = target,
+      value = value_format(value, target, config),
+      envir = config$envir_targets
+    )
+    config$envir_loaded$targets <- c(config$envir_loaded$targets, target)
   }
   invisible()
 }
 
-value_format <- function(x) {
-  if (any(grepl("^drake_format_", class(x)))) {
-    x$value
-  } else {
-    x
-  }
+value_format <- function(value, target, config) {
+  UseMethod("value_format")
+}
+
+value_format.drake_format_diskframe <- function(value, target, config) { # nolint
+  config$cache$get(target)
+}
+
+value_format.drake_format <- function(value, target, config) {
+  value$value
+}
+
+value_format.default <- function(value, target, config) {
+  value
 }
 
 assert_output_files <- function(target, meta, config) {
@@ -469,7 +515,6 @@ set_options <- function(new_options) {
 store_failure <- function(target, meta, config) {
   set_progress(
     target = target,
-    meta = meta,
     value = "failed",
     config = config
   )
@@ -483,10 +528,10 @@ store_failure <- function(target, meta, config) {
   )
 }
 
-set_progress <- function(target, meta, value, config) {
+set_progress <- function(target, value, config) {
   skip_progress <- !identical(config$running_make, TRUE) ||
     !config$log_progress ||
-    (meta$imported %||% FALSE)
+    (config$layout[[target]]$imported %||% FALSE)
   if (skip_progress) {
     return()
   }
