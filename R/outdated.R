@@ -65,7 +65,13 @@ recoverable <-  function(
 ) {
   config$logger$minor("begin recoverable()")
   on.exit(config$logger$minor("end recoverable()"), add = TRUE)
-  assert_config_not_plan(config)
+  assert_config(config)
+  if (make_imports) {
+    config$cache$lock()
+    on.exit(config$cache$unlock(), add = TRUE)
+  }
+  config$ht_is_subtarget <- ht_new()
+  config$ht_target_exists <- ht_target_exists(config)
   if (do_prework) {
     do_prework(config = config, verbose_packages = config$logger$verbose)
   }
@@ -103,12 +109,7 @@ is_recoverable <- function(target, config) {
 #' @seealso [r_outdated()], [drake_config()], [missed()], [drake_plan()],
 #'   [make()]
 #' @return Character vector of the names of outdated targets.
-#' @param config Optional internal runtime parameter list
-#'   produced with [drake_config()].
-#'   You must use a fresh `config` argument with an up-to-date
-#'   dependency graph that was never modified by hand.
-#'   If needed, rerun [drake_config()] early and often.
-#'   See the details in the help file for [drake_config()].
+#' @param config A configured workflow from [drake_config()].
 #' @param make_imports Logical, whether to make the imports first.
 #'   Set to `FALSE` to save some time and risk obsolete output.
 #' @param do_prework Whether to do the `prework`
@@ -136,7 +137,13 @@ outdated <-  function(
 ) {
   config$logger$minor("begin outdated()")
   on.exit(config$logger$minor("end outdated()"), add = TRUE)
-  assert_config_not_plan(config)
+  assert_config(config)
+  if (make_imports) {
+    config$cache$lock()
+    on.exit(config$cache$unlock(), add = TRUE)
+  }
+  config$ht_is_subtarget <- ht_new()
+  config$ht_target_exists <- ht_target_exists(config)
   if (do_prework) {
     do_prework(config = config, verbose_packages = config$logger$verbose)
   }
@@ -185,7 +192,7 @@ is_outdated <- function(target, config) {
     return(TRUE)
   }
   meta <- drake_meta_(target, config)
-  meta_old <- old_meta(key = target, cache = config$cache)
+  meta_old <- config$cache$get(key = target, namespace = "meta")
   any_static_triggers(target, meta, meta_old, config) ||
     check_trigger_dynamic(target, meta, meta_old, config) ||
     missing_subtargets(target, meta_old, config)
@@ -207,8 +214,7 @@ missing_subtargets <- function(target, meta, config) {
 #' @seealso [outdated()]
 #' @return Character vector of names of missing objects and files.
 #'
-#' @param config Internal runtime parameter list
-#'   produced by both [drake_config()] and [make()].
+#' @param config A configured workflow from [drake_config()].
 #'
 #' @examples
 #' \dontrun{
@@ -225,7 +231,7 @@ missing_subtargets <- function(target, meta, config) {
 missed <- function(config) {
   config$logger$minor("begin missed()")
   on.exit(config$logger$minor("end missed()"), add = TRUE)
-  assert_config_not_plan(config)
+  assert_config(config)
   imports <- all_imports(config)
   is_missing <- lightly_parallelize(
     X = imports,
@@ -245,4 +251,11 @@ missing_import <- function(x, config) {
     return(!file_dep_exists(config$cache$decode_path(x)))
   }
   identical(get_import_from_memory(x, config = config), NA_character_)
+}
+
+ht_target_exists <- function(config) {
+  keys_data <- config$cache$list()
+  keys_meta <- config$cache$list(namespace = "meta")
+  keys <- intersect(keys_data, keys_meta)
+  ht_new(keys, hash = TRUE)
 }

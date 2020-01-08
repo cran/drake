@@ -59,7 +59,8 @@ target <- function(
   ...
 ) {
   if (!nzchar(Sys.getenv("drake_target_silent"))) {
-    warning(
+    # 2019-12-05
+    stop(
       "target() in drake is not a standalone user-side function. ",
       "It must be called from inside drake_plan(). Details: ",
       "https://books.ropensci.org/drake/static.html",
@@ -125,6 +126,10 @@ target <- function(
 #'   if the seed changes. Only makes a difference if you set
 #'   a custom `seed` column in your [drake_plan()] at some point
 #'   in your workflow.
+#' @param format Logical, whether to rebuild the target if the
+#'   specialized data format changes. See
+#'   <https://books.ropensci.org/drake/plans.html#special-data-formats-for-targets> # nolint
+#'   for details on formats.
 #' @param condition R code (expression or language object)
 #'   that returns a logical. The target will rebuild
 #'   if the code evaluates to `TRUE`.
@@ -182,22 +187,33 @@ trigger <- function(
   depend = TRUE,
   file = TRUE,
   seed = TRUE,
+  format = TRUE,
   condition = FALSE,
   change = NULL,
   mode = c("whitelist", "blacklist", "condition")
 ) {
-  stopifnot(is.logical(command))
-  stopifnot(is.logical(depend))
-  stopifnot(is.logical(file))
-  list(
+  command <- as.logical(command)
+  depend <- as.logical(depend)
+  file <- as.logical(file)
+  format <- as.logical(format)
+  out <- list(
     command = command,
     depend = depend,
     file = file,
     seed = seed,
+    format = format,
     condition = rlang::quo_squash(rlang::enquo(condition)),
     change = rlang::quo_squash(rlang::enquo(change)),
     mode = match.arg(mode)
   )
+  class(out) <- c("drake_triggers", "drake")
+  out
+}
+
+#' @export
+print.drake_triggers <- function(x, ...) {
+  cat("a list of triggers for a drake target\n")
+  utils::str(x, no.list = TRUE)
 }
 
 #' @title Declare input files and directories.
@@ -517,9 +533,7 @@ no_deps <- function(x = NULL) {
 #'   y = target(id_chr(), dynamic = map(x))
 #' )
 #' make(plan)
-#' ys <- subtargets(y)
-#' ys
-#' readd(ys[1], character_only = TRUE)
+#' readd(y, subtargets = 1)
 #' # Static branching
 #' plan <- drake_plan(
 #'   y = target(c(x, .id_chr), transform = map(x = !!seq_len(4)))
@@ -681,8 +695,8 @@ code_to_plan <- function(path) {
 
 node_plan <- function(node) {
   weak_tibble(
-    target = safe_deparse(node[[2]]),
-    command = safe_deparse(node[[3]])
+    target = safe_deparse(node[[2]], backtick = FALSE),
+    command = safe_deparse(node[[3]], backtick = TRUE)
   )
 }
 
@@ -784,9 +798,12 @@ plan_to_text <- function(plan) {
   order <- match(order, table = plan$target)
   plan <- plan[order, ]
   if (!is.character(plan$command)) {
-    plan$command <- vapply(plan$command,
-                           safe_deparse,
-                           FUN.VALUE = character(1))
+    plan$command <- vapply(
+      plan$command,
+      safe_deparse,
+      FUN.VALUE = character(1),
+      backtick = TRUE
+    )
   }
   text <- paste(plan$target, "<-", plan$command)
   if (requireNamespace("styler")) {
@@ -884,7 +901,7 @@ style_recursive <- function(expr, name, append_comma) {
   if (nzchar(name)) {
     head <- paste(name, "= ")
   }
-  head <- paste0(head, safe_deparse(expr[[1]]), "(")
+  head <- paste0(head, safe_deparse(expr[[1]], backtick = FALSE), "(")
   out <- c(head, paste0("  ", text), ")")
   if (append_comma) {
     out[length(out)] <- paste0(out[length(out)], ",")
@@ -921,7 +938,7 @@ style_recursive_loop <- function(expr) {
 }
 
 style_leaf <- function(name, expr, append_comma) {
-  text <- safe_deparse(expr)
+  text <- safe_deparse(expr, backtick = TRUE)
   try(text <- styler::style_text(text), silent = TRUE)
   text[1] <- paste(name, "=", text[1])
   if (append_comma) {
@@ -932,7 +949,7 @@ style_leaf <- function(name, expr, append_comma) {
 
 is_trigger_call <- function(expr) {
   tryCatch(
-    safe_deparse(expr[[1]]) %in% trigger_fns,
+    safe_deparse(expr[[1]], backtick = FALSE) %in% trigger_fns,
     error = error_false
   )
 }

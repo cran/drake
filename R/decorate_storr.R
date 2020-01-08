@@ -6,6 +6,7 @@ decorate_storr <- function(storr) {
     stop("not a storr", call. = FALSE)
   }
   hash_algorithm <- storr$driver$hash_algorithm %||% "xxhash64"
+  digest <- new_digest_function(hash_algorithm)
   path <- storr$driver$path %||% default_cache_path()
   refclass_decorated_storr$new(
     storr = storr,
@@ -13,18 +14,32 @@ decorate_storr <- function(storr) {
     default_namespace = storr$default_namespace,
     envir = storr$envir,
     hash_algorithm = hash_algorithm,
+    digest = digest,
     history = recover_default_history(path),
     ht_encode_path = ht_new(),
     ht_decode_path = ht_new(),
     ht_encode_namespaced = ht_new(),
     ht_decode_namespaced = ht_new(),
     ht_hash = ht_new(),
-    ht_progress = ht_progress(hash_algorithm),
+    ht_keys = ht_keys(digest),
     path = path,
     path_return = file.path(path, "drake", "return"),
     path_tmp = file.path(path, "drake", "tmp")
   )
 }
+
+new_digest_function <- function(hash_algorithm) {
+  inner_digest <- digest::getVDigest(algo = hash_algorithm)
+  digest <- function(object, serialize = TRUE, ...) {
+    if (serialize) {
+      inner_digest(list(object), serialize = TRUE, ...)
+    } else {
+      inner_digest(object, serialize = FALSE, ...)
+    }
+  }
+}
+
+digest_murmur32 <- new_digest_function("murmur32")
 
 refclass_decorated_storr <- methods::setRefClass(
   Class = "refclass_decorated_storr",
@@ -34,13 +49,14 @@ refclass_decorated_storr <- methods::setRefClass(
     "default_namespace",
     "envir",
     "hash_algorithm",
+    "digest",
     "history",
     "ht_encode_path",
     "ht_decode_path",
     "ht_encode_namespaced",
     "ht_decode_namespaced",
     "ht_hash",
-    "ht_progress",
+    "ht_keys",
     "path",
     "path_return",
     "path_tmp"
@@ -120,11 +136,11 @@ refclass_decorated_storr <- methods::setRefClass(
       .self$driver$set_hash(
         key = target,
         namespace = "progress",
-        hash = .self$ht_progress[[value]]
+        hash = .self$ht_keys[[value]]
       )
     },
-    get_progress = function(target) {
-      retrieve_progress(target = target, cache = .self)
+    get_progress = function(targets) {
+      retrieve_progress(targets = targets, cache = .self)
     },
     set_history = function(history = NULL) {
       .self$history <- manage_history(history, cache_path = .self$path)
@@ -181,6 +197,36 @@ refclass_decorated_storr <- methods::setRefClass(
         gc = gc
       )
       invisible()
+    },
+    lock = function() {
+      .self$assert_unlocked()
+      .self$driver$set_hash(
+        key = "lock",
+        namespace = "session",
+        hash = .self$ht_keys[["lock"]]
+      )
+    },
+    unlock = function() {
+      .self$del(key = "lock", namespace = "session")
+    },
+    assert_unlocked = function() {
+      if (!.self$exists(key = "lock", namespace = "session")) {
+        return()
+      }
+      stop(
+        "drake's cache is locked because another process is building ",
+        "targets or imports right now, ",
+        "e.g. make() or clean() or outdated(make_imports = TRUE) ",
+        "or recoverable(make_imports = TRUE) or ",
+        "vis_drake_graph(make_imports = TRUE) etc. ",
+        "If the process other process crashed before it could clean up, ",
+        "unlock the cache with drake_cache(\"", .self$path, "\")$unlock(). ",
+        "Or, if you are using outdated() or recoverable() ",
+        "or vis_drake_graph() etc. then set make_imports = FALSE. ",
+        "See https://books.ropensci.org/drake/hpc.html to learn how to ",
+        "use parallel computing in drake.",
+        call. = FALSE
+      )
     },
     # Delegate to storr:
     archive_export = function(...) .self$storr$archive_export(...),
@@ -254,6 +300,16 @@ dcst_get_.drake_format_diskframe <- function(value, key, .self) { # nolint
   disk.frame::disk.frame(.self$file_return_key(key), backend = "fst")
 }
 
+dcst_get_.drake_format_qs <- function(value, key, .self) { # nolint
+  assert_pkg("qs")
+  qs::qread(
+    file = .self$file_return_key(key),
+    use_alt_rep = FALSE,
+    strict = FALSE,
+    nthreads = 1L
+  )
+}
+
 # Requires Python Keras and TensorFlow to test. Tested in test-keras.R.
 # nocov start
 dcst_get_.drake_format_keras <- function(value, key, .self) {
@@ -296,6 +352,16 @@ dcst_get_value_.drake_format_diskframe <- function(value, hash, .self) { # nolin
   disk.frame::disk.frame(.self$file_return_hash(hash), backend = "fst")
 }
 
+dcst_get_value_.drake_format_qs <- function(value, hash, .self) { # nolint
+  assert_pkg("qs")
+  qs::qread(
+    file = .self$file_return_hash(hash),
+    use_alt_rep = FALSE,
+    strict = FALSE,
+    nthreads = 1L
+  )
+}
+
 # Requires Python Keras and TensorFlow to test. Tested in test-keras.R.
 # nocov start
 dcst_get_value_.drake_format_keras <- function(value, hash, .self) { # nolint
@@ -320,6 +386,7 @@ dcst_set.drake_format_fst <- function(value, key, ..., .self) {
   assert_pkg("fst")
   .self$assert_dirs()
   tmp <- .self$file_tmp()
+  on.exit(file_remove(tmp), add = TRUE)
   fst::write_fst(x = value$value, path = tmp)
   dcst_set_move_tmp(key = key, value = value, tmp = tmp, .self = .self)
 }
@@ -329,6 +396,7 @@ dcst_set.drake_format_fst_dt <- function(value, key, ..., .self) {
   assert_pkg("fst")
   .self$assert_dirs()
   tmp <- .self$file_tmp()
+  on.exit(file_remove(tmp), add = TRUE)
   fst::write_fst(x = value$value, path = tmp)
   dcst_set_move_tmp(key = key, value = value, tmp = tmp, .self = .self)
 }
@@ -338,6 +406,24 @@ dcst_set.drake_format_diskframe <- function(value, key, ..., .self) { # nolint
   assert_pkg("fst")
   .self$assert_dirs()
   tmp <- attr(value$value, "path")
+  on.exit(file_remove(tmp), add = TRUE)
+  dcst_set_move_tmp(key = key, value = value, tmp = tmp, .self = .self)
+}
+
+dcst_set.drake_format_qs <- function(value, key, ..., .self) { # nolint
+  assert_pkg("qs")
+  .self$assert_dirs()
+  tmp <- .self$file_tmp()
+  on.exit(file_remove(tmp), add = TRUE)
+  qs::qsave(
+    x = value$value,
+    file = tmp,
+    preset = "high",
+    algorithm = "zstd",
+    compress_level = 4L,
+    shuffle_control = 15L,
+    check_hash = TRUE
+  )
   dcst_set_move_tmp(key = key, value = value, tmp = tmp, .self = .self)
 }
 
@@ -347,6 +433,7 @@ dcst_set.drake_format_keras <- function(value, key, ..., .self) {
   assert_pkg("keras")
   .self$assert_dirs()
   tmp <- .self$file_tmp()
+  on.exit(file_remove(tmp), add = TRUE)
   keras::save_model_hdf5(object = value$value, filepath = tmp)
   dcst_set_move_tmp(key = key, value = value, tmp = tmp, .self = .self)
 }
@@ -368,7 +455,7 @@ dcst_set.drake_format_rds <- function(value, key, ..., .self) {
 }
 
 dcst_set_move_tmp <- function(key, value, tmp, .self) {
-  hash_tmp <- rehash_local(tmp, .self$hash_algorithm)
+  hash_tmp <- rehash_local(tmp, config = list(cache = .self))
   class(hash_tmp) <- class(value)
   hash <- .self$storr$set(key = key, value = hash_tmp)
   file <- .self$file_return_hash(hash)
@@ -539,36 +626,33 @@ standardize_key <- function(text) {
   text
 }
 
-ht_progress <- function(hash_algorithm) {
-  keys <- c("running", "done", "failed")
-  out <- lapply(keys, progress_hash, hash_algorithm = hash_algorithm)
+ht_keys <- function(digest_fn) {
+  keys <- c("running", "done", "failed", "lock")
+  out <- lapply(keys, precomputed_key_hash, digest_fn = digest_fn)
   names(out) <- keys
   out
 }
 
-progress_hash <- function(key, hash_algorithm) {
-  out <- digest::digest(
-    key,
-    algo = hash_algorithm,
-    serialize = FALSE
-  )
-  gsub("^.", substr(key, 1, 1), out)
+precomputed_key_hash <- function(key, digest_fn) {
+  out <- digest_fn(key, serialize = FALSE)
+  gsub("^.", substr(key, 1L, 1L), out)
 }
 
-retrieve_progress <- function(target, cache) {
-  if (cache$exists(key = target, namespace = "progress")) {
-    hash <- cache$get_hash(key = target, namespace = "progress")
-    switch(
-      substr(hash, 1, 1),
-      r = "running",
-      d = "done",
-      f = "failed",
-      NA_character_
-    )
-  } else{
-    "none"
-  }
+retrieve_progress <- function(targets, cache) {
+  hash <- cache$mget_hash(key = targets, namespace = "progress")
+  substr <- substr(hash, 1, 1)
+  deduce_progress(substr)
 }
+
+deduce_progress <- Vectorize(function(substr) {
+  switch(
+    substr,
+    r = "running",
+    d = "done",
+    f = "failed",
+    "none"
+  )
+}, vectorize.args = "substr", USE.NAMES = FALSE)
 
 manage_history <- function(history, cache_path) {
   if (!is_history(history)) {
@@ -641,17 +725,17 @@ import_target_storr <- function(target, from, to, gc) {
       value <- from$get(key = target, namespace = ns)
       to$set(key = target, value = value, namespace = ns)
     }
-    if (gc) {
-      gc()
-    }
+    ifelse(gc, gc(), TRUE)
   }
+  invisible()
 }
 
 import_target_formatted <- function(target, from, to) {
   if (from$exists(target) && file.exists(from$file_return_key(target))) {
-    file_move(
+    storage_copy(
       from = from$file_return_key(target),
-      to = to$file_return_key(target)
+      to = to$file_return_key(target),
+      warn = FALSE
     )
   }
 }

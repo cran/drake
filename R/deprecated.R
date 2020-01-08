@@ -69,7 +69,7 @@ build_drake_graph <- function(
 #' @param short_hash_algo Short hash algorithm for drake.
 #'   The short algorithm must be among [available_hash_algos()],
 #'   which is just the collection of algorithms available to the `algo`
-#'   argument in [digest::digest()].
+#'   argument in `digest::digest()`.
 #'   See [default_short_hash_algo()] for more.
 #'
 #' @param long_hash_algo Long hash algorithm for drake.
@@ -2128,7 +2128,7 @@ map_plan <- function(
   } else {
     target <- paste0(
       fun, "_",
-      apply(X = args, MARGIN = 1, FUN = digest::digest, algo = "murmur32")
+      apply(X = args, MARGIN = 1, FUN = digest_murmur32)
     )
   }
   command <- as.character(unlist(drake_pmap(
@@ -2136,7 +2136,7 @@ map_plan <- function(
     .f = function(...) {
       out <- list(as.name(fun), ...)
       out <- as.call(out)
-      safe_deparse(out)
+      safe_deparse(out, backtick = TRUE)
     }
   )))
   out <- weak_tibble(target = target, command = command)
@@ -2537,4 +2537,26 @@ deprecate_arg <- function(value, name, alt = NULL) {
     msg <- paste(msg, "Use", alt, "instead.")
   }
   warning(msg, call. = FALSE)
+}
+
+#' @title Deprecated, get a trace of a dynamic target's value.
+#' \lifecycle{deprecated}
+#' @export
+#' @keywords internal
+#' @description Deprecated on 2019-12-10. Use [read_trace()] instead.
+#' @return The dynamic trace of one target in another:
+#'   a vector of values from a grouping variable.
+#' @param trace Character, name of the trace
+#'   you want to extract. Such trace names are declared
+#'   in the `.trace` argument of `map()`, `cross()` or `group()`..
+#' @param value Value of the dynamic target
+get_trace <- function(trace, value) {
+  .Deprecated(
+    new = "read_trace",
+    package = "drake",
+    msg = paste(
+      "get_trace() is deprecated. Use read_trace() instead."
+    )
+  )
+  attr(value, "dynamic_trace")[[trace]]
 }

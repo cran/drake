@@ -30,7 +30,7 @@ store_triggers <- function(target, meta, config) {
       use_cache = FALSE
     )
   }
-  store_output_files(config$layout[[target]]$deps_build$file_out, meta, config)
+  store_output_files(config$spec[[target]]$deps_build$file_out, meta, config)
 }
 
 store_output_files <- function(files, meta, config) {
@@ -106,10 +106,12 @@ store_item_impl.function <- function(target, value, meta, config) {
 
 standardize_imported_function <- function(fun) {
   fun <- unwrap_function(fun)
-  str <- safe_deparse(fun) # Because the function body still has attributes.
+  # Because the function body still has attributes.
+  str <- safe_deparse(fun, backtick = TRUE)
   if (any(grepl("ignore", str, fixed = TRUE))) {
     fun <- ignore_ignore(fun)
-    str <- safe_deparse(fun) # Worth it: ignore_ignore is slow.
+    # Worth it. ignore_ignore is slow.
+    str <- safe_deparse(fun, backtick = TRUE)
   }
   standardize_deparsed_function(str)
 }
@@ -146,7 +148,7 @@ store_meta <- function(target, value, meta, hash, config) {
     namespace = "meta",
     use_cache = FALSE
   )
-  is_target <- !meta$imported && !is_encoded_path(target)
+  is_target <- !meta$imported && !meta$isfile
   if (is_target && is_history(config$cache$history)) {
     config$cache$history$push(title = target, message = meta_hash)
   }
@@ -168,26 +170,29 @@ store_recovery <- function(target, meta, meta_hash, config) {
 
 finalize_meta <- function(target, value, meta, hash, config) {
   meta <- finalize_triggers(target, meta, config)
-  meta$time_command <- runtime_entry(
-    runtime = meta$time_command,
-    target = target
-  )
-  meta$time_build <- runtime_entry(
-    runtime = proc.time() - meta$time_start,
-    target = target
-  )
+  meta <- finalize_times(target, meta, config)
   meta$time_start <- NULL
   meta$date <- microtime()
   if (!meta$imported && !is_encoded_path(target)) {
     log_time(target, meta, config)
   }
   meta$hash <- hash
-  meta$size <- NROW(value)
+  meta$size_vec <- NROW(value)
   if (is_dynamic(target, config)) {
-    meta$subtargets <- config$layout[[target]]$subtargets
+    meta$subtargets <- config$spec[[target]]$subtargets
   }
   if (is_dynamic_dep(target, config)) {
-    meta$dynamic_hashes <- dynamic_hashes(value, meta$size, config)
+    meta$dynamic_hashes <- dynamic_hashes(value, meta$size_vec, config)
+  }
+  meta
+}
+
+finalize_times <- function(target, meta, config) {
+  if (config$log_build_times) {
+    meta$time_command <- runtime_entry(meta$time_command, target)
+    meta$time_build <- runtime_entry(proc_time() - meta$time_start, target)
+  } else {
+    meta$time_command <- meta$time_build <- empty_times()
   }
   meta
 }
@@ -196,9 +201,9 @@ finalize_triggers <- function(target, meta, config) {
   if (is_subtarget(target, config)) {
     return(meta)
   }
-  layout <- config$layout[[target]]
+  spec <- config$spec[[target]]
   if (is.null(meta$command)) {
-    meta$command <- layout$command_standardized
+    meta$command <- spec$command_standardized
   }
   if (is.null(meta$dependency_hash)) {
     meta$dependency_hash <- dependency_hash(target = target, config = config)
@@ -242,7 +247,7 @@ dynamic_hashes.default <- function(value, size, config) {
 
 dynamic_hash <- function(index, value, config) {
   subvalue <- dynamic_subvalue(value, index)
-  digest::digest(subvalue, algo = config$cache$hash_algorithm)
+  config$cache$digest(subvalue)
 }
 
 log_time <- function(target, meta, config) {
@@ -261,13 +266,17 @@ log_time <- function(target, meta, config) {
 
 runtime_entry <- function(runtime, target) {
   list(
-    target = target,
-    elapsed = runtime[["elapsed"]],
-    user = runtime[["user.self"]],
-    system = runtime[["sys.self"]]
+    target = as.character(target),
+    elapsed = as.numeric(runtime["elapsed"]),
+    user = as.numeric(runtime["user.self"]),
+    system = as.numeric(runtime["sys.self"])
   )
 }
 
 microtime <- function() {
   format(Sys.time(), "%Y-%m-%d %H:%M:%OS9 %z GMT")
+}
+
+proc_time <- function() {
+  unclass(proc.time())
 }

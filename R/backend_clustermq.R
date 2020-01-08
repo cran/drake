@@ -140,23 +140,32 @@ cmq_send_target <- function(target, config) {
     manage_memory(target = target, config = config, jobs = 1)
     deps <- cmq_deps_list(target, config)
   }
-  layout <- hpc_layout(target, config)
+  spec <- hpc_spec(target, config)
+  ht_is_subtarget <- config$ht_is_subtarget
   config$workers$send_call(
     expr = drake::cmq_build(
       target = target,
       meta = meta,
       deps = deps,
-      layout = layout,
+      spec = spec,
+      ht_is_subtarget = ht_is_subtarget,
       config = config
     ),
-    env = list(target = target, meta = meta, deps = deps, layout = layout)
+    env = list(
+      target = target,
+      meta = meta,
+      deps = deps,
+      spec = spec,
+      ht_is_subtarget = ht_is_subtarget
+    )
   )
 }
 
 cmq_deps_list <- function(target, config) {
-  layout <- config$layout[[target]]
-  keys_static <- layout$deps_build$memory
-  keys_dynamic <- layout$deps_dynamic
+  spec <- config$spec[[target]]
+  keys_static <- spec$deps_build$memory
+  keys_dynamic <- spec$deps_dynamic_whole
+  keys_subtargets <- spec$deps_dynamic
   vals_static <- lapply(
     keys_static,
     get,
@@ -166,27 +175,40 @@ cmq_deps_list <- function(target, config) {
   vals_dynamic <- lapply(
     keys_dynamic,
     get,
+    envir = config$envir_dynamic,
+    inherits = FALSE
+  )
+  vals_subtargets <- lapply(
+    keys_subtargets,
+    get,
     envir = config$envir_subtargets,
     inherits = FALSE
   )
   names(vals_static) <- keys_static
   names(vals_dynamic) <- keys_dynamic
-  list(static = vals_static, dynamic = vals_dynamic)
+  names(vals_subtargets) <- keys_subtargets
+  list(
+    static = vals_static,
+    dynamic = vals_dynamic,
+    subtargets = vals_subtargets
+  )
 }
 
 #' @title Build a target using the clustermq backend
-#' \lifecycle{stable}
+#' \lifecycle{maturing}
 #' @description For internal use only
 #' @export
 #' @keywords internal
 #' @param target Target name.
 #' @param meta List of metadata.
 #' @param deps Named list of target dependencies.
-#' @param layout Internal, part of the full `config$layout`.
+#' @param spec Internal, part of the full `config$spec`.
+#' @param ht_is_subtarget Internal, part of `config`
 #' @param config A [drake_config()] list.
-cmq_build <- function(target, meta, deps, layout, config) {
+cmq_build <- function(target, meta, deps, spec, ht_is_subtarget, config) {
   config$logger$minor("build on an hpc worker", target = target)
-  config$layout <- layout
+  config$spec <- spec
+  config$ht_is_subtarget <- ht_is_subtarget
   do_prework(config = config, verbose_packages = FALSE)
   caching <- hpc_caching(target, config)
   if (identical(caching, "master")) {
@@ -218,6 +240,14 @@ cmq_assign_deps <- function(deps, config) {
     assign(
       x = key,
       value = deps$dynamic[[key]],
+      envir = config$envir_dynamic,
+      inherits = FALSE
+    )
+  }
+  for (key in names(deps$subtargets)) {
+    assign(
+      x = key,
+      value = deps$subtargets[[key]],
       envir = config$envir_subtargets,
       inherits = FALSE
     )

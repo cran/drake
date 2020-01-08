@@ -432,6 +432,7 @@ test_with_dir("fst_dt format forces data.tables", {
 })
 
 test_with_dir("disk.frame (#1004)", {
+  skip_on_cran()
   skip_if_not_installed("disk.frame")
   skip_if_not_installed("fst")
   plan <- drake_plan(
@@ -443,7 +444,8 @@ test_with_dir("disk.frame (#1004)", {
       format = "diskframe"
     )
   )
-  make(plan)
+  # https://github.com/xiaodaigh/disk.frame/issues/227
+  suppressWarnings(make(plan))
   out <- readd(x)
   expect_true(inherits(out, "disk.frame"))
   exp <- data.table::as.data.table(
@@ -468,6 +470,7 @@ test_with_dir("disk.frame (#1004)", {
 })
 
 test_with_dir("diskframe format forces disk.frames", {
+  skip_on_cran()
   skip_if_not_installed("disk.frame")
   skip_if_not_installed("fst")
   plan <- drake_plan(
@@ -509,7 +512,7 @@ test_with_dir("decorated storr import (#1015)", {
   cache2 <- new_cache("cache2")
   make(plan1, cache = cache1)
   make(plan2, cache = cache2)
-  cache1$import(cache2)
+  cache1$import(cache2, gc = FALSE)
   expect_equal(cache1$get("a"), "a")
   expect_true(is.list(cache1$get("a", namespace = "meta")))
   expect_equal(cache1$get("b"), "b")
@@ -559,7 +562,7 @@ test_with_dir("decorated storr import specific targets (#1015)", {
   cache2 <- new_cache("cache2")
   make(plan1, cache = cache1)
   make(plan2, cache = cache2)
-  cache1$import(cache2, a)
+  cache1$import(cache2, a, gc = FALSE)
   expect_equal(cache1$get("a"), "a")
   expect_true(is.list(cache1$get("a", namespace = "meta")))
   expect_false(cache1$exists("b"))
@@ -584,7 +587,7 @@ test_with_dir("decorated storr import specific targets (#1015)", {
   cache2 <- new_cache("cache2")
   make(plan1, cache = cache1)
   make(plan2, cache = cache2)
-  cache2$export(cache1, a)
+  cache2$export(cache1, a, gc = FALSE)
   expect_equal(cache1$get("a"), "a")
   expect_true(is.list(cache1$get("a", namespace = "meta")))
   expect_false(cache1$exists("b"))
@@ -603,6 +606,9 @@ test_with_dir("safe_get*() methods", {
 })
 
 test_with_dir("in-memory representation of disk.frame targets (#1077)", {
+  skip_on_cran()
+  skip_if_not_installed("fst")
+  skip_if_not_installed("disk.frame")
   n <- 200
   observations <- data.frame(
     type = sample(letters[seq_len(3)], n, replace = TRUE),
@@ -619,4 +625,143 @@ test_with_dir("in-memory representation of disk.frame targets (#1077)", {
   make(plan)
   out <- readd(result)
   expect_equal(dim(out), c(6L, 2L))
+})
+
+test_with_dir("changes to formats invalidate targets (#1104)", {
+  skip_if_not_installed("fst")
+  df <- data.frame(x = letters, y = letters, stringsAsFactors = FALSE)
+  plan <- drake_plan(x = df)
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), "x")
+  make(plan)
+  expect_equal(justbuilt(config), character(0))
+  plan <- drake_plan(x = target(df, format = "fst"))
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), "x")
+  skip_if(getRversion() < "3.5.0")
+  plan <- drake_plan(x = target(df, format = "rds"))
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), "x")
+  plan <- drake_plan(x = df)
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), "x")
+})
+
+test_with_dir("same with 2 targets (format is NA for x) (#1104)", {
+  skip_if_not_installed("fst")
+  df <- data.frame(x = letters, y = letters, stringsAsFactors = FALSE)
+  plan <- drake_plan(x = df, y = x)
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(sort(justbuilt(config)), sort(c("x", "y")))
+  make(plan)
+  expect_equal(justbuilt(config), character(0))
+  plan <- drake_plan(x = df, y = target(x, format = "fst"))
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), "y")
+  skip_if(getRversion() < "3.5.0")
+  plan <- drake_plan(x = df, y = target(x, format = "rds"))
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), "y")
+  plan <- drake_plan(x = df, y = x)
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), "y")
+})
+
+test_with_dir("can suppress the format trigger (#1104)", {
+  skip_if_not_installed("fst")
+  df <- data.frame(x = letters, y = letters, stringsAsFactors = FALSE)
+  plan <- drake_plan(x = target(df))
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), "x")
+  make(plan)
+  expect_equal(justbuilt(config), character(0))
+  plan <- drake_plan(
+    x = target(df, format = "fst", trigger = trigger(format = FALSE))
+  )
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), character(0))
+  skip_if(getRversion() < "3.5.0")
+  plan <- drake_plan(
+    x = target(df, format = "rds", trigger = trigger(format = FALSE))
+  )
+  config <- drake_config(plan)
+  make(plan)
+  expect_equal(justbuilt(config), character(0))
+})
+
+test_with_dir("$import() copies (does not simply move) (#1120)", {
+  skip_on_cran()
+  skip_if_not_installed("fst")
+  skip_if_not_installed("disk.frame")
+  cache1 <- new_cache("cache1")
+  cache2 <- new_cache("cache2")
+  plan <- drake_plan(
+    data = data.frame(
+      x = runif(1000),
+      y = runif(1000)
+    ),
+    data_fst = target(
+      data,
+      format = "fst"
+    ),
+    data_disk = target(
+      disk.frame::as.disk.frame(
+        rlang::duplicate(data),
+        outdir = drake_tempfile(cache = cache1)
+      ),
+      format = "diskframe"
+    )
+  )
+  make(plan, cache = cache1)
+  cache2$import(data, from = cache1, gc = FALSE)
+  expect_equal(
+    readd(data, cache = cache1),
+    readd(data, cache = cache2)
+  )
+  cache2$import(data_fst, from = cache1, gc = FALSE)
+  expect_equal(
+    readd(data_fst, cache = cache1),
+    readd(data_fst, cache = cache2)
+  )
+  cache2$import(data_disk, from = cache1, gc = FALSE)
+  x1 <- as.data.frame(readd(data_disk, cache = cache1))
+  x2 <- as.data.frame(readd(data_disk, cache = cache2))
+  x1 <- x1[order(x1$x), ]
+  x2 <- x2[order(x2$x), ]
+  expect_equal(x1, x2)
+})
+
+test_with_dir("qs format (#1121)", {
+  skip_on_cran()
+  skip_if_not_installed("qs")
+  plan <- drake_plan(
+    x = target(list(x = letters, y = letters), format = "qs"),
+    y = "normal format"
+  )
+  make(plan)
+  out <- readd(x)
+  exp <- list(x = letters, y = letters)
+  expect_equal(out, exp)
+  cache <- drake_cache()
+  expect_equal(cache$get_value(cache$get_hash("x")), exp)
+  ref <- cache$storr$get("x")
+  expect_true(inherits(ref, "drake_format"))
+  expect_true(inherits(ref, "drake_format_qs"))
+  expect_equal(length(ref), 1L)
+  expect_true(nchar(ref) < 100)
+  expect_false(is.list(ref))
+  ref2 <- cache$storr$get("y")
+  expect_identical(ref2, "normal format")
+  expect_false(inherits(ref2, "drake_format"))
+  expect_false(inherits(ref2, "drake_format_qs"))
 })

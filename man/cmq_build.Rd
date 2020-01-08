@@ -3,9 +3,9 @@
 \name{cmq_build}
 \alias{cmq_build}
 \title{Build a target using the clustermq backend
-\lifecycle{stable}}
+\lifecycle{maturing}}
 \usage{
-cmq_build(target, meta, deps, layout, config)
+cmq_build(target, meta, deps, spec, ht_is_subtarget, config)
 }
 \arguments{
 \item{target}{Target name.}
@@ -14,7 +14,9 @@ cmq_build(target, meta, deps, layout, config)
 
 \item{deps}{Named list of target dependencies.}
 
-\item{layout}{Internal, part of the full \code{config$layout}.}
+\item{spec}{Internal, part of the full \code{config$spec}.}
+
+\item{ht_is_subtarget}{Internal, part of \code{config}}
 
 \item{config}{A \code{\link[=drake_config]{drake_config()}} list.}
 }

@@ -11,15 +11,17 @@ test_with_dir("dynamic dependency detection", {
     z = target(w, dynamic = group(x, y, .by = c(w, nope)))
   )
   config <- drake_config(plan)
-  layout <- config$layout
-  expect_equal(layout[["v"]]$deps_dynamic, character(0))
-  expect_equal(layout[["w"]]$deps_dynamic, character(0))
-  expect_equal(sort(layout[["x"]]$deps_dynamic), sort(c("indices", "v")))
-  expect_equal(sort(layout[["y"]]$deps_dynamic), sort(c("v", "x", "y")))
-  expect_equal(sort(layout[["z"]]$deps_dynamic), sort(c("w", "x", "y")))
+  spec <- config$spec
+  config$ht_is_subtarget <- ht_new()
+  expect_equal(spec[["v"]]$deps_dynamic, character(0))
+  expect_equal(spec[["w"]]$deps_dynamic, character(0))
+  expect_equal(sort(spec[["x"]]$deps_dynamic), sort(c("indices", "v")))
+  expect_equal(sort(spec[["y"]]$deps_dynamic), sort(c("v", "x", "y")))
+  expect_equal(sort(spec[["z"]]$deps_dynamic), sort(c("w", "x", "y")))
   meta1 <- drake_meta_("v", config)
   meta2 <- drake_meta_("x", config)
   con2 <- drake_config(drake_plan(x = 1))
+  con2$ht_is_subtarget <- ht_new()
   meta3 <- drake_meta_("x", con2)
   expect_false(meta1$dynamic)
   expect_true(meta2$dynamic)
@@ -55,22 +57,23 @@ test_with_dir("dynamic sub-target indices", {
   )
   make(plan[, c("target", "command")])
   config <- drake_config(plan)
+  config$ht_is_subtarget <- ht_new()
   config$ht_dynamic <- ht_new()
   config$ht_dynamic_size <- ht_new()
   for (i in seq_len(4)) {
     ew <- list(u = i, v = i)
-    expect_equal(subtarget_deps("w", i, config), ew)
+    expect_equal(subtarget_deps(config$spec$w$dynamic, "w", i, config), ew)
   }
   for (i in seq_len(4)) {
     for (j in seq_len(4)) {
       ey <- list(u = i, v = j)
       k <- 4 * (i - 1) + j
-      expect_equal(subtarget_deps("y", k, config), ey)
+      expect_equal(subtarget_deps(config$spec$y$dynamic, "y", k, config), ey)
     }
   }
   for (i in seq_len(4)) {
     ez <- list(y = seq(from = 4 * (i - 1) + 1, 4 * i))
-    expect_equal(subtarget_deps("z", i, config), ez)
+    expect_equal(subtarget_deps(config$spec$z$dynamic, "z", i, config), ez)
   }
 })
 
@@ -99,6 +102,7 @@ test_with_dir("invalidating a subtarget invalidates the parent", {
     y = target(x, dynamic = map(x))
   )
   config <- drake_config(plan)
+  config$ht_is_subtarget <- ht_new()
   make(plan)
   clean(list = subtargets(y)[1])
   expect_equal(outdated(config), "y")
@@ -650,7 +654,7 @@ test_with_dir("dynamic group with by", {
     x = target(u, dynamic = map(u)),
     y = target(v, dynamic = map(v)),
     z = target(
-      list(x = do.call("c", x), y = do.call("c", y), my_by = w),
+      list(x = x, y = y, my_by = w),
       dynamic = group(x, y, .by = w)
     )
   )
@@ -668,7 +672,7 @@ test_with_dir("dynamic group with by", {
     x = target(u, dynamic = map(u)),
     y = target(v, dynamic = map(v)),
     z = target(
-      list(x = sum(do.call("c", x)), y = do.call("c", y)),
+      sum(c(x, y)),
       dynamic = group(x, y, .by = w)
     )
   )
@@ -677,10 +681,8 @@ test_with_dir("dynamic group with by", {
   expect_true(all(grepl("^z", justbuilt(config))))
   out1 <- readd(subtargets(z)[1], character_only = TRUE)
   out2 <- readd(subtargets(z)[2], character_only = TRUE)
-  exp1 <- list(x = 6, y = seq_len(3) + 1)
-  exp2 <- list(x = 4, y = 5)
-  expect_equal(out1, exp1)
-  expect_equal(out2, exp2)
+  expect_equal(out1, 15)
+  expect_equal(out2, 9)
 })
 
 test_with_dir("insert .by piece by piece", {
@@ -694,7 +696,7 @@ test_with_dir("insert .by piece by piece", {
     x = seq_len(4),
     y = target(x + 1, dynamic = map(x)),
     z = target(
-      list(y = unlist(y), w = w),
+      list(list(y = unlist(y), w = w)),
       dynamic = group(y, .by = w)
     )
   )
@@ -933,27 +935,27 @@ test_with_dir("group: static targets and .by precedence", {
     y = target(x, dynamic = group(x))
   )
   make(plan)
-  expect_equal(readd(y), list(c("a", "a", "b", "b")))
+  expect_equal(readd(y), c("a", "a", "b", "b"))
   plan <- drake_plan(
     x = c("a", "a", "b", "b"),
     y = seq_len(4),
     z = target(y, dynamic = group(y, .by = x))
   )
   make(plan)
-  expect_equal(readd(z), list(c(1, 2), c(3, 4)))
+  expect_equal(readd(z), c(1, 2, 3, 4))
   plan <- drake_plan(
     x = c("a", "a", "b", "b"),
     y = as.character(seq_len(4)),
     z = target(c(x, y), dynamic = group(y, .by = x))
   )
   make(plan)
-  expect_equal(readd(z), list(c("a", "1", "2"), c("b", "3", "4")))
+  expect_equal(readd(z), c("a", "1", "2", "b", "3", "4"))
   plan <- drake_plan(
     x = c("a", "a", "b", "b"),
     y = target(x, dynamic = group(x, .by = x))
   )
   make(plan)
-  expect_equal(readd(y), list(c("a", "a"), c("b", "b")))
+  expect_equal(readd(y), c("a", "a", "b", "b"))
 })
 
 test_with_dir("group multiple targets", {
@@ -965,7 +967,7 @@ test_with_dir("group multiple targets", {
   )
   make(plan)
   out <- readd(z)
-  exp <- list(list(c(1, 2), c(11, 12)), list(c(3, 4), c(13, 14)))
+  exp <- list(c(1, 2), c(11, 12), c(3, 4), c(13, 14))
   expect_equal(out, exp)
 })
 
@@ -1002,9 +1004,7 @@ test_with_dir("non-rds formats and dynamic branching (#1059)", {
     y = target(x, dynamic = map(x), format = "fst")
   )
   make(plan, session_info = FALSE)
-  exp <- readd(x)
-  out <- do.call(rbind, readd(y))
-  expect_equal(out, exp)
+  expect_equal(readd(x), readd(y))
   cache <- drake_cache()
   ref <- cache$storr$get("y")
   expect_false(inherits(ref, "drake_format_fst"))
@@ -1028,6 +1028,7 @@ test_with_dir("runtime predictions for dynamic targets", {
     z = target(y, dynamic = map(y))
   )
   config <- drake_config(plan)
+  config$ht_is_subtarget <- ht_new()
   suppressWarnings(predict_runtime(config))
   make(plan)
   predict_runtime(config)
@@ -1122,6 +1123,7 @@ test_with_dir("dynamic parent recovery", {
     y = target(file.create(x), dynamic = map(x))
   )
   config <- drake_config(plan)
+  config$ht_is_subtarget <- ht_new()
   make(plan)
   files <- letters[seq_len(4)]
   expect_true(all(file.exists(files)))
@@ -1191,32 +1193,24 @@ test_with_dir("dynamic loadd() and readd()", {
     y = target(x, dynamic = map(x))
   )
   make(plan)
-  out <- readd(x)
-  expect_equal(out, mtcars[seq_len(4), ])
+  expect_equal(readd(x), mtcars[seq_len(4), ])
   out <- readd(y)
-  expect_true(is.list(out))
-  expect_false(is.data.frame(out))
-  expect_equal(do.call("rbind", out), mtcars[seq_len(4), ])
+  rownames(out) <- NULL
+  exp <- mtcars[seq_len(4), ]
+  rownames(exp) <- NULL
+  expect_equal(out, exp)
   skip_if_not_installed("bindr")
   for (lazy in c("eager", "promise", "bind")) {
     loadd(y, lazy = lazy)
-    expect_true(is.list(y))
-    expect_false(is.data.frame(y))
-    expect_equal(do.call("rbind", y), mtcars[seq_len(4), ])
+    expect_equal(readd(y), y)
     rm(y)
   }
   out <- readd(y, subtargets = c(2, 4))
-  expect_true(is.list(out))
-  expect_false(is.data.frame(out))
-  expect_equal(length(out), 2)
-  expect_equal(do.call("rbind", out), mtcars[c(2, 4), ])
+  expect_true(is.data.frame(out))
+  expect_equal(nrow(out), 2)
   for (lazy in c("eager", "promise", "bind")) {
     loadd(y, lazy = lazy, subtargets = c(2, 4))
-    expect_equal(length(y), 2)
-    expect_true(is.list(y))
-    expect_false(is.data.frame(y))
-    expect_equal(do.call("rbind", y), mtcars[c(2, 4), ])
-    rm(y)
+    expect_equal(y, out)
   }
 })
 
@@ -1245,7 +1239,8 @@ test_with_dir("dynamic hpc", {
       groups = target(
         unlist(combos),
         dynamic = group(combos, .by = index)
-      )
+      ),
+      final = groups
     )
     make(
       plan,
@@ -1254,9 +1249,11 @@ test_with_dir("dynamic hpc", {
       parallelism = parallelism,
       caching = caching
     )
+    val <- drake_cache()$get("final")
     out <- readd(groups)
-    exp <- list(c("aA", "aB"), c("bA", "bB"))
+    exp <- c("aA", "aB", "bA", "bB")
     expect_equal(out, exp)
+    expect_equal(val, exp)
     config <- drake_config(plan)
     expect_equal(outdated(config), character(0))
     make(
@@ -1275,7 +1272,8 @@ test_with_dir("dynamic hpc", {
       groups = target(
         paste0(unlist(combos), "+"),
         dynamic = group(combos, .by = index)
-      )
+      ),
+      final = groups
     )
     make(
       plan,
@@ -1285,10 +1283,10 @@ test_with_dir("dynamic hpc", {
       caching = caching
     )
     out <- justbuilt(config)
-    exp <- c("groups", subtargets(groups))
+    exp <- c("groups", subtargets(groups), "final")
     expect_equal(sort(out), sort(exp))
     out <- readd(groups)
-    exp <- list(c("aA+", "aB+"), c("bA+", "bB+"))
+    exp <- c("aA+", "aB+", "bA+", "bB+")
     expect_equal(out, exp)
     clean(destroy = TRUE)
   }
@@ -1326,9 +1324,9 @@ test_with_dir("dynamic max_expand", {
   )
   expect_equal(readd(dyn1), seq_len(10))
   expect_equal(readd(dyn2), seq_len(10))
-  expect_equal(readd(dyn3), list(1L, 2L))
-  expect_equal(readd(dyn4), list(c(1L, 1L), c(1L, 2L)))
-  expect_equal(readd(dyn5), list(1L, 2L))
+  expect_equal(readd(dyn3), c(1L, 2L))
+  expect_equal(readd(dyn4), c(1L, 1L, 1L, 2L))
+  expect_equal(readd(dyn5), c(1L, 2L))
   config <- drake_config(plan)
   make(plan, max_expand = 4)
   out <- justbuilt(config)
@@ -1341,15 +1339,15 @@ test_with_dir("dynamic max_expand", {
     subtargets(dyn5)[c(3, 4)]
   )
   expect_equal(sort(out), sort(exp))
-  expect_equal(readd(dyn3), list(1L, 2L, 3L, 4L))
-  expect_equal(readd(dyn4), list(c(1L, 1L), c(1L, 2L), c(1L, 3L), c(1L, 4L)))
-  expect_equal(readd(dyn5), list(1L, 2L, 3L, 4L))
+  expect_equal(readd(dyn3), c(1L, 2L, 3L, 4L))
+  expect_equal(readd(dyn4), c(1L, 1L, 1L, 2L, 1L, 3L, 1L, 4L))
+  expect_equal(readd(dyn5), c(1L, 2L, 3L, 4L))
   make(plan, max_expand = 3)
   expect_equal(sort(justbuilt(config)), sort(c("dyn3", "dyn4", "dyn5")))
   expect_equal(sort(out), sort(exp))
-  expect_equal(readd(dyn3), list(1L, 2L, 3L))
-  expect_equal(readd(dyn4), list(c(1L, 1L), c(1L, 2L), c(1L, 3L)))
-  expect_equal(readd(dyn5), list(1L, 2L, 3L))
+  expect_equal(readd(dyn3), c(1L, 2L, 3L))
+  expect_equal(readd(dyn4), c(1L, 1L, 1L, 2L, 1L, 3L))
+  expect_equal(readd(dyn5), c(1L, 2L, 3L))
   suppressWarnings(rm(dyn1, dyn2, dyn3, dyn4, dyn5, envir = envir))
 })
 
@@ -1367,7 +1365,7 @@ test_with_dir("bad group trace (#1052)", {
     a = letters[seq_len(2)],
     b = seq_len(2),
     c = target(paste(a, b), dynamic = cross(a, b, .trace = c(a, b))),
-    a_crossed = get_trace(c, "a"),
+    a_crossed = read_trace(c, a),
     d = target(unlist(c), dynamic = group(c, .by = a_crossed, .trace = a))
   )
   expect_error(
@@ -1383,11 +1381,9 @@ test_with_dir("dynamic map trace (#1052)", {
     c = target(b, dynamic = map(a, b, .trace = c(a, b)))
   )
   make(plan)
-  value <- drake_cache()$get("c")
-  expect_equal(get_trace("a", value), readd(a))
-  expect_equal(read_trace("a", "c"), readd(a))
+  expect_equal(read_trace("a", c), readd(a))
   exp <- as.character(drake_cache()$get("b"))
-  expect_equal(read_trace("b", "c"), exp)
+  expect_equal(read_trace("b", c), exp)
   config <- drake_config(plan)
   make(plan)
   expect_equal(justbuilt(config), character(0))
@@ -1411,15 +1407,15 @@ test_with_dir("dynamic cross trace (#1052)", {
   )
   make(plan)
   value <- drake_cache()$get("z")
-  out <- get_trace("w", value)
+  out <- suppressWarnings(get_trace("w", value))
   exp <- rep(LETTERS[seq_len(3)], each = 4)
   expect_equal(out, exp)
-  out <- read_trace("w", "z")
+  out <- read_trace("w", z)
   expect_equal(out, exp)
-  out <- get_trace("x", value)
+  out <- read_trace("x", z)
   exp <- rep(letters[c(1, 1, 2, 2)], times = 3)
   expect_equal(out, exp)
-  out <- read_trace("x", "z")
+  out <- read_trace("x", "z", character_only = FALSE)
   expect_equal(out, exp)
 })
 
@@ -1428,15 +1424,12 @@ test_with_dir("dynamic group trace (#1052)", {
     w = LETTERS[seq_len(3)],
     x = letters[seq_len(2)],
     y = target(c(w, x), dynamic = cross(w, x, .trace = w)),
-    w_tr = get_trace("w", y),
+    w_tr = read_trace("w", y),
     z = target(y, dynamic = group(y, .by = w_tr, .trace = w_tr))
   )
   make(plan)
-  value <- drake_cache()$get("z")
-  expect_equal(get_trace("w_tr", value), LETTERS[seq_len(3)])
-  expect_equal(read_trace("w_tr", "z"), LETTERS[seq_len(3)])
+  expect_equal(read_trace("w_tr", z), LETTERS[seq_len(3)])
 })
-
 
 test_with_dir("dynamic combine() does not exist", {
   skip_on_cran()
@@ -1455,7 +1448,7 @@ test_with_dir("trace responds to dynamic max_expand (#1073)", {
       x,
       dynamic = map(x, .trace = x)
     ),
-    y_trace = get_trace("x", y),
+    y_trace = read_trace("x", y),
     z = target(
       sum(unlist(y)),
       dynamic = group(y, .by = y_trace)
@@ -1463,7 +1456,7 @@ test_with_dir("trace responds to dynamic max_expand (#1073)", {
   )
   make(plan, max_expand = 2)
   expect_equal(read_trace("x", "y"), seq_len(2))
-  expect_equal(readd(z), list(1, 2))
+  expect_equal(readd(z), c(1, 2))
 })
 
 test_with_dir("data frame trace (#1074)", {
@@ -1480,7 +1473,11 @@ test_with_dir("data frame trace (#1074)", {
     )
   )
   make(plan, max_expand = 3)
-  expect_equal(readd(y), unname(split(x[seq_len(3), ], f = seq_len(3))))
+  out <- readd(y)
+  exp <- x[seq_len(3), ]
+  rownames(out) <- NULL
+  rownames(exp) <- NULL
+  expect_equal(out, exp)
   expect_equal(read_trace("x", "y"), x[seq_len(3), ])
 })
 
@@ -1495,5 +1492,126 @@ test_with_dir("dynamic branching and memory strategies", {
   )
   # Should clear config$envir_subtargets without a fuss.
   make(plan, memory_strategy = "autoclean")
-  expect_true(is.list(readd(z)))
+  expect_true(is.character(readd(z)))
+})
+
+test_with_dir("format trigger for dynamic targets (#1104)", {
+  skip_if(getRversion() < "3.5.0")
+  plan <- drake_plan(
+    x = 1:4,
+    y = target(x, dynamic = map(x))
+  )
+  make(plan)
+  plan <- drake_plan(
+    x = 1:4,
+    y = target(x, dynamic = map(x), format = "rds")
+  )
+  make(plan)
+  config <- drake_config(plan)
+  out <- sort(justbuilt(config))
+  exp <- sort(c("y", subtargets(y)))
+  expect_equal(out, exp)
+})
+
+test_with_dir("dynamic targets are vectors (#1105)", {
+  plan <- drake_plan(
+    w = c("a", "a", "b", "b"),
+    x = seq_len(4),
+    y = target(x + 1, dynamic = map(x)),
+    z = target(sum(x) + sum(y), dynamic = group(x, y, .by = w))
+  )
+  make(plan)
+  expect_equal(readd(z), c(8, 16))
+})
+
+test_with_dir("clear the subtarget envir for non-sub-targets",  {
+  # Dynamic branching
+  # Get the mean mpg for each cyl in the mtcars dataset.
+  plan <- drake_plan(
+    raw = mtcars,
+    group_index = raw$cyl,
+    munged = target(raw[, c("mpg", "cyl")], dynamic = map(raw)),
+    mean_mpg_by_cyl = target(
+      data.frame(mpg = mean(munged$mpg), cyl = munged$cyl[1]),
+      dynamic = group(munged, .by = group_index)
+    )
+  )
+  make(plan)
+  expect_equal(nrow(readd(mean_mpg_by_cyl)), 3L)
+})
+
+test_with_dir("whole dynamic targets (#1107)", {
+  scenario <- get_testing_scenario()
+  envir <- eval(parse(text = scenario$envir))
+  parallelism <- scenario$parallelism
+  jobs <- scenario$jobs
+  caching <- scenario$caching
+  for (memory_strategy in c("speed", "autoclean", "preclean")) {
+    plan <- drake_plan(
+      raw = mtcars[seq_len(4), ],
+      rows = target(raw[, c("mpg", "cyl")], dynamic = map(raw)),
+      means = colMeans(rows),
+      sds = apply(rows, 1, sd),
+      results = list(means, sds)
+    )
+    config <- drake_config(plan, memory_strategy = memory_strategy)
+    expect_equal(config$spec[["raw"]]$deps_dynamic_whole, character(0))
+    expect_equal(config$spec[["rows"]]$deps_dynamic_whole, character(0))
+    expect_equal(config$spec[["means"]]$deps_dynamic_whole, "rows")
+    make(
+      plan,
+      memory_strategy = memory_strategy,
+      envir = envir,
+      parallelism = parallelism,
+      jobs = jobs,
+      caching = caching
+    )
+    cache <- drake_cache()
+    out <- cache$get("means")
+    expect_true(is.numeric(out))
+    expect_equal(length(out), 2)
+    expect_equal(sort(names(out)), sort(c("cyl", "mpg")))
+    expect_true(is.list(readd(results)))
+    clean(destroy = TRUE)
+  }
+})
+
+test_with_dir("dynamic targets get unloaded from memory (#1107)", {
+  plan <- drake_plan(
+    raw = mtcars[seq_len(4), ],
+    rows = target(raw[, c("mpg", "cyl")], dynamic = map(raw)),
+    means = colMeans(rows),
+    sds = apply(rows, 1, sd),
+    results = list(means, sds)
+  )
+  config <- drake_config(plan, memory_strategy = "autoclean")
+  make(plan)
+  expect_equal(ls(config$envir_dynamic), character(0))
+  manage_memory("rows", config)
+  expect_equal(ls(config$envir_dynamic), character(0))
+  manage_memory("means", config)
+  expect_equal(ls(config$envir_dynamic), "rows")
+  manage_memory("results", config)
+  expect_equal(ls(config$envir_dynamic), character(0))
+})
+
+test_with_dir("cache_planned() and cache_unplanned() (#)", {
+  plan <- drake_plan(w = 1)
+  make(plan)
+  expect_equal(cached_planned(plan), "w")
+  expect_equal(cached_unplanned(plan), character(0))
+  plan <- drake_plan(
+    x = seq_len(2),
+    y = target(x, dynamic = map(x))
+  )
+  expect_equal(cached_planned(plan), character(0))
+  expect_equal(cached_unplanned(plan), "w")
+  make(plan)
+  out <- cached_planned(plan)
+  exp <- c("x", "y", subtargets(y))
+  expect_equal(sort(out), sort(exp))
+  expect_equal(cached_unplanned(plan), "w")
+  expect_equal(sort(cached()), sort(c(exp, "w")))
+  clean(list = cached_unplanned(plan))
+  expect_equal(sort(cached()), sort(exp))
 })

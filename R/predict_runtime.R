@@ -119,9 +119,7 @@ predict_runtime <- function(
 #' }
 #' @return A data frame showing one likely arrangement
 #'   of targets assigned to parallel workers.
-#' @param config Optional internal runtime parameter list of
-#'   produced by both [make()] and
-#'   [drake_config()].
+#' @param config A configured workflow from [drake_config()].
 #' @param targets Character vector, names of targets.
 #'   Predict the runtime of building these targets
 #'   plus dependencies.
@@ -179,7 +177,7 @@ worker_prediction_info <- function(
   default_time = 0,
   warn = TRUE
 ) {
-  assert_config_not_plan(config)
+  assert_config(config)
   deprecate_targets_only(targets_only) # 2019-01-03 # nolint
   assumptions <- timing_assumptions(
     config = config,

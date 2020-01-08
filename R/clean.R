@@ -91,6 +91,10 @@ clean <- function(
     return(invisible())
   }
   cache <- decorate_storr(cache)
+  cache$lock()
+  if (!destroy) {
+    on.exit(cache$unlock(), add = TRUE)
+  }
   if (garbage_collection && abort_gc(cache$path)) {
     return(invisible()) # tested manually in test-always-skipped.R # nocov
   }
@@ -227,8 +231,8 @@ target_namespaces_ <- function(
 }
 
 clean_recovery_msg <- function() {
-  msg_enabled <- .pkg_envir[["drake_clean_recovery_msg"]] %||%
-    getOption("drake_clean_recovery_msg") %||%
+  msg_enabled <- .pkg_envir[["drake_clean_recovery_msg"]] %|||%
+    getOption("drake_clean_recovery_msg") %|||%
     TRUE
   if (!(interactive() && msg_enabled)) {
     return(FALSE)
@@ -236,7 +240,8 @@ clean_recovery_msg <- function() {
   # invoked manually in test-always-skipped.R
   # nocov start
   message(
-    "Undo clean(garbage_collection = FALSE) with make(recovery = TRUE). ",
+    "Undo clean(garbage_collection = FALSE) with ",
+    "make(your_plan, recover = TRUE). ",
     "Also builds unrecoverable targets. Message shown once per session ",
     "if options(drake_clean_recovery_msg) is not FALSE."
   )
@@ -246,8 +251,8 @@ clean_recovery_msg <- function() {
 }
 
 abort_gc <- function(path) {
-  menu_enabled <- .pkg_envir[["drake_clean_menu"]] %||%
-    getOption("drake_clean_menu") %||%
+  menu_enabled <- .pkg_envir[["drake_clean_menu"]] %|||%
+    getOption("drake_clean_menu") %|||%
     TRUE
   if (!(interactive() && menu_enabled)) {
     return(FALSE)
@@ -309,11 +314,14 @@ drake_gc <- function(
 ) {
   deprecate_search(search)
   deprecate_verbose(verbose)
-  if (!is.null(cache)) {
-    cache <- decorate_storr(cache)
-    cache$gc()
-    rm_bad_cache_filenames(cache)
+  if (is.null(cache)) {
+    return()
   }
+  cache <- decorate_storr(cache)
+  cache$lock()
+  on.exit(cache$unlock(), add = TRUE)
+  cache$gc()
+  rm_bad_cache_filenames(cache)
   invisible()
 }
 
@@ -387,6 +395,8 @@ rescue_cache <- function(
     return(invisible())
   }
   cache <- decorate_storr(cache)
+  cache$lock()
+  on.exit(cache$unlock(), add = TRUE)
   for (namespace in cache$list_namespaces()) {
     X <- cache$list(namespace = namespace)
     if (!is.null(targets)) {

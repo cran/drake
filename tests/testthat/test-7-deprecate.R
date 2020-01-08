@@ -18,7 +18,7 @@ test_with_dir("defunct functions", {
 
 test_with_dir("deprecation: target()", {
   skip_on_cran()
-  expect_warning(target(123), regexp = "user-side")
+  expect_error(target(123), regexp = "user-side")
 })
 
 test_with_dir("deprecation: fetch_cache", {
@@ -124,7 +124,7 @@ test_with_dir("drake version checks in previous caches", {
   # We need to be able to set the drake version
   # to check back compatibility.
   plan <- drake_plan(x = 1)
-  expect_silent(make(plan, verbose = 0L))
+  expect_silent(make(plan, verbose = 0L, session_info = TRUE))
   x <- drake_cache()
   suppressWarnings(expect_error(drake_session(cache = NULL), regexp = "make"))
   expect_warning(drake_session(cache = x), regexp = "deprecated")
@@ -171,7 +171,7 @@ test_with_dir("deprecate misc utilities", {
     cache, log_progress = TRUE, init_common_values = TRUE
   ))
   load_mtcars_example()
-  expect_warning(config <- drake_config(my_plan, graph = 1, layout = 2))
+  expect_warning(config <- drake_config(my_plan, graph = 1, spec = 2))
   expect_warning(make_imports(config))
   expect_warning(make_targets(config))
   expect_warning(make_with_config(config))
@@ -193,6 +193,7 @@ test_with_dir("deprecate misc utilities", {
   expect_warning(predict_load_balancing(config), regexp = "deprecated")
   expect_warning(tmp <- this_cache(), regexp = "deprecated")
   expect_warning(drake_cache_log_file(), regexp = "deprecated")
+  expect_warning(get_trace("a", "b"), regexp = "deprecated")
 })
 
 test_with_dir("deprecated arguments", {

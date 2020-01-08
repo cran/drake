@@ -234,7 +234,7 @@ loadd <- function(
   lazy <- parse_lazy_arg(lazy)
   assert_cache(cache)
   cache <- decorate_storr(cache)
-  namespace <- namespace %||% cache$default_namespace
+  namespace <- namespace %|||% cache$default_namespace
   tidyselect <- loadd_use_tidyselect(tidyselect, deps)
   if (tidyselect && requireNamespace("tidyselect", quietly = TRUE)) {
     targets <- drake_tidyselect_cache(
@@ -323,7 +323,8 @@ get_subtargets.drake_dynamic <- function(hashes, cache, subtargets) {
   if (!is.null(subtargets)) {
     hashes <- hashes[subtargets]
   }
-  lapply(hashes, cache$get_value, use_cache = FALSE)
+  out <- lapply(hashes, cache$get_value, use_cache = FALSE)
+  do.call(vec_c, out)
 }
 
 get_subtargets.default <- function(hashes, cache, subtargets) {
@@ -359,7 +360,7 @@ loadd_use_deps <- function(targets, config, deps) {
       call. = FALSE
     )
   }
-  assert_config_not_plan(config)
+  assert_config(config)
   targets <- deps_memory(targets = targets, config = config)
 }
 
@@ -517,7 +518,8 @@ read_drake_seed <- function(
 #' \lifecycle{maturing}
 #' @description Tip: read/load a cached item with [readd()]
 #'   or [loadd()].
-#' @seealso [readd()], [loadd()],
+#' @seealso [cached_planned()], [cached_unplanned()],
+#'   [readd()], [loadd()],
 #'   [drake_plan()], [make()]
 #' @export
 #' @return Either a named logical indicating whether the given
@@ -604,6 +606,97 @@ cached <- function(
   redisplay_keys(targets)
 }
 
+#' @title List targets in both the plan and the cache.
+#' \lifecycle{maturing}
+#' @description Includes dynamic sub-targets as well.
+#'   See examples for details.
+#' @seealso [cached()], [cached_unplanned]
+#' @export
+#' @return A character vector of target and sub-target names.
+#' @inheritParams cached
+#' @param plan A drake plan.
+#' @examples
+#' \dontrun{
+#' isolate_example("cache_planned() example", {
+#' plan <- drake_plan(w = 1)
+#' make(plan)
+#' cached_planned(plan)
+#' plan <- drake_plan(
+#'   x = seq_len(2),
+#'   y = target(x, dynamic = map(x))
+#' )
+#' cached_planned(plan)
+#' make(plan)
+#' cached_planned(plan)
+#' cached()
+#' })
+#' }
+cached_planned <- function(
+  plan,
+  path = NULL,
+  cache = drake::drake_cache(path = path),
+  namespace = NULL,
+  jobs = 1
+) {
+  if (is.null(cache)) {
+    return(character(0))
+  }
+  cache <- decorate_storr(cache)
+  namespace <- namespace %|||% cache$default_namespace
+  cached <- cache$list(namespace = namespace)
+  targets <- intersect(plan$target, cached)
+  subtargets <- unlist(lapply(targets, subtargets, character_only = TRUE))
+  planned <- c(targets, subtargets)
+  intersect(cached, planned)
+}
+
+#' @title List targets in the cache but not the plan.
+#' \lifecycle{maturing}
+#' @description Includes dynamic sub-targets as well.
+#'   See examples for details.
+#' @seealso [cached()], [cached_planned]
+#' @export
+#' @return A character vector of target and sub-target names.
+#' @inheritParams cached
+#' @param plan A drake plan.
+#' @examples
+#' \dontrun{
+#' isolate_example("cache_unplanned() example", {
+#' plan <- drake_plan(w = 1)
+#' make(plan)
+#' cached_unplanned(plan)
+#' plan <- drake_plan(
+#'   x = seq_len(2),
+#'   y = target(x, dynamic = map(x))
+#' )
+#' cached_unplanned(plan)
+#' make(plan)
+#' cached_unplanned(plan)
+#' # cached_unplanned() helps clean superfluous targets.
+#' cached()
+#' clean(list = cached_unplanned(plan))
+#' cached()
+#' })
+#' }
+cached_unplanned <- function(
+  plan,
+  path = NULL,
+  cache = drake::drake_cache(path = path),
+  namespace = NULL,
+  jobs = 1
+) {
+  if (is.null(cache)) {
+    return(character(0))
+  }
+  cache <- decorate_storr(cache)
+  namespace <- namespace %|||% cache$default_namespace
+  cached <- cache$list(namespace = namespace)
+  targets <- intersect(plan$target, cached)
+  subtargets <- unlist(lapply(targets, subtargets, character_only = TRUE))
+  planned <- c(targets, subtargets)
+  setdiff(cached, planned)
+}
+
 targets_only <- function(targets, cache, jobs) {
   parallel_filter(
     x = targets,
@@ -621,7 +714,7 @@ is_imported_cache <- Vectorize(function(target, cache) {
       target = target,
       character_only = TRUE,
       cache = cache
-    )$imported %||%
+    )$imported %|||%
       FALSE
   )
 },
@@ -755,7 +848,7 @@ find_cache <- function(
       call. = FALSE
     )
   }
-  dir <- dir %||% basename(default_cache_path())
+  dir <- dir %|||% basename(default_cache_path())
   while (!(dir %in% list.files(path = path, all.files = TRUE))) {
     path <- dirname(path)
     # If we can search no higher...
@@ -808,7 +901,7 @@ new_cache <- function(
 ) {
   deprecate_verbose(verbose)
   deprecate_console_log_file(console_log_file)
-  path <- path %||% default_cache_path()
+  path <- path %|||% default_cache_path()
   hash_algorithm <- sanitize_hash_algorithm(hash_algorithm)
   if (!is.null(type)) {
     warning(
@@ -840,7 +933,7 @@ sanitize_hash_algorithm <- function(hash_algorithm) {
 }
 
 this_cache_ <- function(path = NULL) {
-  path <- path %||% default_cache_path()
+  path <- path %|||% default_cache_path()
   usual_path_missing <- is.null(path) || !file.exists(path)
   if (usual_path_missing) {
     return(NULL)
@@ -1064,8 +1157,9 @@ single_cache_log <- function(key, cache) {
     key = key,
     field = "imported",
     cache = cache
-  ) %||NA%
-    TRUE
+  )
+  imported <- imported %|||% TRUE
+  imported <- imported %|||NA% TRUE
   type <- ifelse(imported, "import", "target")
   weak_tibble(hash = hash, type = type, name = key)
 }
@@ -1316,12 +1410,7 @@ progress <- function(
   if (!length(targets)) {
     targets <- cache$list(namespace = "progress")
   }
-  progress_results <- vapply(
-    targets,
-    get_progress_single,
-    cache = cache,
-    FUN.VALUE = character(1)
-  )
+  progress_results <- cache$get_progress(targets)
   out <- weak_tibble(target = targets, progress = progress_results)
   rownames(out) <- NULL
   if (is.null(progress)) {
@@ -1336,17 +1425,13 @@ progress <- function(
   out[out$progress %in% progress,, drop = FALSE] # nolint
 }
 
-get_progress_single <- function(target, cache) {
-  cache$get_progress(target = target)
-}
-
 memo_expr <- function(expr, cache, ...) {
   if (is.null(cache)) {
     return(force(expr))
   }
   lang <- match.call(expand.dots = FALSE)$expr
-  lang <- safe_deparse(lang)
-  key <- digest::digest(list(lang, ...), algo = cache$hash_algorithm)
+  lang <- safe_deparse(lang, backtick = TRUE)
+  key <- cache$digest(list(lang, ...))
   if (cache$exists(key = key, namespace = "memoize")) {
     return(cache$get(key = key, namespace = "memoize", use_cache = TRUE))
   }
@@ -1401,9 +1486,5 @@ old_meta <- function(key, cache) {
 }
 
 meta_elt <- function(field, meta) {
-  if (field %in% names(meta)) {
-    meta[[field]]
-  } else {
-    NA_character_
-  }
+  meta[[field]] %|||% NA_character_
 }

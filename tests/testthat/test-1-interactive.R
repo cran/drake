@@ -1,5 +1,35 @@
 drake_context("interactive")
 
+test_with_dir("code analysis print method", {
+  x <- analyze_code(quote(x)) # print by hand
+  m <- utils::capture.output(print(x))
+  expect_true(any(grepl("code analysis results list", m)))
+})
+
+test_with_dir("drake_config() print method", {
+  x <- drake_config(drake_plan(y = 1)) # print by hand
+  m <- utils::capture.output(print(x))
+  expect_true(any(grepl("configured drake workflow", m)))
+})
+
+test_with_dir("trigger() print method", {
+  x <- trigger() # print by hand
+  m <- utils::capture.output(print(x))
+  expect_true(any(grepl("list of triggers", m)))
+})
+
+test_with_dir("drake spec print method", {
+  f <- identity
+  plan <- drake_plan(x = 1)
+  config <- drake_config(plan)
+  x1 <- config$spec$f # print by hand
+  x2 <- config$spec$x # print by hand
+  m1 <- utils::capture.output(print(x1))
+  m2 <- utils::capture.output(print(x2))
+  expect_true(any(grepl("specification of import f", m1)))
+  expect_true(any(grepl("specification of target x", m2)))
+})
+
 test_with_dir("logger", {
   # testthat suppresses messages,
   # so we need to inspect the console output manually.
@@ -58,22 +88,19 @@ test_with_dir("time stamps and large files", {
     file.path(dir_csv, list.files(dir_csv, pattern = "csv$")[1]),
     file_csv
   )
-  for (i in 1:58) {
-    message(i)
-    file.append(file_large, file_csv)
-  }
+  file.append(file_large, file_csv)
   plan <- drake_plan(x = file_in(!!file_large))
   cache <- storr::storr_rds(tempfile())
   config <- drake_config(plan, cache = cache)
-  make(plan, cache = cache, console_log_file = log1)
+  make(plan, cache = cache, console_log_file = log1) # should be a little slow
   expect_equal(justbuilt(config), "x")
-  make(plan, cache = cache, console_log_file = log2)
+  make(plan, cache = cache, console_log_file = log2) # should be quick
   expect_equal(justbuilt(config), character(0))
   tmp <- file.append(file_large, file_csv)
-  make(plan, cache = cache, console_log_file = log3)
+  make(plan, cache = cache, console_log_file = log3) # should be a little slow
   expect_equal(justbuilt(config), "x")
   system2("touch", file_large)
-  make(plan, cache = cache, console_log_file = log4)
+  make(plan, cache = cache, console_log_file = log4) # should be a little slow
   expect_equal(justbuilt(config), character(0))
   # Now, compare the times stamps on the logs.
   # Make sure the imported file takes a long time to process the first time
@@ -98,7 +125,8 @@ test_with_dir("use_drake()", {
   # to tests/testthat/test-examples.R.
   skip_if_not_installed("usethis")
   usethis::create_project(".", open = FALSE, rstudio = FALSE)
-  files <- c("make.R", "_drake.R")
+  files <- c("make", "_drake", "R/packages", "R/functions", "R/plan")
+  files <- paste0(files, ".R")
   for (file in files) {
     expect_false(file.exists(file))
   }
@@ -106,6 +134,9 @@ test_with_dir("use_drake()", {
   for (file in files) {
     expect_true(file.exists(file))
   }
+  drake::r_make()
+  model <- readd(model)
+  expect_true(inherits(model, "summary.lm"))
 })
 
 test_with_dir("can keep going in parallel", {

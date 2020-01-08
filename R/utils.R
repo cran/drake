@@ -27,18 +27,14 @@ all_imports <- function(config) {
   V(config$graph)$name[V(config$graph)$imported]
 }
 
-assert_config_not_plan <- function(config) {
-  if (!inherits(config, "drake_plan")) {
+assert_config <- function(config) {
+  if (inherits(config, "drake_config")) {
     return()
   }
   stop(
-    "You supplied a drake plan to the ",
+    "the ",
     shQuote("config"),
-    " argument of a function. Instead, please call ",
-    shQuote("drake_config()"),
-    " on the plan and then supply the return value to ",
-    shQuote("config"),
-    ".",
+    " argument must be a drake_config() object.",
     call. = FALSE
   )
 }
@@ -111,19 +107,12 @@ error_na <- function(e) {
   NA_character_
 }
 
-all_is_na <- function(x) {
-  all(is.na(x))
-}
-
-safe_is_na <- function(x) {
-  tryCatch(is.na(x), error = error_false, warning = error_false)
-}
-
 complete_cases <- function(x) {
   !as.logical(Reduce(`|`, lapply(x, is.na)))
 }
 
 select_nonempty <- function(x) {
+  class <- class(x)
   keep <- vapply(
     X = x,
     FUN = function(y) {
@@ -131,7 +120,11 @@ select_nonempty <- function(x) {
     },
     FUN.VALUE = logical(1)
   )
-  x[keep]
+  out <- x[keep]
+  if (!is.null(out)) {
+    class(out) <- class
+  }
+  out
 }
 
 longest_match <- function(choices, against) {
@@ -143,6 +136,10 @@ longest_match <- function(choices, against) {
   )
   matches <- names(index[!is.na(index)])
   matches[which.max(nchar(matches))]
+}
+
+vlapply <- function(X, FUN, ...) {
+  vapply(X, FUN, FUN.VALUE = logical(1), ...)
 }
 
 num_unique <- function(x) {
@@ -264,6 +261,72 @@ file_move <- function(from, to) {
   invisible()
 }
 
+storage_copy <- function(
+  from,
+  to,
+  overwrite = FALSE,
+  merge = FALSE,
+  warn = TRUE,
+  jobs = 1L
+) {
+  if (dir.exists(from)) {
+    dir_copy(
+      from = from,
+      to = to,
+      overwrite = overwrite,
+      merge = merge,
+      warn = warn,
+      jobs = jobs
+    )
+  } else {
+    file_copy(from = from, to = to, overwrite = overwrite)
+  }
+  invisible()
+}
+
+dir_copy <- function(
+  from,
+  to,
+  overwrite = FALSE,
+  merge = FALSE,
+  warn = TRUE,
+  jobs = 1L
+) {
+  if (!overwrite && file.exists(to)) {
+    if (warn) {
+      warning(
+        "cannot move ", from, " to ", to, ". ",
+        to, " already exists.",
+        call. = FALSE
+      )
+    }
+    return(invisible())
+  }
+  if (!merge) {
+    unlink(to, recursive = TRUE)
+  }
+  dir_create(to)
+  files <- list.files(from, all.files = TRUE, recursive = TRUE)
+  args <- list(
+    from = file.path(from, files),
+    to = file.path(to, files)
+  )
+  drake_pmap(.l = args, .f = file_copy, overwrite = overwrite, jobs = jobs)
+  invisible()
+}
+
+file_copy <- function(from, to, overwrite = FALSE) {
+  dir_create(dirname(to))
+  file.copy(from = from, to = to, overwrite = overwrite)
+  invisible()
+}
+
+file_remove <- function(file) {
+  if (file.exists(file)) {
+    unlink(file, recursive = TRUE)
+  }
+}
+
 dir_create <- function(x) {
   if (!file.exists(x)) {
     dir.create(x, showWarnings = FALSE, recursive = TRUE)
@@ -272,6 +335,14 @@ dir_create <- function(x) {
     stop("cannot create directory at ", shQuote(x), call. = FALSE)
   }
   invisible()
+}
+
+all_is_na <- function(x) {
+  all(is.na(x))
+}
+
+safe_is_na <- function(x) {
+  tryCatch(is.na(x), error = error_false, warning = error_false)
 }
 
 # From lintr
@@ -292,10 +363,15 @@ dir_create <- function(x) {
 }
 
 `%||NA%` <- function(x, y) {
-  return_y <- is.null(x) ||
-    length(x) < 1L ||
-    (is.atomic(x) && anyNA(x))
-  if (return_y) {
+  if (is.null(x) || is.na(x)) {
+    y
+  } else {
+    x
+  }
+}
+
+`%|||NA%` <- function(x, y) {
+  if (anyNA(x)) {
     y
   } else {
     x

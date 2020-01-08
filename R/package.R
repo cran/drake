@@ -29,32 +29,34 @@
 #' head(large)
 #' }
 #' # Dynamic branching
+#' # Get the mean mpg for each cyl in the mtcars dataset.
 #' plan <- drake_plan(
-#'   w = c("a", "a", "b", "b"),
-#'   x = seq_len(4),
-#'   y = target(x + 1, dynamic = map(x)),
-#'   z = target(list(y = y, w = w), dynamic = group(y, .by = w))
+#'   raw = mtcars,
+#'   group_index = raw$cyl,
+#'   munged = target(raw[, c("mpg", "cyl")], dynamic = map(raw)),
+#'   mean_mpg_by_cyl = target(
+#'     data.frame(mpg = mean(munged$mpg), cyl = munged$cyl[1]),
+#'     dynamic = group(munged, .by = group_index)
+#'   )
 #' )
 #' make(plan)
-#' subtargets(y)
-#' readd(subtargets(y)[1], character_only = TRUE)
-#' readd(subtargets(y)[2], character_only = TRUE)
-#' readd(subtargets(z)[1], character_only = TRUE)
-#' readd(subtargets(z)[2], character_only = TRUE)
+#' readd(mean_mpg_by_cyl)
 #' })
 #' }
 #' @references <https://github.com/ropensci/drake>
 #' @useDynLib drake, .registration = TRUE
 #' @importFrom base64url base32_decode base32_encode
-#' @importFrom digest digest
+#' @importFrom digest getVDigest
 #' @importFrom igraph adjacent_vertices as_ids components delete_vertices
 #'   degree gorder graph_from_adjacency_matrix igraph_opt igraph_options
 #'   induced_subgraph is_dag make_empty_graph make_ego_graph set_vertex_attr
 #'   simplify topo_sort V vertex_attr
 #' @importFrom methods new setRefClass
+#' @importFrom parallel mclapply
 #' @importFrom rlang dots_list enquo eval_tidy expr quo_squash quos
 #' @importFrom storr storr_environment storr_rds
 #' @importFrom txtq txtq
 #' @importFrom utils compareVersion flush.console head menu packageVersion
-#'   read.csv sessionInfo stack type.convert unzip write.table
+#'   read.csv sessionInfo stack str type.convert unzip write.table
+#' @importFrom vctrs vec_c vec_slice
 NULL

@@ -86,7 +86,7 @@ test_with_dir("dependency profile", {
   expect_true(as.logical(dp[dp$name == "depend", "changed"]))
   expect_equal(sum(dp$changed), 1)
   plan$command <- "b + c"
-  config$layout <- create_drake_layout(
+  config$spec <- create_drake_spec(
     plan = plan,
     envir = config$envir,
     cache = config$cache,
@@ -116,6 +116,8 @@ test_with_dir("Missing cache", {
   s <- storr::storr_rds("s")
   unlink(s$path, recursive = TRUE)
   expect_equal(cached(), character(0))
+  expect_equal(cached_planned(), character(0))
+  expect_equal(cached_unplanned(), character(0))
 })
 
 test_with_dir("Cache namespaces", {
@@ -425,11 +427,12 @@ test_with_dir("master caching, environment caches and parallelism", {
   skip_on_cran()
   skip_if_not_installed("knitr")
   skip_if_not_installed("future")
+  skip_on_os("windows")
   if (!grepl("loop", get_testing_scenario_name())) {
     skip("avoid conflicts with other hpc scenarios")
   }
   load_mtcars_example()
-  future::plan(future::multisession)
+  future::plan(future::multicore)
   cache <- storr::storr_environment() # not thread-safe
   make(
     my_plan,
@@ -516,7 +519,7 @@ test_with_dir("selection and filtering in progress", {
   skip_if_not_installed("tidyselect")
   expect_equivalent(progress(tidyselect::starts_with("x_")), exp4)
   cache <- drake_cache()
-  expect_equal(get_progress_single("12345", cache), "none")
+  expect_equal(cache$get_progress("12345"), "none")
 })
 
 test_with_dir("make() writes a cache log file", {
@@ -736,7 +739,8 @@ test_with_dir("arbitrary storr in-memory cache", {
     cache = cache,
     parallelism = parallelism,
     jobs = jobs,
-    verbose = 0L
+    verbose = 0L,
+    session_info = TRUE
   )
   envir$reg2 <- function(d) {
     d$x3 <- d$x ^ 3
@@ -872,4 +876,32 @@ test_with_dir("ignore storrs (#1071)", {
   expect_equal(readd(x), c("val", "target"))
   expect_equal(cache$get("x"), "val")
   expect_equal(readd(cache), "storr")
+})
+
+test_with_dir("cache locking (#1081)", {
+  skip_on_cran()
+  skip_if_not_installed("visNetwork")
+  plan <- drake_plan(x = 1)
+  config <- drake_config(plan)
+  config$cache$lock()
+  expect_error(make(plan), regexp = "locked")
+  expect_error(outdated(config), regexp = "locked")
+  expect_error(recoverable(config), regexp = "locked")
+  expect_error(vis_drake_graph(config), regexp = "locked")
+  expect_error(drake_gc(), regexp = "locked")
+  expect_error(clean(), regexp = "locked")
+  expect_error(rescue_cache(), regexp = "locked")
+  outdated(config, make_imports = FALSE)
+  recoverable(config, make_imports = FALSE)
+  g <- vis_drake_graph(config, make_imports = FALSE)
+  config$cache$unlock()
+  outdated(config)
+  recoverable(config)
+  g <- vis_drake_graph(config)
+  config$cache$lock()
+  expect_error(config$cache$lock(), regexp = "locked")
+  replicate(4, config$cache$unlock())
+  rescue_cache()
+  drake_gc()
+  clean()
 })

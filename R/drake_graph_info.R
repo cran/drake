@@ -8,8 +8,7 @@
 #'   the legend nodes. The list also contains the
 #'   default title of the graph.
 #' @seealso [vis_drake_graph()]
-#' @param config A [drake_config()] configuration list.
-#'   You can get one as a return value from [make()] as well.
+#' @param config A configured workflow from [drake_config()].
 #'
 #' @param from Optional collection of target/import names.
 #'   If `from` is nonempty,
@@ -138,7 +137,7 @@ drake_graph_info <- function(
   on_select_col = NULL
 ) {
   assert_pkg("visNetwork")
-  assert_config_not_plan(config)
+  assert_config(config)
   config$logger$minor("begin drake_graph_info()")
   on.exit(config$logger$minor("end drake_graph_info()"), add = TRUE)
   if (!length(V(config$graph)$name)) {
@@ -154,7 +153,7 @@ drake_graph_info <- function(
   config$hover <- hover
   config$on_select_col <- on_select_col
   config$file_out <- lapply(all_targets(config), function(target) {
-    config$layout[[target]]$deps_build$file_out
+    config$spec[[target]]$deps_build$file_out
   })
   names(config$file_out) <- all_targets(config)
   if (!show_output_files) {
@@ -228,13 +227,10 @@ get_raw_node_category_data <- function(config) {
   )
   config$dynamic <- config$targets[is_dynamic]
   config$outdated <- resolve_graph_outdated(config = config)
-  config$running <- running(cache = config$cache)
-  config$failed <- failed(cache = config$cache)
-  config$files <- parallel_filter(
-    x = all_labels,
-    f = is_encoded_path,
-    jobs = config$jobs_preprocess
-  )
+  prog <- config$cache$get_progress(config$targets)
+  config$running <- config$targets[prog == "running"]
+  config$failed <- config$targets[prog == "failed"]
+  config$files <- all_labels[is_encoded_path(all_labels)]
   config$functions <- parallel_filter(
     x = config$import_names,
     f = function(x) {
@@ -314,9 +310,9 @@ get_cluster_grouping <- function(config, group) {
   vapply(
     X = config$nodes$id,
     FUN = function(x) {
-      out <- config$layout[[x]][[group]]
+      out <- config$spec[[x]][[group]]
       if (!is.character(out)) {
-        out <- safe_deparse(out)
+        out <- safe_deparse(out, backtick = TRUE)
       }
       out %||% NA_character_
     },
@@ -637,7 +633,7 @@ target_hover_text <- function(targets, config) {
   commands <- vapply(
     X = targets,
     FUN = function(target) {
-      config$layout[[target]]$command_standardized
+      config$spec[[target]]$command_standardized
     },
     FUN.VALUE = character(1),
     USE.NAMES = FALSE
@@ -655,7 +651,7 @@ target_hover_text <- function(targets, config) {
 # for large functions.
 style_hover_text <- function(x) {
   if (!is.character(x)) {
-    x <- safe_deparse(x)
+    x <- safe_deparse(x, backtick = TRUE)
   }
   x <- crop_lines(x, n = hover_lines)
   x <- crop_text(x, width = hover_width)

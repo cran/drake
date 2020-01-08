@@ -1,6 +1,6 @@
 create_drake_graph <- function(
   plan,
-  layout,
+  spec,
   targets,
   cache,
   jobs,
@@ -8,10 +8,10 @@ create_drake_graph <- function(
 ) {
   config <- list(plan = plan, jobs = jobs, logger = logger, cache = cache)
   edges <- memo_expr(
-    cdg_create_edges(config, layout),
+    cdg_create_edges(config, spec),
     cache,
     plan,
-    layout
+    spec
   )
   memo_expr(
     cdg_finalize_graph(edges, targets, config),
@@ -21,9 +21,10 @@ create_drake_graph <- function(
   )
 }
 
-cdg_create_edges <- function(config, layout) {
+cdg_create_edges <- function(config, spec) {
+  config$logger$minor("create graph edges")
   edges <- lightly_parallelize(
-    X = layout,
+    X = spec,
     FUN = cdg_node_to_edges,
     jobs = config$jobs,
     config = config
@@ -37,7 +38,6 @@ cdg_create_edges <- function(config, layout) {
 }
 
 cdg_node_to_edges <- function(node, config) {
-  config$logger$minor("connect", target = node$target)
   file_out <- node$deps_build$file_out
   node$deps_build$file_out <- NULL
   inputs <- clean_nested_char_list(
@@ -62,7 +62,7 @@ cdg_node_to_edges <- function(node, config) {
     )
   }
   if (is.null(out)) {
-    out <- list(from = node$target %||% character(0))
+    out <- list(from = as.character(node$target))
     out$to <- out$from
   }
   out

@@ -89,6 +89,7 @@ GitLab
 globals
 gridlines
 gsp
+gzip
 Halotype
 HDF
 HDF5
@@ -170,6 +171,7 @@ Pinnoi
 pleurosoriopsis
 Pleurorosiopsis
 Polypodiaceae
+POSIXct
 pre
 preCCProbPaper
 preclean

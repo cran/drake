@@ -1,3 +1,50 @@
+# Version 7.9.0
+
+## Breaking changes in dynamic branching
+
+- Embrace the `vctrs` paradigm and its type stability for dynamic branching (#1105, #1106).
+- Accept `target` as a symbol by default in `read_trace()`. Required for the trace to make sense in #1107.
+
+## Bug fixes
+
+- Repair reference to custom HPC resources in the `"future"` backend (#1083, @jennysjaarda).
+- Properly copy data when importing targets from one cache into another (#1120, @brendanf).
+- Prevent dynamic vector sizes from conflicting with file sizes in metadata.
+
+## New features
+
+- Add a new `log_build_times` argument to `make()` and `drake_config()`. Allows users to disable the recording of build times. Produces a speedup of up to 20% on Macs (#1078).
+- Implement cache locking to prohibit concurrent calls to `make()`, `outdated(make_imports = TRUE)`, `recoverable(make_imports = TRUE)`, `vis_drake_graph(make_imports = TRUE)`, `clean()`, etc. on the same cache.
+- Add a new `format` trigger to invalidate targets when the specialized data format changes (#1104, @kendonB).
+- Add new functions `cache_planned()` and `cache_unplanned()` to help selectively clean workflows with dynamic targets (#1110, @kendonB).
+- Add S3 classes and pretty print methods for `drake_config()` objects and `analyze_code()` objects.
+- Add a new `"qs"` format (#1121, @kendonB).
+
+## Speedups
+
+- Avoid setting seeds for imports (#1086, @adamkski).
+- Avoid working directly with POSIXct times (#1086, @adamkski)
+- Avoid excessive calls to `%||%` (`%|||%` is faster). (#1089, @billdenney)
+- Remove `%||NA` due to slowness (#1089, @billdenney).
+- Use hash tables to speed up `is_dynamic()` and `is_subtarget()` (#1089, @billdenney).
+- Use `getVDigest()` instead of `digest()` (#1089, #1092, https://github.com/eddelbuettel/digest/issues/139#issuecomment-561870289, @eddelbuettel, @billdenney).
+- Pre-compute `backtick` and `.deparseOpts()` to speed up `deparse()` (#1086, `https://stackoverflow.com/users/516548/g-grothendieck`, @adamkski).
+- Pre-compute which targets exist in advance (#1095).
+- Avoid gratuitous cache interactions and data frame operations in `build_times()` (#1098).
+- Use `mget_hash()` in `progress()` (#1098).
+- Get target progress info only once in `drake_graph_info()` (#1098).
+- Speed up the retrieval of old metadata in `outdated()` (#1098).
+- In `make()`, avoid checking for nonexistent metadata for missing targets.
+- Reduce logging in `drake_config()`.
+
+## Enhancements
+
+- Write a complete project structure in `use_drake()` (#1097, @lorenzwalthert, @tjmahr).
+- Add a minor logger note to say how many dynamic sub-targets are registered at a time (#1102, @kendonB).
+- Handle dependencies that are dynamic targets but not declared as such for the current target (#1107).
+- Internally, the "layout" data structure is now called the "workflow specification", or "spec" for short. The spec is `drake`'s interpretation of the plan. In the plan, all the dependency relationships among targets and files are *implicit*. In the spec, they are all *explicit*. We get from the plan to the spec using static code analysis, e.g. `analyze_code()`.
+
+
 # Version 7.8.0
 
 ## Bug fixes
@@ -15,8 +62,7 @@
 - Add new `get_trace()` and `read_trace()` functions to help track which values of grouping variables go into the making of dynamic sub-targets.
 - Add a new `id_chr()` function to get the name of the target while `make()` is running.
 - Implement `plot(plan)` (#1036).
-- `vis_drake_graph()`, `drake_graph_info()`, and `render_drake_graph()` now 
-  take arguments that allow behavior to be defined upon selection of nodes. (#1031, @mstr3336).
+- `vis_drake_graph()`, `drake_graph_info()`, and `render_drake_graph()` now take arguments that allow behavior to be defined upon selection of nodes. (#1031,@mstr3336).
 - Add a new `max_expand` argument to `make()` and `drake_config()` to scale down dynamic branching (#1050, @hansvancalster).
 
 ## Enhancements

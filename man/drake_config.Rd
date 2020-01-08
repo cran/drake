@@ -2,7 +2,7 @@
 % Please edit documentation in R/drake_config.R
 \name{drake_config}
 \alias{drake_config}
-\title{Interpret the plan and prepare for \code{\link[=make]{make()}}
+\title{Configure a drake workflow to your environment and plan.
 \lifecycle{maturing}}
 \usage{
 drake_config(
@@ -35,7 +35,7 @@ drake_config(
   skip_imports = FALSE,
   skip_safety_checks = FALSE,
   lazy_load = "eager",
-  session_info = TRUE,
+  session_info = NULL,
   cache_log_file = NULL,
   seed = NULL,
   caching = c("master", "worker"),
@@ -50,13 +50,15 @@ drake_config(
   sleep = function(i) 0.01,
   hasty_build = NULL,
   memory_strategy = "speed",
+  spec = NULL,
   layout = NULL,
   lock_envir = TRUE,
   history = TRUE,
   recover = FALSE,
   recoverable = TRUE,
   curl_handles = list(),
-  max_expand = NULL
+  max_expand = NULL,
+  log_build_times = TRUE
 )
 }
 \arguments{
@@ -192,7 +194,7 @@ and slows down \code{make()} a little.
 If you need to reduce or limit the number of files in the cache,
 call \code{make(log_progress = FALSE, recover = FALSE)}.}
 
-\item{graph}{An \code{igraph} object from the previous \code{make()}.
+\item{graph}{An \code{config$graph} object from an existing \code{drake_config()}.
 Supplying a pre-built graph could save time.}
 
 \item{trigger}{Name of the trigger to apply to all targets.
@@ -211,7 +213,13 @@ This argument is overridden if you supply your own \code{graph} argument.}
 \item{skip_safety_checks}{Logical, whether to skip the safety checks
 on your workflow. Use at your own peril.}
 
-\item{lazy_load}{Either a character vector or a logical. Choices:
+\item{lazy_load}{An old feature, currently being questioned.
+For the current recommendations on memory management, see
+\url{https://books.ropensci.org/drake/memory.html#memory-strategies}.
+The \code{lazy_load} argument is either a character vector or a logical.
+For dynamic targets, the behavior is always \code{"eager"} (see below).
+So the \code{lazy_load} argument is for static targets only.
+Choices for \code{lazy_load}:
 \itemize{
 \item \code{"eager"}: no lazy loading. The target is loaded right away
 with \code{\link[=assign]{assign()}}.
@@ -234,7 +242,8 @@ Lazy loading may be more memory efficient in some use cases, but
 it may duplicate the loading of dependencies, costing time.}
 
 \item{session_info}{Logical, whether to save the \code{sessionInfo()}
-to the cache. This behavior is recommended for serious \code{\link[=make]{make()}}s
+to the cache. Defaults to \code{TRUE}.
+This behavior is recommended for serious \code{\link[=make]{make()}}s
 for the sake of reproducibility. This argument only exists to
 speed up tests. Apparently, \code{sessionInfo()} is a bottleneck
 for small \code{\link[=make]{make()}}s.}
@@ -425,10 +434,11 @@ help file examples of \code{\link[=drake_envir]{drake_envir()}}.
 Also see the \code{garbage_collection} argument of \code{make()} and
 \code{drake_config()}.}
 
-\item{layout}{\code{config$layout}, where \code{config} is the return value
-from a prior call to \code{drake_config()}. If your plan or environment
-have changed since the last \code{make()}, do not supply a \code{layout} argument.
-Otherwise, supplying one could save time.}
+\item{spec}{\code{config$spec} from an existing \code{drake_config()}.
+Supplying a pre-built workflow specification to this argument
+could save time in some cases.}
+
+\item{layout}{Deprecated. Use \code{spec} instead.}
 
 \item{lock_envir}{Logical, whether to lock \code{config$envir} during \code{make()}.
 If \code{TRUE}, \code{make()} quits in error whenever a command in your
@@ -514,27 +524,34 @@ Note: the \code{max_expand} argument of \code{make()} and
 \code{drake_config()} is for dynamic branching only.
 The static branching \code{max_expand}
 is an argument of \code{drake_plan()} and \code{transform_plan()}.}
+
+\item{log_build_times}{Logical, whether to record build_times for targets.
+Mac users may notice a 20\% speedup in \code{make()}
+with \code{build_times = FALSE}.}
 }
 \value{
-The master internal configuration list of a project.
+A configured \code{drake} workflow.
 }
 \description{
-\code{\link[=drake_config]{drake_config()}} does all the preprocessing that
-\code{\link[=make]{make()}} needs to build targets. This includes interpreting
-the plan (from \code{\link[=drake_plan]{drake_plan()}}) and analyzing how all the
-targets fit together. The result is a list of objects
-that \code{\link[=make]{make()}} needs to keep track of everything during runtime.
+In \code{drake}, \code{\link[=make]{make()}} has two stages:
+\enumerate{
+\item Configure a workflow to your environment and plan.
+\item Build targets.
+The \code{\link[=drake_config]{drake_config()}} function just does step (1).
+It returns a configured workflow that you can inspect
+with utility functions like
+\code{\link[=outdated]{outdated()}} and \code{\link[=vis_drake_graph]{vis_drake_graph()}}.
+The configured workflow strongly depends on your environment
+and plan, so if you create new functions or change the plan,
+rerun \code{\link[=drake_config]{drake_config()}}.
+And once you create a configured workflow with \code{\link[=drake_config]{drake_config()}},
+do not modify it by hand.
+}
 }
 \details{
-Once you create a list with \code{\link[=drake_config]{drake_config()}},
-do not modify it by hand.
-
-Utility functions such as \code{\link[=outdated]{outdated()}},
-\code{\link[=vis_drake_graph]{vis_drake_graph()}}, and \code{\link[=predict_runtime]{predict_runtime()}} require output from
-\code{\link[=drake_config]{drake_config()}} for the \code{config} argument.
-If you supply a \code{\link[=drake_config]{drake_config()}} object to the \code{config}
-argument of \code{\link[=make]{make()}}, then \code{drake} will ignore all the other arguments
-because it already has everything it needs in \code{config}.
+Almost all function arguments are exactly the same
+between \code{\link[=make]{make()}} and \code{drake_config()}
+(all except \code{config} in \code{\link[=make]{make()}}).
 }
 \section{Recovery}{
 

@@ -33,12 +33,12 @@
 #' deps_code("x + y + 123")
 deps_code <- function(x) {
   if (is.function(x)) {
-    out <- cdl_import_dependencies(x)
+    out <- cds_import_dependencies(x)
   } else {
     if (is.character(x)) {
       x <- parse(text = x)
     }
-    out <- cdl_command_dependencies(x)
+    out <- cds_command_dependencies(x)
   }
   display_deps_list(decode_deps_list(out))
 }
@@ -78,7 +78,7 @@ deps_target <- function(
   if (!character_only) {
     target <- as.character(substitute(target))
   }
-  out <- config$layout[[target]]$deps_build
+  out <- config$spec[[target]]$deps_build
   out <- decode_deps_list(out)
   display_deps_list(select_nonempty(out))
 }
@@ -203,6 +203,9 @@ deps_profile <- function(
   if (!length(meta$command)) {
     meta$command <- NA_character_
   }
+  if (!length(meta$seed)) {
+    meta$seed <- NA_integer_
+  }
   old_values <- meta[c(
     "command",
     "dependency_hash",
@@ -212,24 +215,18 @@ deps_profile <- function(
   )]
   old_values <- unlist(old_values)
   old_values <- unname(old_values)
-  old_values[1] <- digest::digest(
-    paste(old_values[1], collapse = ""),
-    algo = config$cache$hash_algorithm,
-    serialize = FALSE
-  )
-  layout <- config$layout[[target]]
+  elt <- paste(old_values[1], collapse = "")
+  old_values[1] <- config$cache$digest(elt, serialize = FALSE)
+  spec <- config$spec[[target]]
   new_values <- c(
-    digest::digest(
-      paste(layout$command_standardized, collapse = ""),
-      algo = config$cache$hash_algorithm,
+    config$cache$digest(
+      paste(spec$command_standardized, collapse = ""),
       serialize = FALSE
     ),
     dependency_hash(target, config),
     input_file_hash(target, config),
     output_file_hash(target, config),
-    as.integer(
-      layout$seed %||NA% seed_from_basic_types(config$seed, target)
-    )
+    resolve_target_seed(target, config)
   )
   weak_tibble(
     name = c("command", "depend", "file_in", "file_out", "seed"),
@@ -241,7 +238,7 @@ deps_profile <- function(
 
 #' @title List the targets and imports that are reproducibly tracked.
 #' \lifecycle{stable}
-#' @description List all the layout
+#' @description List all the spec
 #' in your project's dependency network.
 #' @export
 #' @return A character vector with the names of reproducibly-tracked targets.
@@ -261,7 +258,7 @@ tracked <- function(config) {
   out <- lightly_parallelize(
     X = V(config$graph)$name,
     FUN = function(target) {
-      out <- config$layout[[target]]$deps_build
+      out <- config$spec[[target]]$deps_build
       out <- as.list(out)
       out <- unlist(out)
       c(out, target)

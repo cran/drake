@@ -5,7 +5,10 @@ handle_triggers <- function(target, meta, config) {
   if (is_registered_dynamic(target, config)) {
     return(FALSE)
   }
-  meta_old <- old_meta(key = target, cache = config$cache)
+  meta_old <- NULL
+  if (target_exists(target, config)) {
+    meta_old <- config$cache$get(key = target, namespace = "meta")
+  }
   static_ok <- !any_static_triggers(target, meta, meta_old, config) ||
     recover_target(target, meta, config)
   if (!is_dynamic(target, config)) {
@@ -88,10 +91,7 @@ recovery_key_impl.default <- function(target, meta, config) {
   if (is.null(meta$trigger$value)) {
     change_hash <- NA_character_
   } else {
-    change_hash <- digest::digest(
-      meta$trigger$value,
-      algo = config$cache$hash_algorithm
-    )
+    change_hash <- config$cache$digest(meta$trigger$value)
   }
   x <- c(
     meta$command,
@@ -99,16 +99,12 @@ recovery_key_impl.default <- function(target, meta, config) {
     meta$input_file_hash,
     meta$output_file_hash,
     as.character(meta$seed),
-    safe_deparse(meta$trigger$condition),
+    safe_deparse(meta$trigger$condition, backtick = TRUE),
     meta$trigger$mode,
     change_hash
   )
   x <- paste(x, collapse = "|")
-  digest::digest(
-    x,
-    algo = config$cache$hash_algorithm,
-    serialize = FALSE
-  )
+  config$cache$digest(x, serialize = FALSE)
 }
 
 recovery_key_impl.subtarget <- function(target, meta, config) {
@@ -153,6 +149,9 @@ check_triggers_stage2 <- function(target, meta, meta_old, config) {
     return(TRUE)
   }
   if (check_trigger_seed(target, meta, meta_old, config)) {
+    return(TRUE)
+  }
+  if (check_trigger_format(target, meta, meta_old, config)) {
     return(TRUE)
   }
   if (check_trigger_change(target, meta, config)) {
@@ -236,6 +235,16 @@ check_trigger_change <- function(target, meta, config) {
   FALSE
 }
 
+check_trigger_format <- function(target, meta, meta_old, config) {
+  if (identical(meta$trigger$format, TRUE)) {
+    if (trigger_format(target, meta, meta_old, config)) {
+      config$logger$minor("trigger format", target = target)
+      return(TRUE)
+    }
+  }
+  FALSE
+}
+
 check_trigger_dynamic <- function(target, meta, meta_old, config) {
   trigger_dynamic(target, meta, meta_old, config)
 }
@@ -270,7 +279,7 @@ trigger_file <- function(target, meta, meta_old, config) {
 }
 
 trigger_file_missing <- function(target, meta, config) {
-  file_out <- config$layout[[target]]$deps_build$file_out
+  file_out <- config$spec[[target]]$deps_build$file_out
   for (file in file_out) {
     if (!file.exists(config$cache$decode_path(file))) {
       return(TRUE)
@@ -294,12 +303,24 @@ trigger_seed <- function(target, meta, meta_old, config) {
   !identical(as.integer(seed), as.integer(meta$seed))
 }
 
+trigger_format <- function(target, meta, meta_old, config) {
+  format_new <- meta$format
+  format_old <- meta_old$format
+  if (is.null(format_new) || is.null(format_old)) {
+    return(FALSE)
+  }
+  !identical(format_new, format_old)
+}
+
 trigger_condition <- function(target, meta, config) {
   if (!length(target) || !length(config) || !length(meta)) {
     return(FALSE)
   }
   if (is.language(meta$trigger$condition)) {
-    try_load(config$layout[[target]]$deps_condition$memory, config = config)
+    try_load_deps(
+      config$spec[[target]]$deps_condition$memory,
+      config = config
+    )
     value <- eval(meta$trigger$condition, envir = config$envir_targets)
   } else {
     value <- meta$trigger$condition

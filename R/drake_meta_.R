@@ -1,5 +1,6 @@
 drake_meta_ <- function(target, config) {
-  class <- ifelse(is_subtarget(target, config), "subtarget", "target")
+  is_subtarget <- is_subtarget(target, config) %|||% FALSE
+  class <- ifelse(is_subtarget, "subtarget", "target")
   class(target) <- class
   drake_meta_impl(target, config)
 }
@@ -9,47 +10,49 @@ drake_meta_impl <- function(target, config) {
 }
 
 drake_meta_impl.subtarget <- function(target, config) {
-  seed <- config$layout[[target]]$seed %||NA%
-    seed_from_basic_types(config$seed, target)
-  list(
+  out <- list(
     name = target,
     target = target,
     imported = FALSE,
     isfile = FALSE,
-    time_start = proc.time(),
-    seed = as.integer(seed)
+    seed = resolve_target_seed(target, config)
   )
+  if (config$log_build_times) {
+    out$time_start <- proc_time()
+  }
+  out
 }
 
 drake_meta_impl.default <- function(target, config) {
-  layout <- config$layout[[target]]
+  spec <- config$spec[[target]]
   meta <- list(
     name = target,
     target = target,
-    imported = layout$imported %||% TRUE,
+    imported = spec$imported %|||% TRUE,
     missing = target_missing(target, config),
-    seed = as.integer(
-      layout$seed %||NA% seed_from_basic_types(config$seed, target)
-    ),
-    time_start = proc.time(),
-    file_out = layout$deps_build$file_out,
-    dynamic = is.call(layout$dynamic)
+    file_out = spec$deps_build$file_out,
+    format = spec$format %||NA% "none",
+    dynamic = is.call(spec$dynamic)
   )
+  if (config$log_build_times) {
+    meta$time_start <- proc_time()
+  }
   if (meta$imported) {
     meta$isfile <- is_encoded_path(target)
     meta$trigger <- trigger(condition = TRUE)
   } else {
     meta$isfile <- FALSE
-    meta$trigger <- as.list(layout$trigger)
+    meta$trigger <- as.list(spec$trigger)
+    meta$seed <- resolve_target_seed(target, config)
   }
   # For imported files.
   if (meta$isfile) {
     path <- config$cache$decode_path(target)
     meta$mtime <- storage_mtime(path)
-    meta$size <- storage_size(path)
+    meta$size_storage <- storage_size(path)
   }
   if (meta$trigger$command) {
-    meta$command <- layout$command_standardized
+    meta$command <- spec$command_standardized
   }
   if (meta$trigger$depend) {
     meta$dependency_hash <- dependency_hash(target = target, config = config)
@@ -59,7 +62,7 @@ drake_meta_impl.default <- function(target, config) {
     meta$output_file_hash <- output_file_hash(target = target, config = config)
   }
   if (!is.null(meta$trigger$change)) {
-    try_load(layout$deps_change$memory, config = config)
+    try_load_deps(spec$deps_change$memory, config = config)
     meta$trigger$value <- eval(meta$trigger$change, config$envir_targets)
   }
   if (is_dynamic(target, config)) {
@@ -74,8 +77,34 @@ target_missing <- function(target, config) {
 }
 
 target_exists <- function(target, config) {
+  if (is.null(config$ht_target_exists)) {
+    target_exists_slow(target, config)
+  } else {
+    target_exists_fast(target, config)
+  }
+}
+
+target_exists_slow <- function(target, config) {
   config$cache$exists(key = target) &
     config$cache$exists(key = target, namespace = "meta")
+}
+
+target_exists_single <- function(target, config) {
+  ht_exists(ht = config$ht_target_exists, x = target)
+}
+
+target_exists_fast <- Vectorize(
+  target_exists_single,
+  vectorize.args = "target",
+  USE.NAMES = FALSE
+)
+
+resolve_target_seed <- function(target, config) {
+  seed <- config$spec[[target]]$seed
+  if (is.null(seed) || is.na(seed)) {
+    seed <- seed_from_basic_types(config$seed, target)
+  }
+  as.integer(seed)
 }
 
 # A numeric hash that could be used as a
@@ -88,19 +117,19 @@ seed_from_basic_types <- function(...) {
 }
 
 integer_hash <- function(x, mod = .Machine$integer.max) {
-  hash <- digest::digest(x, algo = "murmur32", serialize = FALSE)
+  hash <- digest_murmur32(x, serialize = FALSE)
   hexval <- paste0("0x", hash)
-  as.integer(utils::type.convert(hexval) %% mod)
+  as.integer(type.convert(hexval) %% mod)
 }
 
 dependency_hash <- function(target, config) {
-  layout <- config$layout[[target]]
-  x <- layout$deps_build
+  spec <- config$spec[[target]]
+  x <- spec$deps_build
   deps <- c(x$globals, x$namespaced, x$loadd, x$readd)
   if (is_imported(target, config)) {
     deps <- c(deps, x$file_in, x$knitr_in)
   }
-  deps <- setdiff(deps, layout$deps_dynamic)
+  deps <- setdiff(deps, spec$deps_dynamic)
   if (!length(deps)) {
     return("")
   }
@@ -112,9 +141,9 @@ dependency_hash <- function(target, config) {
 }
 
 dynamic_dependency_hash <- function(target, config) {
-  layout <- config$layout[[target]]
-  deps_dynamic <- layout$deps_dynamic
-  deps_trace <- sort(unique(layout$deps_dynamic_trace))
+  spec <- config$spec[[target]]
+  deps_dynamic <- spec$deps_dynamic
+  deps_trace <- sort(unique(spec$deps_dynamic_trace))
   deps <- c(deps_dynamic, deps_trace)
   dependency_hash_impl(deps, config)
 }
@@ -126,11 +155,7 @@ dependency_hash_impl <- function(deps, config) {
     config = config
   )
   out <- paste(out, collapse = "")
-  digest::digest(
-    out,
-    algo = config$cache$hash_algorithm,
-    serialize = FALSE
-  )
+  config$cache$digest(out, serialize = FALSE)
 }
 
 self_hash <- function(target, config) {
@@ -142,7 +167,7 @@ self_hash <- function(target, config) {
 }
 
 is_imported <- function(target, config) {
-  config$layout[[target]]$imported %||% TRUE
+  config$spec[[target]]$imported %|||% TRUE
 }
 
 input_file_hash <- function(
@@ -150,7 +175,7 @@ input_file_hash <- function(
   config,
   size_threshold = rehash_storage_size_threshold
 ) {
-  deps <- config$layout[[target]]$deps_build
+  deps <- config$spec[[target]]$deps_build
   files <- sort(unique(as.character(c(deps$file_in, deps$knitr_in))))
   if (!length(files)) {
     return("")
@@ -162,11 +187,7 @@ input_file_hash <- function(
     size_threshold = size_threshold
   )
   out <- paste(out, collapse = "")
-  digest::digest(
-    out,
-    algo = config$cache$hash_algorithm,
-    serialize = FALSE
-  )
+  config$cache$digest(out, serialize = FALSE)
 }
 
 output_file_hash <- function(
@@ -174,7 +195,7 @@ output_file_hash <- function(
   config,
   size_threshold = rehash_storage_size_threshold
 ) {
-  deps <- config$layout[[target]]$deps_build
+  deps <- config$spec[[target]]$deps_build
   files <- sort(unique(as.character(deps$file_out)))
   if (!length(files)) {
     return("")
@@ -187,11 +208,7 @@ output_file_hash <- function(
     size_threshold = size_threshold
   )
   out <- paste(out, collapse = "")
-  digest::digest(
-    out,
-    algo = config$cache$hash_algorithm,
-    serialize = FALSE
-  )
+  config$cache$digest(out, serialize = FALSE)
 }
 
 storage_hash <- function(
@@ -216,9 +233,9 @@ storage_hash <- function(
   should_rehash <- should_rehash_storage(
     size_threshold = size_threshold,
     new_mtime = storage_mtime(file),
-    old_mtime = meta$mtime %||% -Inf,
+    old_mtime = as.numeric(meta$mtime %|||% -Inf),
     new_size = storage_size(file),
-    old_size = meta$size
+    old_size = meta$size_storage %|||% -1L
   )
   ifelse(
     should_rehash,
@@ -234,9 +251,9 @@ should_rehash_storage <- function(
   new_size,
   old_size
 ) {
-  small <- (new_size < size_threshold) %||NA% TRUE
-  touched <- (new_mtime > old_mtime) %||NA% TRUE
-  resized <- (abs(new_size - old_size) > rehash_storage_size_tol) %||NA% TRUE
+  small <- (new_size < size_threshold) %|||NA% TRUE
+  touched <- (new_mtime > old_mtime) %|||NA% TRUE
+  resized <- (abs(new_size - old_size) > rehash_storage_size_tol) %|||NA% TRUE
   small || touched || resized
 }
 
@@ -247,7 +264,7 @@ storage_mtime <- function(x) {
   if (dir.exists(x)) {
     dir_mtime(x)
   } else {
-    file.mtime(x)
+    file_mtime(x)
   }
 }
 
@@ -259,8 +276,12 @@ dir_mtime <- function(x) {
     recursive = TRUE,
     include.dirs = FALSE
   )
-  times <- vapply(files, file.mtime, FUN.VALUE = numeric(1))
+  times <- vapply(files, file_mtime, FUN.VALUE = numeric(1))
   max(times %||% Inf)
+}
+
+file_mtime <- function(x) {
+  as.numeric(file.mtime(x))
 }
 
 storage_size <- function(x) {
@@ -304,18 +325,18 @@ rehash_storage <- function(target, file = NULL, config) {
   if (!file.exists(file)) {
     return(NA_character_)
   }
-  rehash_local(file, hash_algorithm = config$cache$hash_algorithm)
+  rehash_local(file, config)
 }
 
-rehash_local <- function(file, hash_algorithm) {
+rehash_local <- function(file, config) {
   if (dir.exists(file)) {
-    rehash_dir(file, hash_algorithm)
+    rehash_dir(file, config)
   } else {
-    rehash_file(file, hash_algorithm)
+    rehash_file(file, config)
   }
 }
 
-rehash_dir <- function(dir, hash_algorithm) {
+rehash_dir <- function(dir, config) {
   files <- list.files(
     path = dir,
     all.files = TRUE,
@@ -327,23 +348,14 @@ rehash_dir <- function(dir, hash_algorithm) {
     files,
     rehash_file,
     FUN.VALUE = character(1),
-    hash_algorithm = hash_algorithm
+    config = config
   )
   out <- paste(out, collapse = "")
-  digest::digest(
-    out,
-    algo = hash_algorithm,
-    serialize = FALSE
-  )
+  config$cache$digest(out, serialize = FALSE)
 }
 
-rehash_file <- function(file, hash_algorithm) {
-  digest::digest(
-    object = file,
-    algo = hash_algorithm,
-    file = TRUE,
-    serialize = FALSE
-  )
+rehash_file <- function(file, config) {
+  config$cache$digest(object = file, file = TRUE, serialize = FALSE)
 }
 
 rehash_url <- function(url, config) {
@@ -356,7 +368,7 @@ rehash_url <- function(url, config) {
   # Find the longest name of the handle that matches the url.
   choices <- names(config$curl_handles)
   name <- longest_match(choices = choices, against = url) %||% NA_character_
-  handle <- config$curl_handles[[name]] %||% curl::new_handle()
+  handle <- config$curl_handles[[name]] %|||% curl::new_handle()
   # Do not download the whole URL.
   handle <- curl::handle_setopt(handle, nobody = TRUE)
   req <- curl::curl_fetch_memory(url, handle = handle)

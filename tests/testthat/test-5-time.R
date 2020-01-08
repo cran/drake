@@ -22,8 +22,9 @@ test_with_dir("proc_time runtimes can be fetched", {
   })
   meta <- list(time_build = t)
   cache$set(key = "x", value = meta, namespace = "meta")
-  y <- fetch_runtime(key = "x", cache = cache, type = "build")
-  expect_true(nrow(y) > 0)
+  y <- extract_runtime(meta, type = "time_build")
+  expect_true(is.list(y))
+  expect_equal(sort(names(y)), sort(c("target", "elapsed", "user", "system")))
 })
 
 test_with_dir("build times works if no targets are built", {
@@ -146,4 +147,13 @@ test_with_dir("predict_workers()", {
   expect_equal(sort(unique(out$worker)), sort(as.integer(1:4)))
   expect_equal(dim(out), dim(my_plan))
   expect_equal(sort(colnames(out)), sort(c("target", "worker")))
+})
+
+test_with_dir("can disable build times (#1078)", {
+  skip_on_cran()
+  skip_if_not_installed("lubridate")
+  plan <- drake_plan(x = 1)
+  make(plan, log_build_times = FALSE)
+  expect_equal(nrow(build_times(type = "build")), 0L)
+  expect_equal(nrow(build_times(type = "command")), 0L)
 })

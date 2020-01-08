@@ -194,7 +194,7 @@ test_with_dir(
     )
   })
   expect_true(all(letters[1:4] %in% cached()))
-  expect_true(all(letters[1:4] %in% names(con$layout)))
+  expect_true(all(letters[1:4] %in% names(con$spec)))
 })
 
 test_with_dir("plans can start with bad symbols", {
@@ -204,7 +204,7 @@ test_with_dir("plans can start with bad symbols", {
     command = 1)
   y <- drake_config(x)
   out <- sort(c("a.x.", "b.x.", "X_a", "a...."))
-  expect_true(all(out %in% names(y$layout)))
+  expect_true(all(out %in% names(y$spec)))
 })
 
 test_with_dir("can use semicolons for multi-line commands", {
@@ -611,7 +611,7 @@ test_with_dir("Trailing slashes in file paths on Windows", {
 test_with_dir("supplied a plan instead of a config", {
   skip_if_not_installed("visNetwork")
   plan <- drake_plan(x = 1)
-  expect_error(vis_drake_graph(plan), regexp = "supplied a drake plan")
+  expect_error(vis_drake_graph(plan), regexp = "must be a drake_config")
 })
 
 test_with_dir("warning when file_out() files not produced", {

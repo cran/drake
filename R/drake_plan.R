@@ -92,9 +92,11 @@
 #'     e.g. `as.disk.frame(your_dataset, outdir = drake_tempfile())`.
 #'   - `"keras"`: save Keras models as HDF5 files.
 #'     Requires the `keras` package.
-#'   - `"rds"`: save any object. This is similar to the default storage
-#'     except we avoid creating a serialized copy of
-#'     the entire target in memory.
+#'   - `"qs"`: save any object. Uses `qsave()` and `qread()` from the
+#'     `qs` package. Uses the default settings in `qs` version 0.20.2.
+#'     Could be fast and reduce file size in some general use cases.
+#'   - `"rds"`: save any object. Uses gzip compression, which is slow.
+#'     Not recommended in the general case. Consider `"qs"` instead.
 #'     Requires R >= 3.5.0 so drake can use ALTREP.
 #'
 #' @section Keywords:
@@ -253,18 +255,18 @@
 #' drake_plan(x = target(f(char), transform = map(char = !!sms)))
 #'
 #' # Dynamic branching
+#' # Get the mean mpg for each cyl in the mtcars dataset.
 #' plan <- drake_plan(
-#'   w = c("a", "a", "b", "b"),
-#'   x = seq_len(4),
-#'   y = target(x + 1, dynamic = map(x)),
-#'   z = target(list(y = y, w = w), dynamic = group(y, .by = w))
+#'   raw = mtcars,
+#'   group_index = raw$cyl,
+#'   munged = target(raw[, c("mpg", "cyl")], dynamic = map(raw)),
+#'   mean_mpg_by_cyl = target(
+#'     data.frame(mpg = mean(munged$mpg), cyl = munged$cyl[1]),
+#'     dynamic = group(munged, .by = group_index)
+#'   )
 #' )
 #' make(plan)
-#' subtargets(y)
-#' readd(subtargets(y)[1], character_only = TRUE)
-#' readd(subtargets(y)[2], character_only = TRUE)
-#' readd(subtargets(z)[1], character_only = TRUE)
-#' readd(subtargets(z)[2], character_only = TRUE)
+#' readd(mean_mpg_by_cyl)
 #' })
 #' }
 drake_plan <- function(
@@ -294,6 +296,7 @@ drake_plan <- function(
   }
   commands <- complete_target_names(commands)
   targets <- names(commands)
+  commands <- unname(commands)
   plan <- weak_tibble(target = targets)
   plan$command <- commands
   plan <- parse_custom_plan_columns(plan, envir = envir)
@@ -336,7 +339,7 @@ namespaced_target <- parse(text = ("drake:::target"))[[1]]
 
 is_target_call <- function(expr) {
   tryCatch(
-    safe_deparse(expr[[1]]) %in% target_fns,
+    safe_deparse(expr[[1]], backtick = FALSE) %in% target_fns,
     error = error_false
   )
 }
@@ -468,8 +471,10 @@ warn_arrows <- function(dots) {
 }
 
 detect_arrow <- function(command) {
-  if (length(command) > 2 && safe_deparse(command[[1]]) %in% c("<-", "->")) {
-    safe_deparse(command)
+  has_arrow <- length(command) > 2 &&
+    safe_deparse(command[[1]], backtick = FALSE) %in% c("<-", "->")
+  if (has_arrow) {
+    safe_deparse(command, backtick = TRUE)
   } else {
     NULL
   }
@@ -549,7 +554,7 @@ as_drake_plan <- function(plan, .force_df = FALSE) {
   if (.force_df || no_tibble) {
     structure(
       as.data.frame(plan, stringsAsFactors = FALSE),
-      class = c("drake_plan", "data.frame")
+      class = c("drake_plan", "drake", "data.frame")
     )
   } else {
     tibble::new_tibble(plan, nrow = nrow(plan), subclass = "drake_plan")
@@ -624,7 +629,7 @@ deparse_lang_col <- function(x) {
   if (!length(x) || !is.list(x)) {
     return(x)
   }
-  out <- unlist(lapply(x, safe_deparse, collapse = " "))
+  out <- unlist(lapply(x, safe_deparse, collapse = " ", backtick = TRUE))
   as_expr_list(out)
 }
 

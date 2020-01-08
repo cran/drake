@@ -82,12 +82,13 @@ ft_launch_worker <- function(target, meta, protect, config) {
     manage_memory(target = target, config = config, downstream = protect)
   }
   DRAKE_GLOBALS__ <- NULL # Avoid name conflicts with other globals.
-  layout <- hpc_layout(target, config)
+  spec <- hpc_spec(target, config)
   globals <- future_globals(
     target = target,
     meta = meta,
     config = config$ft_config,
-    layout = layout,
+    spec = spec,
+    ht_is_subtarget = config$ht_is_subtarget,
     protect = protect
   )
   announce_build(target = target, config = config)
@@ -97,24 +98,33 @@ ft_launch_worker <- function(target, meta, protect, config) {
         target = DRAKE_GLOBALS__$target,
         meta = DRAKE_GLOBALS__$meta,
         config = DRAKE_GLOBALS__$config,
-        layout = DRAKE_GLOBALS__$layout,
+        spec = DRAKE_GLOBALS__$spec,
+        ht_is_subtarget = DRAKE_GLOBALS__$ht_is_subtarget,
         protect = DRAKE_GLOBALS__$protect
       ),
       globals = globals,
       label = target,
-      resources = as.list(layout$resources)
+      resources = as.list(spec[[target]]$resources)
     ),
     target = target
   )
 }
 
-future_globals <- function(target, meta, config, layout, protect) {
+future_globals <- function(
+  target,
+  meta,
+  config,
+  spec,
+  ht_is_subtarget,
+  protect
+) {
   globals <- list(
     DRAKE_GLOBALS__ = list(
       target = target,
       meta = meta,
       config = config,
-      layout = layout,
+      spec = spec,
+      ht_is_subtarget = ht_is_subtarget,
       protect = protect
     )
   )
@@ -144,10 +154,19 @@ future_globals <- function(target, meta, config, layout, protect) {
 #' @param target Name of the target.
 #' @param meta A list of metadata.
 #' @param config A [drake_config()] list.
+#' @param ht_is_subtarget Internal, part of `config`.
 #' @param protect Names of targets that still need their
 #' dependencies available in memory.
-future_build <- function(target, meta, config, layout, protect) {
-  config$layout <- layout
+future_build <- function(
+  target,
+  meta,
+  config,
+  spec,
+  ht_is_subtarget,
+  protect
+) {
+  config$spec <- spec
+  config$ht_is_subtarget <- ht_is_subtarget
   caching <- hpc_caching(target, config)
   if (identical(caching, "worker")) {
     manage_memory(target = target, config = config, downstream = protect)

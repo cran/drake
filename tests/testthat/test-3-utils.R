@@ -1,5 +1,13 @@
 drake_context("utils")
 
+test_with_dir("file_remove()", {
+  expect_silent(file_remove("abc"))
+  file.create("abc")
+  expect_true(file.exists("abc"))
+  expect_silent(file_remove("abc"))
+  expect_false(file.exists("abc"))
+})
+
 test_with_dir("assert_pkg", {
   skip_on_cran()
   expect_error(assert_pkg("_$$$blabla"), regexp = "not installed")
@@ -17,26 +25,43 @@ test_with_dir("assert_pkg", {
   )
 })
 
-test_with_dir("operators", {
+test_with_dir("%||%", {
   expect_equal("a" %||% "b", "a")
   expect_equal(NULL %||% "b", "b")
+  expect_equal(character(0) %||% "b", "b")
   expect_true(is.numeric(Inf %||% "b"))
   expect_true(is.na(NA %||% "b"))
-  expect_equal("a" %||NA% "b", "a")
-  expect_equal(NULL %||NA% "b", "b")
-  expect_true(is.numeric(Inf %||NA% "b"))
-  expect_false(is.na(NA %||NA% "b"))
+})
+
+test_with_dir("%|||%", {
+  expect_equal("a" %|||% "b", "a")
+  expect_equal(NULL %|||% "b", "b")
+  expect_equal(character(0) %|||% "b", character(0))
+  expect_true(is.numeric(Inf %|||% "b"))
+  expect_true(is.na(NA %|||% "b"))
+})
+
+test_with_dir("%||NA%", {
+  expect_equal("a" %|||NA% "b", "a")
+  expect_equal(NULL %|||NA% "b", NULL)
+  expect_true(is.numeric(Inf %|||NA% "b"))
+  expect_false(is.na(NA %|||NA% "b"))
+})
+
+test_with_dir("%|||NA%", {
+  expect_equal("a" %|||NA% "b", "a")
+  expect_equal(NULL %|||NA% "b", NULL)
+  expect_true(is.numeric(Inf %|||NA% "b"))
+  expect_false(is.na(NA %|||NA% "b"))
 })
 
 test_with_dir("weak_tibble", {
   skip_on_cran()
-
   for (fdf in c(FALSE, TRUE)) {
     out <- weak_tibble(.force_df = fdf)
     expect_equivalent(out, data.frame())
     expect_equivalent(weak_as_tibble(list(), .force_df = fdf), data.frame())
   }
-
   # No factors
   out <- weak_tibble(a = 1:2, b = c("x", "y"), .force_df = TRUE)
   exp <- data.frame(a = 1:2, b = c("x", "y"), stringsAsFactors = FALSE)
@@ -122,4 +147,40 @@ test_with_dir("grid_index()", {
       grid_index(index, size)
     )
   }
+})
+
+test_with_dir("custom digest functions give same hashes", {
+  out <- digest_murmur32(mtcars, serialize = TRUE)
+  exp <- digest::digest(mtcars, algo = "murmur32", serialize = TRUE)
+  expect_equal(out, exp)
+  object <- digest::digest("abc")
+  out <- digest_murmur32(object, serialize = FALSE)
+  exp <- digest::digest(object, algo = "murmur32", serialize = FALSE)
+  expect_equal(out, exp)
+})
+
+test_with_dir("storage_copy() (#1120)", {
+  f1 <- tempfile()
+  f2 <- tempfile()
+  suppressWarnings(storage_copy(f1, f2))
+  expect_false(file.exists(f1))
+  expect_false(file.exists(f2))
+  file.create(f1)
+  storage_copy(f1, f2)
+  expect_true(file.exists(f2))
+  storage_copy(f1, f2, overwrite = FALSE)
+  expect_true(file.exists(f2))
+  storage_copy(f1, f2, overwrite = TRUE)
+  expect_true(file.exists(f2))
+  d1 <- tempfile()
+  d2 <- tempfile()
+  x <- file.path(d1, "x")
+  dir_create(d1)
+  file.create(x)
+  storage_copy(d1, d2)
+  expect_true(file.exists(x))
+  expect_warning(storage_copy(d1, d2, warn = TRUE, overwrite = FALSE))
+  storage_copy(d1, d2, merge = FALSE, overwrite = TRUE)
+  storage_copy(d1, d2, merge = TRUE, overwrite = TRUE)
+  expect_true(file.exists(x))
 })
