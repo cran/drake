@@ -289,9 +289,8 @@ print.drake_triggers <- function(x, ...) {
 #' file.exists("dir/mtcars.csv")
 #'
 #' # See the connections that the file relationships create:
-#' config <- drake_config(plan)
 #' if (requireNamespace("visNetwork", quietly = TRUE)) {
-#'   vis_drake_graph(config)
+#'   vis_drake_graph(plan)
 #' }
 #' })
 #' }
@@ -359,9 +358,8 @@ file_in <- function(...) {
 #' file.exists("dir/mtcars.csv")
 #'
 #' # See the connections that the file relationships create:
-#' config <- drake_config(plan)
 #' if (requireNamespace("visNetwork", quietly = TRUE)) {
-#'   vis_drake_graph(config)
+#'   vis_drake_graph(plan)
 #' }
 #' })
 #' }
@@ -513,6 +511,84 @@ no_deps <- function(x = NULL) {
   x
 }
 
+#' @title Cancel a target mid-build under some condition
+#'   \lifecycle{experimental}
+#' @description Cancel a target mid-build if some logical condition is met.
+#'   Upon cancellation, `drake` halts the current target and moves to the
+#'   next one. The target's previous value and metadata, if they exist,
+#'   remain in the cache.
+#' @export
+#' @seealso cancel
+#' @return Nothing.
+#' @inheritParams cancel
+#' @param condition Logical, whether to cancel the target.
+#' @examples
+#' \dontrun{
+#' isolate_example("cancel_if()", {
+#' f <- function(x) {
+#'   cancel_if(x > 1)
+#'   Sys.sleep(2) # Does not run if x > 1.
+#' }
+#' g <- function(x) f(x)
+#' plan <- drake_plan(y = g(2))
+#' make(plan)
+#' # Does not exist.
+#' # readd(y)
+#' })
+#' }
+cancel_if <- function(condition, allow_missing = TRUE) {
+  envir_call()
+  if (length(condition) != 1L) {
+    stop("condition must be length 1 in cancel_if()")
+  }
+  if (!condition) {
+    return(invisible())
+  }
+  cancel(allow_missing = allow_missing)
+}
+
+#' @title Cancel a target mid-build \lifecycle{experimental}
+#' @description Cancel a target mid-build.
+#'   Upon cancellation, `drake` halts the current target and moves to the
+#'   next one. The target's previous value and metadata, if they exist,
+#'   remain in the cache.
+#' @export
+#' @seealso cancel_if
+#' @return Nothing.
+#' @param allow_missing Logical. If `FALSE`, `drake` will not cancel
+#'   the target if it is missing from the cache (or if you removed the
+#'   key with `clean()`).
+#' @examples
+#' \dontrun{
+#' isolate_example("cancel()", {
+#' f <- function(x) {
+#'   cancel()
+#'   Sys.sleep(2) # Does not run.
+#' }
+#' g <- function(x) f(x)
+#' plan <- drake_plan(y = g(1))
+#' make(plan)
+#' # Does not exist.
+#' # readd(y)
+#' })
+#' }
+cancel <- function(allow_missing = TRUE) {
+  envir <- envir_call()
+  if (!allow_missing) {
+    if (target_missing(envir$target, envir$config)) {
+      return(invisible())
+    }
+  }
+  stop(cancellation(allow_missing = allow_missing))
+}
+
+cancellation <- function(...) {
+  structure(
+    list(message = "cancel", call = NULL),
+    class = c("drake_cancel", "error", "condition")
+  )
+}
+
 #' @title Name of the current target \lifecycle{maturing}
 #' @export
 #' @description `id_chr()` gives you the name of the current target
@@ -542,37 +618,28 @@ no_deps <- function(x = NULL) {
 #' })
 #' }
 id_chr <- function() {
-  envir <- environment()
-  for (i in seq_len(getOption("expressions"))) {
-    if (exists(drake_target_marker, envir = envir, inherits = FALSE)) {
-      return(envir[[drake_target_marker]])
-    }
-    if (identical(envir, globalenv())) {
-      break # nocov
-    }
-    envir <- parent.frame(n = i)
-  }
-  stop(
-    "Could not find the name of the current target. ",
-    "You should only use id_chr() in your drake plan.",
-    call. = FALSE
-  )
+  envir_call()$target
 }
 
 #' @title Get the environment where drake builds targets
 #' \lifecycle{questioning}
 #' @description Call this function inside the commands in your plan
 #'   to get the environment where `drake` builds targets.
-#'   That way, you can strategically remove targets from memory
-#'   while [make()] is running. That way, you can limit the
-#'   amount of computer memory you use.
-#' @details `drake_envir()` is where `drake` puts the dependencies
-#'   of *dynamic sub-targets*. To manage ordinary dependencies,
-#'   you need `parent.env(drake_envir())`.
+#'   Advanced users can use it to strategically remove targets from memory
+#'   while [make()] is running.
+#' @details `drake` manages in-memory targets in 4 environments:
+#'   one with sub-targets, one with whole dynamic targets, one with
+#'   static targets, and one with imported global objects and functions.
+#'   This last environment is usually the environment
+#'   from which you call [make()].
+#'   Select the appropriate environment for your
+#'   use case with the `which` argument of `drake_envir()`.
 #' @export
 #' @inheritSection drake_plan Keywords
 #' @seealso [from_plan()]
 #' @return The environment where `drake` builds targets.
+#' @param which Character of length 1, which environment
+#'   to select. See the details of this help file.
 #' @examples
 #' \dontrun{
 #' isolate_example("contain side effects", {
@@ -583,38 +650,41 @@ id_chr <- function() {
 #'   summary = {
 #'     print(ls(envir = parent.env(drake_envir())))
 #'     # We don't need the large_data_* targets in memory anymore.
-#'     rm(large_data_1, large_data_2, envir = parent.env(drake_envir()))
-#'     print(ls(envir = parent.env(drake_envir())))
+#'     rm(large_data_1, large_data_2, envir = drake_envir("targets"))
+#'     print(ls(envir = drake_envir("targets")))
 #'     mean(subset)
 #'   }
 #' )
 #' make(plan, cache = storr::storr_environment(), session_info = FALSE)
 #' })
 #' }
-drake_envir <- function() {
-  envir <- environment()
-  for (i in seq_len(getOption("expressions"))) {
-    if (exists(drake_envir_marker, envir = envir, inherits = FALSE)) {
-      return(envir)
-    }
-    if (identical(envir, globalenv())) {
-      break # nocov
-    }
-    envir <- parent.frame(n = i)
+drake_envir <- function(
+  which = c("targets", "dynamic", "subtargets", "imports")
+) {
+  config <- envir_call()$config
+  which <- match.arg(which)
+  which <- ifelse(which == "imports", "envir", paste0("envir_", which))
+  config[[which]]
+}
+
+envir_call <- function() {
+  calls <- vcapply(sys.calls(), safe_deparse)
+  matching_calls <- grepl("^drake_with_call_stack_8a6af5\\(", calls)
+  if (!any(matching_calls)) {
+    envir_call_error()
   }
+  pos <- max(which(matching_calls))
+  sys.frame(pos)
+}
+
+envir_call_error <- function() {
   stop(
     "Could not find the environment where drake builds targets. ",
-    "You should only use drake_envir() in your drake plan.",
+    "Functions drake_envir(), id_chr(), cancel(), and cancel_if() ",
+    "can only be invoked through make().",
     call. = FALSE
   )
 }
-
-drake_envir_marker <- "._drake_envir"
-drake_target_marker <- ".id_chr"
-drake_markers <- c(
-  drake_envir_marker,
-  drake_target_marker
-)
 
 #' @title Row-bind together drake plans
 #' \lifecycle{stable}
@@ -1043,9 +1113,8 @@ is_trigger_call <- function(expr) {
 #' make(plan)
 #'
 #' # See the connections that the sourced scripts create:
-#' config <- drake_config(plan)
 #' if (requireNamespace("visNetwork", quietly = TRUE)) {
-#'   vis_drake_graph(config)
+#'   vis_drake_graph(plan)
 #' }
 #' }
 #' })

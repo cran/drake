@@ -1,6 +1,7 @@
 drake_context("utils")
 
 test_with_dir("file_remove()", {
+  skip_on_cran()
   expect_silent(file_remove("abc"))
   file.create("abc")
   expect_true(file.exists("abc"))
@@ -78,11 +79,13 @@ test_with_dir("error handlers", {
 })
 
 test_with_dir("isolate_example()", {
+  skip_on_cran()
   isolate_example("example", file.create("abc"))
   expect_false(file.exists("abc"))
 })
 
 test_with_dir("lifecycle", {
+  skip_on_cran()
   stages <- c(
     "experimental",
     "maturing",
@@ -101,6 +104,7 @@ test_with_dir("lifecycle", {
 })
 
 test_with_dir("text wrapping", {
+  skip_on_cran()
   x <- paste(letters, collapse = "")
   expect_equal(x, soft_wrap(x, width = 2))
   expect_equal(x, soft_wrap(x, width = 100))
@@ -138,6 +142,7 @@ test_with_dir("dir_move()", {
 })
 
 test_with_dir("grid_index()", {
+  skip_on_cran()
   grid <- expand.grid(seq_len(6), seq_len(3), seq_len(7), seq_len(5))
   grid <- grid[, rev(seq_len(4))]
   size <- unname(vapply(grid, max, FUN.VALUE = integer(1)))
@@ -160,6 +165,7 @@ test_with_dir("custom digest functions give same hashes", {
 })
 
 test_with_dir("storage_copy() (#1120)", {
+  skip_on_cran()
   f1 <- tempfile()
   f2 <- tempfile()
   suppressWarnings(storage_copy(f1, f2))
@@ -183,4 +189,13 @@ test_with_dir("storage_copy() (#1120)", {
   storage_copy(d1, d2, merge = FALSE, overwrite = TRUE)
   storage_copy(d1, d2, merge = TRUE, overwrite = TRUE)
   expect_true(file.exists(x))
+})
+
+test_with_dir("safe_vec_c() (#1138)", {
+  expect_equal(safe_vec_c(letters, letters), c(letters, letters))
+  x <- lm(mpg ~ cyl, data = mtcars)
+  y <- lm(mpg ~ wt, data = mtcars)
+  expect_equal(safe_vec_c(x, y), list(x, y))
+  expect_equal(safe_vec_c(x, letters[1]), list(x, letters[1]))
+  expect_error(safe_vec_c(stop("sdklfjiole")), regexp = "sdklfjiole")
 })

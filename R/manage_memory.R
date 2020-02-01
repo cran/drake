@@ -118,7 +118,6 @@ discard_dynamic <- function(discard_these, config) {
 clear_envir_subtargets <- function(target, config) {
   rm(list = config$envir_loaded$subtargets, envir = config$envir_subtargets)
   config$envir_loaded$subtargets <- character(0)
-  config$envir_subtargets[[drake_envir_marker]] <- TRUE
 }
 
 clear_envir_targets <- function(target, config) {
@@ -305,7 +304,7 @@ load_dynamic_subdep_impl.group <- function( # nolint
 ) {
   subdeps <- config$cache$get(dep, namespace = "meta")$subtargets[index]
   value <- config$cache$mget(subdeps, use_cache = FALSE)
-  value <- do.call(vec_c, value)
+  value <- do.call(safe_vec_c, value)
   assign(
     x = dep,
     value = value,
@@ -355,6 +354,6 @@ sync_envir_dynamic <- function(target, config) {
 
 sync_dynamic_whole <- function(target, config) {
   hashes <- get(target, envir = config$envir_targets, inherits = FALSE)
-  value <- get_subtargets(hashes, config$cache, NULL)
+  value <- get_subtargets(hashes, target, config$cache, NULL, FALSE)
   assign(target, value, envir = config$envir_dynamic, inherits = FALSE)
 }

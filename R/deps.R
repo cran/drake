@@ -52,20 +52,36 @@ deps_code <- function(x) {
 #' @export
 #' @param target A symbol denoting a target name, or if `character_only`
 #'   is TRUE, a character scalar denoting a target name.
-#' @param config An output list from [drake_config()].
+#' @param ... Arguments to [make()], such as `plan` and `targets`.
 #' @param character_only Logical, whether to assume target is a character
 #'   string rather than a symbol.
+#' @param config Deprecated.
 #' @return A data frame with the dependencies listed by type
 #'   (globals, files, etc).
 #' @examples
 #' \dontrun{
 #' isolate_example("Quarantine side effects.", {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
-#' config <- drake_config(my_plan)
-#' deps_target("regression1_small", config = config)
+#' deps_target(regression1_small, my_plan)
 #' })
 #' }
 deps_target <- function(
+  target,
+  ...,
+  character_only = FALSE,
+  config = NULL
+) {
+}
+
+#' @title Internal function with a drake_config() argument
+#' @export
+#' @keywords internal
+#' @description Not a user-side function.
+#' @param target Name of a target.
+#' @param character_only Logical, whether to interpret
+#'   `target` as a character (`TRUE`) or a symbol (`FALSE`).
+#' @param config A [drake_config()] object.
+deps_target_impl <- function(
   target,
   config,
   character_only = FALSE
@@ -80,8 +96,12 @@ deps_target <- function(
   }
   out <- config$spec[[target]]$deps_build
   out <- decode_deps_list(out)
-  display_deps_list(select_nonempty(out))
+  out <- display_deps_list(select_nonempty(out))
+  out$hash <- config$cache$mget_hash(out$name)
+  out
 }
+
+body(deps_target) <- config_util_body(deps_target_impl)
 
 #' @title Find the drake dependencies of a dynamic knitr report target.
 #' \lifecycle{stable}
@@ -164,8 +184,8 @@ display_deps_list <- function(x) {
 #'   [deps_code()], [make()],
 #'   [drake_config()]
 #' @param target Name of the target.
-#' @param config Configuration list output by
-#'   [drake_config()] or [make()].
+#' @param ... Arguments to [make()], such as `plan` and `targets`.
+#' @param config Deprecated.
 #' @param character_only Logical, whether to assume `target`
 #'   is a character string rather than a symbol.
 #' @examples
@@ -174,9 +194,8 @@ display_deps_list <- function(x) {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Load drake's canonical example.
 #' make(my_plan) # Run the project, build the targets.
-#' config <- drake_config(my_plan)
 #' # Get some example dependency profiles of targets.
-#' deps_profile(small, config = config)
+#' deps_profile(small, my_plan)
 #' # Change a dependency.
 #' simulate <- function(x) {}
 #' # Update the in-memory imports in the cache
@@ -184,11 +203,27 @@ display_deps_list <- function(x) {
 #' # Changes to targets are already cached.
 #' make(my_plan, skip_targets = TRUE)
 #' # The dependency hash changed.
-#' deps_profile(small, config = config)
+#' deps_profile(small, my_plan)
 #' }
 #' })
 #' }
 deps_profile <- function(
+  target,
+  ...,
+  character_only = FALSE,
+  config = NULL
+) {
+}
+
+#' @title Internal function with a drake_config() argument
+#' @export
+#' @keywords internal
+#' @description Not a user-side function.
+#' @param target Name of a target.
+#' @param character_only Logical, whether to interpret
+#'   `target` as a character (`TRUE`) or a symbol (`FALSE`).
+#' @param config A [drake_config()] object.
+deps_profile_impl <- function(
   target,
   config,
   character_only = FALSE
@@ -228,13 +263,19 @@ deps_profile <- function(
     output_file_hash(target, config),
     resolve_target_seed(target, config)
   )
-  weak_tibble(
+  out <- weak_tibble(
     name = c("command", "depend", "file_in", "file_out", "seed"),
     changed = old_values != new_values,
     old = old_values,
     new = new_values
   )
+  if (identical(spec$imported, TRUE)) {
+    out <- out[out$name %in% c("depend", "file_in"), ]
+  }
+  out
 }
+
+body(deps_profile) <- config_util_body(deps_profile_impl)
 
 #' @title List the targets and imports that are reproducibly tracked.
 #' \lifecycle{stable}

@@ -1,24 +1,28 @@
 drake_context("interactive")
 
 test_with_dir("code analysis print method", {
+  skip_on_cran()
   x <- analyze_code(quote(x)) # print by hand
   m <- utils::capture.output(print(x))
   expect_true(any(grepl("code analysis results list", m)))
 })
 
 test_with_dir("drake_config() print method", {
+  skip_on_cran()
   x <- drake_config(drake_plan(y = 1)) # print by hand
   m <- utils::capture.output(print(x))
   expect_true(any(grepl("configured drake workflow", m)))
 })
 
 test_with_dir("trigger() print method", {
+  skip_on_cran()
   x <- trigger() # print by hand
   m <- utils::capture.output(print(x))
   expect_true(any(grepl("list of triggers", m)))
 })
 
 test_with_dir("drake spec print method", {
+  skip_on_cran()
   f <- identity
   plan <- drake_plan(x = 1)
   config <- drake_config(plan)
@@ -30,7 +34,24 @@ test_with_dir("drake spec print method", {
   expect_true(any(grepl("specification of target x", m2)))
 })
 
+test_with_dir("drake_graph_info() print method", {
+  skip_on_cran()
+  x <- drake_graph_info(drake_plan(y = 1)) # print by hand
+  m <- utils::capture.output(print(x))
+  expect_true(any(grepl("drake graph", m)))
+})
+
+test_with_dir("drake_meta_() print method", {
+  skip_on_cran()
+  plan <- drake_plan(x = 1)
+  make(plan)
+  x <- diagnose(x) # print by hand
+  m <- utils::capture.output(print(x))
+  expect_true(any(grepl("drake metadata", m)))
+})
+
 test_with_dir("logger", {
+  skip_on_cran()
   # testthat suppresses messages,
   # so we need to inspect the console output manually.
   files <- list.files()
@@ -67,6 +88,7 @@ test_with_dir("imported online file with no internet", {
 })
 
 test_with_dir("time stamps and large files", {
+  skip_on_cran()
   # Reconnect to the internet.
   skip_if_not_installed("downloader")
   dir_csv <- tempfile()
@@ -118,6 +140,7 @@ test_with_dir("time stamps and large files", {
 })
 
 test_with_dir("use_drake()", {
+  skip_on_cran()
   # Load drake with library(drake)
   # and not with devtools::load_all().
   # Reason: https://github.com/r-lib/usethis/issues/347
@@ -150,10 +173,10 @@ test_with_dir("can keep going in parallel", {
     jobs = 2,
     session_info = FALSE,
     keep_going = TRUE,
-    verbose = 0L
+    verbose = 1
   )
   expect_error(readd(a))
-  expect_equal(readd(b), numeric(0))
+  expect_error(readd(b))
 })
 
 test_with_dir("drake_debug()", {
@@ -163,31 +186,31 @@ test_with_dir("drake_debug()", {
     simulate(48)
     stop(1234)
   })
-  config <- drake_config(my_plan, lock_envir = TRUE)
   expect_error(make(my_plan), regexp = "1234")
-  out <- drake_debug(large, config = config)
+  out <- drake_debug(regression1_large, my_plan)
   out <- drake_debug(
-    "large",
-    config = config,
+    "regression1_large",
+    plan = my_plan,
     verbose = 0L,
     character_only = TRUE
   )
-  expect_true(is.data.frame(out))
+  expect_true(inherits(out, "lm"))
   for (i in seq_len(2)) {
     clean(destroy = TRUE)
     load_mtcars_example()
     make(my_plan)
     config <- drake_config(my_plan)
-    expect_true(config$cache$exists("small"))
-    clean(small)
-    expect_false(config$cache$exists("small"))
-    out <- drake_debug(small, config = config)
-    expect_false(config$cache$exists("small"))
-    expect_true(is.data.frame(out))
+    expect_true(config$cache$exists("regression1_small"))
+    clean(regression1_small)
+    expect_false(config$cache$exists("regression1_small"))
+    out <- drake_debug(regression1_small, plan = my_plan)
+    expect_false(config$cache$exists("regression1_small"))
+    expect_true(inherits(out, "lm"))
   }
 })
 
 test_with_dir("clustermq error messages get back to master", {
+  skip_on_cran()
   plan <- drake_plan(a = stop(123))
   options(clustermq.scheduler = "multicore")
   for (caching in c("worker", "master")) {
@@ -203,6 +226,7 @@ test_with_dir("clustermq error messages get back to master", {
 })
 
 test_with_dir("forks + lock_envir = informative error msg", {
+  skip_on_cran()
   # Don't run this test for real because (1) we would have to add
   # furrr to "Suggests" and (2) at some point, base R may be patched
   # so forking in the parallel package does not give this warning anyway.
@@ -226,6 +250,7 @@ test_with_dir("forks + lock_envir = informative error msg", {
 })
 
 test_with_dir("clean() in interactive mode", {
+  skip_on_cran()
   # Must run this test in a fresh new interactive session.
   # Cannot be fully automated like the other tests.
   .pkg_envir$drake_clean_menu <- NULL
@@ -254,6 +279,7 @@ test_with_dir("clean() in interactive mode", {
 })
 
 test_with_dir("rescue_cache() in interactive mode", {
+  skip_on_cran()
   # Must run this test in a fresh new interactive session.
   # Cannot be fully automated like the other tests.
   .pkg_envir$drake_clean_menu <- NULL
@@ -272,6 +298,7 @@ test_with_dir("rescue_cache() in interactive mode", {
 })
 
 test_with_dir("recovery ad in clean()", {
+  skip_on_cran()
   # Must run this test in a fresh new interactive session.
   # Cannot be fully automated like the other tests.
   .pkg_envir$drake_clean_menu <- NULL

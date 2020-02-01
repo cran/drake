@@ -1,6 +1,7 @@
 drake_context("lock")
 
 test_with_dir("lock_environment()", {
+  skip_on_cran()
   scenario <- get_testing_scenario()
   e <- eval(parse(text = scenario$envir))
   jobs <- scenario$jobs
@@ -8,7 +9,7 @@ test_with_dir("lock_environment()", {
   caching <- scenario$caching
   plan <- drake_plan(
     x = try(
-      assign("a", 1L, envir = paren.env(parent.env(drake_envir()))),
+      assign("a", 1L, envir = parent.env(drake_envir("targets"))),
       silent = TRUE
     )
   )
@@ -26,7 +27,7 @@ test_with_dir("lock_environment()", {
   e$a <- 123
   e$plan$four <- "five"
   plan <- drake_plan(
-    x = assign("a", 1, envir = parent.env(parent.env(drake_envir())))
+    x = assign("a", 1, envir = drake_envir("targets"))
   )
   make(
     plan,
@@ -43,6 +44,7 @@ test_with_dir("lock_environment()", {
 })
 
 test_with_dir("Try to modify a locked environment", {
+  skip_on_cran()
   e <- new.env()
   lock_environment(e)
   plan <- drake_plan(x = {
@@ -56,6 +58,7 @@ test_with_dir("Try to modify a locked environment", {
 })
 
 test_with_dir("unlock_environment()", {
+  skip_on_cran()
   expect_error(
     unlock_environment(NULL),
     regexp = "use of NULL environment is defunct"

@@ -7,23 +7,22 @@ for non-staged parallel backends.
 \lifecycle{maturing}}
 \usage{
 predict_runtime(
-  config,
-  targets = NULL,
+  ...,
+  targets_predict = NULL,
   from_scratch = FALSE,
   targets_only = NULL,
-  jobs = 1,
+  jobs_predict = 1L,
   known_times = numeric(0),
   default_time = 0,
-  warn = TRUE
+  warn = TRUE,
+  config = NULL
 )
 }
 \arguments{
-\item{config}{A configured workflow from \code{\link[=drake_config]{drake_config()}}.}
+\item{...}{Arguments to \code{\link[=make]{make()}}, such as \code{plan} and \code{targets}.}
 
-\item{targets}{Character vector, names of targets.
-Predict the runtime of building these targets
-plus dependencies.
-Defaults to all targets.}
+\item{targets_predict}{Character vector, names of targets
+to include in the total runtime and worker predictions.}
 
 \item{from_scratch}{Logical, whether to predict a
 \code{\link[=make]{make()}} build from scratch or to
@@ -32,9 +31,8 @@ already up to date and therefore skipped.}
 
 \item{targets_only}{Deprecated.}
 
-\item{jobs}{The \code{jobs} argument of your next planned
-\code{make()}. How many targets to do you plan
-to have running simultaneously?}
+\item{jobs_predict}{The \code{jobs} argument of your next planned
+\code{make()}.}
 
 \item{known_times}{A named numeric vector with targets/imports
 as names and values as hypothetical runtimes in seconds.
@@ -49,6 +47,8 @@ or anything in \code{known_times}.}
 any targets with no available runtime, either in
 \code{known_times} or \code{\link[=build_times]{build_times()}}. The times for these
 targets default to \code{default_time}.}
+
+\item{config}{Deprecated.}
 }
 \value{
 Predicted total runtime of the next call to \code{\link[=make]{make()}}.
@@ -68,27 +68,26 @@ isolate_example("Quarantine side effects.", {
 if (suppressWarnings(require("knitr"))) {
 load_mtcars_example() # Get the code with drake_example("mtcars").
 make(my_plan) # Run the project, build the targets.
-config <- drake_config(my_plan)
 known_times <- rep(7200, nrow(my_plan))
 names(known_times) <- my_plan$target
 known_times
 # Predict the runtime
 if (requireNamespace("lubridate", quietly = TRUE)) {
 predict_runtime(
-  config,
-  jobs = 7,
+  my_plan,
+  jobs_predict = 7L,
   from_scratch = TRUE,
   known_times = known_times
 )
 predict_runtime(
-  config,
-  jobs = 8,
+  my_plan,
+  jobs_predict = 8L,
   from_scratch = TRUE,
   known_times = known_times
 )
 balance <- predict_workers(
-  config,
-  jobs = 7,
+  my_plan,
+  jobs_predict = 7L,
   from_scratch = TRUE,
   known_times = known_times
 )

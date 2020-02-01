@@ -1,6 +1,7 @@
 drake_context("code to function")
 
 test_with_dir("Scripts eval'd to fns returning times & file paths", {
+  skip_on_cran()
   script1 <- tempfile()
   writeLines(
     c(
@@ -30,6 +31,7 @@ test_with_dir("Scripts eval'd to fns returning times & file paths", {
 })
 
 test_with_dir("Returned fns include only *active* scripts lines", {
+  skip_on_cran()
   script1 <- tempfile()
   script2 <- tempfile()
 
@@ -71,6 +73,7 @@ test_with_dir("Returned fns include only *active* scripts lines", {
 })
 
 test_with_dir("Returned fns include only *active* Rmd code lines", {
+  skip_on_cran()
   skip_if_not_installed("knitr")
   rmd <- tempfile()
 
@@ -107,6 +110,7 @@ test_with_dir("Returned fns include only *active* Rmd code lines", {
 })
 
 test_with_dir("drake tracks and updates for scripted functions", {
+  skip_on_cran()
   #Setup scripts
   script_list <- setup_scripts()
   script1_function <- code_to_function(script_list$script1)
@@ -132,7 +136,7 @@ test_with_dir("drake tracks and updates for scripted functions", {
     temp_dir = script_list$temp_dir
   )
   expect_equal(
-    length(outdated(config)),
+    length(outdated_impl(config)),
     0
   )
 
@@ -143,7 +147,7 @@ test_with_dir("drake tracks and updates for scripted functions", {
   )
 
   expect_equal(
-    outdated(config),
+    outdated_impl(config),
     c(
       "step2",
       "step3"
@@ -168,7 +172,7 @@ test_with_dir("drake tracks and updates for scripted functions", {
   )
 
   expect_equal(
-    outdated(config),
+    outdated_impl(config),
     c(
       "step2",
       "step3"
@@ -198,6 +202,7 @@ test_with_dir("drake tracks and updates for scripted functions", {
 })
 
 test_with_dir("drake tracks/updates for Rmd files that act like scripts", {
+  skip_on_cran()
   skip_if_not_installed("knitr")
 
   #Setup scripts
@@ -227,7 +232,7 @@ test_with_dir("drake tracks/updates for Rmd files that act like scripts", {
   )
 
   expect_equal(
-    length(outdated(config)),
+    length(outdated_impl(config)),
     0
   )
 
@@ -238,7 +243,7 @@ test_with_dir("drake tracks/updates for Rmd files that act like scripts", {
   )
 
   expect_equal(
-    outdated(config),
+    outdated_impl(config),
     c(
       "step2",
       "step3"
@@ -262,7 +267,7 @@ test_with_dir("drake tracks/updates for Rmd files that act like scripts", {
   )
 
   expect_equal(
-    outdated(config),
+    outdated_impl(config),
     c(
       "step2",
       "step3"

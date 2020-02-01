@@ -69,6 +69,7 @@ test_with_dir("same with an imported directory", {
 })
 
 test_with_dir("drake_config() memoizes against knitr files (#887)", {
+  skip_on_cran()
   skip_if_not_installed("knitr")
 
   # Setup
@@ -116,12 +117,12 @@ test_with_dir("drake_config() memoizes against knitr files (#887)", {
     cache = cache,
     session_info = FALSE
   )
-  deps <- deps_target(report_step, config)
+  deps <- deps_target_impl(report_step, config)
   expect_true("a" %in% deps$name)
   expect_true("b" %in% deps$name)
 
   # make() first so file times and hashes are in the cache.
-  make(config = config)
+  make_impl(config = config)
   writeLines(lines_b, "report1.Rmd")
   config <- drake_config(
     plan,
@@ -129,7 +130,7 @@ test_with_dir("drake_config() memoizes against knitr files (#887)", {
     cache = cache,
     session_info = FALSE
   )
-  deps <- deps_target(report_step, config)
+  deps <- deps_target_impl(report_step, config)
   expect_false("a" %in% deps$name)
   expect_true("b" %in% deps$name)
 
@@ -150,8 +151,18 @@ test_with_dir("good URL with an ETag", {
   skip_on_cran()
   skip_if_offline()
   skip_if_not_installed("curl")
+  url <- "https://raw.githubusercontent.com/ropensci/drake/932afcb4050f18351e1e25be3644d7ddb5c903a8/DESCRIPTION" # nolint
+  tryCatch(
+    mem <- curl::curl_fetch_memory(url),
+    error = function(e) {
+      skip("test URL unreachable")
+    }
+  )
+  if (mem$status_code != 200) {
+    skip("test URL unreachable")
+  }
   plan <- drake_plan(
-    x = file_in("https://github.com/ropensci/drake/archive/v7.3.0.tar.gz")
+    x = file_in("https://raw.githubusercontent.com/ropensci/drake/932afcb4050f18351e1e25be3644d7ddb5c903a8/DESCRIPTION") # nolint
   )
   config <- drake_config(
     plan,
@@ -159,14 +170,14 @@ test_with_dir("good URL with an ETag", {
     session_info = FALSE,
     log_progress = TRUE
   )
-  make(config = config)
+  make_impl(config = config)
   expect_equal(justbuilt(config), "x")
   etag <- config$cache$get(
-    file_store("https://github.com/ropensci/drake/archive/v7.3.0.tar.gz")
+    file_store("https://raw.githubusercontent.com/ropensci/drake/932afcb4050f18351e1e25be3644d7ddb5c903a8/DESCRIPTION") # nolint
   )
   expect_true(nzchar(etag))
-  expect_equal(outdated(config), character(0))
-  make(config = config)
+  expect_equal(outdated_impl(config), character(0))
+  make_impl(config = config)
   expect_equal(justbuilt(config), character(0))
 })
 
@@ -174,6 +185,16 @@ test_with_dir("good URL with a timestamp", {
   skip_on_cran()
   skip_if_offline()
   skip_if_not_installed("curl")
+  url <- "https://nytimes.com"
+  tryCatch(
+    mem <- curl::curl_fetch_memory(url),
+    error = function(e) {
+      skip("test URL unreachable")
+    }
+  )
+  if (mem$status_code != 200) {
+    skip("test URL unreachable")
+  }
   plan <- drake_plan(x = file_in("https://nytimes.com"))
   config <- drake_config(
     plan,
@@ -181,7 +202,7 @@ test_with_dir("good URL with a timestamp", {
     session_info = FALSE,
     log_progress = TRUE
   )
-  make(config = config)
+  make_impl(config = config)
   expect_equal(justbuilt(config), "x")
   mtime <- config$cache$get(file_store("https://nytimes.com"))
   expect_true(nzchar(mtime))
@@ -201,12 +222,12 @@ test_with_dir("bad URL", {
     log_progress = TRUE
   )
   expect_error(
-    make(config = config),
+    make_impl(config = config),
     "could not access url|resolve host"
   )
   expect_equal(justbuilt(config), character(0))
   expect_error(
-    make(config = config),
+    make_impl(config = config),
     "could not access url|resolve host"
   )
   expect_equal(justbuilt(config), character(0))
@@ -241,6 +262,7 @@ test_with_dir("authentication", {
 })
 
 test_with_dir("assert_useful_headers()", {
+  skip_on_cran()
   expect_error(
     assert_useful_headers(list(), "xyz"),
     regexp = "no ETag or Last-Modified for url"
@@ -278,7 +300,7 @@ test_with_dir("responses to intermediate file", {
     config$plan <- plan
     testrun(config)
     expect_equal(justbuilt(config), sort(config$plan$target))
-    expect_equal(outdated(config), character(0))
+    expect_equal(outdated_impl(config), character(0))
     final0 <- readd(final)
     val <- readRDS("intermediatefile.rds")
     val2 <- readRDS("out2.rds")
@@ -333,6 +355,7 @@ test_with_dir("responses to intermediate file", {
 })
 
 test_with_dir("same with a directory", {
+  skip_on_cran()
   scenario <- get_testing_scenario()
   envir <- eval(parse(text = scenario$envir))
   envir <- dbug_envir(envir)
@@ -363,7 +386,7 @@ test_with_dir("same with a directory", {
   config$plan <- plan
   testrun(config)
   expect_equal(justbuilt(config), sort(config$plan$target))
-  expect_equal(outdated(config), character(0))
+  expect_equal(outdated_impl(config), character(0))
   final0 <- readd(final)
   val <- readRDS("scratch/intermediatefile.rds")
   val2 <- readRDS("scratch/out2.rds")

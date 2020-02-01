@@ -47,6 +47,7 @@ test_with_dir("clean() removes the correct files", {
 })
 
 test_with_dir("drake_version", {
+  skip_on_cran()
   cache <- storr::storr_environment()
   expect_equal(
     drake_cache_version(cache),
@@ -74,15 +75,15 @@ test_with_dir("dependency profile", {
   make(plan, session_info = FALSE)
   config <- drake_config(plan, session_info = FALSE)
   expect_error(
-    deps_profile(target = missing, config = config),
+    deps_profile_impl(target = missing, config = config),
     regexp = "no recorded metadata"
   )
-  expect_false(any(deps_profile(target = a, config = config)$changed))
+  expect_false(any(deps_profile_impl(target = a, config = config)$changed))
   b <- 2
-  expect_false(any(deps_profile(target = a, config = config)$changed))
+  expect_false(any(deps_profile_impl(target = a, config = config)$changed))
   config$skip_targets <- TRUE
-  make(config = config)
-  dp <- deps_profile(target = a, config = config)
+  make_impl(config = config)
+  dp <- deps_profile_impl(target = a, config = config)
   expect_true(as.logical(dp[dp$name == "depend", "changed"]))
   expect_equal(sum(dp$changed), 1)
   plan$command <- "b + c"
@@ -92,7 +93,7 @@ test_with_dir("dependency profile", {
     cache = config$cache,
     logger = config$logger
   )
-  dp <- deps_profile(target = a, config = config)
+  dp <- deps_profile_impl(target = a, config = config)
   expect_true(as.logical(dp[dp$name == "command", "changed"]))
   expect_equal(sum(dp$changed), 2)
   load_mtcars_example()
@@ -102,13 +103,24 @@ test_with_dir("dependency profile", {
     skip_targets = TRUE,
     session_info = FALSE
   )
-  make(config = config)
-  out <- deps_profile(
+  make_impl(config = config)
+  out <- deps_profile_impl(
     file_store("report.Rmd"),
     character_only = TRUE,
     config
   )
   expect_equal(nrow(out), 5L)
+})
+
+test_with_dir("deps_profile_impl() on imports (#1134)", {
+  f <- function(x) {
+    x
+  }
+  plan <- drake_plan(y = f(1))
+  make(plan)
+  config <- drake_config(plan)
+  out <- deps_profile_impl(target = f, config = config)
+  expect_equal(sort(out$name), sort(c("depend", "file_in")))
 })
 
 test_with_dir("Missing cache", {
@@ -177,6 +189,7 @@ test_with_dir("non-existent caches", {
 })
 
 test_with_dir("drake_gc() and mangled keys", {
+  skip_on_cran()
   cache <- storr::storr_rds(tempfile(), mangle_key = TRUE)
   cache$set("a", 1)
   expect_silent(tmp <- drake_gc(cache = cache))
@@ -190,6 +203,7 @@ test_with_dir("try to rescue non-existent stuff", {
 })
 
 test_with_dir("drake_cache() can search", {
+  skip_on_cran()
   dir.create(file.path("w"))
   dir.create(file.path("w", "x"))
   dir.create(file.path("w", "x", "y"))
@@ -215,6 +229,7 @@ test_with_dir("drake_cache() can search", {
 })
 
 test_with_dir("neighboring caches", {
+  skip_on_cran()
   cache <- new_cache(".test")
   test_plan <- drake_plan(
     dot_test = 1L
@@ -270,7 +285,7 @@ test_with_dir("cache functions work from various working directories", {
     drake_gc()
     y <- cached()
     expect_equal(sort(x), sort(y))
-    expect_equal(outdated(config), character(0))
+    expect_equal(outdated_impl(config), character(0))
 
     # targets and imports
     imports <- sort(
@@ -452,6 +467,7 @@ test_with_dir("master caching, environment caches and parallelism", {
 })
 
 test_with_dir("run make() from subdir", {
+  skip_on_cran()
   old <- Sys.getenv("drake_warn_subdir")
   Sys.setenv(drake_warn_subdir = "")
   on.exit(Sys.setenv(drake_warn_subdir = old))
@@ -470,6 +486,7 @@ test_with_dir("run make() from subdir", {
 })
 
 test_with_dir("loadd() does not load imports", {
+  skip_on_cran()
   f <- function(x) {
     x + 1
   }
@@ -546,6 +563,7 @@ test_with_dir("make() writes a cache log file", {
 })
 
 test_with_dir("loadd(x, deps = TRUE) when x is not cached", {
+  skip_on_cran()
   plan <- drake_plan(x = "abc", y = x + 1)
   expect_error(make(plan, session_info = FALSE))
   config <- drake_config(plan, session_info = FALSE)
@@ -650,7 +668,7 @@ test_with_dir("use two differnt file system caches", {
     session_info = FALSE
   )
 
-  o1 <- outdated(con)
+  o1 <- outdated_impl(con)
 
   expect_equal(o1, character(0))
   expect_equal(
@@ -664,7 +682,7 @@ test_with_dir("use two differnt file system caches", {
   )
   con2 <- con
   con2$cache <- cache2
-  o2 <- outdated(con2)
+  o2 <- outdated_impl(con2)
   make(
     my_plan,
     cache = cache2,
@@ -683,7 +701,7 @@ test_with_dir("use two differnt file system caches", {
     jobs = jobs,
     session_info = FALSE
   )
-  o3 <- outdated(con2)
+  o3 <- outdated_impl(con2)
   expect_equal(o2, targ)
   expect_equal(o3, character(0))
   expect_equal(
@@ -710,7 +728,7 @@ test_with_dir("storr_environment is usable", {
   expect_equal(cached(cache = x), "y")
   cached_data <- file.path(default_cache_path(), "data")
   expect_false(file.exists(cached_data))
-  expect_equal(outdated(config), character(0))
+  expect_equal(outdated_impl(config), character(0))
   expect_false(file.exists(cached_data))
 })
 
@@ -757,8 +775,10 @@ test_with_dir("arbitrary storr in-memory cache", {
   expect_true(is.list(drake_get_session_info(cache = cache)))
   expect_false(file.exists(cached_data))
 
-  imp <- setdiff(cached(cache = cache, targets_only = FALSE),
-                 cached(cache = cache, targets_only = TRUE))
+  imp <- setdiff(
+    cached(cache = cache, targets_only = FALSE),
+    cached(cache = cache, targets_only = TRUE)
+  )
   expect_true(length(imp) > 0)
   expect_false(file.exists(cached_data))
 
@@ -768,7 +788,7 @@ test_with_dir("arbitrary storr in-memory cache", {
   expect_true(nrow(build_times(cache = cache)) > 0)
   expect_false(file.exists(cached_data))
 
-  o1 <- outdated(con)
+  o1 <- outdated_impl(con)
   expect_equal(length(o1), 6)
   expect_false(file.exists(cached_data))
 
@@ -796,6 +816,7 @@ test_with_dir("clean a nonexistent cache", {
 })
 
 test_with_dir("make() from inside the cache", {
+  skip_on_cran()
   cache <- storr::storr_rds(getwd())
   plan <- drake_plan(x = 1)
   expect_error(
@@ -824,7 +845,7 @@ test_with_dir("try_build() does not need to access cache", {
   config$cache <- config$cache_log_file <- NULL
   build <- try_build(target = "x", meta = meta, config = config)
   expect_equal(1, build$value)
-  expect_error(drake_build(target = "x", config = config))
+  expect_error(drake_build_impl(target = "x", config = config))
 })
 
 test_with_dir("running()", {
@@ -848,6 +869,7 @@ test_with_dir("need a storr for a decorated storr", {
 })
 
 test_with_dir("dir_create()", {
+  skip_on_cran()
   x <- tempfile()
   dir_create(x)
   expect_true(dir.exists(x))
@@ -857,6 +879,7 @@ test_with_dir("dir_create()", {
 })
 
 test_with_dir("which_clean() (#1014)", {
+  skip_on_cran()
   cache <- storr::storr_environment()
   expect_equal(which_clean(cache = cache), character(0))
   plan <- drake_plan(x = 1, y = 2, z = 3)
@@ -869,6 +892,7 @@ test_with_dir("which_clean() (#1014)", {
 })
 
 test_with_dir("ignore storrs (#1071)", {
+  skip_on_cran()
   cache <- new_cache(tempfile())
   cache$set("x", "val")
   plan <- drake_plan(x = c(cache$get("x"), "target"))
@@ -885,23 +909,35 @@ test_with_dir("cache locking (#1081)", {
   config <- drake_config(plan)
   config$cache$lock()
   expect_error(make(plan), regexp = "locked")
-  expect_error(outdated(config), regexp = "locked")
-  expect_error(recoverable(config), regexp = "locked")
-  expect_error(vis_drake_graph(config), regexp = "locked")
+  expect_error(outdated_impl(config), regexp = "locked")
+  expect_error(recoverable_impl(config), regexp = "locked")
+  expect_error(vis_drake_graph_impl(config), regexp = "locked")
   expect_error(drake_gc(), regexp = "locked")
   expect_error(clean(), regexp = "locked")
   expect_error(rescue_cache(), regexp = "locked")
-  outdated(config, make_imports = FALSE)
-  recoverable(config, make_imports = FALSE)
-  g <- vis_drake_graph(config, make_imports = FALSE)
+  outdated_impl(config, make_imports = FALSE)
+  recoverable_impl(config, make_imports = FALSE)
+  g <- vis_drake_graph_impl(config, make_imports = FALSE)
   config$cache$unlock()
-  outdated(config)
-  recoverable(config)
-  g <- vis_drake_graph(config)
+  outdated_impl(config)
+  recoverable_impl(config)
+  g <- vis_drake_graph_impl(config)
   config$cache$lock()
   expect_error(config$cache$lock(), regexp = "locked")
   replicate(4, config$cache$unlock())
   rescue_cache()
   drake_gc()
   clean()
+})
+
+test_with_dir("suppress cache locking (#1081)", {
+  skip_on_cran()
+  skip_if_not_installed("visNetwork")
+  plan <- drake_plan(x = 1)
+  config <- drake_config(plan, lock_cache = FALSE)
+  config$cache$lock()
+  make(plan, lock_cache = FALSE)
+  expect_equal(justbuilt(config), "x")
+  expect_equal(outdated_impl(config), character(0))
+  expect_equal(recoverable_impl(config), character(0))
 })

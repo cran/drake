@@ -1,6 +1,23 @@
 drake_context("clustermq")
 
+test_with_dir("clustermq parallelism for CRAN", {
+  skip_if_not_installed("clustermq")
+  skip_on_os("windows")
+  options(clustermq.scheduler = "multicore")
+  plan <- drake_plan(x = 1)
+  for (caching in c("master", "worker")) {
+    clean()
+    make(plan, parallelism = "clustermq", caching = caching)
+    config <- drake_config(plan)
+    expect_equal(justbuilt(config), "x")
+  }
+  if ("package:clustermq" %in% search()) {
+    detach("package:clustermq", unload = TRUE) # nolint
+  }
+})
+
 test_with_dir("clustermq parallelism", {
+  skip_on_cran()
   skip_if_not_installed("clustermq")
   skip_on_os("windows")
   if ("package:clustermq" %in% search()) {
@@ -16,7 +33,7 @@ test_with_dir("clustermq parallelism", {
   for (caching in c("master", "worker")) {
     clean(destroy = TRUE)
     config <- drake_config(e$my_plan, envir = e)
-    expect_equal(length(outdated(config)), nrow(e$my_plan))
+    expect_equal(length(outdated_impl(config)), nrow(e$my_plan))
     make(
       e$my_plan,
       parallelism = parallelism,
@@ -27,7 +44,7 @@ test_with_dir("clustermq parallelism", {
       garbage_collection = TRUE,
       lock_envir = TRUE
     )
-    expect_equal(outdated(config), character(0))
+    expect_equal(outdated_impl(config), character(0))
     make(
       e$my_plan,
       parallelism = parallelism,
@@ -105,13 +122,13 @@ test_with_dir("All hpc targets up to date? No workers.", {
   make(plan, session_info = FALSE, cache = cache)
   config <- drake_config(plan, cache = cache)
   expect_equal(sort(justbuilt(config)), c("x", "y"))
-  expect_equal(outdated(config), character(0))
+  expect_equal(outdated_impl(config), character(0))
   plan <- drake_plan(
     x = target(2L - 1L, hpc = FALSE),
     y = target(x, hpc = TRUE)
   )
   config <- drake_config(plan, cache = cache)
-  expect_equal(sort(outdated(config)), c("x", "y"))
+  expect_equal(sort(outdated_impl(config)), c("x", "y"))
   drake:::with_options(
     list(clustermq.scheduler = "does_not_exist"),
     make(
@@ -154,7 +171,7 @@ test_with_dir("Start off with non-HPC targets, then go to HPC targets.", {
   )
   config <- drake_config(e$my_plan, envir = e)
   expect_equal(sort(justbuilt(config)), sort(e$my_plan$target))
-  expect_equal(outdated(config), character(0))
+  expect_equal(outdated_impl(config), character(0))
   if ("package:clustermq" %in% search()) {
     detach("package:clustermq", unload = TRUE) # nolint
   }

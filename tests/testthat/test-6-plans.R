@@ -169,8 +169,7 @@ test_with_dir("drake_plan() trims outer whitespace in target names", {
   }
 })
 
-test_with_dir(
-  "make() trims outer whitespace in target names", {
+test_with_dir("make() trims outer whitespace in target names", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   x <- weak_tibble(target = c("a\n", "  b", "c ", "\t  d   "),
                   command = 1)
@@ -203,7 +202,7 @@ test_with_dir("plans can start with bad symbols", {
     target = c("a'x'", "b'x'", "_a", "a^-.*"),
     command = 1)
   y <- drake_config(x)
-  out <- sort(c("a.x.", "b.x.", "X_a", "a...."))
+  out <- sort(c("a.x_", "b.x_", "X_a", "a..._"))
   expect_true(all(out %in% names(y$spec)))
 })
 
@@ -337,6 +336,27 @@ test_with_dir("bind_plans()", {
   )
 })
 
+test_with_dir("bind_plans() with unequal list columns (#1136)", {
+  plan1 <- drake_plan(
+    data_raw = read_data()
+  )
+  plan2 <- drake_plan(
+    data = target(
+      download_data(),
+      resources = list(ncpus = 1, partition = "cluster")
+    )
+  )
+  out <- bind_plans(plan1, plan2)
+  exp <- drake_plan(
+    data_raw = read_data(),
+    data = target(
+      download_data(),
+      resources = list(ncpus = 1, partition = "cluster")
+    )
+  )
+  equivalent_plans(out, exp)
+})
+
 test_with_dir("spaces in target names are replaced only when appropriate", {
   skip_on_cran() # CRAN gets whitelist tests only (check time limits).
   pl <- drake_plan(
@@ -355,10 +375,10 @@ test_with_dir("spaces in target names are replaced only when appropriate", {
   expect_equal(
     sort(pl$target),
     sort(c(
-      "a_.b.....x..y.",
-      "a_.a..x.",
-      "drake_target_1_.b.....x..y.",
-      "drake_target_1_.a..x."
+      "a_.b.....x..y_",
+      "a_.a..x_",
+      "drake_target_1_.b.....x..y_",
+      "drake_target_1_.a..x_"
     ))
   )
 })
@@ -444,6 +464,7 @@ test_with_dir("plan_to_notebook()", {
 })
 
 test_with_dir("commands and triggers can be character strings too", {
+  skip_on_cran()
   config <- dbug()
   config$plan <- deparse_lang_cols(config$plan)
   for (col in colnames(config$plan)) {
@@ -451,10 +472,10 @@ test_with_dir("commands and triggers can be character strings too", {
   }
   testrun(config)
   expect_equal(sort(config$plan$target), sort(justbuilt(config)))
-  expect_equal(outdated(config), character(0))
+  expect_equal(outdated_impl(config), character(0))
   testrun(config)
   expect_equal(character(0), sort(justbuilt(config)))
-  expect_equal(outdated(config), character(0))
+  expect_equal(outdated_impl(config), character(0))
   config$plan$trigger <- "trigger(condition = TRUE)"
   testrun(config)
   expect_equal(sort(config$plan$target), sort(justbuilt(config)))
@@ -463,6 +484,7 @@ test_with_dir("commands and triggers can be character strings too", {
 })
 
 test_with_dir("printing large plans", {
+  skip_on_cran()
   skip_if_not_installed("tibble")
   tmp <- capture.output({
     z <- seq_len(1e3)
@@ -475,6 +497,7 @@ test_with_dir("printing large plans", {
 })
 
 test_with_dir("drake_plan_source() with character columns", {
+  skip_on_cran()
   skip_if_not_installed("styler")
   skip_if_not_installed("tibble")
   exp <- dbug_plan()
@@ -611,7 +634,7 @@ test_with_dir("Trailing slashes in file paths on Windows", {
 test_with_dir("supplied a plan instead of a config", {
   skip_if_not_installed("visNetwork")
   plan <- drake_plan(x = 1)
-  expect_error(vis_drake_graph(plan), regexp = "must be a drake_config")
+  expect_error(vis_drake_graph_impl(plan), regexp = "must be a drake_config")
 })
 
 test_with_dir("warning when file_out() files not produced", {
@@ -630,8 +653,116 @@ test_with_dir("warning when file_out() files not produced", {
 
 test_with_dir("id_chr()", {
   skip_on_cran()
-  expect_error(id_chr(), regexp = "drake plan")
+  expect_error(id_chr(), regexp = "environment where drake builds targets")
   plan <- drake_plan(x = id_chr())
   make(plan)
   expect_equal(readd(x), "x")
+})
+
+test_with_dir("cancel() (#1131)", {
+  f <- function(x) {
+    cancel()
+    "x"
+  }
+  g <- function(x) f(x)
+  plan <- drake_plan(y = g(1))
+  make(plan)
+  expect_equal(progress()$progress, "cancelled")
+  expect_error(suppressWarnings(readd(y)))
+  config <- drake_config(plan)
+  expect_equal(justbuilt(config), character(0))
+  f <- function(x) {
+    cancel(allow_missing = FALSE)
+    "x"
+  }
+  make(plan)
+  expect_equal(justbuilt(config), "y")
+  f <- function(x) {
+    cancel(allow_missing = FALSE)
+    "y"
+  }
+  plan <- drake_plan(y = g(1), z = y)
+  make(plan)
+  expect_equal(justbuilt(config), "z")
+  expect_equal(readd(y), "x")
+  expect_equal(readd(z), "x")
+})
+
+test_with_dir("cancel_if(TRUE) (#1131)", {
+  f <- function(x) {
+    cancel_if(TRUE)
+    "x"
+  }
+  g <- function(x) f(x)
+  plan <- drake_plan(y = g(1))
+  make(plan)
+  expect_error(suppressWarnings(readd(y)))
+  config <- drake_config(plan)
+  expect_equal(justbuilt(config), character(0))
+  f <- function(x) {
+    cancel_if(TRUE, allow_missing = FALSE)
+    "x"
+  }
+  make(plan)
+  expect_equal(justbuilt(config), "y")
+  f <- function(x) {
+    cancel_if(TRUE, allow_missing = FALSE)
+    "y"
+  }
+  plan <- drake_plan(y = g(1), z = y)
+  make(plan)
+  expect_equal(justbuilt(config), "z")
+  expect_equal(readd(y), "x")
+  expect_equal(readd(z), "x")
+})
+
+test_with_dir("cancel_if(condition) (#1131)", {
+  f <- function(x) {
+    cancel_if(x > 1)
+    "x"
+  }
+  plan <- drake_plan(x = f(0), y = f(2))
+  make(plan)
+  expect_equal(cached(), "x")
+})
+
+test_with_dir("cancel_if(bad condition) (#1131)", {
+  plan <- drake_plan(x = cancel_if(1:2))
+  expect_error(make(plan), regexp = "length 1 in cancel_if")
+})
+
+test_with_dir("cancel in incorrect context (#1131)", {
+  expect_error(cancel(), regexp = "where drake builds targets")
+  expect_error(cancel_if(TRUE), regexp = "where drake builds targets")
+})
+
+test_with_dir("convert_trailing_dot() (#1147)", {
+  expect_equal(
+    convert_trailing_dot(c("numeric_ids_.1.", "numeric_ids_.2.")),
+    c("numeric_ids_.1_", "numeric_ids_.2_")
+  )
+  expect_equal(
+    convert_trailing_dot(c("numeric_ids_.1._", "numeric_ids_.2.")),
+    c("numeric_ids_.1._", "numeric_ids_.2_")
+  )
+  expect_equal(convert_trailing_dot(letters), letters)
+})
+
+test_with_dir("convert_trailing_dot() in plans (#1147)", {
+  n <- seq_len(2)
+  ids <- rlang::syms(as.character(n))
+  plan <- drake_plan(
+    numeric_ids = target(
+      rnorm(n),
+      transform = map(
+        n = !!n,
+        ids = !!ids,
+        .id = ids
+      )
+    )
+  )
+  expect_equal(
+    plan$target,
+    c("numeric_ids_.1_", "numeric_ids_.2_")
+  )
 })

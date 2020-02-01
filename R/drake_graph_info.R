@@ -8,7 +8,9 @@
 #'   the legend nodes. The list also contains the
 #'   default title of the graph.
 #' @seealso [vis_drake_graph()]
-#' @param config A configured workflow from [drake_config()].
+#' @param ... Arguments to [make()], such as `plan` and `targets`.
+#'
+#' @param config Deprecated.
 #'
 #' @param from Optional collection of target/import names.
 #'   If `from` is nonempty,
@@ -94,14 +96,13 @@
 #' if (requireNamespace("visNetwork", quietly = TRUE)) {
 #' if (suppressWarnings(require("knitr"))) {
 #' load_mtcars_example() # Get the code with drake_example("mtcars").
-#' config <- drake_config(my_plan) # my_plan loaded with load_mtcars_example()
-#' vis_drake_graph(config) # Jump straight to the interactive graph.
+#' vis_drake_graph(my_plan)
 #' # Get a list of data frames representing the nodes, edges,
 #' # and legend nodes of the visNetwork graph from vis_drake_graph().
-#' raw_graph <- drake_graph_info(config = config)
+#' raw_graph <- drake_graph_info(my_plan)
 #' # Choose a subset of the graph.
 #' smaller_raw_graph <- drake_graph_info(
-#'   config = config,
+#'   my_plan,
 #'   from = c("small", "reg2"),
 #'   mode = "in"
 #' )
@@ -118,6 +119,33 @@
 #' })
 #' }
 drake_graph_info <- function(
+  ...,
+  from = NULL,
+  mode = c("out", "in", "all"),
+  order = NULL,
+  subset = NULL,
+  build_times = "build",
+  digits = 3,
+  targets_only = FALSE,
+  font_size = 20,
+  from_scratch = FALSE,
+  make_imports = TRUE,
+  full_legend = FALSE,
+  group = NULL,
+  clusters = NULL,
+  show_output_files = TRUE,
+  hover = FALSE,
+  on_select_col = NULL,
+  config = NULL
+) {
+}
+
+#' @title Internal function
+#' @export
+#' @keywords internal
+#' @description Not a user-side function.
+#' @param config A [drake_config()] object.
+drake_graph_info_impl <- function(
   config,
   from = NULL,
   mode = c("out", "in", "all"),
@@ -204,7 +232,7 @@ drake_graph_info <- function(
   if (length(config$group)) {
     config <- cluster_nodes(config)
   }
-  list(
+  out <- list(
     nodes = weak_as_tibble(config$nodes),
     edges = weak_as_tibble(config$edges),
     legend_nodes = filtered_legend_nodes(
@@ -214,7 +242,23 @@ drake_graph_info <- function(
     ),
     default_title = default_graph_title()
   )
+  class(out) <- "drake_graph_info"
+  out
 }
+
+#' @export
+print.drake_graph_info <- function(x, ...) {
+  cat(
+    "drake graph visual info:",
+    nrow(x$nodes),
+    "nodes and",
+    nrow(x$edges),
+    "edges:\n"
+  )
+  min_str(x)
+}
+
+body(drake_graph_info) <- config_util_body(drake_graph_info_impl)
 
 get_raw_node_category_data <- function(config) {
   all_labels <- V(config$graph)$name
@@ -229,6 +273,7 @@ get_raw_node_category_data <- function(config) {
   config$outdated <- resolve_graph_outdated(config = config)
   prog <- config$cache$get_progress(config$targets)
   config$running <- config$targets[prog == "running"]
+  config$cancelled <- config$targets[prog == "cancelled"]
   config$failed <- config$targets[prog == "failed"]
   config$files <- all_labels[is_encoded_path(all_labels)]
   config$functions <- parallel_filter(
@@ -250,7 +295,7 @@ get_raw_node_category_data <- function(config) {
 
 trim_node_categories <- function(config) {
   elts <- c(
-    "failed", "files", "functions", "running", "missing",
+    "cancelled", "failed", "files", "functions", "running", "missing",
     "outdated", "targets"
   )
   for (elt in elts) {
@@ -263,7 +308,7 @@ resolve_graph_outdated <- function(config) {
   if (config$from_scratch) {
     config$outdated <- all_targets(config)
   } else {
-    config$outdated <- outdated(
+    config$outdated <- outdated_impl(
       config = config,
       make_imports = config$make_imports
     )
@@ -382,6 +427,7 @@ legend_nodes <- function(font_size = 20) {
       "Up to date",
       "Outdated",
       "Running",
+      "Cancelled",
       "Failed",
       "Imported",
       "Missing",
@@ -395,13 +441,14 @@ legend_nodes <- function(font_size = 20) {
       "up_to_date",
       "outdated",
       "running",
+      "cancelled",
       "failed",
       "import",
       "missing",
       rep("generic", 5)
     )),
     shape = node_shape(c(
-      rep("object", 7),
+      rep("object", 8),
       "dynamic",
       "funct",
       "file",
@@ -430,11 +477,9 @@ cluster_nodes <- function(config) {
       config = list(nodes = new_node, font_size = config$font_size))
     new_node$label <- new_node$id <-
       paste0(config$group, ": ", cluster)
-
     if (!is.null(config$on_select_col)) {
       new_node$on_select_col <- config$nodes[index, "on_select_col"][[1]]
     }
-
     matching <- config$nodes$id[index]
     new_node$title <- paste(matching, collapse = ", ")
     new_node$title <- crop_text(new_node$title, width = hover_width)
@@ -487,6 +532,7 @@ categorize_nodes <- function(config) {
     nodes[missing, "status"] <- "missing"
     nodes[outdated, "status"] <- "outdated"
     nodes[running, "status"] <- "running"
+    nodes[cancelled, "status"] <- "cancelled"
     nodes[failed, "status"] <- "failed"
     nodes$type <- "object"
     nodes[dynamic, "type"] <- "dynamic"
@@ -520,6 +566,7 @@ style_nodes <- function(config) {
     nodes$font.size <- font_size # nolint
     nodes[nodes$status == "imported", "color"] <- node_color("import")
     nodes[nodes$status == "running", "color"] <- node_color("running")
+    nodes[nodes$status == "cancelled", "color"] <- node_color("cancelled")
     nodes[nodes$status == "failed", "color"] <- node_color("failed")
     nodes[nodes$status == "missing", "color"] <- node_color("missing")
     nodes[nodes$status == "outdated", "color"] <- node_color("outdated")
@@ -540,6 +587,7 @@ node_color <- Vectorize(function(x) {
     fail = "red",
     up_to_date = "forestgreen",
     outdated = "#000000",
+    cancelled = "#ecb753",
     failed = "#aa0000",
     import = "dodgerblue3",
     missing = "darkorchid3",
@@ -564,23 +612,50 @@ node_shape <- Vectorize(function(x) {
 "x", USE.NAMES = FALSE)
 
 append_build_times <- function(config) {
-  with(config, {
-    time_data <- build_times(
-      digits = digits,
-      cache = cache,
-      type = build_times
+  time_data <- build_times(
+    digits = config$digits,
+    cache = config$cache,
+    type = config$build_times
+  )
+  nodes <- config$nodes
+  timed <- intersect(time_data$target, nodes$id)
+  if (!length(timed)) {
+    return(nodes)
+  }
+  time_data <- aggregate_dynamic_times(time_data, config)
+  time_labels <- as.character(time_data$elapsed)
+  if (any(time_data$dynamic)) {
+    time_labels[time_data$dynamic] <- paste0(
+      time_labels[time_data$dynamic],
+      " total\n(",
+      time_data$subtargets[time_data$dynamic],
+      " sub-targets)"
     )
-    timed <- intersect(time_data$target, nodes$id)
-    if (!length(timed)) {
-      return(nodes)
-    }
-    time_labels <- as.character(time_data$elapsed)
-    names(time_labels) <- time_data$target
-    time_labels <- time_labels[timed]
-    nodes[timed, "label"] <-
-      paste(nodes[timed, "label"], time_labels, sep = "\n")
-    nodes
-  })
+  }
+  names(time_labels) <- time_data$target
+  time_labels <- time_labels[timed]
+  nodes[timed, "label"] <- paste(
+    nodes[timed, "label"],
+    time_labels,
+    sep = "\n"
+  )
+  nodes
+}
+
+aggregate_dynamic_times <- function(time_data, config) {
+  time_data$dynamic <- vlapply(time_data$target, is_dynamic, config = config)
+  time_data$subtargets <- 0L
+  dynamic <- which(time_data$dynamic)
+  for (i in dynamic) {
+    target <- time_data$target[i]
+    meta <- config$cache$get(target, namespace = "meta")
+    subtargets <- intersect(meta$subtargets, time_data$target)
+    subtime <- sum(time_data$elapsed[time_data$target %in% subtargets]) %||% 0
+    dyntime <- time_data$elapsed[i] %||% 0L
+    time_data$elapsed[i] <- lubridate::dseconds(dyntime + subtime)
+    time_data$subtargets[i] <- time_data$subtargets[i] + length(subtargets)
+  }
+  time_data
 }
 
 hover_text <- function(config) {

@@ -214,17 +214,15 @@ refclass_decorated_storr <- methods::setRefClass(
         return()
       }
       stop(
-        "drake's cache is locked because another process is building ",
-        "targets or imports right now, ",
-        "e.g. make() or clean() or outdated(make_imports = TRUE) ",
-        "or recoverable(make_imports = TRUE) or ",
-        "vis_drake_graph(make_imports = TRUE) etc. ",
-        "If the process other process crashed before it could clean up, ",
-        "unlock the cache with drake_cache(\"", .self$path, "\")$unlock(). ",
-        "Or, if you are using outdated() or recoverable() ",
-        "or vis_drake_graph() etc. then set make_imports = FALSE. ",
-        "See https://books.ropensci.org/drake/hpc.html to learn how to ",
-        "use parallel computing in drake.",
+        "drake's cache is locked. ",
+        "Either another process is storing targets/imports right now ",
+        "(e.g. make()) or the process was interrupted before cleanup. ",
+        "In the latter case, unlock the cache with:\n\n",
+        "  drake::drake_cache(\"", .self$path, "\")$unlock()\n\n",
+        "To invoke a function like outdated() or vis_drake_graph() ",
+        "while make() is running, set make_imports = FALSE instead.\n\n",
+        "To read about parallel computing in drake, visit ",
+        "https://books.ropensci.org/drake/hpc.html.",
         call. = FALSE
       )
     },
@@ -288,6 +286,13 @@ dcst_get_.drake_format_fst <- function(value, key, .self) {
   fst::read_fst(.self$file_return_key(key))
 }
 
+dcst_get_.drake_format_fst_tbl <- function(value, key, .self) {
+  assert_pkg("fst")
+  assert_pkg("tibble")
+  out <- fst::read_fst(.self$file_return_key(key))
+  tibble::as_tibble(out)
+}
+
 dcst_get_.drake_format_fst_dt <- function(value, key, .self) { # nolint
   assert_pkg("data.table")
   assert_pkg("fst")
@@ -340,6 +345,13 @@ dcst_get_value_.drake_format_fst <- function(value, hash, .self) { # nolint
   fst::read_fst(.self$file_return_hash(hash))
 }
 
+dcst_get_value_.drake_format_fst_tbl <- function(value, hash, .self) { # nolint
+  assert_pkg("fst")
+  assert_pkg("tibble")
+  out <- fst::read_fst(.self$file_return_hash(hash))
+  tibble::as_tibble(out)
+}
+
 dcst_get_value_.drake_format_fst_dt <- function(value, hash, .self) { # nolint
   assert_pkg("data.table")
   assert_pkg("fst")
@@ -390,6 +402,8 @@ dcst_set.drake_format_fst <- function(value, key, ..., .self) {
   fst::write_fst(x = value$value, path = tmp)
   dcst_set_move_tmp(key = key, value = value, tmp = tmp, .self = .self)
 }
+
+dcst_set.drake_format_fst_tbl <- dcst_set.drake_format_fst
 
 dcst_set.drake_format_fst_dt <- function(value, key, ..., .self) {
   assert_pkg("data.table")
@@ -627,7 +641,7 @@ standardize_key <- function(text) {
 }
 
 ht_keys <- function(digest_fn) {
-  keys <- c("running", "done", "failed", "lock")
+  keys <- c("running", "done", "cancelled", "failed", "lock")
   out <- lapply(keys, precomputed_key_hash, digest_fn = digest_fn)
   names(out) <- keys
   out
@@ -649,6 +663,7 @@ deduce_progress <- Vectorize(function(substr) {
     substr,
     r = "running",
     d = "done",
+    c = "cancelled",
     f = "failed",
     "none"
   )

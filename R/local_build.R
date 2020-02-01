@@ -19,6 +19,10 @@ announce_build <- function(target, config) {
     announce_dynamic(target, config)
     return()
   }
+  announce_static(target, config)
+}
+
+announce_static <- function(target, config) {
   set_progress(
     target = target,
     value = "running",
@@ -34,6 +38,11 @@ announce_build <- function(target, config) {
 }
 
 announce_dynamic <- function(target, config) {
+  set_progress(
+    target = target,
+    value = "running",
+    config = config
+  )
   msg <- ifelse(
     is_registered_dynamic(target, config),
     "aggregate",
@@ -181,7 +190,7 @@ with_handling <- function(target, meta, config) {
     start <- proc_time()
   }
   withCallingHandlers(
-    value <- with_call_stack(target = target, config = config),
+    value <- drake_with_call_stack_8a6af5(target = target, config = config),
     warning = function(w) {
       config$logger$minor(paste("Warning:", w$message), target = target)
       warnings <<- c(warnings, w$message)
@@ -202,7 +211,6 @@ with_handling <- function(target, meta, config) {
   if (inherits(value, "error")) {
     value$message <- prepend_fork_advice(value$message)
     meta$error <- value
-    value <- NULL
   }
   list(
     target = target,
@@ -237,7 +245,7 @@ prepend_fork_advice <- function(msg) {
 # Taken directly from the `evaluate::try_capture_stack()`.
 # https://github.com/r-lib/evaluate/blob/b43d54f1ea2fe4296f53316754a28246903cd703/R/traceback.r#L20-L47 # nolint
 # Copyright Hadley Wickham and Yihui Xie, 2008 - 2018. MIT license.
-with_call_stack <- function(target, config) {
+drake_with_call_stack_8a6af5 <- function(target, config) {
   frame <- sys.nframe()
   capture_calls <- function(e) {
     e <- mention_pure_functions(e)
@@ -245,38 +253,29 @@ with_call_stack <- function(target, config) {
     signalCondition(e)
   }
   expr <- config$spec[[target]]$command_build
-  # Need to make sure the environment is locked for running commands.
-  # Why not just do this once at the beginning of `make()`?
-  # Because do_prework() and future::value()
-  # may need to modify the global state.
-  # Unfortunately, we have to repeatedly lock and unlock the envir.
-  # Unfortunately, the safe way to do this adds overhead and
-  # makes future::multicore parallelism serial.
   if (config$lock_envir) {
-    i <- 1
-    # Lock the environment only while running the command.
-    while (environmentIsLocked(config$envir)) {
-      Sys.sleep(config$sleep(max(0L, i))) # nocov
-      i <- i + 1 # nocov
-    }
-    lock_environment(config$envir)
     on.exit(unlock_environment(config$envir))
+    block_envir_lock(config)
+    lock_environment(config$envir)
   }
-  config$envir_subtargets[[drake_target_marker]] <- target
-  tidy_expr <- eval(
-    expr = expr,
-    envir = config$envir_subtargets
-  ) # tidy eval prep
+  tidy_expr <- eval(expr = expr, envir = config$envir_subtargets)
   tryCatch(
     withCallingHandlers(
-      eval(
-        expr = tidy_expr,
-        envir = config$envir_subtargets
-      ), # pure eval
+      eval(expr = tidy_expr, envir = config$envir_subtargets),
       error = capture_calls
     ),
-    error = identity
+    error = identity,
+    drake_cancel = cancellation
   )
+}
+
+block_envir_lock <- function(config) {
+  i <- 1
+  # Lock the environment only while running the command.
+  while (environmentIsLocked(config$envir)) {
+    Sys.sleep(config$sleep(max(0L, i))) # nocov
+    i <- i + 1 # nocov
+  }
 }
 
 lock_environment <- function(envir) {
@@ -326,20 +325,28 @@ conclude_build <- function(build, config) {
   target <- build$target
   value <- build$value
   meta <- build$meta
-  assert_output_files(target = target, meta = meta, config = config)
-  handle_build_exceptions(target = target, meta = meta, config = config)
-  value <- assign_format(
-    target = target,
-    value = value,
-    format = config$spec[[target]]$format,
-    config = config
-  )
-  store_outputs(target = target, value = value, meta = meta, config = config)
-  assign_to_envir(target = target, value = value, config = config)
-  invisible(value)
+  conclude_build_impl(value, target, meta, config)
 }
 
-assign_format <- function(target, value, format, config) {
+conclude_build_impl <- function(value, target, meta, config) {
+  UseMethod("conclude_build_impl")
+}
+
+conclude_build_impl.drake_cancel <- function(value, target, meta, config) { # nolint
+  config$cache$set_progress(target = target, value = "cancelled")
+  config$logger$major("cancel", target, target = target, color = "cancel")
+}
+
+conclude_build_impl.default <- function(value, target, meta, config) {
+  assert_output_files(target = target, meta = meta, config = config)
+  handle_build_exceptions(target = target, meta = meta, config = config)
+  value <- assign_format(target = target, value = value, config = config)
+  store_outputs(target = target, value = value, meta = meta, config = config)
+  assign_to_envir(target = target, value = value, config = config)
+}
+
+assign_format <- function(target, value, config) {
+  format <- config$spec[[target]]$format %||NA% config$format
   drop_format <- is.null(format) ||
     is.na(format) ||
     is.null(value) ||
@@ -373,6 +380,22 @@ sanitize_format.drake_format_fst <- function(x, target, config) { # nolint
     config$logger$minor(msg, target = target)
   }
   x$value <- as.data.frame(x$value)
+  x
+}
+
+sanitize_format.drake_format_fst_tbl <- function(x, target, config) { # nolint
+  assert_pkg("tibble")
+  if (!inherits(x$value, "tbl_df")) {
+    msg <- paste0(
+      "You selected fst_tbl format for target ", target,
+      ", so drake will convert it from class ",
+      safe_deparse(class(x$value), backtick = TRUE),
+      " to a tibble."
+    )
+    warning(msg, call. = FALSE)
+    config$logger$minor(msg, target = target)
+  }
+  x$value <- tibble::as_tibble(x$value)
   x
 }
 
@@ -501,9 +524,14 @@ handle_build_exceptions <- function(target, meta, config) {
       color = "fail"
     )
     store_failure(target = target, meta = meta, config = config)
+    if (is_subtarget(target, config)) {
+      parent <- config$spec[[target]]$subtarget_parent
+      meta$subtarget <- target
+      store_failure(target = parent, meta = meta, config = config)
+    }
     if (!config$keep_going) {
       msg <- paste0(
-        "Target `", target, "` failed. Call `diagnose(", target,
+        "target `", target, "` failed. Call `drake::diagnose(", target,
         ")` for details. Error message:\n  ",
         meta$error$message
       )
@@ -532,7 +560,8 @@ store_failure <- function(target, meta, config) {
     value = "failed",
     config = config
   )
-  fields <- intersect(c("messages", "warnings", "error"), names(meta))
+  fields <- c("messages", "warnings", "error", "subtarget")
+  fields <- intersect(fields, names(meta))
   meta <- meta[fields]
   config$cache$set(
     key = target,
