@@ -28,8 +28,6 @@
 #'   - `cross(..., .data, .id, .tag_in, .tag_out)`
 #'   - `combine(..., .by, .id, .tag_in, .tag_out)`
 #' @section Dynamic branching:
-#'   Dynamic branching is not yet implemented,
-#'   but this is what it usage will look like.
 #'   - `map(..., .trace)`
 #'   - `cross(..., .trace)`
 #'   - `group(..., .by, .trace)`
@@ -606,9 +604,6 @@ transform_row <- function(index, plan, graph, max_expand) {
   )
   check_group_names(new_cols, old_cols(plan))
   out <- dsl_transform(transform, target, row, plan, graph, max_expand)
-  if (is.null(out)) {
-    return()
-  }
   out[[target]] <- out$target
   for (col in tag_in(transform)) {
     out[[col]] <- target
@@ -646,8 +641,7 @@ dsl_transform.map <- dsl_transform.cross <- function(
   groupings <- groupings(transform)
   grid <- dsl_grid(transform, groupings)
   if (any(dim(grid) < 1L)) {
-    warn_empty_transform(target)
-    return(grid)
+    error_nonempty_transform(target)
   }
   grid <- dsl_map_join_plan(
     grid = grid,
@@ -773,13 +767,11 @@ seq_max_expand <- function(n, max_expand) {
 dsl_transform.combine <- function(transform, target, row, plan, graph, ...) {
   plan <- valid_splitting_plan(plan, transform)
   if (!nrow(plan)) {
-    warn_empty_transform(target)
-    return()
+    error_nonempty_transform(target)
   }
   out <- dsl_commands_combine(transform = transform, row = row, plan = plan)
   if (!nrow(out)) {
-    warn_empty_transform(target)
-    return()
+    error_nonempty_transform(target)
   }
   out$target <- new_target_names(
     target,
@@ -802,8 +794,8 @@ dsl_commands_combine <- function(transform, row, plan) {
   )
 }
 
-warn_empty_transform <- function(target) {
-  warning(
+error_nonempty_transform <- function(target) {
+  stop(
     "A grouping variable for target ", shQuote(target),
     " is either undefined or improperly invoked. Transformation skipped ",
     "and target deleted. To read about grouping variables and ",

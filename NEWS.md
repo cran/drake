@@ -1,3 +1,36 @@
+# Version 7.11.0
+
+## Bug fixes
+
+* Sanitize internal S3 classes for target storage (#1159, @rsangole).
+* Bump `digest` version to require 0.6.21 (#1166, @boshek)
+* Actually store output file sizes in metadata.
+* Use the `depend` trigger to toggle invalidation from dynamic-only dependencies, including the `max_expand` argument of `make()`.
+* Repair `session_info` argument parsing (and reduce calls to `utils::sessionInfo()` in tests).
+* Ensure compatibility with `tibble` 3.0.0.
+
+## New features
+
+* Allow dynamic files with `target(format = "file")` (#1168, #1127).
+* Implement dynamic `max_expand` on a target-by-target basis via `target()` (#1175, @kendonB).
+
+## Enhancements
+
+* Assert dependencies of formats at the very beginning of `make()`, not in `drake_config()` (#1156).
+* In `make(verbose = 2)`, remove the spinner and use a progress bar to track how many targets are done so far.
+* Reduce logging of utility functions.
+* Improve the aesthetics of console messages using `cli` (optional package).
+* Deprecate `console_log_file` in favor of `log_make` as an argument to `make()` and `drake_config()`.
+* Immediately relay warnings and messages in `"loop"` and `"future"` parallel backends (#400).
+* Warn when converting trailing dots (#1147).
+* Warn about imports with trailing dots on Windows (#1147).
+* Allow user-defined caches for the `loadd()` RStudio addin through the new `rstudio_drake_cache` global option (#1169, @joelnitta).
+* Change dynamic target finalization message to "finalize" instead of "aggregate" (#1176, @kendonB).
+* Describe the limits of `recoverable()`, e.g. dynamic branching + dynamic files.
+* Throw an error instead of a warning in `drake_plan()` if a grouping variable is undefined or invalid (#1182, @kendonB).
+* Rigorous S3 framework for static code analysis objects of type `drake_deps` and `drake_deps_ht` (#1183).
+* Use `rlang::trace_back()` to make `diagnose()$error$calls` nicer (#1198).
+
 # Version 7.10.0
 
 ## Unavoidable but minor breaking changes

@@ -69,32 +69,61 @@ test_with_dir("checksum functionality", {
   config$jobs <- 1
   config$cache <- decorate_storr(storr::storr_environment())
   testrun(config)
-  checksum <- get_checksum(target = "combined", config = config)
+  checksum <- get_checksum(target = "combined", value = 1, config = config)
   bad <- "askldfklhjsdfkj"
   expect_false(grepl("NA", checksum))
   expect_true(
     is_good_checksum(
-      target = "combined", checksum = checksum, config = config))
+      target = "combined", value = 1, checksum = checksum, config = config))
   expect_false(
     is_good_checksum(
-      target = "combined", checksum = bad, config = config))
+      target = "combined", value = 1, checksum = bad, config = config))
   expect_silent(
     wait_checksum(
-      target = "combined", checksum = checksum, config = config, timeout = 0.1))
+      target = "combined",
+      value = 1,
+      checksum = checksum,
+      config = config,
+      timeout = 0.1
+    )
+  )
   expect_error(
     wait_checksum(
-      target = "combined", checksum = bad, config = config, timeout = 0.1))
-  checksum <- get_outfile_checksum(target = "combined", config = config)
+      target = "combined",
+      value = 1,
+      checksum = bad,
+      config = config,
+      timeout = 0.1
+    )
+  )
+  checksum <- get_outfile_checksum(
+    target = "combined",
+    value = 1,
+    config = config
+  )
   expect_silent(
     wait_outfile_checksum(
-      target = "combined", checksum = checksum, config = config, timeout = 0.1))
+      target = "combined",
+      value = 1,
+      checksum = checksum,
+      config = config,
+      timeout = 0.1
+    )
+  )
   expect_error(
     wait_outfile_checksum(
-      target = "combined", checksum = bad, config = config, timeout = 0.1))
+      target = "combined",
+      value = 1,
+      checksum = bad,
+      config = config,
+      timeout = 0.1
+    )
+  )
 })
 
 test_with_dir("direct users to GitHub issue #675", {
   skip_on_cran()
+  skip_if_not_installed("future")
   plan <- drake_plan(
     # If base R is patched, mclapply may not always give this warning.
     x = warning("all scheduled cores encountered errors in user code")
@@ -104,6 +133,35 @@ test_with_dir("direct users to GitHub issue #675", {
   expect_warning(
     make(plan, envir = globalenv(), session_info = FALSE, cache = cache),
     regexp = regexp
+  )
+  clean(cache = cache)
+  expect_warning(
+    make(
+      plan,
+      parallelism = "future",
+      envir = globalenv(),
+      session_info = FALSE,
+      cache = cache
+    ),
+    regexp = regexp
+  )
+})
+
+test_with_dir("same, but with error (#675)", {
+  skip_on_cran()
+  plan <- drake_plan(
+    # If base R is patched, mclapply may not always give this warning.
+    x = {
+      warning("all scheduled cores encountered errors in user code")
+      stop()
+    }
+  )
+  cache <- storr::storr_environment()
+  regexp <- "workaround"
+  expect_error(
+    expect_warning(
+      make(plan, envir = globalenv(), session_info = FALSE, cache = cache)
+    )
   )
 })
 
@@ -148,7 +206,6 @@ test_with_dir("parallelism can be a scheduler function", {
   loop_ <- function(config) {
     targets <- igraph::topo_sort(config$graph)$name
     for (target in targets) {
-      config$logger$minor(target)
       config$envir_targets[[target]] <- build_(
         target = target,
         config = config

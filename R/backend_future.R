@@ -29,11 +29,11 @@ ft_check_target <- function(target, id, config) {
   if (length(target)) {
     ft_do_target(target, id, config)
   } else {
-    ft_skip_target(config) # nocov
+    ft_no_target(config) # nocov
   }
 }
 
-ft_skip_target <- function(config) {
+ft_no_target <- function(config) {
   Sys.sleep(config$sleep(max(0L, config$sleeps$count)))
   config$sleeps$count <- config$sleeps$count + 1L
 }
@@ -54,9 +54,10 @@ ft_build_target <- function(target, id, running, protect, config) {
 }
 
 future_local_build <- function(target, protect, config) {
-  config$logger$minor("local target", target = target)
+  config$logger$disk("local target", target = target)
   local_build(target, config, downstream = protect)
   decrease_revdep_keys(config$queue, target, config)
+  config$logger$progress()
 }
 
 initialize_workers <- function(config) {
@@ -71,6 +72,7 @@ initialize_workers <- function(config) {
 ft_decide_worker <- function(target, protect, config) {
   meta <- drake_meta_(target, config)
   if (handle_triggers(target, meta, config)) {
+    config$logger$progress()
     return(empty_worker(target))
   }
   ft_launch_worker(target, meta, protect, config)
@@ -88,7 +90,7 @@ ft_launch_worker <- function(target, meta, protect, config) {
     meta = meta,
     config = config$ft_config,
     spec = spec,
-    ht_is_subtarget = config$ht_is_subtarget,
+    config_tmp = get_hpc_config_tmp(config),
     protect = protect
   )
   announce_build(target = target, config = config)
@@ -99,7 +101,7 @@ ft_launch_worker <- function(target, meta, protect, config) {
         meta = DRAKE_GLOBALS__$meta,
         config = DRAKE_GLOBALS__$config,
         spec = DRAKE_GLOBALS__$spec,
-        ht_is_subtarget = DRAKE_GLOBALS__$ht_is_subtarget,
+        config_tmp = DRAKE_GLOBALS__$config_tmp,
         protect = DRAKE_GLOBALS__$protect
       ),
       globals = globals,
@@ -115,7 +117,7 @@ future_globals <- function(
   meta,
   config,
   spec,
-  ht_is_subtarget,
+  config_tmp,
   protect
 ) {
   globals <- list(
@@ -124,7 +126,7 @@ future_globals <- function(
       meta = meta,
       config = config,
       spec = spec,
-      ht_is_subtarget = ht_is_subtarget,
+      config_tmp = config_tmp,
       protect = protect
     )
   )
@@ -154,7 +156,7 @@ future_globals <- function(
 #' @param target Name of the target.
 #' @param meta A list of metadata.
 #' @param config A [drake_config()] list.
-#' @param ht_is_subtarget Internal, part of `config`.
+#' @param config_tmp Internal, parts of `config` that the workers need.
 #' @param protect Names of targets that still need their
 #' dependencies available in memory.
 future_build <- function(
@@ -162,12 +164,12 @@ future_build <- function(
   meta,
   config,
   spec,
-  ht_is_subtarget,
+  config_tmp,
   protect
 ) {
-  config$logger$minor("build on an hpc worker", target = target)
+  config$logger$disk("build on an hpc worker", target = target)
   config$spec <- spec
-  config$ht_is_subtarget <- ht_is_subtarget
+  config <- restore_hpc_config_tmp(config_tmp, config)
   caching <- hpc_caching(target, config)
   if (identical(caching, "worker")) {
     manage_memory(target = target, config = config, downstream = protect)
@@ -175,13 +177,15 @@ future_build <- function(
   do_prework(config = config, verbose_packages = FALSE)
   build <- try_build(target = target, meta = meta, config = config)
   if (identical(caching, "master")) {
-    build$checksum <- get_outfile_checksum(target, config)
+    build$checksum <- get_outfile_checksum(target, build$value, config)
     build <- classify_build(build, config)
     build <- serialize_build(build)
     return(build)
   }
   conclude_build(build = build, config = config)
-  list(target = target, checksum = get_checksum(target, config))
+  checksum <- get_checksum(target, build$value, config)
+  value <- hpc_worker_build_value(target, build$value, config)
+  list(target = target, value = value, checksum = checksum)
 }
 
 running_targets <- function(config) {
@@ -221,6 +225,7 @@ conclude_worker <- function(worker, config) {
   if (identical(caching, "worker")) {
     wait_checksum(
       target = build$target,
+      value = build$value,
       checksum = build$checksum,
       config = config
     )
@@ -230,10 +235,12 @@ conclude_worker <- function(worker, config) {
   }
   wait_outfile_checksum(
     target = build$target,
+    value = build$value,
     checksum = build$checksum,
     config = config
   )
   conclude_build(build = build, config = config)
+  config$logger$progress()
   out
 }
 

@@ -213,10 +213,10 @@ chr_dynamic_impl.default <- function(x) {
 
 register_subtargets <- function(target, static_ok, dynamic_ok, config) {
   on.exit(register_dynamic(target, config))
-  announce_build(target, config)
   subtargets_build <- subtargets_all <- subtarget_names(target, config)
+  preregister_subtargets(target, subtargets_all, config)
   if (static_ok) {
-    subtargets_build <- filter_subtargets(subtargets_all, config)
+    subtargets_build <- filter_subtargets(target, subtargets_all, config)
   }
   if (length(subtargets_all)) {
     register_in_graph(target, subtargets_all, config)
@@ -224,7 +224,11 @@ register_subtargets <- function(target, static_ok, dynamic_ok, config) {
   }
   ndeps <- length(subtargets_build)
   if (ndeps) {
-    config$logger$minor("register", ndeps, "subtargets", target = target)
+    announce_build(target, config)
+  }
+  if (ndeps) {
+    config$logger$disk("register", ndeps, "subtargets", target = target)
+    config$logger$inc_progress_total(ndeps)
     ht_set(config$ht_is_subtarget, subtargets_build)
     register_in_loop(subtargets_build, config)
     register_in_queue(subtargets_build, 0, config)
@@ -238,8 +242,22 @@ register_subtargets <- function(target, static_ok, dynamic_ok, config) {
   }
 }
 
-filter_subtargets <- function(subtargets, config) {
-  subtargets <- subtargets[target_missing(subtargets, config)]
+preregister_subtargets <- function(target, subtargets, config) {
+  register_subtarget_parents(target, subtargets, config)
+}
+
+register_subtarget_parents <- function(target, subtargets, config) {
+  ht_set(config$ht_subtarget_parents, x = subtargets, value = target)
+}
+
+subtarget_parent <- function(subtarget, config) {
+  ht_get(config$ht_subtarget_parents, subtarget)
+}
+
+filter_subtargets <- function(target, subtargets, config) {
+  ht_set(config$ht_is_subtarget, subtargets)
+  index <- check_subtarget_triggers(target, subtargets, config)
+  subtargets <- subtargets[index]
   if (!config$recover || !length(subtargets)) {
     return(subtargets)
   }
@@ -247,7 +265,8 @@ filter_subtargets <- function(subtargets, config) {
     subtargets,
     recover_subtarget,
     jobs = config$jobs_preprocess,
-    config = config
+    config = config,
+    parent = target
   )
   subtargets[!unlist(recovered)]
 }
@@ -419,20 +438,22 @@ def_group <- function(..., .by = NULL, .trace = NULL) {
 # nocov end
 
 subtarget_names <- function(target, config) {
-  dynamic <- config$spec[[target]]$dynamic
+  spec <- config$spec[[target]]
+  dynamic <- spec$dynamic
   hashes <- dynamic_hash_list(dynamic, target, config)
   hashes <- subtarget_hashes(dynamic, target, hashes, config)
   hashes <- vapply(hashes, shorten_dynamic_hash, FUN.VALUE = character(1))
   out <- paste(target, hashes, sep = "_")
   out <- make_unique(out)
-  max_expand_dynamic(out, config)
+  max_expand_dynamic(out, spec, config)
 }
 
-max_expand_dynamic <- function(targets, config) {
-  if (is.null(config$max_expand)) {
+max_expand_dynamic <- function(targets, spec, config) {
+  max_expand <- spec$max_expand %||NA% config$max_expand
+  if (is.null(max_expand)) {
     return(targets)
   }
-  size <- min(length(targets), config$max_expand)
+  size <- min(length(targets), max_expand)
   targets[seq_len(size)]
 }
 

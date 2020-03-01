@@ -86,11 +86,6 @@ deps_target_impl <- function(
   config,
   character_only = FALSE
 ) {
-  config$logger$minor("begin deps_target()", target = target)
-  on.exit(
-    config$logger$minor("end deps_target()", target = target),
-    add = TRUE
-  )
   if (!character_only) {
     target <- as.character(substitute(target))
   }
@@ -127,11 +122,11 @@ get_deps_knitr <- function(target) {
   if (!length(target)) {
     return(list())
   }
-  out <- new_code_analysis_results()
+  out <- new_drake_deps_ht()
   if (is_encoded_path(target)) {
     target <- redecode_path(target)
   }
-  analyze_knitr_file(target, out, allowed_globals = NULL)
+  analyze_knitr_file(target, out, restrict = NULL)
   list_code_analysis_results(out)
 }
 
@@ -258,7 +253,7 @@ deps_profile_impl <- function(
       paste(spec$command_standardized, collapse = ""),
       serialize = FALSE
     ),
-    dependency_hash(target, config),
+    static_dependency_hash(target, config),
     input_file_hash(target, config),
     output_file_hash(target, config),
     resolve_target_seed(target, config)
@@ -314,9 +309,6 @@ clean_dependency_list <- function(x) {
 }
 
 clean_nested_char_list <- function(x) {
-  if (!length(x)) {
-    return(character(0))
-  }
   x <- unlist(x)
   x <- unname(x)
   x <- as.character(x)

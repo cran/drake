@@ -1146,13 +1146,17 @@ test_with_dir("dynamic parent recovery", {
     y = target(file.create(x), dynamic = map(x))
   )
   config <- drake_config(plan)
-  config$ht_is_subtarget <- ht_new()
+  config <- init_config_tmp(config)
+  r <- recoverable(plan)
+  expect_equal(r, character(0))
   make(plan)
   files <- letters[seq_len(4)]
   expect_true(all(file.exists(files)))
   unlink(files)
   expect_false(any(file.exists(files)))
   clean(list = c("y", subtargets(y)))
+  r <- recoverable(plan)
+  expect_equal(r, "y")
   make(plan, recover = TRUE)
   expect_false(any(file.exists(files)))
   expect_equal(outdated_impl(config), character(0))
@@ -1190,7 +1194,7 @@ test_with_dir("failed dynamic data recovery", {
   unlink(files)
   expect_false(any(file.exists(files)))
   config$cache$del(subtargets(y)[1])
-  config$cache$del(subtargets(y)[1], namespace = "recover")
+  config$cache$clear(namespace = "recover")
   make(plan, recover = TRUE)
   expect_true(file.exists("a"))
 })
@@ -1682,6 +1686,7 @@ test_with_dir("cache_planned() and cache_unplanned() (#1110)", {
 
 test_with_dir("visualization labels for dynamic targets", {
   skip_on_cran()
+  skip_if_not_installed("visNetwork")
   plan <- drake_plan(
     x = seq_len(2),
     y = target(x, dynamic = map(x))
@@ -1736,4 +1741,223 @@ test_with_dir("log dynamic target as failed if a sub-target fails (#1158)", {
   )
   expect_error(make(plan))
   expect_true("y" %in% failed())
+})
+
+test_with_dir("target-specific max_expand (#1175)", {
+  skip_on_cran()
+  x <- seq_len(4)
+  plan <- drake_plan(
+    y = target(x, dynamic = map(x), max_expand = 2)
+  )
+  config <- drake_config(plan)
+  make_impl(config)
+  old_sub <- subtargets(y)
+  expect_equal(length(subtargets(y)), 2)
+  expect_equal(sort(justbuilt(config)), c("y", subtargets(y)))
+  # change max_expand
+  plan <- drake_plan(
+    y = target(x, dynamic = map(x), max_expand = 1)
+  )
+  config <- drake_config(plan)
+  make_impl(config)
+  expect_equal(length(subtargets(y)), 1)
+  expect_equal(justbuilt(config), "y")
+  # remove max_expand
+  plan <- drake_plan(
+    y = target(x, dynamic = map(x))
+  )
+  config <- drake_config(plan)
+  make_impl(config)
+  expect_equal(length(subtargets(y)), 4)
+  new_sub <- setdiff(subtargets(y), old_sub)
+  expect_equal(sort(justbuilt(config)), c("y", new_sub))
+  # max_expand is NA for a target
+  clean()
+  plan <- drake_plan(
+    x = seq_len(4),
+    y = target(x, dynamic = map(x)),
+    z = target(y, dynamic = map(y), max_expand = 2)
+  )
+  config <- drake_config(plan)
+  make_impl(config)
+  expect_equal(length(subtargets(y)), 4)
+  expect_equal(length(subtargets(z)), 2)
+  exp <- sort(c("x", "y", "z", subtargets(y), subtargets(z)))
+  expect_equal(sort(justbuilt(config)), exp)
+})
+
+test_with_dir("dynamic files + dynamic branching (#1168)", {
+  skip_on_cran()
+  write_lines <- function(files, ...) {
+    for (file in files) {
+      writeLines(c(file, "stuff"), file)
+    }
+    files
+  }
+  plan <- drake_plan(
+    w = c("a", "b"),
+    x = target(
+      write_lines(w),
+      dynamic = map(w),
+      format = "file"
+    ),
+    y = target(
+      write_lines(paste0(x, x)),
+      dynamic = map(x),
+      format = "file"
+    ),
+    z = y
+  )
+  # initial state
+  config <- drake_config(plan, history = FALSE)
+  expect_equal(sort(outdated_impl(config)), sort(c("w", "x", "y", "z")))
+  make_impl(config)
+  expect_equal(
+    sort(justbuilt(config)),
+    sort(c("w", "x", "y", "z", subtargets(x), subtargets(y)))
+  )
+  # Should be up to date.
+  expect_equal(outdated_impl(config), character(0))
+  make_impl(config)
+  expect_equal(justbuilt(config), character(0))
+  # file format internals
+  expect_identical(readd(x), c("a", "b"))
+  key <- subtargets(x)[1]
+  expect_identical(config$cache$get(key), "a")
+  hash <- config$cache$get_hash(key)
+  expect_identical(config$cache$get_value(hash), "a")
+  expect_false("history" %in% list.files(".drake/drake"))
+  val <- config$cache$storr$get(key)
+  val2 <- config$cache$storr$get_value(hash)
+  expect_identical(val, val2)
+  expect_equal(val$value, "a")
+  expect_true(is.character(val$hash))
+  expect_equal(length(val$hash), 1)
+  expect_true(inherits(val, "drake_format_file"))
+  expect_true(inherits(val, "drake_format"))
+  # validated state
+  expect_equal(outdated_impl(config), character(0))
+  make_impl(config)
+  expect_equal(justbuilt(config), character(0))
+  # write the same content to an x file
+  write_lines("b")
+  expect_equal(outdated_impl(config), character(0))
+  make_impl(config)
+  expect_equal(justbuilt(config), character(0))
+  # corrupt an x file
+  writeLines("123", "b")
+  expect_equal(readLines("b"), "123")
+  expect_equal(sort(outdated_impl(config)), sort(c("x", "y", "z")))
+  make_impl(config)
+  expect_equal(
+    sort(justbuilt(config)),
+    sort(c("x", subtargets(x)[2]))
+  )
+  expect_equal(readLines("b"), c("b", "stuff"))
+  # remove an x file
+  unlink("b")
+  expect_false(file.exists("b"))
+  expect_equal(sort(outdated_impl(config)), sort(c("x", "y", "z")))
+  make_impl(config)
+  expect_equal(
+    sort(justbuilt(config)),
+    sort(c("x", subtargets(x)[2]))
+  )
+  expect_equal(readLines("b"), c("b", "stuff"))
+  # corrupt x and y files
+  writeLines("123", "b")
+  writeLines("123", "aa")
+  expect_equal(readLines("b"), "123")
+  expect_equal(readLines("aa"), "123")
+  expect_equal(sort(outdated_impl(config)), sort(c("x", "y", "z")))
+  make_impl(config)
+  expect_equal(
+    sort(justbuilt(config)),
+    sort(c("x", "y", subtargets(x)[2], subtargets(y)[1]))
+  )
+  expect_equal(readLines("b"), c("b", "stuff"))
+  expect_equal(readLines("bb"), c("bb", "stuff"))
+  # change the expected file content
+  write_lines <- function(files, ...) {
+    for (file in files) {
+      writeLines(c(file, "new stuff"), file)
+    }
+    files
+  }
+  expect_equal(sort(outdated_impl(config)), sort(c("x", "y", "z")))
+  make_impl(config)
+  expect_equal(
+    sort(justbuilt(config)),
+    sort(c("x", "y", "z", subtargets(x), subtargets(y)))
+  )
+  expect_equal(readLines("b"), c("b", "new stuff"))
+})
+
+test_with_dir("data recovery + dynamic files + dynamic files (#1168)", {
+  skip_on_cran()
+  write_lines <- function(files, ...) {
+    for (file in files) {
+      writeLines(c(file, "stuff"), file)
+    }
+    files
+  }
+  f <- function() {
+    write_lines("no_recover")
+    write_lines("b")
+  }
+  y <- 1
+  plan <- drake_plan(
+    x = target(f(), format = "file", dynamic = map(y))
+  )
+  make(plan)
+  r <- recoverable(plan)
+  expect_equal(r, character(0))
+  # Should be up to date.
+  config <- drake_config(plan)
+  expect_equal(outdated_impl(config), character(0))
+  make_impl(config)
+  expect_equal(justbuilt(config), character(0))
+  r <- recoverable(plan)
+  expect_equal(r, character(0))
+  # Clean, remove output file, and fail to recover.
+  unlink("no_recover")
+  clean()
+  unlink(c("no_recover", "b"))
+  r <- recoverable(plan)
+  expect_equal(r, character(0))
+  make(plan, recover = TRUE)
+  expect_equal(sort(justbuilt(config)), sort(c("x", subtargets(x))))
+  expect_true(file.exists("no_recover"))
+  expect_true(file.exists("b"))
+  # Set up to restore file and recover old target.
+  write_lines <- function(files, ...) {
+    for (file in files) {
+      writeLines(c(file, "stuff2"), file)
+    }
+    files
+  }
+  unlink("no_recover")
+  make(plan)
+  expect_equal(sort(justbuilt(config)), sort(c("x", subtargets(x))))
+  expect_true(file.exists("no_recover"))
+  expect_true(file.exists("b"))
+  expect_equal(outdated_impl(config), character(0))
+  make(plan)
+  expect_equal(justbuilt(config), character(0))
+  # Restore file and recover old target.
+  write_lines <- function(files, ...) {
+    for (file in files) {
+      writeLines(c(file, "stuff"), file)
+    }
+    files
+  }
+  unlink("no_recover")
+  write_lines("b")
+  r <- recoverable(plan)
+  expect_equal(r, "x")
+  make(plan, recover = TRUE)
+  expect_equal(sort(justbuilt(config)), sort(c("x", subtargets(x))))
+  expect_false(file.exists("no_recover"))
+  expect_true(file.exists("b"))
+  expect_equal(outdated_impl(config), character(0))
 })

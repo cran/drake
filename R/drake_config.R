@@ -46,8 +46,9 @@
 #'
 #' @param verbose Integer, control printing to the console/terminal.
 #'   - `0`: print nothing.
-#'   - `1`: print targets, retries, and failures.
-#'   - `2`: also show a spinner when preprocessing tasks are underway.
+#'   - `1`: print target-by-target messages as [make()] progresses.
+#'   - `2`: show a progress bar to track how many targets are
+#'     done so far.
 #'
 #' @param hook Deprecated.
 #'
@@ -305,7 +306,9 @@
 #'
 #' @param makefile_path Deprecated.
 #'
-#' @param console_log_file Optional character scalar of a file name or
+#' @param console_log_file Deprecated in favor of `log_make`.
+#'
+#' @param log_make Optional character scalar of a file name or
 #'   connection object (such as `stdout()`) to dump maximally verbose
 #'   log information for [make()] and other functions (all functions that
 #'   accept a `config` argument, plus `drake_config()`).
@@ -404,6 +407,10 @@
 #'   Targets recovered from the distant past may have been generated
 #'   with earlier versions of R and earlier package environments
 #'   that no longer exist.
+#'   3. It is not always possible, especially when dynamic files
+#'   are combined with dynamic branching
+#'   (e.g. `dynamic = map(stuff)` and `format = "file"` etc.)
+#'   since behavior is harder to predict in advance.
 #'
 #'   How it works: if `recover` is `TRUE`,
 #'   `drake` tries to salvage old target values from the cache
@@ -431,6 +438,10 @@
 #'   (`clean(garbage_collection = TRUE)`, `gc()` in `storr`s).
 #'   If you need to limit the cache size or the number of files in the cache,
 #'   consider `make(recoverable = FALSE, progress = FALSE)`.
+#'   Recovery is not always possible, especially when dynamic files
+#'   are combined with dynamic branching
+#'   (e.g. `dynamic = map(stuff)` and `format = "file"` etc.)
+#'   since behavior is harder to predict in advance.
 #'
 #' @param curl_handles A named list of curl handles. Each value is an
 #'   object from `curl::new_handle()`, and each name is a URL
@@ -555,10 +566,11 @@ drake_config <- function(
   max_expand = NULL,
   log_build_times = TRUE,
   format = NULL,
-  lock_cache = TRUE
+  lock_cache = TRUE,
+  log_make = NULL
 ) {
-  logger <- logger(verbose = verbose, file = console_log_file)
-  logger$minor("begin drake_config()")
+  logger <- logger(verbose = verbose, file = log_make)
+  logger$disk("begin drake_config()")
   deprecate_fetch_cache(fetch_cache)
   deprecate_arg(hook, "hook") # 2018-10-25 # nolint
   # 2018-11-01 # nolint
@@ -575,6 +587,7 @@ drake_config <- function(
   deprecate_arg(prepend, "prepend")
   deprecate_arg(makefile_path, "makefile_path")
   deprecate_arg(layout, "layout", "spec") # 2019-12-15
+  deprecate_arg(console_log_file, "console_log_file", "log_make") # 2020-02-08
   session_info <- resolve_session_info(session_info)
   memory_strategy <- match.arg(memory_strategy, choices = memory_strategies())
   if (memory_strategy == "memory") {
@@ -587,18 +600,24 @@ drake_config <- function(
     )
   }
   force(envir)
-  check_formats(format)
   plan <- sanitize_plan(plan, envir = envir)
   plan_checks(plan)
   targets <- sanitize_targets(targets, plan)
   trigger <- convert_old_trigger(trigger)
+  formats <- format
+  if ("format" %in% colnames(plan)) {
+    formats <- unique(c(formats, plan$format))
+  }
+  if (length(formats)) {
+    formats <- na_omit(formats)
+  }
   sleep <- `environment<-`(sleep, new.env(parent = globalenv()))
   if (is.null(cache)) {
     cache <- new_cache()
   }
   cache <- decorate_storr(cache)
   cache$set_history(history)
-  logger$minor("cache", cache$path)
+  logger$disk("cache", cache$path)
   seed <- choose_seed(supplied = seed, cache = cache)
   if (identical(force, TRUE)) {
     drake_set_session_info(cache = cache, full = session_info)
@@ -632,6 +651,8 @@ drake_config <- function(
   envir_subtargets <- new.env(parent = envir_dynamic)
   envir_loaded <- new.env(hash = FALSE, parent = emptyenv())
   envir_graph <- new.env(parent = emptyenv())
+  meta <- new.env(parent = emptyenv())
+  meta_old <- new.env(parent = emptyenv())
   out <- list(
     envir = envir,
     envir_graph = envir_graph,
@@ -648,6 +669,8 @@ drake_config <- function(
     lib_loc = lib_loc,
     prework = prework,
     spec = spec,
+    meta = meta,
+    meta_old = meta_old,
     graph = graph,
     seed = seed,
     trigger = trigger,
@@ -680,11 +703,12 @@ drake_config <- function(
     max_expand = max_expand,
     log_build_times = log_build_times,
     format = format,
+    formats = formats,
     lock_cache = lock_cache
   )
   class(out) <- c("drake_config", "drake")
   config_checks(out)
-  logger$minor("end drake_config()")
+  logger$disk("end drake_config()")
   out
 }
 
@@ -706,7 +730,10 @@ print.drake_config <- function(x, ...) {
 
 resolve_session_info <- function(x) {
   out <- x %|||% Sys.getenv("drake_session_info")
-  is.logical(out) || out %in% c("true", "")
+  if (is.logical(out)) {
+    return(out)
+  }
+  out %in% c("true", "")
 }
 
 new_ht_dynamic_deps <- function(spec) {
@@ -817,7 +844,6 @@ plan_checks <- function(plan) {
   stopifnot(is.data.frame(plan))
   plan_check_required_cols(plan)
   plan_check_bad_symbols(plan)
-  plan_check_format_col(plan)
 }
 
 plan_check_required_cols <- function(plan) {
@@ -838,69 +864,6 @@ plan_check_bad_symbols <- function(plan) {
       call. = FALSE
     )
   }
-}
-
-plan_check_format_col <- function(plan) {
-  if (!("format" %in% colnames(plan))) {
-    return()
-  }
-  format <- plan$format
-  check_formats(format)
-}
-
-check_formats <- function(formats) {
-  if (length(formats)) {
-    formats <- unique(formats[!is.na(formats)])
-  }
-  lapply(formats, assert_format)
-}
-
-assert_format <- function(format) {
-  class(format) <- format
-  assert_format_impl(format)
-}
-
-assert_format_impl <- function(format) {
-  UseMethod("assert_format_impl")
-}
-
-assert_format_impl.fst <- function(format) {
-  assert_pkg("fst")
-}
-
-assert_format_impl.fst_tbl <- function(format) {
-  assert_pkg("fst")
-  assert_pkg("tibble")
-}
-
-assert_format_impl.fst_dt <- function(format) {
-  assert_pkg("fst")
-  assert_pkg("data.table")
-}
-
-assert_format_impl.diskframe <- function(format) {
-  assert_pkg("disk.frame")
-}
-
-assert_format_impl.keras <- function(format) {
-  assert_pkg("keras") # nocov
-}
-
-assert_format_impl.qs <- function(format) {
-  assert_pkg("qs")
-}
-
-assert_format_impl.rds <- function(format) {
-  stopifnot(getRversion() >= "3.5.0")
-}
-
-assert_format_impl.default <- function(format) {
-  stop(
-    "illegal format ", format, ". Read ",
-    "https://docs.ropensci.org/drake/reference/drake_plan.html#formats",
-    " for legal formats and their system requirements.",
-    call. = FALSE
-  )
 }
 
 config_checks <- function(config) {

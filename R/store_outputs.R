@@ -2,9 +2,10 @@ store_outputs <- function(target, value, meta, config) {
   if (inherits(meta$error, "error")) {
     return()
   }
-  config$logger$minor("store", target = target)
+  config$logger$disk("store", target = target)
   store_triggers(target, meta, config)
   meta$name <- target
+  value <- decorate_format_value(value, target, config)
   store_item(
     target = target,
     value = value,
@@ -16,6 +17,31 @@ store_outputs <- function(target, value, meta, config) {
     value = "done",
     config = config
   )
+}
+
+decorate_format_value <- function(value, target, config) {
+  UseMethod("decorate_format_value")
+}
+
+decorate_format_value.default <- function(value, target, config) {
+  value
+}
+
+decorate_format_value.drake_format_file <- function(value, target, config) { # nolint
+  path <- value$value
+  hash <- rep(NA_character_, length(path))
+  exists <- file.exists(path)
+  if (any(!exists)) {
+    msg <- paste0(
+      "missing dynamic files for target ",
+      target, ":\n", multiline_message(path[!exists])
+    )
+    warning(msg, call. = FALSE)
+    config$logger$disk(msg)
+  }
+  hash[exists] <- rehash_local(path[exists], config)
+  value$hash <- hash
+  value
 }
 
 store_triggers <- function(target, meta, config) {
@@ -30,14 +56,16 @@ store_triggers <- function(target, meta, config) {
       use_cache = FALSE
     )
   }
-  store_output_files(config$spec[[target]]$deps_build$file_out, meta, config)
+  store_file_out_files(config$spec[[target]]$deps_build$file_out, meta, config)
 }
 
-store_output_files <- function(files, meta, config) {
+store_file_out_files <- function(files, meta, config) {
   meta$isfile <- TRUE
   for (file in files) {
     meta$name <- file
-    meta$mtime <- storage_mtime(config$cache$decode_path(file))
+    path <- config$cache$decode_path(file)
+    meta$mtime <- storage_mtime(path)
+    meta$size_storage <- storage_size(path)
     meta$isfile <- TRUE
     store_item(
       target = file,
@@ -62,15 +90,15 @@ store_item <- function(target, value, meta, config) {
 
 output_type <- function(value, meta) {
   if (meta$isfile) {
-    return("file")
+    return("drake_static_storage")
   }
   if (is.function(value)) {
-    return("function")
+    return("drake_function")
   }
   if (is_storr(value)) {
-    return("storr")
+    return("drake_storr")
   }
-  "object"
+  "drake_object"
 }
 
 is_storr <- function(value) {
@@ -82,11 +110,16 @@ store_item_impl <- function(target, value, meta, config) {
   UseMethod("store_item_impl")
 }
 
-store_item_impl.file <- function(target, value = NULL, meta, config) {
+store_item_impl.drake_static_storage <- function( # nolint
+  target,
+  value = NULL,
+  meta,
+  config
+) {
   if (meta$imported) {
-    value <- storage_hash(target = target, config = config)
+    value <- static_storage_hash(target = target, config = config)
   } else {
-    value <- rehash_storage(target = target, config = config)
+    value <- rehash_static_storage(target = target, config = config)
   }
   store_object(
     target = target,
@@ -96,7 +129,7 @@ store_item_impl.file <- function(target, value = NULL, meta, config) {
   )
 }
 
-store_item_impl.function <- function(target, value, meta, config) {
+store_item_impl.drake_function <- function(target, value, meta, config) { # nolint
   if (meta$imported) {
     value <- standardize_imported_function(value)
     value <- c(value, meta$dependency_hash)
@@ -120,11 +153,11 @@ standardize_deparsed_function <- function(str) {
   gsub("<pointer: 0x[0-9a-zA-Z]*>", "", str)
 }
 
-store_item_impl.storr <- function(target, value, meta, config) {
+store_item_impl.drake_storr <- function(target, value, meta, config) {
   store_object(target, value = "storr", meta, config)
 }
 
-store_item_impl.object <- function(target, value, meta, config) {
+store_item_impl.drake_object <- function(target, value, meta, config) {
   store_object(target, value, meta, config)
 }
 
@@ -184,6 +217,29 @@ finalize_meta <- function(target, value, meta, hash, config) {
   if (is_dynamic_dep(target, config)) {
     meta$dynamic_hashes <- dynamic_hashes(value, meta$size_vec, config)
   }
+  meta <- decorate_format_meta(value, target, meta, config)
+  meta
+}
+
+decorate_format_meta <- function(value, target, meta, config) {
+  UseMethod("decorate_format_meta")
+}
+
+decorate_format_meta.drake_format_file <- function( # nolint
+  value,
+  target,
+  meta,
+  config
+) {
+  path <- value$value
+  meta$format_file_path <- path
+  meta$format_file_hash <- value$hash
+  meta$format_file_time <- storage_mtime(path)
+  meta$format_file_size <- storage_size(path)
+  meta
+}
+
+decorate_format_meta.default <- function(value, target, meta, config) {
   meta
 }
 
@@ -206,7 +262,7 @@ finalize_triggers <- function(target, meta, config) {
     meta$command <- spec$command_standardized
   }
   if (is.null(meta$dependency_hash)) {
-    meta$dependency_hash <- dependency_hash(target = target, config = config)
+    meta$dependency_hash <- static_dependency_hash(target, config)
   }
   if (is.null(meta$input_file_hash)) {
     meta$input_file_hash <- input_file_hash(target = target, config = config)
@@ -257,11 +313,11 @@ log_time <- function(target, meta, config) {
   if (requireNamespace("lubridate", quietly = TRUE)) {
     exec <- round(lubridate::dseconds(meta$time_command$elapsed), 3)
     total <- round(lubridate::dseconds(meta$time_build$elapsed), 3)
-    tail <- paste("", exec, "|", total, " (exec | total)")
+    tail <- paste("", exec, ":", total, " (exec : total)")
   } else {
     tail <- " (install lubridate to print runtimes in the log)" # nocov
   }
-  config$logger$minor("time", tail, target = target)
+  config$logger$disk("time", tail, target = target)
 }
 
 runtime_entry <- function(runtime, target) {

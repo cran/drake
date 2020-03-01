@@ -139,7 +139,7 @@ make <- function(
   skip_safety_checks = FALSE,
   config = NULL,
   lazy_load = "eager",
-  session_info = TRUE,
+  session_info = NULL,
   cache_log_file = NULL,
   seed = NULL,
   caching = "master",
@@ -164,7 +164,8 @@ make <- function(
   max_expand = NULL,
   log_build_times = TRUE,
   format = NULL,
-  lock_cache = TRUE
+  lock_cache = TRUE,
+  log_make = NULL
 ) {
   force(envir)
   deprecate_arg(config, "config")
@@ -223,7 +224,8 @@ make <- function(
     max_expand = max_expand,
     log_build_times = log_build_times,
     format = format,
-    lock_cache = lock_cache
+    lock_cache = lock_cache,
+    log_make = log_make
   )
   make_impl(config)
 }
@@ -234,22 +236,14 @@ make <- function(
 #' @description Not a user-side function.
 #' @param config a [drake_config()] object.
 make_impl <- function(config) {
-  config$logger$minor("begin make()")
-  on.exit(config$logger$minor("end make()"), add = TRUE)
+  config$logger$disk("begin make()")
+  on.exit(config$logger$disk("end make()"), add = TRUE)
   runtime_checks(config = config)
   if (config$lock_cache) {
     config$cache$lock()
     on.exit(config$cache$unlock(), add = TRUE)
   }
-  config$running_make <- TRUE
-  config$ht_dynamic <- ht_new()
-  config$ht_dynamic_size <- ht_new()
-  config$ht_is_subtarget <- ht_new()
-  config$ht_target_exists <- ht_target_exists(config)
-  config$envir_loaded <- new.env(hash = FALSE, parent = emptyenv())
-  config$cache$reset_memo_hash()
-  on.exit(config$cache$reset_memo_hash(), add = TRUE)
-  config$cache$set(key = "seed", value = config$seed, namespace = "session")
+  config <- prep_config_for_make(config)
   if (config$log_progress) {
     config$cache$clear(namespace = "progress")
   }
@@ -275,12 +269,33 @@ make_impl <- function(config) {
   invisible()
 }
 
+prep_config_for_make <- function(config) {
+  config$running_make <- TRUE
+  config <- init_config_tmp(config)
+}
+
+init_config_tmp <- function(config) {
+  config$ht_dynamic <- ht_new()
+  config$ht_dynamic_size <- ht_new()
+  config$ht_is_subtarget <- ht_new()
+  config$ht_subtarget_parents <- ht_new()
+  config$ht_target_exists <- ht_target_exists(config)
+  config$envir_loaded <- new.env(hash = FALSE, parent = emptyenv())
+  config$cache$reset_memo_hash()
+  config$meta <- new.env(hash = TRUE, parent = emptyenv())
+  config$meta_old <- new.env(hash = TRUE, parent = emptyenv())
+  config$cache$set(key = "seed", value = config$seed, namespace = "session")
+  config
+}
+
 process_targets <- function(config) {
   if (is.character(config$parallelism)) {
     run_native_backend(config)
   } else {
     run_external_backend(config)
   }
+  config$logger$terminate_progress()
+  invisible()
 }
 
 run_native_backend <- function(config) {
@@ -288,11 +303,13 @@ run_native_backend <- function(config) {
     config$parallelism,
     c("loop", "clustermq", "future")
   )
-  if (igraph::gorder(config$envir_graph$graph)) {
+  order <- igraph::gorder(config$envir_graph$graph)
+  if (order) {
+    config$logger$set_progress_total(order)
     class(config) <- c(class(config), parallelism)
     drake_backend(config)
   } else {
-    config$logger$major("All targets are already up to date.", color = NULL)
+    config$logger$up_to_date()
   }
 }
 
@@ -315,7 +332,7 @@ run_external_backend <- function(config) {
 
 outdated_subgraph <- function(config) {
   outdated <- outdated_impl(config, do_prework = FALSE, make_imports = FALSE)
-  config$logger$minor("isolate oudated targets")
+  config$logger$disk("isolate oudated targets")
   igraph::induced_subgraph(graph = config$graph, vids = outdated)
 }
 
@@ -407,6 +424,7 @@ do_prework <- function(config, verbose_packages) {
 }
 
 clear_make_memory <- function(config) {
+  config$cache$reset_memo_hash()
   envirs <- c(
     "envir_graph",
     "envir_targets",
@@ -416,7 +434,10 @@ clear_make_memory <- function(config) {
     "ht_dynamic",
     "ht_dynamic_size",
     "ht_is_subtarget",
-    "ht_target_exists"
+    "ht_subtarget_parents",
+    "ht_target_exists",
+    "meta",
+    "meta_old"
   )
   for (key in envirs) {
     remove(list = names(config[[key]]), envir = config[[key]])
@@ -471,6 +492,65 @@ runtime_checks <- function(config) {
   missing_input_files(config = config)
   subdirectory_warning(config = config)
   assert_outside_cache(config = config)
+  check_formats(config$formats)
+}
+
+check_formats <- function(formats) {
+  if (length(formats)) {
+    formats <- unique(formats[!is.na(formats)])
+  }
+  lapply(formats, assert_format)
+}
+
+assert_format <- function(format) {
+  class(format) <- format
+  assert_format_impl(format)
+}
+
+assert_format_impl <- function(format) {
+  UseMethod("assert_format_impl")
+}
+
+assert_format_impl.fst <- function(format) {
+  assert_pkg("fst")
+}
+
+assert_format_impl.fst_tbl <- function(format) {
+  assert_pkg("fst")
+  assert_pkg("tibble")
+}
+
+assert_format_impl.fst_dt <- function(format) {
+  assert_pkg("fst")
+  assert_pkg("data.table")
+}
+
+assert_format_impl.diskframe <- function(format) {
+  assert_pkg("disk.frame")
+}
+
+assert_format_impl.keras <- function(format) {
+  assert_pkg("keras") # nocov
+}
+
+assert_format_impl.qs <- function(format) {
+  assert_pkg("qs")
+}
+
+assert_format_impl.rds <- function(format) {
+  stopifnot(getRversion() >= "3.5.0")
+}
+
+assert_format_impl.file <- function(format) {
+}
+
+assert_format_impl.default <- function(format) {
+  stop(
+    "illegal format ", format, ". Read ",
+    "https://docs.ropensci.org/drake/reference/drake_plan.html#formats",
+    " for legal formats and their system requirements.",
+    call. = FALSE
+  )
 }
 
 missing_input_files <- function(config) {
@@ -548,10 +628,6 @@ r_make_message <- function(force) {
     )
   )
   if (force || (r_make_message && sample.int(n = 10, size = 1) < 1.5)) {
-    message(
-      "In drake, consider r_make() instead of make(). ",
-      "r_make() runs make() in a fresh R session ",
-      "for enhanced robustness and reproducibility."
-    )
+    cli_msg("Consider drake::r_make() to improve robustness.")
   }
 }

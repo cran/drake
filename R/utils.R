@@ -69,6 +69,14 @@ assert_cache <- function(cache) {
   }
 }
 
+assert_character <- function(x) {
+  stopifnot(is.character(x))
+}
+
+assert_environment <- function(x) {
+  stopifnot(is.environment(x))
+}
+
 # weak_as_tibble - use as_tibble() if available but fall back to
 # as.data.frame() if necessary
 weak_as_tibble <- function(..., .force_df = FALSE) {
@@ -183,12 +191,12 @@ random_tempdir <- function() {
   dir
 }
 
-multiline_message <- function(x) {
+multiline_message <- function(x, indent = "  ") {
   n <- 30
   if (length(x) > n) {
     x <- c(x[1:(n - 1)], "...")
   }
-  x <- paste0("  ", x)
+  x <- paste0(indent, x)
   paste(x, collapse = "\n")
 }
 
@@ -369,6 +377,10 @@ min_str <- function(x) {
     spaces <- paste(rep(" ", n_spaces[index]), collapse = "")
     cat(" $", name, ":", spaces, class(x[[name]]), "\n")
   }
+}
+
+drake_validate <- function(x) {
+  UseMethod("drake_validate")
 }
 
 # From lintr
