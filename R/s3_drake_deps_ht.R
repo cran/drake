@@ -21,7 +21,27 @@ drake_deps_ht <- function(expr, exclude = character(0), restrict = NULL) {
   locals <- ht_new_from_list(ignored_symbols_list)
   ht_set(locals, exclude)
   walk_code(expr, results, locals, restrict)
+  if (is.function(expr)) {
+    assert_good_function_deps(results)
+  }
   results
+}
+
+assert_good_function_deps <- function(results) {
+  assert_not_in_fn(results, field = "file_out")
+  assert_not_in_fn(results, field = "knitr_in")
+}
+
+assert_not_in_fn <- function(results, field) {
+  files <- ht_list(results[[field]])
+  if (!length(files)) {
+    return()
+  }
+  stop0(
+    field,
+    "() files in imported functions are illegal. Detected files:\n",
+    multiline_message(redecode_path(files))
+  )
 }
 
 #' @title `drake_deps_ht` constructor
@@ -57,24 +77,19 @@ new_drake_deps_ht <- function(
   out
 }
 
-drake_validate.drake_deps_ht <- function(x) {
-  lapply(x, assert_environment)
+validate_drake_deps_ht <- function(x) {
+  stopifnot(inherits(x, "drake_deps_ht"))
+  stopifnot(inherits(x, "drake"))
   out_fields <- names(x)
-  exp_fields <- c(
-    "globals",
-    "namespaced",
-    "strings",
-    "loadd",
-    "readd",
-    "file_in",
-    "file_out",
-    "knitr_in"
-  )
-  stopifnot(identical(out_fields, exp_fields))
+  exp_fields <- names(formals(new_drake_deps_ht))
+  for (field in exp_fields) {
+    stopifnot(is.environment(x[[field]]))
+  }
+  stopifnot(identical(sort(out_fields), sort(exp_fields)))
 }
 
 #' @export
 print.drake_deps_ht <- function(x, ...) {
   cat("drake_deps_ht\n")
-  utils::str(unclass(x), no.list = TRUE)
+  str0(x)
 }

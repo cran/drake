@@ -1,4 +1,4 @@
-drake_backend.future <- function(config) {
+drake_backend_future <- function(config) {
   assert_pkg("future")
   config$queue <- priority_queue(config)
   config$workers <- initialize_workers(config)
@@ -34,7 +34,7 @@ ft_check_target <- function(target, id, config) {
 }
 
 ft_no_target <- function(config) {
-  Sys.sleep(config$sleep(max(0L, config$sleeps$count)))
+  Sys.sleep(config$settings$sleep(max(0L, config$sleeps$count)))
   config$sleeps$count <- config$sleeps$count + 1L
 }
 
@@ -62,7 +62,7 @@ future_local_build <- function(target, protect, config) {
 
 initialize_workers <- function(config) {
   out <- new.env(parent = emptyenv())
-  ids <- as.character(seq_len(config$jobs))
+  ids <- as.character(seq_len(config$settings$jobs))
   for (id in ids) {
     out[[id]] <- empty_worker(target = NA_character_)
   }
@@ -134,10 +134,9 @@ future_globals <- function(
     # nocov start
     # Unit tests should not modify global env
     if (exists("DRAKE_GLOBALS__", config$envir)) {
-      warning(
+      warn0(
         "Do not define an object named `DRAKE_GLOBALS__` ",
-        "in the global environment",
-        call. = FALSE
+        "in the global environment"
       )
     }
     globals <- c(globals, as.list(config$envir, all.names = TRUE))
@@ -269,10 +268,7 @@ resolve_worker_value <- function(worker, config) {
     # Check if the worker crashed.
     future::value(worker),
     error = function(e) {
-      e$message <- paste0(
-        "Worker terminated unexpectedly before the target could complete. ",
-        "Is something wrong with your system or job scheduler?"
-      )
+      e$message <- "future worker terminated before target could complete."
       meta <- list(error = e)
       target <- attr(worker, "target")
       caching <- hpc_caching(target, config)

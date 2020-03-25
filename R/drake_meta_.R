@@ -134,7 +134,81 @@ drake_meta_impl.dynamic <- function(target, config) {
     dynamic_dependency_hash = dynamic_dependency_hash(target, config),
     max_expand = spec$max_expand %||NA% config$max_expand
   )
-  decorate_trigger_meta(target, meta, spec, config)
+  meta <- decorate_trigger_meta(target, meta, spec, config)
+  meta$dynamic_progress_namespace <- dynamic_progress_namespace(
+    target,
+    meta,
+    config
+  )
+  meta
+}
+
+# GitHub issue 1209
+dynamic_progress_namespace <- function(target, meta, config) {
+  prefix <- dynamic_progress_ns_pfx(target)
+  key <- dynamic_progress_key(target, meta, config)
+  paste0(prefix, key)
+}
+
+dynamic_progress_key <- function(target, meta, config) {
+  x <- dynamic_progress_prekey(target, meta, config)
+  x <- paste(as.character(x), collapse = "|")
+  digest_murmur32(x, serialize = FALSE)
+}
+
+dynamic_progress_prekey <- function(target, meta, config) {
+ command <- ifelse(
+    meta$trigger$command,
+    meta$command,
+    NA_character_
+  )
+  depend <- ifelse(
+    meta$trigger$depend,
+    meta$dependency_hash,
+    NA_character_
+  )
+  input_file_hash <- ifelse(
+    meta$trigger$file,
+    meta$input_file_hash,
+    NA_character_
+  )
+  output_file_hash <- ifelse(
+    meta$trigger$file,
+    meta$output_file_hash,
+    NA_character_
+  )
+  seed <- ifelse(
+    meta$trigger$seed,
+    as.character(meta$seed),
+    NA_character_
+  )
+  format <- ifelse(
+    meta$trigger$format,
+    meta$format,
+    NA_character_
+  )
+  condition <- safe_deparse(meta$trigger$condition, backtick = TRUE)
+  mode <- meta$trigger$mode
+  change_hash <- ifelse(
+    is.null(meta$trigger$value),
+    NA_character_,
+    config$cache$digest(meta$trigger$value)
+  )
+  list(
+    command = command,
+    depend = depend,
+    input_file_hash = input_file_hash,
+    output_file_hash = output_file_hash,
+    seed = seed,
+    format = format,
+    condition = condition,
+    mode = mode,
+    change_hash = change_hash
+  )
+}
+
+dynamic_progress_ns_pfx <- function(target) {
+  paste0("dyn-", target, "-")
 }
 
 drake_meta_impl.static <- function(target, config) {
@@ -157,16 +231,10 @@ drake_meta_impl.static <- function(target, config) {
 
 decorate_trigger_meta <- function(target, meta, spec, config) {
   meta$trigger <- as.list(spec$trigger)
-  if (meta$trigger$command) {
-    meta$command <- spec$command_standardized
-  }
-  if (meta$trigger$depend) {
-    meta$dependency_hash <- static_dependency_hash(target, config)
-  }
-  if (meta$trigger$file) {
-    meta$input_file_hash <- input_file_hash(target = target, config = config)
-    meta$output_file_hash <- output_file_hash(target = target, config = config)
-  }
+  meta$command <- spec$command_standardized
+  meta$dependency_hash <- static_dependency_hash(target, config)
+  meta$input_file_hash <- input_file_hash(target = target, config = config)
+  meta$output_file_hash <- output_file_hash(target = target, config = config)
   if (!is.null(meta$trigger$change)) {
     try_load_deps(spec$deps_change$memory, config = config)
     meta$trigger$value <- eval(meta$trigger$change, config$envir_targets)
@@ -217,7 +285,7 @@ decorate_trigger_format_meta.file <- function(target, meta, config) { # nolint
 }
 
 drake_meta_start <- function(config) {
-  if (config$log_build_times) {
+  if (config$settings$log_build_times) {
     proc_time()
   }
 }
@@ -257,7 +325,7 @@ target_exists_fast <- function(target, config) {
 resolve_target_seed <- function(target, config) {
   seed <- config$spec[[target]]$seed
   if (is.null(seed) || is.na(seed)) {
-    seed <- seed_from_basic_types(config$seed, target)
+    seed <- seed_from_basic_types(config$settings$seed, target)
   }
   as.integer(seed)
 }
@@ -559,12 +627,12 @@ rehash_url <- function(url, config) {
   headers <- NULL
   if (!curl::has_internet()) {
     # Tested in tests/testthat/test-always-skipped.R.
-    stop("no internet. Cannot check url: ", url, call. = FALSE) # nocov
+    stop0("no internet. Cannot check url: ", url) # nocov
   }
   # Find the longest name of the handle that matches the url.
-  choices <- names(config$curl_handles)
+  choices <- names(config$settings$curl_handles)
   name <- longest_match(choices = choices, against = url) %||% NA_character_
-  handle <- config$curl_handles[[name]] %|||% curl::new_handle()
+  handle <- config$settings$curl_handles[[name]] %|||% curl::new_handle()
   # Do not download the whole URL.
   handle <- curl::handle_setopt(handle, nobody = TRUE)
   req <- curl::curl_fetch_memory(url, handle = handle)
@@ -577,18 +645,29 @@ rehash_url <- function(url, config) {
   return(paste(etag, mtime))
 }
 
+longest_match <- function(choices, against) {
+  index <- vapply(
+    choices,
+    pmatch,
+    table = against,
+    FUN.VALUE = integer(1)
+  )
+  matches <- names(index[!is.na(index)])
+  matches[which.max(nchar(matches))]
+}
+
 is_url <- function(x) {
   grepl("^http://|^https://|^ftp://", x)
 }
 
 assert_status_code <- function(req, url) {
   if (req$status_code != 200L) {
-    stop("could not access url: ", url, call. = FALSE)
+    stop0("could not access url: ", url)
   }
 }
 
 assert_useful_headers <- function(headers, url) {
   if (!any(c("etag", "last-modified") %in% names(headers))) {
-    stop("no ETag or Last-Modified for url: ", url, call. = FALSE)
+    stop0("no ETag or Last-Modified for url: ", url)
   }
 }

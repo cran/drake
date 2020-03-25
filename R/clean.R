@@ -32,8 +32,7 @@
 #'   from `make()`
 #'   are removed. If `TRUE`, the whole cache is removed, including
 #'   session metadata, etc.
-#' @param jobs Number of jobs for light parallelism
-#'   (disabled on Windows).
+#' @param jobs Deprecated.
 #' @param force Logical, whether to try to clean the cache
 #'   even though the project may not be back compatible with the
 #'   current version of drake.
@@ -82,15 +81,20 @@ clean <- function(
   search = NULL,
   cache = drake::drake_cache(path = path),
   verbose = NULL,
-  jobs = 1,
+  jobs = NULL,
   force = FALSE,
   garbage_collection = FALSE,
   purge = FALSE
 ) {
+  deprecate_arg(jobs, "jobs") # 2020-03-06
   deprecate_force(force)
   deprecate_search(search)
   deprecate_verbose(verbose)
   if (is.null(cache)) {
+    return(invisible())
+  }
+  if (destroy) {
+    cache$destroy()
     return(invisible())
   }
   cache <- decorate_storr(cache)
@@ -116,16 +120,15 @@ clean <- function(
   if (!length(targets) && is.null(c(...))) {
     targets <- cache$list()
   }
-  lightly_parallelize(
-    X = targets,
-    FUN = clean_single_target,
-    jobs = jobs,
-    cache = cache,
-    namespaces = namespaces,
-    garbage_collection = garbage_collection
-  )
-  clean_cleanup(cache, garbage_collection, destroy)
+  clean_impl(targets, namespaces, cache)
+  clean_cleanup(cache, garbage_collection)
   invisible()
+}
+
+clean_impl <- function(targets, namespaces, cache) {
+  for (namespace in namespaces) {
+    try(cache$del(key = targets, namespace = namespace))
+  }
 }
 
 clean_select_namespaces <- function(cache, purge) {
@@ -136,14 +139,11 @@ clean_select_namespaces <- function(cache, purge) {
   }
 }
 
-clean_cleanup <- function(cache, garbage_collection, destroy) {
+clean_cleanup <- function(cache, garbage_collection) {
   if (garbage_collection) {
     cache$gc()
-  } else if (!destroy) {
+  } else {
     clean_recovery_msg()
-  }
-  if (destroy) {
-    cache$destroy()
   }
 }
 
@@ -192,27 +192,6 @@ which_clean <- function(
     targets <- cache$list()
   }
   targets
-}
-
-clean_single_target <- function(
-  target,
-  cache,
-  namespaces,
-  graph,
-  garbage_collection
-) {
-  files <- character(0)
-  if (cache$exists(target, namespace = "meta")) {
-    files <- cache$get(key = target, namespace = "meta")$file_out
-  }
-  for (namespace in namespaces) {
-    for (key in c(target, files)) {
-      try(cache$del(key = key, namespace = namespace))
-    }
-  }
-  if (garbage_collection && length(files)) {
-    unlink(redecode_path(files), recursive = TRUE)
-  }
 }
 
 cleaned_namespaces_ <- function(

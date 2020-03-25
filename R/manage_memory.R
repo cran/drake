@@ -14,7 +14,7 @@ manage_memory <- function(target, config, downstream = NULL, jobs = 1) {
   stopifnot(length(target) == 1L)
   memory_strategy <- config$spec[[target]]$memory_strategy
   if (is.null(memory_strategy) || is.na(memory_strategy)) {
-    memory_strategy <- config$memory_strategy
+    memory_strategy <- config$settings$memory_strategy
   }
   class(target) <- memory_strategy
   if (!is_subtarget(target, config)) {
@@ -27,7 +27,7 @@ manage_memory <- function(target, config, downstream = NULL, jobs = 1) {
     jobs = jobs
   )
   sync_envir_dynamic(target, config)
-  if (identical(config$garbage_collection, TRUE)) {
+  if (config$settings$garbage_collection) {
     gc()
   }
   invisible()
@@ -142,7 +142,7 @@ try_load_deps <- function(targets, config, jobs = 1) {
   if (!length(targets)) {
     return()
   }
-  if (config$lazy_load == "eager") {
+  if (config$settings$lazy_load == "eager") {
     config$logger$disk("load", targets)
   }
   lapply(
@@ -165,7 +165,7 @@ try_load_dep_impl <- function(target, config) {
     envir = config$envir_targets,
     cache = config$cache,
     verbose = FALSE,
-    lazy = config$lazy_load
+    lazy = config$settings$lazy_load
   )
 }
 
@@ -208,10 +208,7 @@ load_target_impl.bind <- function(target, cache, namespace, envir, verbose) {
   assert_pkg("bindr")
   # Allow active bindings to overwrite existing variables.
   if (exists(x = target, envir = envir, inherits = FALSE)) {
-    message(
-      "Replacing already-loaded variable ", target,
-      " with an active binding."
-    )
+    cli_msg("Replacing", target, "with an active binding.")
     remove(list = target, envir = envir)
   }
   bindr::populate_env(
@@ -332,6 +329,7 @@ load_dynamic_subdep_impl.default <- function( # nolint
 
 load_static_subdep <- function(dep, index, config) {
   value <- get(dep, envir = config$envir_targets, inherits = FALSE)
+  assert_dynamic_grouping_var(dep, value)
   value <- dynamic_subvalue(value, index)
   assign(
     x = dep,
@@ -339,6 +337,12 @@ load_static_subdep <- function(dep, index, config) {
     envir = config$envir_subtargets,
     inherits = FALSE
   )
+}
+
+assert_dynamic_grouping_var <- function(dep, value) {
+  if (!length(value)) {
+    stop0("dynamic grouping variable ", dep, " needs more than 0 elements.")
+  }
 }
 
 sync_envir_dynamic <- function(target, config) {

@@ -143,7 +143,7 @@ test_with_dir("drake_config() memoizes against knitr files (#887)", {
       cache = cache,
       session_info = FALSE
     ),
-    regexp = "does not exist"
+    regexp = "Could not open"
   )
 })
 
@@ -221,14 +221,20 @@ test_with_dir("bad URL", {
     session_info = FALSE,
     log_progress = TRUE
   )
+  tryCatch(
+    mem <- curl::curl_fetch_memory("http://httpbin.org/basic-auth/user/passwd"),
+    error = function(e) {
+      skip("test URL unreachable")
+    }
+  )
   expect_error(
     make_impl(config = config),
-    "could not access url|resolve host"
+    "could not access url|resolve host|HTTP code 407"
   )
   expect_equal(justbuilt(config), character(0))
   expect_error(
     make_impl(config = config),
-    "could not access url|resolve host"
+    "could not access url|resolve host|HTTP code 407"
   )
   expect_equal(justbuilt(config), character(0))
 })
@@ -240,6 +246,12 @@ test_with_dir("authentication", {
   plan <- drake_plan(x = file_in("http://httpbin.org/basic-auth/user/passwd"))
   expect_error(make(plan), regexp = "could not access url")
   handles <- list(`http://httpbin.org/basic-auth` = curl::new_handle())
+  tryCatch(
+    mem <- curl::curl_fetch_memory("http://httpbin.org/basic-auth/user/passwd"),
+    error = function(e) {
+      skip("test URL unreachable")
+    }
+  )
   expect_error(
     make(plan, curl_handles = handles),
     regexp = "could not access url"
@@ -257,7 +269,7 @@ test_with_dir("authentication", {
   )
   expect_error(
     make(plan, curl_handles = handles),
-    regexp = "no ETag or Last-Modified for url"
+    regexp = "no ETag or Last-Modified for url|code 407|could not access url"
   )
 })
 
@@ -446,8 +458,8 @@ test_with_dir("imported files in imported functions", {
   scenario <- get_testing_scenario()
   envir <- eval(parse(text = scenario$envir))
   envir <- dbug_envir(envir)
-  eval(parse(text = "j <- function(x) {
-      knitr_in(\"report.Rmd\")
+  eval(
+    parse(text = "j <- function(x) {
       file_in(\"a.rds\", \"b.rds\")
       x + 2 + c + readRDS(file_in(\"c.rds\"))
     }"),
@@ -466,7 +478,7 @@ test_with_dir("imported files in imported functions", {
     testrun(config)
     expect_equal(sort(justbuilt(config)), sort(c("nextone", "yourinput")))
   }
-  write("new content", file = "report.Rmd", append = TRUE)
+  saveRDS(129837, file = "a.rds")
   testrun(config)
   expect_equal(sort(justbuilt(config)), sort(c("nextone", "yourinput")))
   saveRDS(2, "c.rds")
@@ -528,7 +540,7 @@ test_with_dir("bad knitr report", {
       cache = storr::storr_environment(),
       verbose = 0L
     ),
-    regexp = "dependencies could not be extracted"
+    regexp = "Could not parse"
   )
 })
 
@@ -567,7 +579,10 @@ test_with_dir("deps_knitr() works", {
     deps_knitr(reencode_path("report.Rmd"))$name)))
   expect_true(!nrow(x))
   load_mtcars_example()
-  w <- deps_code("funct(knitr_in(report.Rmd))")
+  expect_warning(
+    w <- deps_code("funct(knitr_in(report.Rmd))"),
+    regexp = "must be literal strings"
+  )
   x <- deps_knitr("report.Rmd")
   real_deps <- c(
     "small", "coef_regression2_small", "large"

@@ -14,18 +14,18 @@ test_with_dir("print.drake_deps_ht()", {
   expect_true(any(grepl("drake_deps_ht", m)))
 })
 
-test_with_dir("drake_config() print method", {
+test_with_dir("print.drake_settings()", {
   skip_on_cran()
-  x <- drake_config(drake_plan(y = 1)) # print by hand
+  x <- drake_settings() # print by hand
   m <- utils::capture.output(print(x))
-  expect_true(any(grepl("configured drake workflow", m)))
+  expect_true(any(grepl("drake_settings", m)))
 })
 
-test_with_dir("trigger() print method", {
+test_with_dir("print.drake_triggers()", {
   skip_on_cran()
   x <- trigger() # print by hand
   m <- utils::capture.output(print(x))
-  expect_true(any(grepl("list of triggers", m)))
+  expect_true(any(grepl("drake_triggers", m)))
 })
 
 test_with_dir("drake spec print method", {
@@ -39,6 +39,13 @@ test_with_dir("drake spec print method", {
   m2 <- utils::capture.output(print(x2))
   expect_true(any(grepl("specification of import f", m1)))
   expect_true(any(grepl("specification of target x", m2)))
+})
+
+test_with_dir("drake_config() print method", {
+  skip_on_cran()
+  x <- drake_config(drake_plan(y = 1)) # print by hand
+  m <- utils::capture.output(print(x))
+  expect_true(any(grepl("drake_config", m)))
 })
 
 test_with_dir("drake_graph_info() print method", {
@@ -258,7 +265,7 @@ test_with_dir("clustermq error messages get back to master", {
   }
 })
 
-test_with_dir("forks + lock_envir = informative error msg", {
+test_with_dir("forks + lock_envir = informative warning msg", {
   skip_on_cran()
   # Don't run this test for real because (1) we would have to add
   # furrr to "Suggests" and (2) at some point, base R may be patched
@@ -267,16 +274,6 @@ test_with_dir("forks + lock_envir = informative error msg", {
   regexp <- "workaround"
   plan <- drake_plan(x = parallel::mclapply(1:2, identity, mc.cores = 2))
   expect_warning(
-    make(plan, envir = globalenv(), lock_envir = TRUE),
-    regexp = regexp
-  )
-  future::plan(future::multicore, workers = 2)
-  plan <- drake_plan(
-    # install.packages("furrr") # nolint
-    # Not in "Suggests"
-    x = eval(parse(text = "furrr::future_map(1:2, function(x) Sys.getpid())"))
-  )
-  expect_error(
     make(plan, envir = globalenv(), lock_envir = TRUE),
     regexp = regexp
   )

@@ -12,11 +12,7 @@ store_outputs <- function(target, value, meta, config) {
     meta = meta,
     config = config
   )
-  set_progress(
-    target = target,
-    value = "done",
-    config = config
-  )
+  finalize_progress(target, config)
 }
 
 decorate_format_value <- function(value, target, config) {
@@ -36,12 +32,24 @@ decorate_format_value.drake_format_file <- function(value, target, config) { # n
       "missing dynamic files for target ",
       target, ":\n", multiline_message(path[!exists])
     )
-    warning(msg, call. = FALSE)
+    warn0(msg)
     config$logger$disk(msg)
   }
   hash[exists] <- rehash_local(path[exists], config)
   value$hash <- hash
   value
+}
+
+undecorate_format_value <- function(value) {
+  UseMethod("undecorate_format_value")
+}
+
+undecorate_format_value.default <- function(value) { # nolint
+  value
+}
+
+undecorate_format_value.drake_format <- function(value) { # nolint
+  value$value
 }
 
 store_triggers <- function(target, meta, config) {
@@ -185,7 +193,7 @@ store_meta <- function(target, value, meta, hash, config) {
   if (is_target && is_history(config$cache$history)) {
     config$cache$history$push(title = target, message = meta_hash)
   }
-  if (is_target && config$recoverable) {
+  if (is_target && config$settings$recoverable) {
     store_recovery(target, meta, meta_hash, config)
   }
 }
@@ -210,7 +218,7 @@ finalize_meta <- function(target, value, meta, hash, config) {
     log_time(target, meta, config)
   }
   meta$hash <- hash
-  meta$size_vec <- NROW(value)
+  meta$size_vec <- NROW(undecorate_format_value(value))
   if (is_dynamic(target, config)) {
     meta$subtargets <- config$spec[[target]]$subtargets
   }
@@ -244,7 +252,7 @@ decorate_format_meta.default <- function(value, target, meta, config) {
 }
 
 finalize_times <- function(target, meta, config) {
-  if (config$log_build_times) {
+  if (config$settings$log_build_times) {
     meta$time_command <- runtime_entry(meta$time_command, target)
     meta$time_build <- runtime_entry(proc_time() - meta$time_start, target)
   } else {
@@ -260,12 +268,6 @@ finalize_triggers <- function(target, meta, config) {
   spec <- config$spec[[target]]
   if (is.null(meta$command)) {
     meta$command <- spec$command_standardized
-  }
-  if (is.null(meta$dependency_hash)) {
-    meta$dependency_hash <- static_dependency_hash(target, config)
-  }
-  if (is.null(meta$input_file_hash)) {
-    meta$input_file_hash <- input_file_hash(target = target, config = config)
   }
   if (length(file_out) || is.null(file_out)) {
     meta$output_file_hash <- output_file_hash(
@@ -335,4 +337,25 @@ microtime <- function() {
 
 proc_time <- function() {
   unclass(proc.time())
+}
+
+# GitHub issue 1209
+finalize_progress <- function(target, config) {
+  set_progress(target = target, value = "done", config = config)
+  if (is_dynamic(target, config)) {
+    finalize_progress_dynamic(target, config)
+  }
+  if (is_subtarget(target, config)) {
+    finalize_progress_subtarget(target, config)
+  }
+}
+
+finalize_progress_dynamic <- function(target, config) {
+  config$cache$clear_dynamic_progress(target)
+}
+
+finalize_progress_subtarget <- function(target, config) {
+  parent <- config$spec[[target]]$subtarget_parent
+  namespace <- config$meta[[parent]]$dynamic_progress_namespace
+  config$cache$inc_dynamic_progress(target, namespace)
 }

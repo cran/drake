@@ -4,9 +4,7 @@
 #' this function is divided into
 #' [drake_graph_info()] and [render_sankey_drake_graph()].
 #' A legend is unfortunately unavailable
-#' for the graph itself
-#' (<https://github.com/christophergandrud/networkD3/issues/240>)
-#' but you can see what all the colors mean with
+#' for the graph itself, but you can see what all the colors mean with
 #' `visNetwork::visNetwork(drake::legend_nodes())`.
 #' @export
 #' @seealso [render_sankey_drake_graph()], [vis_drake_graph()],
@@ -107,9 +105,7 @@ body(sankey_drake_graph) <- config_util_body(sankey_drake_graph_impl)
 #' @description This function is called inside
 #' [sankey_drake_graph()], which typical users
 #' call more often. A legend is unfortunately unavailable
-#' for the graph itself
-#' (<https://github.com/christophergandrud/networkD3/issues/240>)
-#' but you can see what all the colors mean with
+#' for the graph itself, but you can see what all the colors mean with
 #' `visNetwork::visNetwork(drake::legend_nodes())`.
 #' @export
 #' @seealso [sankey_drake_graph()], [vis_drake_graph()],
@@ -214,7 +210,9 @@ sankey_render_webshot <- function(file, graph, selfcontained) {
   file <- path.expand(file)
   if (is_image_filename(file)) {
     assert_pkg("webshot")
-    url <- file.path(random_tempdir(), "tmp.html")
+    dir <- tempfile()
+    dir.create(dir)
+    url <- file.path(dir, "tmp.html")
     networkD3::saveNetwork(
       network = graph,
       file = url,

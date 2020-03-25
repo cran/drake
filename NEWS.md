@@ -1,3 +1,43 @@
+# Version 7.12.0
+
+## Bug fixes
+
+* **Ensure up-to-date sub-targets are skipped even if the dynamic parent does not get a chance to finalize (#1209, #1211, @psadil, @kendonB).**
+* Restrict static transforms so they only use the upstream part of the plan (#1199, #1200, @bart1).
+* Correctly match the names and values of dynamic `cross()` sub-targets (#1204, @psadil). Expansion order is the same, but names are correctly matched now.
+* Stop trying to remove `file_out()` files in `clean()`, even when `garbage_collection` is `TRUE` (#521, @the-Hull).
+* Fix `keep_going = TRUE` for formatted targets (#1206).
+* Use the correct variable names in logger helper (`progress_bar` instead of `progress`) so that `drake` works without the `progress` package (#1208, @mbaccou).
+* Avoid conflict between formats and upstream dynamic targets (#1210, @psadil).
+* Always compute trigger metadata up front because recovery keys need it.
+* Deprecate and remove hasty mode and custom parallel backends (#1222).
+* Compartmentalize fixed runtime parameters in `config$settings` (#965).
+
+## New features
+
+* Add new functions `drake_done()` and `drake_cancelled()` (#1205).
+
+## Speedups
+
+* Avoid reading build times of dynamic sub-targets in `drake_graph_info()` (#1207).
+
+## Enhancements
+
+* Show an empty progress bar just before targets start to build when `verbose` is `2` (#1203, @kendonB).
+* Deprecate the `jobs` argument of `clean()`.
+* Show an informative error message for empty dynamic grouping variables (#1212, @kendonB).
+* Throw error messages if users supply dynamic targets to `drake_build()` or `drake_debug()` (#1214, @kendonB).
+* Log the sub-target name and index of the failing sub-target in the metadata of the sub-target and its parent (#1214, @kendonB).
+* Shorten the call stack in error metadata.
+* Deprecate and remove custom schedulers (#1222).
+* Deprecate `hasty_build` (#1222).
+* Migrate constant runtime parameters to `config$settings` (#965).
+* Warn the user if `file_in()`/`file_out()`/`knitr_in()` files are not literal strings (#1229).
+* Prohibit `file_out()` and `knitr_in()` in imported functions (#1229).
+* Prohibit `knitr_in()` in dynamic branching (#1229).
+* Improve the help file of `target()`.
+* Deprecate and rename progress functions to avoid potential name conflicts (`progress()` => `drake_progress()`, `running()` => `drake_running()`, `failed()` => `drake_failed()`) (#1205).
+
 # Version 7.11.0
 
 ## Bug fixes

@@ -1,11 +1,20 @@
 logger <- function(verbose, file = NULL) {
   verbose <- as.integer(verbose)
-  progress <- NULL
+  progress_bar <- NULL
   if (.pkg_envir$has_progress) {
     progress_bar <- progress::progress_bar$new(
-      format = "targets [:bar] :percent"
+      format = "targets [:bar] :percent",
+      show_after = 0
+    )
+  # nocov start
+  } else if (verbose == 2L) {
+     # Covered if we run tests without the progress package.
+     # Part of https://github.com/ropensci/drake/blob/master/inst/testing/cran-checklist.md # nolint
+    cli_msg(
+      "Install the progress package to see a progress bar when verbose = 2."
     )
   }
+  # nocov end
   out <- refclass_logger$new(
     verbose = verbose,
     file = file,
@@ -47,9 +56,9 @@ refclass_logger <- methods::setRefClass(
         cli_msg(msg, cli_sym = cli::col_green(cli::symbol$tick))
       }
     },
-    progress = function() {
+    progress = function(increment = 1L) {
       pb <- .self$progress_bar
-      .self$progress_index <- .self$progress_index + 1L
+      .self$progress_index <- .self$progress_index + increment
       if (!is.null(pb) && .self$verbose == 2L) {
         ratio <- min(1, .self$progress_index / .self$progress_total)
         pb$finished <- FALSE

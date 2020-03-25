@@ -189,7 +189,8 @@ cds_prepare_spec <- function(args, spec) {
       spec$command_standardized,
       dynamic_command
     )
-    cds_exclude_dynamic_file_out(spec)
+    cds_exclude_dynamic_file_dsl(spec, field = "file_out")
+    cds_exclude_dynamic_file_dsl(spec, field = "knitr_in")
   }
   spec$command_build <- cds_preprocess_command(
     spec$command,
@@ -225,12 +226,12 @@ cds_prepare_spec <- function(args, spec) {
   as_drake_spec(spec)
 }
 
-cds_exclude_dynamic_file_out <- function(spec) {
-  if (length(spec$deps_build$file_out)) {
-    stop(
-      "file_out() in dynamic targets is illegal. Target: ",
-      spec$target,
-      call. = FALSE
+cds_exclude_dynamic_file_dsl <- function(spec, field) {
+  if (length(spec$deps_build[[field]])) {
+    stop0(
+      field,
+      "() in dynamic targets is illegal. Target: ",
+      spec$target
     )
   }
 }
@@ -265,11 +266,10 @@ cds_no_dynamic_triggers_impl <- function(target, deps_dynamic, deps_trigger) {
   if (!length(common)) {
     return()
   }
-  stop(
+  stop0(
     "Dynamic grouping variables are forbidden in the condition ",
-    "and change triggers. For target ", target, ", found dynamic ",
-    "grouping variables:\n", multiline_message(common),
-    call. = FALSE
+    "and change triggers. Found dynamic grouping variables for target ",
+    target, ":\n", multiline_message(common)
   )
 }
 
@@ -299,10 +299,9 @@ cds_dynamic_deps.dynamic <- function(dynamic, target, args) {
   dynamic$.trace <- NULL
   out <- ht_filter(args$ht_globals, all.vars(dynamic))
   if (!length(out)) {
-    stop(
+    stop0(
       "no admissible grouping variables for dynamic target ",
-      target,
-      call. = FALSE
+      target
     )
   }
   out
@@ -333,15 +332,14 @@ cds_assert_trace.group <- function(dynamic, spec) {
   if (!length(bad)) {
     return()
   }
-  stop(
+  stop0(
     "in dynamic group(), ",
     "the only legal dynamic trace variable ",
     "is the one you select with `.by`. ",
     "illegal dynamic trace variables for target ",
     spec$target,
     ":\n",
-    multiline_message(bad),
-    call. = FALSE
+    multiline_message(bad)
   )
 }
 
@@ -350,7 +348,7 @@ cds_assert_trace.dynamic <- function(dynamic, spec) {
   if (!length(bad)) {
     return()
   }
-  stop(
+  stop0(
     "in map() and cross(), ",
     "all dynamic trace variables must be ",
     "existing grouping variables, e.g. map(x, .trace = x) ",
@@ -358,8 +356,7 @@ cds_assert_trace.dynamic <- function(dynamic, spec) {
     "illegal dynamic trace variables for target ",
     spec$target,
     ":\n",
-    multiline_message(bad),
-    call. = FALSE
+    multiline_message(bad)
   )
 }
 
@@ -395,6 +392,9 @@ cds_std_dyn_cmd <- function(x) {
   transform <- class(x)
   vars <- sort(all.vars(x))
   by <- as.character(x$.by)
+  # TODO: the mention of trace is a bug, but fixing it
+  # will invalidate everyone's sub-targets. Wait to fix it
+  # until drake 8.0.0.
   paste(c(transform, vars, by, trace), collapse = " ")
 }
 

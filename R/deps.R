@@ -91,7 +91,7 @@ deps_target_impl <- function(
   }
   out <- config$spec[[target]]$deps_build
   out <- decode_deps_list(out)
-  out <- display_deps_list(select_nonempty(out))
+  out <- display_deps_list(out)
   out$hash <- config$cache$mget_hash(out$name)
   out
 }
@@ -127,7 +127,8 @@ get_deps_knitr <- function(target) {
     target <- redecode_path(target)
   }
   analyze_knitr_file(target, out, restrict = NULL)
-  list_code_analysis_results(out)
+  out <- lapply(out, ht_list)
+  do.call(new_drake_deps, out)
 }
 
 decode_deps_list <- function(x) {
@@ -147,10 +148,12 @@ display_deps_list <- function(x) {
     return(weak_tibble(name = character(0), type = character(0)))
   }
   x$memory <- NULL
+  x <- select_nonempty(x)
   out <- lapply(names(x), function(n) {
     weak_tibble(name = x[[n]], type = n)
   })
-  do.call(rbind, out)
+  do.call(rbind, out) %|||%
+    weak_tibble(name = character(0), type = character(0))
 }
 
 #' @title Find out why a target is out of date.
@@ -299,7 +302,7 @@ tracked <- function(config) {
       out <- unlist(out)
       c(out, target)
     },
-    jobs = config$jobs_preprocess
+    jobs = config$settings$jobs_preprocess
   )
   config$cache$display_keys(clean_dependency_list(out))
 }

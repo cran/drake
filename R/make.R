@@ -4,8 +4,6 @@
 #' of the drake package. It runs all the steps of your
 #' workflow in the correct order, skipping any work
 #' that is already up to date.
-#' See <https://github.com/ropensci/drake/blob/master/README.md#documentation>
-#' for an overview of the documentation.
 #' @section Interactive mode:
 #' In interactive sessions, consider [r_make()], [r_outdated()], etc.
 #' rather than [make()], [outdated()], etc. The `r_*()` `drake` functions
@@ -56,6 +54,14 @@
 #' There are legitimate use cases for `lock_envir = FALSE`
 #' (example: <https://books.ropensci.org/drake/hpc.html#parallel-computing-within-targets>) # nolint
 #' but most workflows should stick with the default `lock_envir = TRUE`.
+#'
+#' @section Cache locking:
+#' When `make()` runs, it locks the cache so other processes cannot modify it.
+#' Same goes for [outdated()], [vis_drake_graph()], and similar functions
+#' when `make_imports = TRUE`. This is a safety measure to prevent simultaneous
+#' processes from corrupting the cache. If you get an error saying that the
+#' cache is locked, either set `make_imports = FALSE` or manually force
+#' unlock it with `drake_cache()$unlock()`.
 #'
 #' @seealso
 #'   [drake_plan()],
@@ -239,31 +245,32 @@ make_impl <- function(config) {
   config$logger$disk("begin make()")
   on.exit(config$logger$disk("end make()"), add = TRUE)
   runtime_checks(config = config)
-  if (config$lock_cache) {
+  if (config$settings$lock_cache) {
     config$cache$lock()
     on.exit(config$cache$unlock(), add = TRUE)
   }
   config <- prep_config_for_make(config)
-  if (config$log_progress) {
+  if (config$settings$log_progress) {
     config$cache$clear(namespace = "progress")
   }
-  drake_set_session_info(cache = config$cache, full = config$session_info)
+  drake_set_session_info(
+    cache = config$cache,
+    full = config$settings$session_info
+  )
   do_prework(config = config, verbose_packages = config$logger$verbose)
-  if (!config$skip_imports) {
+  if (!config$settings$skip_imports) {
     process_imports(config)
   }
-  if (is.character(config$parallelism)) {
-    config$envir_graph <- new.env(parent = emptyenv())
-    config$envir_graph$graph <- outdated_subgraph(config)
-  }
+  config$envir_graph <- new.env(parent = emptyenv())
+  config$envir_graph$graph <- outdated_subgraph(config)
   r_make_message(force = FALSE)
-  if (!config$skip_targets) {
+  if (!config$settings$skip_targets) {
     process_targets(config)
   }
   drake_cache_log_file_(
-    file = config$cache_log_file,
+    file = config$settings$cache_log_file,
     cache = config$cache,
-    jobs = config$jobs_preprocess
+    jobs = config$settings$jobs_preprocess
   )
   clear_make_memory(config)
   invisible()
@@ -284,29 +291,22 @@ init_config_tmp <- function(config) {
   config$cache$reset_memo_hash()
   config$meta <- new.env(hash = TRUE, parent = emptyenv())
   config$meta_old <- new.env(hash = TRUE, parent = emptyenv())
-  config$cache$set(key = "seed", value = config$seed, namespace = "session")
+  seed <- config$settings$seed
+  config$cache$set(key = "seed", value = seed, namespace = "session")
   config
 }
 
 process_targets <- function(config) {
-  if (is.character(config$parallelism)) {
-    run_native_backend(config)
-  } else {
-    run_external_backend(config)
-  }
+  run_backend(config)
   config$logger$terminate_progress()
   invisible()
 }
 
-run_native_backend <- function(config) {
-  parallelism <- match.arg(
-    config$parallelism,
-    c("loop", "clustermq", "future")
-  )
+run_backend <- function(config) {
   order <- igraph::gorder(config$envir_graph$graph)
   if (order) {
     config$logger$set_progress_total(order)
-    class(config) <- c(class(config), parallelism)
+    config$logger$progress(0L)
     drake_backend(config)
   } else {
     config$logger$up_to_date()
@@ -314,20 +314,23 @@ run_native_backend <- function(config) {
 }
 
 drake_backend <- function(config) {
-  UseMethod("drake_backend")
+  if (identical(config$settings$parallelism, "loop")) {
+    drake_backend_loop(config)
+  } else if (identical(config$settings$parallelism, "clustermq")) {
+    drake_backend_clustermq(config)
+  } else if (identical(config$settings$parallelism, "future")) {
+    drake_backend_future(config)
+  } else {
+    drake_backend_bad(config)
+  }
 }
 
-run_external_backend <- function(config) {
-  warning(
-    "`drake` can indeed accept a custom scheduler function for the ",
-    "`parallelism` argument of `make()` ",
-    "but this is only for the sake of experimentation ",
-    "and graceful deprecation. ",
-    "Your own custom schedulers may cause surprising errors. ",
-    "Use at your own risk.",
-    call. = FALSE
-  )
-  config$parallelism(config = config)
+drake_backend_bad <- function(config) {
+  if (!is.character(config$settings$parallelism)) {
+    warn0("Custom drake parallel backends are deprecated. Using \"loop\".")
+  }
+  warn0("Illegal drake backend. Running without parallelism.")
+  drake_backend_loop(config)
 }
 
 outdated_subgraph <- function(config) {
@@ -397,7 +400,7 @@ do_prework <- function(config, verbose_packages) {
     expr <- as.call(c(
       quote(require),
       package = package,
-      lib.loc = as.call(c(quote(c), config$lib_loc)),
+      lib.loc = as.call(c(quote(c), config$settings$lib_loc)),
       quietly = TRUE,
       character.only = TRUE
     ))
@@ -414,11 +417,7 @@ do_prework <- function(config, verbose_packages) {
   } else if (is.list(config$prework)) {
     lapply(config$prework, eval, envir = config$envir_targets)
   } else if (length(config$prework)) {
-    stop(
-      "prework must be an expression ",
-      "or a list of expressions",
-      call. = FALSE
-    )
+    stop0("prework must be an expression or a list of expressions.")
   }
   invisible()
 }
@@ -443,7 +442,7 @@ clear_make_memory <- function(config) {
     remove(list = names(config[[key]]), envir = config[[key]])
   }
   config$cache$flush_cache()
-  if (config$garbage_collection) {
+  if (config$settings$garbage_collection) {
     gc()
   }
 }
@@ -486,13 +485,12 @@ drake_cache_log_file_ <- function(
 
 runtime_checks <- function(config) {
   assert_config(config)
-  if (identical(config$skip_safety_checks, TRUE)) {
+  if (identical(config$settings$skip_safety_checks, TRUE)) {
     return(invisible())
   }
   missing_input_files(config = config)
   subdirectory_warning(config = config)
   assert_outside_cache(config = config)
-  check_formats(config$formats)
 }
 
 check_formats <- function(formats) {
@@ -545,11 +543,9 @@ assert_format_impl.file <- function(format) {
 }
 
 assert_format_impl.default <- function(format) {
-  stop(
+  stop0(
     "illegal format ", format, ". Read ",
-    "https://docs.ropensci.org/drake/reference/drake_plan.html#formats",
-    " for legal formats and their system requirements.",
-    call. = FALSE
+    "https://docs.ropensci.org/drake/reference/drake_plan.html#formats"
   )
 }
 
@@ -557,15 +553,14 @@ missing_input_files <- function(config) {
   files <- parallel_filter(
     all_imports(config),
     f = is_encoded_path,
-    jobs = config$jobs_preprocess
+    jobs = config$settings$jobs_preprocess
   )
   files <- config$cache$decode_path(x = files)
   missing_files <- files[!file_dep_exists(files)]
   if (length(missing_files)) {
-    warning(
-      "missing input files:\n",
-      multiline_message(missing_files),
-      call. = FALSE
+    warn0(
+      "missing file_in() files:\n",
+      multiline_message(missing_files)
     )
   }
   invisible()
@@ -584,21 +579,11 @@ subdirectory_warning <- function(config) {
   if (!length(dir) || wd == dir || is.na(pmatch(dir, wd))) {
     return()
   }
-  warning(
-    "Running make() in a subdirectory of your project. \n",
-    "This could cause problems if your ",
-    "file_in()/file_out()/knitr_in() files ",
-    "are relative paths.\n",
-    "Please either\n",
-    "  (1) run make() from your drake project root, or\n",
-    "  (2) create a cache in your working ",
-    "directory with new_cache('path_name'), or\n",
-    "  (3) supply a cache of your own (e.g. make(cache = your_cache))\n",
-    "      whose folder name is not '.drake'.\n",
+  warn0(
+    "Do not run make() from a subdirectory of your project.\n",
     "  running make() from: ", wd, "\n",
     "  drake project root:  ", dir, "\n",
-    "  cache directory:     ", config$cache$path,
-    call. = FALSE
+    "  cache directory:     ", config$cache$path
   )
 }
 
@@ -606,13 +591,9 @@ assert_outside_cache <- function(config) {
   work_dir <- normalizePath(getwd(), mustWork = FALSE)
   cache_dir <- normalizePath(config$cache$path, mustWork = FALSE)
   if (identical(work_dir, cache_dir)) {
-    stop(
-      "cannot run make() from inside the cache: ", shQuote(cache_dir),
-      ". The cache path must be different from your working directory. ",
-      "If your drake project lives at ", shQuote("/your/project/root/"), # nolint
-      " then you should run ", shQuote("make()"), " from this directory, ",
-      "and your cache should be in a subfolder, e.g. ",
-      shQuote("/your/project/root/.drake/") # nolint
+    stop0(
+      "cannot run make() from inside the cache: ", cache_dir,
+      ". The cache path must be different from your working directory."
     )
   }
 }

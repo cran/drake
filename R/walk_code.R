@@ -92,6 +92,7 @@ analyze_arrow <- function(expr, results, locals, restrict) {
 }
 
 analyze_knitr_in <- function(expr, results, restrict) {
+  warn_nonliteral_paths(expr)
   expr <- ignore_ignore(expr)
   files <- analyze_strings(expr[-1])
   lapply(
@@ -104,6 +105,7 @@ analyze_knitr_in <- function(expr, results, restrict) {
 }
 
 analyze_file_in <- function(expr, results) {
+  warn_nonliteral_paths(expr)
   expr <- ignore_ignore(expr)
   x <- analyze_strings(expr[-1])
   x <- file.path(x)
@@ -112,11 +114,31 @@ analyze_file_in <- function(expr, results) {
 }
 
 analyze_file_out <- function(expr, results) {
+  warn_nonliteral_paths(expr)
   expr <- ignore_ignore(expr)
   x <- analyze_strings(expr[-1])
   x <- file.path(x)
   x <- reencode_path(x)
   ht_set(results$file_out, x)
+}
+
+warn_nonliteral_paths <- function(expr) {
+  syms <- all.vars(expr, functions = TRUE)
+  syms <- unique(syms)
+  ignore_these <- c("drake", "::", ":::", "c", "list")
+  syms <- setdiff(syms, c(drake_symbols, ignore_these))
+  if (!length(syms)) {
+    return()
+  }
+  str <- safe_deparse(expr)
+  warn0(
+    "Detected ", str,
+    ". File paths in file_in(), file_out(), and knitr_in() ",
+    "must be literal strings, not variables. For example, ",
+    "file_in(\"file1.csv\", \"file2.csv\") is legal, but ",
+    "file_in(paste0(filename_variable, \".csv\")) is not. ",
+    "Details: https://books.ropensci.org/drake/plans.html#static-files"
+  )
 }
 
 analyze_knitr_file <- function(file, results, restrict) {
@@ -318,20 +340,17 @@ get_tangled_frags <- function(file) {
     return(character(0))
   }
   if (!file.exists(file)) {
-    warning(
-      "knitr/rmarkdown report '", file,
-      "' does not exist and cannot be inspected for dependencies.",
-      call. = FALSE
-    )
+    warn0("Could not open ", file, " to detect dependencies.")
     return(character(0))
   }
   fragments <- tryCatch({
     parse(text = get_tangled_text(file))
   },
   error = function(e) {
-    warning(
-      "Could not parse file '", file,
-      "'. drake dependencies could not be extracted from code chunks: ",
+    warn0(
+      "Could not parse ",
+      file,
+      " to detect dependencies: ",
       conditionMessage(e)
     )
     character(0)
@@ -385,21 +404,21 @@ apdef <- function(e) {
 get_assigned_var <- function(e) {
   v <- e[[2]]
   if (missing(v)) {
-    stop(paste("missing assignment variable in", dsq(e)), call. = FALSE)
+    stop0(paste("missing assignment variable in", dsq(e)))
   } else if (typeof(v) %in% c("symbol", "character")) {
     as.character(v)
   } else {
     while (typeof(v) == "language") {
       if (length(v) < 2) {
-        stop(paste("unfinished code:", dsq(e)), call. = FALSE)
+        stop0(paste("unfinished code:", dsq(e)))
       }
       v <- v[[2]]
       if (missing(v)) {
-        stop(paste("missing variable in", dsq(e)), call. = FALSE)
+        stop0(paste("missing variable in", dsq(e)))
       }
     }
     if (typeof(v) != "symbol") {
-      stop(paste("not a symbol:", dsq(e)), call. = FALSE)
+      stop0(paste("not a symbol:", dsq(e)))
     }
     as.character(v)
   }
@@ -428,7 +447,7 @@ make_assignment_fn_impl <- function(fun) {
     fun
   }
   else {
-    stop("bad function in complex assignments: ", dsq(fun), call. = FALSE)
+    stop0("bad function in complex assignments: ", dsq(fun))
   }
 }
 
@@ -445,18 +464,6 @@ evalseq <- function(e) {
   else {
     list(e)
   }
-}
-
-list_code_analysis_results <- function(results) {
-  nms <- names(results)
-  x <- lapply(
-    X = nms,
-    FUN = function(slot) {
-      ht_list(results[[slot]])
-    }
-  )
-  names(x) <- nms
-  select_nonempty(x)
 }
 
 unwrap_function <- function(funct) {

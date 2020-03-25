@@ -22,10 +22,16 @@
 #' drake_deps(expr)
 #' }
 drake_deps <- function(expr, exclude = character(0), restrict = NULL) {
-  if (!is.function(expr) && !is.language(expr)) {
-    return(new_drake_deps())
-  }
-  results <- drake_deps_impl(expr, exclude, restrict)
+  ternary(
+    is.function(expr) || is.language(expr),
+    drake_deps_impl(expr, exclude, restrict),
+    new_drake_deps()
+  )
+}
+
+drake_deps_impl <- function(expr, exclude = character(0), restrict = NULL) {
+  results <- drake_deps_ht(expr, exclude, restrict)
+  results <- lapply(results, ht_list)
   do.call(new_drake_deps, results)
 }
 
@@ -72,29 +78,19 @@ new_drake_deps <- function(
   out
 }
 
-drake_validate.drake_deps <- function(x) {
-  lapply(x, assert_character)
+validate_drake_deps <- function(x) {
+  stopifnot(inherits(x, "drake_deps"))
+  stopifnot(inherits(x, "drake"))
   out_fields <- names(x)
-  exp_fields <- c(
-    "globals",
-    "namespaced",
-    "strings",
-    "loadd",
-    "readd",
-    "file_in",
-    "file_out",
-    "knitr_in"
-  )
-  stopifnot(identical(out_fields, exp_fields))
+  exp_fields <- names(formals(new_drake_deps))
+  for (field in exp_fields) {
+    stopifnot(is.character(x[[field]]))
+  }
+  stopifnot(identical(sort(out_fields), sort(exp_fields)))
 }
 
 #' @export
 print.drake_deps <- function(x, ...) {
   cat("drake_deps\n")
-  utils::str(unclass(x), no.list = TRUE)
-}
-
-drake_deps_impl <- function(expr, exclude = character(0), restrict = NULL) {
-  results <- drake_deps_ht(expr, exclude, restrict)
-  lapply(results, ht_list)
+  str0(x)
 }

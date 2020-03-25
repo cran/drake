@@ -118,7 +118,7 @@ test_with_dir("a close look at the memory strategies", {
   expect_equal(sort(deps), sort(ls(config$envir_targets)))
 
   # speed
-  config$memory_strategy <- "speed"
+  config$settings$memory_strategy <- "speed"
   clear_envir_targets("", config)
   expect_equal(ls(config$envir_targets), character(0))
   lapply(c("x", "y", "z"), function(x) {
@@ -148,7 +148,7 @@ test_with_dir("a close look at the memory strategies", {
 
   # autoclean and preclean
   for (strategy in c("preclean", "autoclean")) {
-    config$memory_strategy <- strategy
+    config$settings$memory_strategy <- strategy
     rm(list = names(config$envir_targets), envir = config$envir_targets)
     config$envir_loaded$targets <- character(0)
 
@@ -186,7 +186,7 @@ test_with_dir("a close look at the memory strategies", {
     assign_to_envir("x", "value", config)
     e <- exists("x", envir = config$envir_targets, inherits = FALSE)
     e2 <- "x" %in% config$envir_loaded$targets
-    expect_equal(e, config$memory_strategy == "preclean")
+    expect_equal(e, config$settings$memory_strategy == "preclean")
     expect_equal(e, e2)
     if (e) {
       rm(list = "x", envir = config$envir_targets)
@@ -195,12 +195,12 @@ test_with_dir("a close look at the memory strategies", {
   }
 
   # none
-  config$memory_strategy <- "none"
+  config$settings$memory_strategy <- "none"
   manage_memory("final1", config)
   expect_equal(sort(deps), sort(ls(config$envir_targets)))
 
   # unload
-  config$memory_strategy <- "unload"
+  config$settings$memory_strategy <- "unload"
   manage_memory("s", config)
   expect_equal(ls(config$envir_targets), character(0))
 })
@@ -227,7 +227,7 @@ test_with_dir("The unload and none strategies do not hold on to targets", {
   for (mem in c("none", "unload")) {
     plan <- drake_plan(target84d2fe31 = 1, target167ff309 = target84d2fe31)
     expect_error(make(plan, memory_strategy = mem), regexp = "not found")
-    expect_equal(failed(), "target167ff309")
+    expect_equal(drake_failed(), "target167ff309")
     clean()
     plan <- drake_plan(
       target84d2fe31 = 1,
@@ -251,7 +251,7 @@ test_with_dir("different memory strategies for each targret", {
     targetx523e1fba = target(targetx167ff309, memory_strategy = "unload")
   )
   expect_error(make(plan), regexp = "not found")
-  expect_equal(failed(), "targetx523e1fba")
+  expect_equal(drake_failed(), "targetx523e1fba")
 })
 
 test_with_dir("drake_envir() and memory strategies", {

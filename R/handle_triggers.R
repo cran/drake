@@ -45,7 +45,7 @@ handle_triggers_impl.static <- function(target, meta, config) { # nolint
 }
 
 recover_target <- function(target, meta, config) {
-  if (!config$recover) {
+  if (!config$settings$recover) {
     return(FALSE)
   }
   key <- recovery_key_impl(target = target, meta = meta, config = config)
@@ -120,11 +120,11 @@ recovery_key_impl.subtarget <- function(target, meta, config) {
 }
 
 recovery_key_impl.default <- function(target, meta, config, ...) {
-  if (is.null(meta$trigger$value)) {
-    change_hash <- NA_character_
-  } else {
-    change_hash <- config$cache$digest(meta$trigger$value)
-  }
+  change_hash <- ifelse(
+    is.null(meta$trigger$value),
+    NA_character_,
+    config$cache$digest(meta$trigger$value)
+  )
   x <- c(
     meta$command,
     meta$dependency_hash,
@@ -317,6 +317,7 @@ check_subtarget_triggers <- function(target, subtargets, config) {
       config
     )
   }
+  out[is.na(out)] <- TRUE
   if (any(out)) {
     config$logger$disk("trigger subtarget (special)", target = target)
   }
@@ -332,7 +333,7 @@ check_trigger_subtarget_format_file <- function( # nolint
   out <- lightly_parallelize(
     X = subtargets,
     FUN = check_trigger_subtarget_format_file_impl,
-    jobs = config$jobs_preprocess,
+    jobs = config$settings$jobs_preprocess,
     parent = parent,
     config = config
   )
@@ -436,7 +437,7 @@ trigger_condition <- function(target, meta, config) {
       "got `", value, "` for target ", target, "."
     )
     config$logger$disk(paste("Error:", msg))
-    stop(msg, call. = FALSE)
+    stop0(msg)
   }
   condition_decision(value = value, mode = meta$trigger$mode)
 }

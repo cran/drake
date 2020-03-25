@@ -117,7 +117,7 @@ read_trace <- function(
 
 dynamic_build <- function(target, meta, config) {
   subtargets <- config$spec[[target]]$subtargets
-  if (config$log_build_times) {
+  if (config$settings$log_build_times) {
     meta$time_command <- proc_time() - meta$time_start
   }
   value <- config$cache$mget_hash(subtargets)
@@ -218,6 +218,10 @@ register_subtargets <- function(target, static_ok, dynamic_ok, config) {
   if (static_ok) {
     subtargets_build <- filter_subtargets(target, subtargets_all, config)
   }
+  namespace <- config$meta[[target]]$dynamic_progress_namespace
+  already_done <- config$cache$list(namespace = namespace)
+  already_done <- intersect(already_done, ht_list(config$ht_target_exists))
+  subtargets_build <- setdiff(subtargets_build, already_done)
   if (length(subtargets_all)) {
     register_in_graph(target, subtargets_all, config)
     register_in_spec(target, subtargets_all, config)
@@ -258,13 +262,13 @@ filter_subtargets <- function(target, subtargets, config) {
   ht_set(config$ht_is_subtarget, subtargets)
   index <- check_subtarget_triggers(target, subtargets, config)
   subtargets <- subtargets[index]
-  if (!config$recover || !length(subtargets)) {
+  if (!config$settings$recover || !length(subtargets)) {
     return(subtargets)
   }
   recovered <- lightly_parallelize(
     subtargets,
     recover_subtarget,
-    jobs = config$jobs_preprocess,
+    jobs = config$settings$jobs_preprocess,
     config = config,
     parent = target
   )
@@ -323,7 +327,7 @@ register_subtarget_spec <- function(
   mem_deps <- all.vars(spec$dynamic)
   spec$dynamic <- NULL
   spec$deps_build$memory <- unique(c(spec$deps_build$memory, mem_deps))
-  spec$seed <- seed_from_basic_types(config$seed, spec$seed, subtarget)
+  spec$seed <- seed_from_basic_types(config$settings$seed, spec$seed, subtarget)
   spec <- register_dynamic_subdeps(dynamic, spec, index, parent, config)
   assign(
     x = subtarget,
@@ -394,6 +398,7 @@ as_dynamic <- function(x) {
 }
 
 dynamic_subvalue <- function(value, index) {
+  value <- undecorate_format_value(value)
   vec_slice(x = value, i = index)
 }
 
@@ -415,11 +420,10 @@ match_dynamic_call_impl.map <- function(dynamic) {
 match_dynamic_call_impl.cross <- match_dynamic_call_impl.map
 
 match_dynamic_call_impl.combine <- function(dynamic) { # nolint
-  stop(
+  stop0(
     "Dynamic combine() does not exist. ",
     "use group() instead. ",
-    "Ref: https://github.com/ropensci/drake/issues/1065",
-    call. = FALSE
+    "Ref: https://github.com/ropensci/drake/issues/1065"
   )
 }
 
@@ -469,12 +473,15 @@ dynamic_hash_list.map <- function(dynamic, target, config) {
   deps <- sort(config$spec[[target]]$deps_dynamic)
   hashes <- lapply(deps, read_dynamic_hashes, config = config)
   assert_equal_branches(target, deps, hashes)
+  names(hashes) <- deps
   hashes
 }
 
 dynamic_hash_list.cross <- function(dynamic, target, config) {
-  deps <- sort(config$spec[[target]]$deps_dynamic)
-  lapply(deps, read_dynamic_hashes, config = config)
+  deps <- config$spec[[target]]$deps_dynamic
+  hashes <- lapply(deps, read_dynamic_hashes, config = config)
+  names(hashes) <- deps
+  hashes
 }
 
 dynamic_hash_list.group <- function(dynamic, target, config) {
@@ -501,13 +508,12 @@ assert_equal_branches <- function(target, deps, hashes) {
   deps <- deps[keep]
   lengths <- lengths[keep]
   deps[is.na(deps)] <- ".by"
-  stop(
+  stop0(
     "for dynamic map() and group(), all grouping variables ",
     "must have equal lengths. For target ", target,
     ", the lengths of ", paste(deps, collapse = ", "),
     " were ", paste0(lengths, collapse = ", "),
-    ", respectively.",
-    call. = FALSE
+    ", respectively."
   )
 }
 
@@ -529,7 +535,10 @@ subtarget_hashes.map <- function(dynamic, target, hashes, config) {
 }
 
 subtarget_hashes.cross <- function(dynamic, target, hashes, config) {
-  hashes <- rev(expand.grid(rev(hashes)))
+  deps <- all.vars(dynamic)
+  hashes <- hashes[deps]
+  hashes <- expand.grid(rev(hashes))
+  hashes <- hashes[, sort(colnames(hashes))]
   apply(hashes, 1, paste, collapse = " ")
 }
 
@@ -562,6 +571,14 @@ subtarget_deps.cross <- function(dynamic, target, index, config) {
   out <- as.list(out)
   names(out) <- vars
   out
+}
+
+# Get a row of expand_grid from tidyr
+# without actually expanding the grid.
+grid_index <- function(index, size) {
+  reps <- prod(size) / cumprod(size)
+  inc <- ceiling(index / reps) - 1L
+  (inc %% size) + 1L
 }
 
 subtarget_deps.group <- function(

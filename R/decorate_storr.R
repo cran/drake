@@ -3,7 +3,7 @@ decorate_storr <- function(storr) {
     return(storr)
   }
   if (!inherits(storr, "storr")) {
-    stop("not a storr", call. = FALSE)
+    stop0("not a storr")
   }
   hash_algorithm <- storr$driver$hash_algorithm %||% "xxhash64"
   digest <- new_digest_function(hash_algorithm)
@@ -139,6 +139,21 @@ refclass_decorated_storr <- methods::setRefClass(
         hash = .self$ht_keys[[value]]
       )
     },
+    inc_dynamic_progress = function(subtarget, namespace) {
+      .self$driver$set_hash(
+        key = subtarget,
+        namespace = namespace,
+        hash = .self$ht_keys[["done"]]
+      )
+    },
+    clear_dynamic_progress = function(target) {
+      prefix <- dynamic_progress_ns_pfx(target)
+      namespaces <- .self$list_namespaces()
+      namespaces <- grep(pattern = prefix, x = namespaces, value = TRUE)
+      for (namespace in namespaces) {
+        clear_namespace_folder(.self, namespace)
+      }
+    },
     get_progress = function(targets) {
       retrieve_progress(targets = targets, cache = .self)
     },
@@ -213,17 +228,12 @@ refclass_decorated_storr <- methods::setRefClass(
       if (!.self$exists(key = "lock", namespace = "session")) {
         return()
       }
-      stop(
-        "drake's cache is locked. ",
-        "Either another process is storing targets/imports right now ",
-        "(e.g. make()) or the process was interrupted before cleanup. ",
-        "In the latter case, unlock the cache with:\n\n",
-        "  drake::drake_cache(\"", .self$path, "\")$unlock()\n\n",
-        "To invoke a function like outdated() or vis_drake_graph() ",
-        "while make() is running, set make_imports = FALSE instead.\n\n",
-        "To read about parallel computing in drake, visit ",
-        "https://books.ropensci.org/drake/hpc.html.",
-        call. = FALSE
+      stop0(
+        "drake's cache is locked.\nRead ",
+        "https://docs.ropensci.org/drake/reference/make.html#cache-locking\n",
+        "or force unlock the cache with drake::drake_cache(\"",
+        .self$path,
+        "\")$unlock()"
       )
     },
     # Delegate to storr:
@@ -522,7 +532,7 @@ drake_tempfile <- function(
   cache = drake::drake_cache(path = path)
 ) {
   if (is.null(cache)) {
-    stop("drake cache not found", call. = FALSE)
+    stop0("drake cache not found")
   }
   cache <- decorate_storr(cache)
   cache$file_tmp()
@@ -761,6 +771,18 @@ import_target_formatted <- function(target, from, to) {
       warn = FALSE
     )
   }
+}
+
+# TODO: simplify to just clear when
+# https://github.com/richfitz/storr/pull/122 is merged.
+clear_namespace_folder <- function(cache, namespace) {
+  if (inherits(cache$driver, "driver_rds")) {
+    path <- file.path(cache$path, "keys", namespace)
+    if (file.exists(path)) {
+      unlink(path, recursive = TRUE)
+    }
+  }
+  cache$clear(namespace = namespace)
 }
 
 # Should be used as sparingly as possible.

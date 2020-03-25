@@ -1,10 +1,21 @@
 #' @title Customize a target in [drake_plan()].
 #' \lifecycle{maturing}
-#' @description Must be called inside [drake_plan()].
-#'   Invalid otherwise.
+#' @description The `target()` function is a way to
+#'   configure individual targets in a `drake` plan.
+#'   Its most common use is to invoke static branching
+#'   and dynamic branching, and it can also set the values
+#'   of custom columns such as `format`, `elapsed`, `retries`,
+#'   and `max_expand`. Details are at
+#'   <https://books.ropensci.org/drake/plans.html#special-columns>.
+#'   Note: `drake_plan(my_target = my_command())`
+#'   is equivalent to
+#'   `drake_plan(my_target = target(my_command())`.
+#' @details `target()` must be called inside [drake_plan()].
+#'   It is invalid otherwise.
 #' @export
 #' @inheritSection drake_plan Columns
 #' @inheritSection drake_plan Keywords
+#' @inheritSection drake_plan Formats
 #' @seealso [drake_plan()], [make()]
 #' @return A one-row workflow plan data frame with the named
 #' arguments as columns.
@@ -60,11 +71,10 @@ target <- function(
 ) {
   if (!nzchar(Sys.getenv("drake_target_silent"))) {
     # 2019-12-05
-    stop(
+    stop0(
       "target() in drake is not a standalone user-side function. ",
       "It must be called from inside drake_plan(). Details: ",
-      "https://books.ropensci.org/drake/static.html",
-      call. = FALSE
+      "https://books.ropensci.org/drake/static.html"
     )
   }
   call <- match.call(expand.dots = FALSE)
@@ -200,24 +210,19 @@ trigger <- function(
   depend <- as.logical(depend)
   file <- as.logical(file)
   format <- as.logical(format)
-  out <- list(
+  condition <- rlang::quo_squash(rlang::enquo(condition))
+  change <- rlang::quo_squash(rlang::enquo(change))
+  mode <- match.arg(mode)
+  new_drake_triggers(
     command = command,
     depend = depend,
     file = file,
     seed = seed,
     format = format,
-    condition = rlang::quo_squash(rlang::enquo(condition)),
-    change = rlang::quo_squash(rlang::enquo(change)),
-    mode = match.arg(mode)
+    condition = condition,
+    change = change,
+    mode = mode
   )
-  class(out) <- c("drake_triggers", "drake")
-  out
-}
-
-#' @export
-print.drake_triggers <- function(x, ...) {
-  cat("a list of triggers for a drake target\n")
-  utils::str(x, no.list = TRUE)
 }
 
 #' @title Declare input files and directories.
@@ -682,11 +687,10 @@ envir_call <- function() {
 }
 
 envir_call_error <- function() {
-  stop(
+  stop0(
     "Could not find the environment where drake builds targets. ",
     "Functions drake_envir(), id_chr(), cancel(), and cancel_if() ",
-    "can only be invoked through make().",
-    call. = FALSE
+    "can only be invoked through make()."
   )
 }
 

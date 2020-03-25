@@ -1,5 +1,5 @@
 #' @title Build/process a single target or import.
-#' \lifecycle{maturing}
+#' \lifecycle{questioning}
 #' @description Not valid for dynamic branching.
 #' @export
 #' @seealso [drake_debug()]
@@ -54,6 +54,7 @@ drake_build_impl <- function(
   if (!character_only) {
     target <- as.character(substitute(target))
   }
+  assert_static(target, config, "drake_build()")
   deps <- deps_memory(targets = target, config = config)
   for (dep in deps) {
     if (replace || !exists(dep, envir = config$envir_targets)) {
@@ -72,7 +73,7 @@ drake_build_impl <- function(
 body(drake_build) <- config_util_body(drake_build_impl)
 
 #' @title Run a single target's command in debug mode.'
-#' \lifecycle{maturing}
+#' \lifecycle{questioning}
 #' @description Not valid for dynamic branching.
 #'   `drake_debug()` loads a target's dependencies
 #'   and then runs its command in debug mode (see `browser()`,
@@ -119,11 +120,7 @@ drake_debug_impl <- function(
   # Tested in tests/testthat/test-always-skipped.R.
   # nocov start
   if (is.null(config)) {
-    stop(
-      "In `drake_debug()`, you must supply a `drake_config()` ",
-      "object to the `config` argument.",
-      call. = FALSE
-    )
+    stop0("drake_debug() needs a drake_config() in config.")
   }
   if (!character_only) {
     target <- as.character(substitute(target))
@@ -131,8 +128,9 @@ drake_debug_impl <- function(
   if (!length(target)) {
     target <- utils::head(drake::failed(cache = config$cache), n = 1)
   }
+  assert_static(target, config, "drake_debug()")
   if (verbose) {
-    message("Building target `", target, "` in debug mode.")
+    cli_msg("Building target", target, "in debug mode.")
   }
   deps <- deps_memory(targets = target, config = config)
   for (dep in deps) {

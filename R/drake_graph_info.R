@@ -279,14 +279,14 @@ get_raw_node_category_data <- function(config) {
     f = function(x) {
       is.function(get_import_from_memory(x, config = config))
     },
-    jobs = config$jobs_preprocess
+    jobs = config$settings$jobs_preprocess
   )
   config$missing <- parallel_filter(
     x = config$import_names,
     f = function(x) {
       missing_import(x, config = config)
     },
-    jobs = config$jobs_preprocess
+    jobs = config$settings$jobs_preprocess
   )
   config
 }
@@ -621,6 +621,7 @@ node_shape <- Vectorize(function(x) {
 
 append_build_times <- function(config) {
   time_data <- build_times(
+    list = all_targets(config),
     digits = config$digits,
     cache = config$cache,
     type = config$build_times
@@ -634,10 +635,10 @@ append_build_times <- function(config) {
   time_labels <- as.character(time_data$elapsed)
   if (any(time_data$dynamic)) {
     time_labels[time_data$dynamic] <- paste0(
-      time_labels[time_data$dynamic],
-      " total\n(",
       time_data$subtargets[time_data$dynamic],
-      " sub-targets)"
+      " sub-targets\n",
+      time_labels[time_data$dynamic],
+      " elapsed\n(time depends on jobs)"
     )
   }
   names(time_labels) <- time_data$target
@@ -657,11 +658,7 @@ aggregate_dynamic_times <- function(time_data, config) {
   for (i in dynamic) {
     target <- time_data$target[i]
     meta <- config$cache$get(target, namespace = "meta")
-    subtargets <- intersect(meta$subtargets, time_data$target)
-    subtime <- sum(time_data$elapsed[time_data$target %in% subtargets]) %||% 0
-    dyntime <- time_data$elapsed[i] %||% 0L
-    time_data$elapsed[i] <- lubridate::dseconds(dyntime + subtime)
-    time_data$subtargets[i] <- time_data$subtargets[i] + length(subtargets)
+    time_data$subtargets[i] <- length(meta$subtargets)
   }
   time_data
 }
