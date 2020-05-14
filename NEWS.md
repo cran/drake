@@ -1,3 +1,21 @@
+# Version 7.12.1
+
+## Bug fixes
+
+* Repair `subtarget_hashes.cross()` for crosses on a single grouping variable.
+* Repair dynamic `group()` used with specialized formats (#1236, @adamaltmejd).
+* Enforce `tidyselect` >= 1.0.0.
+
+## New features
+
+* Allow user-defined target names in static branching with the `.names` argument (#1240, @maciejmotyka, @januz).
+
+## Enhancements
+
+* Do not analyze dependencies of calls to `drake_plan()` (#1237, @januz).
+* Error message for locked cache gives paste-able error message in Windows (#1243, @billdenney).
+* Prevent stack traces from accidentally storing large amounts of data (#1253, @sclewis23).
+
 # Version 7.12.0
 
 ## Bug fixes

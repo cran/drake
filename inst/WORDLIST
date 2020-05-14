@@ -42,6 +42,7 @@ coef
 coercible
 config
 connectedness
+coolmlproject
 cpu
 cranlogs
 CRAN
@@ -62,6 +63,7 @@ docstring
 Dobbyn
 dplyr
 DSL
+drakepkg
 drakeplanner
 DropBox
 dt
@@ -140,6 +142,7 @@ memoize
 memoization
 Memoization
 memoized
+Miles'
 Nitta
 modularity
 mtcars
@@ -191,6 +194,7 @@ Rbuildignore
 RDS
 README
 Recombinant
+recreatable
 reimagine
 reimagining
 reimplement
@@ -202,6 +206,7 @@ RL
 rmarkdown
 Rmd
 RMSPE
+rodrigues
 ropensci
 rOpenSci
 RStudio

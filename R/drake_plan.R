@@ -573,7 +573,7 @@ as_drake_plan <- function(plan, .force_df = FALSE) {
       class = c("drake_plan", "drake", "data.frame")
     )
   } else {
-    tibble::new_tibble(plan, nrow = nrow(plan), subclass = "drake_plan")
+    tibble::new_tibble(plan, nrow = nrow(plan), class = "drake_plan")
   }
 }
 
@@ -611,7 +611,7 @@ print.drake_plan <- function(x, ...) {
 type_sum <- NULL
 
 #' @title Type summary printing
-#' \lifecycle{stable}
+#' \lifecycle{questioning}
 #' @description Ensures `<expr>` is printed at the top
 #'   of any `drake` plan column that is a list of language objects
 #'   (e.g. `plan$command`).
