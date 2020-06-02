@@ -1,3 +1,10 @@
+# Version 7.12.2
+
+## Bug fixes
+
+* Invalidate old sub-targets when finalizing a dynamic target (@richardbayes). Solves a major reproducibility bug (#1260).
+* Prevent `splice_inner()` from dropping formal arguments shared by `c()` (#1262, @bart1).
+
 # Version 7.12.1
 
 ## Bug fixes
