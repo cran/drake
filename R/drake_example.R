@@ -1,5 +1,5 @@
 #' @title Download the files of an example `drake` project.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description The `drake_example()` function downloads a
 #'   folder from <https://github.com/wlandau/drake-examples>.
 #'   By default, it creates a new folder with the example name
@@ -98,7 +98,7 @@ drake_examples <- function(quiet = TRUE) {
 }
 
 #' @title Load the mtcars example.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description Is there an association between
 #' the weight and the fuel efficiency of cars?
 #' To find out, we use the mtcars example from `drake_example("mtcars")`.
@@ -183,8 +183,6 @@ load_mtcars_example <- function(
 populate_mtcars_example_envir <- function(envir) {
   assert_pkg("datasets")
   force(envir)
-  eval(parse(text = "suppressPackageStartupMessages(require(drake))"))
-  eval(parse(text = "suppressPackageStartupMessages(require(knitr))"))
   mtcars <- lm <- NULL
   local(envir = envir, {
     random_rows <- function(data, n) {
@@ -216,8 +214,12 @@ mtcars_plan <- function() {
     summ_regression2_large <- coef_regression1_small <-
     coef_regression1_large <- coef_regression2_small <-
     coef_regression2_large <- knit <- simulate <- reg1 <- reg2 <- NULL
-  drake_plan(
-    report = knit(knitr_in("report.Rmd"), file_out("report.md"), quiet = TRUE),
+  drake::drake_plan(
+    report = knitr::knit(
+      drake::knitr_in("report.Rmd"),
+      drake::file_out("report.md"),
+      quiet = TRUE
+    ),
     small = simulate(48),
     large = simulate(64),
     regression1_small = reg1(small),

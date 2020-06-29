@@ -1,5 +1,5 @@
 #' @title Customize a target in [drake_plan()].
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description The `target()` function is a way to
 #'   configure individual targets in a `drake` plan.
 #'   Its most common use is to invoke static branching
@@ -275,7 +275,7 @@ trigger <- function(
 #' plan <- drake::drake_plan(
 #'   data = target(
 #'     write.csv(data, file_out(paste0(.id_chr, ".csv"))),
-#'     transform = map(data = c(iris, mtcars))
+#'     transform = map(data = c(airquality, mtcars))
 #'   )
 #' )
 #' plan
@@ -343,7 +343,7 @@ file_in <- function(...) {
 #' plan <- drake::drake_plan(
 #'   data = target(
 #'     write.csv(data, file_out(paste0(.id_chr, ".csv"))),
-#'     transform = map(data = c(iris, mtcars))
+#'     transform = map(data = c(airquality, mtcars))
 #'   )
 #' )
 #'
@@ -521,7 +521,7 @@ no_deps <- function(x = NULL) {
 }
 
 #' @title Cancel a target mid-build under some condition
-#'   \lifecycle{experimental}
+#'   \lifecycle{stable}
 #' @description Cancel a target mid-build if some logical condition is met.
 #'   Upon cancellation, `drake` halts the current target and moves to the
 #'   next one. The target's previous value and metadata, if they exist,
@@ -556,7 +556,7 @@ cancel_if <- function(condition, allow_missing = TRUE) {
   cancel(allow_missing = allow_missing)
 }
 
-#' @title Cancel a target mid-build \lifecycle{experimental}
+#' @title Cancel a target mid-build \lifecycle{stable}
 #' @description Cancel a target mid-build.
 #'   Upon cancellation, `drake` halts the current target and moves to the
 #'   next one. The target's previous value and metadata, if they exist,
@@ -598,7 +598,7 @@ cancellation <- function(...) {
   )
 }
 
-#' @title Name of the current target \lifecycle{maturing}
+#' @title Name of the current target \lifecycle{stable}
 #' @export
 #' @description `id_chr()` gives you the name of the current target
 #'   while [make()] is running. For static branching in [drake_plan()],
@@ -747,7 +747,7 @@ bind_plans <- function(...) {
 #'   raw_data = read_excel(file_in("raw_data.xlsx")),
 #'   data = raw_data,
 #'   hist = create_plot(data),
-#'   fit = lm(Sepal.Width ~ Petal.Width + Species, data)
+#'   fit = lm(Ozone ~ Temp + Wind, data)
 #' )
 #' file <- tempfile()
 #' # Turn the plan into an R script a the given file path.
@@ -802,7 +802,7 @@ node_plan <- function(node) {
 #'   raw_data = read_excel(file_in("raw_data.xlsx")),
 #'   data = raw_data,
 #'   hist = create_plot(data),
-#'   fit = lm(Sepal.Width ~ Petal.Width + Species, data)
+#'   fit = lm(Ozone ~ Temp + Wind, data)
 #' )
 #' file <- tempfile()
 #' # Turn the plan into an R script a the given file path.
@@ -838,7 +838,7 @@ plan_to_code <- function(plan, con = stdout()) {
 #'   raw_data = read_excel(file_in("raw_data.xlsx")),
 #'   data = raw_data,
 #'   hist = create_plot(data),
-#'   fit = lm(Sepal.Width ~ Petal.Width + Species, data)
+#'   fit = lm(Ozone ~ Temp + Wind, data)
 #' )
 #' file <- tempfile()
 #' # Turn the plan into an R notebook a the given file path.
@@ -1033,7 +1033,7 @@ is_trigger_call <- function(expr) {
 }
 
 #' @title Turn a script into a function.
-#' \lifecycle{experimental}
+#' \lifecycle{stable}
 #' @description `code_to_function()` is a quick (and very dirty) way to
 #'   retrofit drake to an existing script-based project. It parses
 #'   individual `\*.R/\*.RMD` files into functions so they can be added
@@ -1051,6 +1051,7 @@ is_trigger_call <- function(expr) {
 #' [code_to_plan()], [plan_to_code()], [plan_to_notebook()]
 #' @return A function to be input into the drake plan
 #' @param path Character vector, path to script.
+#' @param envir Environment of the created function.
 #' @export
 #' @examples
 #' \dontrun{
@@ -1127,7 +1128,8 @@ is_trigger_call <- function(expr) {
 #' }
 #' })
 #' }
-code_to_function <- function(path) {
+code_to_function <- function(path, envir = parent.frame()) {
+  force(envir)
   lines <- readLines(path)
   if (any(grepl(knitr_pattern, lines))) {
     lines <- get_tangled_text(path)
@@ -1139,7 +1141,7 @@ code_to_function <- function(path) {
     "}"
   )
   text <- paste(lines, sep = "\n")
-  func <- eval(safe_parse(text))
+  func <- eval(safe_parse(text), envir = envir)
   func
 }
 

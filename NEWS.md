@@ -1,3 +1,30 @@
+# Version 7.12.4
+
+* Fix a CRAN warning about docs.
+
+# Version 7.12.3
+
+## Bug fixes
+
+* `cached_planned()` and `cached_unplanned()` now work with non-standard cache locations (#1268, @Plebejer).
+* Set `use_cache` to `FALSE` more often (#1257, @Plebejer).
+* Use namespaced function calls in mtcars example instead of loading packages.
+* Replace the `iris` dataset with the `airquality` dataset in all documentation, examples, and tests (#1271).
+* Assign functions created with `code_to_function()` to the proper environment (#1275, @robitalec).
+* Store tracebacks as character vectors and restrict the contents of error objects to try to prevent accidental storage of large data from the environment (#1276, @billdenney).
+* Strongly depend on `tidyselect` (#1274, @dernst).
+* Avoid `txtq` lockfiles (#1232, #1239, #1280, @danwwilson, @pydupont, @mattwarkentin).
+
+## New features
+
+* Add a new `drake_script()` function to write `_drake.R` files for `r_make()` (#1282).
+
+## Enhancements
+
+* Deprecate `expose_imports()` in favor of `make(envir = getNamespace("yourPackage")` (#1286, @mvarewyck).
+* Suppress the message recommending `r_make()` if `getOption("drake_r_make_message")` is `FALSE` (#1238, @januz).
+* Improve the appearance of the `visNetwork` graph by using the hierarchical layout with `visEdges(smooth = list(type = "cubicBezier", forceDirection = TRUE))` (#1289, @mstr3336).
+
 # Version 7.12.2
 
 ## Bug fixes

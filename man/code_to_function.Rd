@@ -3,12 +3,14 @@
 \name{code_to_function}
 \alias{code_to_function}
 \title{Turn a script into a function.
-\lifecycle{experimental}}
+\lifecycle{stable}}
 \usage{
-code_to_function(path)
+code_to_function(path, envir = parent.frame())
 }
 \arguments{
 \item{path}{Character vector, path to script.}
+
+\item{envir}{Environment of the created function.}
 }
 \value{
 A function to be input into the drake plan

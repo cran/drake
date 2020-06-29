@@ -3,7 +3,7 @@
 \name{make}
 \alias{make}
 \title{Run your project (build the outdated targets).
-\lifecycle{maturing}}
+\lifecycle{stable}}
 \usage{
 make(
   plan,
@@ -439,7 +439,7 @@ Must be \code{TRUE} for \code{\link[=drake_history]{drake_history()}} to work la
 \item{recover}{Logical, whether to activate automated data recovery.
 The default is \code{FALSE} because
 \enumerate{
-\item Automated data recovery is still experimental.
+\item Automated data recovery is still stable.
 \item It has reproducibility issues.
 Targets recovered from the distant past may have been generated
 with earlier versions of R and earlier package environments
@@ -553,13 +553,20 @@ nothing
 This is the central, most important function
 of the drake package. It runs all the steps of your
 workflow in the correct order, skipping any work
-that is already up to date.
+that is already up to date. Because of how \code{make()}
+tracks global functions and objects as dependencies of targets,
+please restart your R session so the pipeline runs
+in a clean reproducible environment.
 }
 \section{Interactive mode}{
 
 In interactive sessions, consider \code{\link[=r_make]{r_make()}}, \code{\link[=r_outdated]{r_outdated()}}, etc.
 rather than \code{\link[=make]{make()}}, \code{\link[=outdated]{outdated()}}, etc. The \verb{r_*()} \code{drake} functions
 are more reproducible when the session is interactive.
+If you do run \code{make()} interactively, please restart your R session
+beforehand so your functions and global objects get loaded into
+a clean reproducible environment. This prevents targets
+from getting invalidated unexpectedly.
 
 A serious drake workflow should be consistent and reliable,
 ideally with the help of a master R script.

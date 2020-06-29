@@ -32,9 +32,9 @@ new_digest_function <- function(hash_algorithm) {
   inner_digest <- digest::getVDigest(algo = hash_algorithm)
   digest <- function(object, serialize = TRUE, ...) {
     if (serialize) {
-      inner_digest(list(object), serialize = TRUE, ...)
+      suppressWarnings(inner_digest(list(object), serialize = TRUE, ...))
     } else {
-      inner_digest(object, serialize = FALSE, ...)
+      suppressWarnings(inner_digest(object, serialize = FALSE, ...))
     }
   }
 }
@@ -102,7 +102,7 @@ refclass_decorated_storr <- methods::setRefClass(
       dcst_set(value = value, key = key, ..., .self = .self)
     },
     memo_hash = function(x, fun, ...) {
-      ht_memo(ht = .self$ht_hash, x = x, fun = fun, ...)
+      suppressWarnings(ht_memo(ht = .self$ht_hash, x = x, fun = fun, ...))
     },
     reset_memo_hash = function() {
       ht_clear(.self$ht_hash)
@@ -411,7 +411,7 @@ dcst_set <- function(value, key, ..., .self) {
 }
 
 dcst_set.default <- function(value, key, ..., .self) {
-  .self$storr$set(key = key, value = value, ...)
+  suppressWarnings(.self$storr$set(key = key, value = value, ...))
 }
 
 dcst_set.drake_format_fst <- function(value, key, ..., .self) {
@@ -504,7 +504,7 @@ dcst_set_move_tmp <- function(key, value, tmp, .self) {
 }
 
 #' @title drake tempfile
-#' \lifecycle{experimental}
+#' \lifecycle{stable}
 #' @description Create the path to a temporary file inside drake's cache.
 #' @details This function is just like the `tempfile()` function in base R
 #'   except that the path points to a special location inside `drake`'s cache.
@@ -728,7 +728,7 @@ default_history_path <- function(cache_path) {
 
 history_queue <- function(history_path) {
   dir_create(history_path)
-  txtq::txtq(history_path)
+  txtq::txtq(history_path, use_lock_file = FALSE)
 }
 
 is_history <- function(history) {

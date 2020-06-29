@@ -1,5 +1,5 @@
 #' @title Read and return a drake target/import from the cache.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description [readd()] returns an object from the cache,
 #' and [loadd()] loads one or more objects from the cache
 #' into your environment or session. These objects are usually
@@ -125,7 +125,7 @@ readd <- function(
 }
 
 #' @title Load one or more targets or imports from the drake cache.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @rdname readd
 #' @seealso [cached()], [drake_plan()], [make()]
 #' @export
@@ -355,7 +355,7 @@ get_subtargets.drake_dynamic <- function(
   }
   out <- lapply(hashes, cache$get_value, use_cache = FALSE)
   if (subtarget_list) {
-    keys <- cache$get(target, namespace = "meta")$subtargets
+    keys <- cache$get(target, namespace = "meta", use_cache = FALSE)$subtargets
     if (!is.null(subtargets)) {
       keys <- keys[subtargets]
     }
@@ -488,7 +488,7 @@ show_source <- function(target, config, character_only = FALSE) {
 }
 
 #' @title Read the pseudo-random number generator seed of the project.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description When a project is created with [make()]
 #' or [drake_config()], the project's pseudo-random number generator
 #' seed is cached. Then, unless the cache is destroyed,
@@ -561,7 +561,7 @@ read_drake_seed <- function(
 }
 
 #' @title List targets in the cache.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description Tip: read/load a cached item with [readd()]
 #'   or [loadd()].
 #' @seealso [cached_planned()], [cached_unplanned()],
@@ -652,7 +652,7 @@ cached <- function(
 }
 
 #' @title List targets in both the plan and the cache.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description Includes dynamic sub-targets as well.
 #'   See examples for details.
 #' @seealso [cached()], [cached_unplanned]
@@ -690,13 +690,15 @@ cached_planned <- function(
   namespace <- namespace %|||% cache$default_namespace
   cached <- cache$list(namespace = namespace)
   targets <- intersect(plan$target, cached)
-  subtargets <- unlist(lapply(targets, subtargets, character_only = TRUE))
+  subtargets <- unlist(
+    lapply(targets, subtargets, character_only = TRUE, cache = cache)
+  )
   planned <- c(targets, subtargets)
   intersect(cached, planned)
 }
 
 #' @title List targets in the cache but not the plan.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description Includes dynamic sub-targets as well.
 #'   See examples for details.
 #' @seealso [cached()], [cached_planned]
@@ -737,7 +739,9 @@ cached_unplanned <- function(
   namespace <- namespace %|||% cache$default_namespace
   cached <- cache$list(namespace = namespace)
   targets <- intersect(plan$target, cached)
-  subtargets <- unlist(lapply(targets, subtargets, character_only = TRUE))
+  subtargets <- unlist(
+    lapply(targets, subtargets, character_only = TRUE, cache = cache)
+  )
   planned <- c(targets, subtargets)
   setdiff(cached, planned)
 }
@@ -904,7 +908,7 @@ find_cache <- function(
 }
 
 #' @title  Make a new `drake` cache.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description Uses the [storr_rds()] function
 #' from the `storr` package.
 #' @export
@@ -1055,7 +1059,7 @@ drake_cache_version <- function(cache) {
 }
 
 #' @title Session info of the last call to [make()].
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description By default, session info is saved
 #' during [make()] to ensure reproducibility.
 #' Your loaded packages and their versions are recorded, for example.
@@ -1089,7 +1093,7 @@ drake_get_session_info <- function(
 }
 
 #' @title Get the state of the cache.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description Get the fingerprints of all the targets in a data frame.
 #' This functionality is like
 #' `make(..., cache_log_file = TRUE)`,
@@ -1209,7 +1213,7 @@ single_cache_log <- function(key, cache) {
 }
 
 #' @title Get diagnostic metadata on a target.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description Diagnostics include errors, warnings,
 #'   messages, runtimes, and other context/metadata from when a
 #'   target was built or an import was processed.
@@ -1290,7 +1294,7 @@ diagnose <- function(
 }
 
 #' @title List running targets.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description List the targets that either
 #'   1. Are currently being built during a call to [make()], or
 #'   2. Were in progress when [make()] was interrupted.
@@ -1324,7 +1328,7 @@ drake_running <- function(
 }
 
 #' @title List failed targets.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description List the targets that quit in error during [make()].
 #' @seealso [drake_done()], [drake_running()], [drake_cancelled()],
 #'   [drake_progress()], [make()]
@@ -1358,7 +1362,7 @@ drake_failed <- function(
 }
 
 #' @title List done targets.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description List the targets that completed in the current or
 #'   previous call to [make()].
 #' @seealso [drake_running()], [drake_failed()], [drake_cancelled()],
@@ -1379,7 +1383,7 @@ drake_done <- function(cache = drake::drake_cache(path = path), path = NULL) {
 }
 
 #' @title List cancelled targets.
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description List the targets that were cancelled in the current or
 #'   previous call to [make()] using [cancel()] or [cancel_if()].
 #' @seealso [running()], [failed()], [done()], [make()]
@@ -1407,7 +1411,7 @@ drake_progress_field <- function(cache, path, field) {
 }
 
 #' @title Get the build progress of your targets
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description Objects that drake imported, built, or attempted
 #' to build are listed as `"done"` or `"running"`.
 #' Skipped objects are not listed.
@@ -1503,26 +1507,6 @@ memo_expr <- function(expr, cache, ...) {
   value
 }
 
-drake_tidyselect_cache <- function(
-  ...,
-  list = character(0),
-  cache,
-  namespaces = cache$default_namespace
-) {
-  suppressPackageStartupMessages(
-    suppressWarnings(
-      eval(parse(text = "require('tidyselect', quietly = TRUE)"))
-    )
-  )
-  out <- tidyselect::vars_select(
-    .vars = list_multiple_namespaces(cache = cache, namespaces = namespaces),
-    ...,
-    .strict = FALSE
-  )
-  out <- unname(out)
-  c(out, list)
-}
-
 list_multiple_namespaces <- function(cache, namespaces, jobs = 1) {
   out <- lightly_parallelize(
     X = namespaces,
@@ -1546,3 +1530,41 @@ old_meta <- function(key, cache) {
 meta_elt <- function(field, meta) {
   meta[[field]] %|||% NA_character_
 }
+
+drake_tidyselect_cache <- function(
+  ...,
+  list = character(0),
+  cache,
+  namespaces = cache$default_namespace
+) {
+  out <- tidyselect::vars_select(
+    .vars = list_multiple_namespaces(cache = cache, namespaces = namespaces),
+    ...,
+    .strict = FALSE
+  )
+  out <- unname(out)
+  c(out, list)
+}
+
+# Borrowed from dplyr source under the MIT license.
+#' @aliases tar_tidyselect
+#' @export
+tidyselect::all_of
+#' @export
+tidyselect::any_of
+#' @export
+tidyselect::contains
+#' @export
+tidyselect::ends_with
+#' @export
+tidyselect::everything
+#' @export
+tidyselect::last_col
+#' @export
+tidyselect::matches
+#' @export
+tidyselect::num_range
+#' @export
+tidyselect::one_of
+#' @export
+tidyselect::starts_with

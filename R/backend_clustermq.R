@@ -13,7 +13,7 @@ drake_backend_clustermq <- function(config) {
     template = config$settings$template
   )
   config$logger$disk("set common data")
-  cmq_set_common_data(config)
+  suppressWarnings(cmq_set_common_data(config))
   config$counter <- new.env(parent = emptyenv())
   config$counter$remaining <- config$queue$size()
   cmq_master(config)
@@ -196,7 +196,7 @@ cmq_deps_list <- function(target, config) {
 }
 
 #' @title Build a target using the clustermq backend
-#' \lifecycle{maturing}
+#' \lifecycle{stable}
 #' @description For internal use only
 #' @export
 #' @keywords internal

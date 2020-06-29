@@ -3,7 +3,7 @@
 \name{drake_slice}
 \alias{drake_slice}
 \title{Take a strategic subset of a dataset.
-\lifecycle{maturing}}
+\lifecycle{stable}}
 \usage{
 drake_slice(data, slices, index, margin = 1L, drop = FALSE)
 }
@@ -53,10 +53,10 @@ drake_slice(x, slices = 3, margin = 2, index = 1)
 \dontrun{
 isolate_example("contain side effects", {
 plan <- drake_plan(
-  large_data = iris,
+  large_data = mtcars,
   data_split = target(
-    drake_slice(large_data, slices = 50, index = i),
-    transform = map(i = !!seq_len(50))
+    drake_slice(large_data, slices = 32, index = i),
+    transform = map(i = !!seq_len(32))
   )
 )
 plan
