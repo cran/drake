@@ -1,5 +1,5 @@
 #' @title Run your project (build the outdated targets).
-#' \lifecycle{stable}
+#' `r lifecycle::badge("stable")`
 #' @description This is the central, most important function
 #' of the drake package. It runs all the steps of your
 #' workflow in the correct order, skipping any work
@@ -178,7 +178,8 @@ make <- function(
   log_build_times = TRUE,
   format = NULL,
   lock_cache = TRUE,
-  log_make = NULL
+  log_make = NULL,
+  log_worker = FALSE
 ) {
   force(envir)
   deprecate_arg(config, "config")
@@ -238,7 +239,8 @@ make <- function(
     log_build_times = log_build_times,
     format = format,
     lock_cache = lock_cache,
-    log_make = log_make
+    log_make = log_make,
+    log_worker = log_worker
   )
   make_impl(config)
 }
@@ -374,7 +376,7 @@ drake_set_session_info <- function(
 
 #' @title Do the prework in the `prework`
 #'   argument to [make()].
-#' \lifecycle{stable}
+#' `r lifecycle::badge("stable")`
 #' @export
 #' @keywords internal
 #' @description For internal use only.

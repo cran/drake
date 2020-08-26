@@ -1,4 +1,4 @@
-#' @title List sub-targets \lifecycle{stable}
+#' @title List sub-targets `r lifecycle::badge("stable")`
 #' @description List the sub-targets of a dynamic target.
 #' @export
 #' @seealso [get_trace()], [read_trace()]
@@ -41,7 +41,7 @@ subtargets <- function(
 }
 
 #' @title Read a trace of a dynamic target.
-#' \lifecycle{stable}
+#' `r lifecycle::badge("stable")`
 #' @export
 #' @seealso [get_trace()], [subtargets()]
 #' @description Read a target's dynamic trace from the cache.
@@ -369,6 +369,7 @@ dynamic_pad_revdep_keys <- function(target, config) {
 register_dynamic_subdeps <- function(dynamic, spec, index, parent, config) {
   index_deps <- subtarget_deps(dynamic, parent, index, config)
   for (dep in spec$deps_dynamic) {
+    assert_legal_branching_format(parent, dep, config)
     if (is_dynamic(dep, config)) {
       subdeps <- config$spec[[dep]]$subtargets[index_deps[[dep]]]
       spec$deps_build$memory <- c(spec$deps_build$memory, subdeps)
@@ -376,6 +377,18 @@ register_dynamic_subdeps <- function(dynamic, spec, index, parent, config) {
     }
   }
   spec
+}
+
+assert_legal_branching_format <- function(parent, dep, config) {
+  bad_dep <- !is_dynamic(dep, config) &&
+    identical(config$spec[[dep]]$format, "file")
+  if (bad_dep) {
+    stop0(
+      "Illegal dynamic branching of target `", parent, "` over `", dep, "`. ",
+      "If `", parent, "` dynamically branches over the dynamic file target `",
+      dep, "`, then `", dep, "` must also use dynamic branching."
+    )
+  }
 }
 
 is_dynamic <- function(target, config) {
@@ -612,9 +625,18 @@ get_dynamic_size <- function(target, config) {
     namespace = "meta",
     use_cache = FALSE
   )$size_vec
-  stopifnot(size > 0L)
+  assert_dynamic_size(target, size)
   ht_set(config$ht_dynamic_size, x = target, value = size)
   size
+}
+
+assert_dynamic_size <- function(target, size) {
+  if (size < 1L) {
+    stop0(
+      "cannot dynamically branch over ", target, " because NROW(",
+      target, ") is 0."
+    )
+  }
 }
 
 get_dynamic_by <- function(target, config) {

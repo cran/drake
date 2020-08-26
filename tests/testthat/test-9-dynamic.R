@@ -101,6 +101,12 @@ test_with_dir("empty dynamic transform", {
   expect_error(make(plan), regexp = "no admissible grouping variables")
 })
 
+test_with_dir("assert_dynamic_size() (#1308)", {
+  expect_silent(assert_dynamic_size("x", 1L))
+  expect_error(assert_dynamic_size("x", 0L), regexp = "because NROW")
+})
+
+
 test_with_dir("invalidating a subtarget invalidates the parent", {
   skip_on_cran()
   plan <- drake_plan(
@@ -2455,4 +2461,14 @@ test_with_dir("same with recovery enabled (#1260)", {
   )
   make(plan, recover = TRUE)
   expect_equal(readd(y), f(seq_len(5)))
+})
+
+test_with_dir("no branching over non-branching dynamic files (#1302)", {
+  writeLines("a", "a")
+  writeLines("b", "b")
+  plan <- drake::drake_plan(
+    path = target(c("a", "b"), format = "file"),
+    data = target(path, dynamic = map(path))
+  )
+  expect_error(make(plan), regexp = "dynamic branching")
 })

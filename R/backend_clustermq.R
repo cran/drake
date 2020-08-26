@@ -10,7 +10,8 @@ drake_backend_clustermq <- function(config) {
   }
   config$workers <- clustermq::workers(
     n_jobs = config$settings$jobs,
-    template = config$settings$template
+    template = config$settings$template,
+    log_worker = config$settings$log_worker
   )
   config$logger$disk("set common data")
   suppressWarnings(cmq_set_common_data(config))
@@ -196,7 +197,7 @@ cmq_deps_list <- function(target, config) {
 }
 
 #' @title Build a target using the clustermq backend
-#' \lifecycle{stable}
+#' `r lifecycle::badge("stable")`
 #' @description For internal use only
 #' @export
 #' @keywords internal

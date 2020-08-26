@@ -1,6 +1,6 @@
 #' @title Create a drake plan
 #'   for the `plan` argument of [make()].
-#' \lifecycle{stable}
+#' `r lifecycle::badge("stable")`
 #'
 #' @description A `drake` plan is a data frame with columns
 #'   `"target"` and `"command"`. Each target is an R object
@@ -540,8 +540,16 @@ parse_lang_cols <- function(plan) {
     if (!is.list(plan[[col]])) {
       plan[[col]] <- lapply(plan[[col]], safe_parse)
     }
+    plan[[col]] <- lapply(plan[[col]], replace_missing_symbol)
   }
   plan
+}
+
+replace_missing_symbol <- function(x) {
+  if (identical(x, substitute())) {
+    x <- expression(NULL)
+  }
+  x
 }
 
 complete_target_names <- function(commands_list) {
@@ -611,7 +619,7 @@ print.drake_plan <- function(x, ...) {
 type_sum <- NULL
 
 #' @title Type summary printing
-#' \lifecycle{questioning}
+#' `r lifecycle::badge("questioning")`
 #' @description Ensures `<expr>` is printed at the top
 #'   of any `drake` plan column that is a list of language objects
 #'   (e.g. `plan$command`).

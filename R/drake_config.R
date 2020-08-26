@@ -1,5 +1,5 @@
 #' @title Ending of _drake.R for r_make() and friends
-#' \lifecycle{stable}
+#' `r lifecycle::badge("stable")`
 #' @description Call this function inside the `_drake.R`
 #'   script for [r_make()] and friends.
 #'   All non-deprecated function arguments are the same
@@ -481,6 +481,10 @@
 #'   by hand is annoying, and `lock_cache = FALSE` prevents the cache
 #'   from locking in the first place.
 #'
+#' @param log_worker Logical, same as the `log_worker` argument of
+#'   `clustermq::workers()` and `clustermq::Q()`. Only relevant
+#'   if `parallelism` is `"clustermq"`.
+#'
 #' @examples
 #' \dontrun{
 #' isolate_example("quarantine side effects", {
@@ -556,7 +560,8 @@ drake_config <- function(
   log_build_times = TRUE,
   format = NULL,
   lock_cache = TRUE,
-  log_make = NULL
+  log_make = NULL,
+  log_worker = FALSE
 ) {
   logger <- logger(verbose = verbose, file = log_make)
   logger$disk("begin drake_config()")
@@ -670,7 +675,8 @@ drake_config <- function(
     skip_safety_checks = skip_safety_checks,
     skip_targets = skip_targets,
     sleep = sleep,
-    template = template
+    template = template,
+    log_worker = log_worker
   )
   out <- list(
     cache = cache,

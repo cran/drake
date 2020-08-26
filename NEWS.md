@@ -1,3 +1,18 @@
+# Version 7.12.5
+
+## Bug fixes
+
+* Sanitize empty symbols in language columns (#1299, @odaniel1).
+* Handle cases where `NROW()` throws an error (#1300, `julian-tagell` on Stack Overflow).
+* Prohibit dynamic branching over non-branching dynamic files (#1302, @djbirke).
+
+## Enhancements
+
+* Transition to updated `lifecycle` that does not require badges to be in `man/figures`.
+* Improve error message for empty dynamic grouping variables (#1308, @saadaslam).
+* Expose the `log_worker` argument of `clustermq::workers()` to `make()` and `drake_config()` (#1305, @billdenney, @mschubert).
+* Set `as.is` to `TRUE` in `utils::type.convert()` (#1309, @bbolker).
+
 # Version 7.12.4
 
 * Fix a CRAN warning about docs.

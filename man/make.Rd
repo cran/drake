@@ -3,7 +3,7 @@
 \name{make}
 \alias{make}
 \title{Run your project (build the outdated targets).
-\lifecycle{stable}}
+\ifelse{html}{\out{<a href='https://www.tidyverse.org/lifecycle/#stable'><img src='figures/lifecycle-stable.svg' alt='Stable lifecycle'></a>}}{\strong{Stable}}}
 \usage{
 make(
   plan,
@@ -62,7 +62,8 @@ make(
   log_build_times = TRUE,
   format = NULL,
   lock_cache = TRUE,
-  log_make = NULL
+  log_make = NULL,
+  log_worker = FALSE
 )
 }
 \arguments{
@@ -545,6 +546,10 @@ computer (from \code{Sys.info()["nodename"]}).
 - The process ID (from \code{Sys.getpid()}).
 - A timestamp with the date and time (in microseconds).
 - A brief description of what \code{drake} was doing.\verb{ The fields are separated by pipe symbols (}"|"`).}
+
+\item{log_worker}{Logical, same as the \code{log_worker} argument of
+\code{clustermq::workers()} and \code{clustermq::Q()}. Only relevant
+if \code{parallelism} is \code{"clustermq"}.}
 }
 \value{
 nothing
