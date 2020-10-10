@@ -94,6 +94,7 @@ cmq_conclude_build <- function(msg, config) {
   }
   caching <- hpc_caching(build$target, config)
   if (identical(caching, "worker")) {
+    cmq_report_warnings(build)
     wait_checksum(
       target = build$target,
       value = build$value,
@@ -111,6 +112,18 @@ cmq_conclude_build <- function(msg, config) {
     conclude_build(build = build, config = config)
   }
   cmq_conclude_target(target = build$target, config = config)
+}
+
+cmq_report_warnings <- function(build) {
+  if (length(build$warnings)) {
+    warning(
+      "target ",
+      build$target,
+      " warnings:\n",
+      multiline_message(build$warnings),
+      call. = FALSE
+    )
+  }
 }
 
 cmq_next_target <- function(config) {
@@ -144,6 +157,7 @@ cmq_send_target <- function(target, config) {
   }
   spec <- hpc_spec(target, config)
   config_tmp <- get_hpc_config_tmp(config)
+  config$logger$disk("build on an hpc worker", target = target)
   config$workers$send_call(
     expr = drake::cmq_build(
       target = target,
@@ -208,7 +222,6 @@ cmq_deps_list <- function(target, config) {
 #' @param config_tmp Internal, extra parts of `config` that the workers need.
 #' @param config A [drake_config()] list.
 cmq_build <- function(target, meta, deps, spec, config_tmp, config) {
-  config$logger$disk("build on an hpc worker", target = target)
   config$spec <- spec
   config <- restore_hpc_config_tmp(config_tmp, config)
   do_prework(config = config, verbose_packages = FALSE)
@@ -228,7 +241,12 @@ cmq_build <- function(target, meta, deps, spec, config_tmp, config) {
   conclude_build(build = build, config = config)
   checksum <- get_checksum(target, build$value, config)
   value <- hpc_worker_build_value(target, build$value, config)
-  list(target = target, value = value, checksum = checksum)
+  list(
+    target = target,
+    value = value,
+    checksum = checksum,
+    warnings = build$meta$warnings
+  )
 }
 
 cmq_assign_deps <- function(deps, config) {

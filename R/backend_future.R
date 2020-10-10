@@ -94,6 +94,7 @@ ft_launch_worker <- function(target, meta, protect, config) {
     protect = protect
   )
   announce_build(target = target, config = config)
+  config$logger$disk("build on an hpc worker", target = target)
   structure(
     future::future(
       expr = drake::future_build(
@@ -106,7 +107,8 @@ ft_launch_worker <- function(target, meta, protect, config) {
       ),
       globals = globals,
       label = target,
-      resources = as.list(spec[[target]]$resources)
+      resources = as.list(spec[[target]]$resources),
+      seed = TRUE
     ),
     target = target
   )
@@ -166,7 +168,6 @@ future_build <- function(
   config_tmp,
   protect
 ) {
-  config$logger$disk("build on an hpc worker", target = target)
   config$spec <- spec
   config <- restore_hpc_config_tmp(config_tmp, config)
   caching <- hpc_caching(target, config)

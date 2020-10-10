@@ -1,3 +1,17 @@
+# Version 7.12.6
+
+## Bug fixes
+
+* Fix defunct functions error message when using namespace (#1310, @malcolmbarrett).
+* Preserve names of list elements in `.data` in DSL (#1323, @shirdekel).
+* Use `identical()` to compare file hashes (#1324, @shirdekel).
+* Set `seed = TRUE` in `future::future()`.
+* Manually relay warnings when `parallelism = "clustermq"` and `caching = "worker"` (@richardbayes).
+
+## Enhancements
+
+* Make logs more machine-readable by sanitizing messages and preventing race conditions (#1331, @Plebejer).
+
 # Version 7.12.5
 
 ## Bug fixes
