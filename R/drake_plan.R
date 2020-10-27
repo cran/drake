@@ -42,7 +42,7 @@
 #'   for details.
 #' - `caching`: overrides the `caching` argument of [make()] for each target
 #'   individually. Possible values:
-#'   - "master": tell the master process to store the target in the cache.
+#'   - "main": tell the main process to store the target in the cache.
 #'   - "worker": tell the HPC worker to store the target in the cache.
 #'   - NA: default to the `caching` argument of [make()].
 #' - `elapsed` and `cpu`: number of seconds to wait for the target to build
@@ -384,6 +384,14 @@ sanitize_plan <- function(
   allow_duplicated_targets = FALSE,
   envir = parent.frame()
 ) {
+  is_plan <- is.data.frame(plan) &&
+    all(c("target", "command") %in% colnames(plan))
+  if (!is_plan) {
+    stop0(
+      "the drake plan must be a data frame that contains ",
+      "columns `target` and `command`."
+    )
+  }
   if (nrow(plan) < 1L) {
     return(plan)
   }

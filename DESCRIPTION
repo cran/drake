@@ -1,6 +1,6 @@
 Package: drake
 Title: A Pipeline Toolkit for Reproducible Computation at Scale
-Version: 7.12.6
+Version: 7.12.7
 Authors@R: c(
   person(
     given = c("William", "Michael"),
@@ -116,7 +116,7 @@ Encoding: UTF-8
 Language: en-US
 RoxygenNote: 7.1.1.9000
 NeedsCompilation: yes
-Packaged: 2020-10-09 22:46:13 UTC; c240390
+Packaged: 2020-10-27 17:59:21 UTC; c240390
 Author: William Michael Landau [aut, cre]
     (<https://orcid.org/0000-0003-1878-3253>),
   Alex Axthelm [ctb],
@@ -133,4 +133,4 @@ Author: William Michael Landau [aut, cre]
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2020-10-10 04:20:03 UTC
+Date/Publication: 2020-10-27 18:50:06 UTC
