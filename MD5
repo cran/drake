@@ -1,6 +1,6 @@
-2d814595941750d093aa83b9ac8a033e *DESCRIPTION
+9c3b05b6deb12f6eea9ed329f979f98a *DESCRIPTION
 aae618f37c2b06e5fd54e2cb135aa7ae *NAMESPACE
-fe929b6f01831d4b78f9bf3dca64d6ff *NEWS.md
+269f54c6c3df68abb6a41a263c4d812d *NEWS.md
 863ef99ee55d4fe8793b2d1773df9ad2 *R/aaa.R
 3f6610b96abbef94fe62c186f00008be *R/backend_clustermq.R
 1a6c07d0bcad8b91bf22352511daa592 *R/backend_future.R
@@ -17,7 +17,7 @@ d1f7ed96b6c4ebd34c3b4b930c45063d *R/deprecated.R
 6259c1dac565ab2c5215b65a850515ef *R/drake_build.R
 a1d5693e151e1f07529004902b5d368c *R/drake_config.R
 dba1c95a04f17f5e33e166b79193ecbf *R/drake_example.R
-382d88c6c98fb9efb15fe00073002aa4 *R/drake_ggraph.R
+4a06e6a077a74a2e30026d19c19dba9a *R/drake_ggraph.R
 0d13b1548878e893c291c6934c0f6e49 *R/drake_graph_info.R
 db387b202b23ddd1079252d666fc996a *R/drake_history.R
 01e1f2528875331e0e9fdea79b7cdf86 *R/drake_meta_.R
@@ -47,10 +47,10 @@ fe59b09a70f412a14e62ba57dd6b4fbe *R/s3_drake_deps_ht.R
 bc9a83a45c055e5a4c4279647db0ed4f *R/sankey_drake_graph.R
 675eef87edd6644dd0c07a67488f5afb *R/store_outputs.R
 f4e7d12fdc80faa069afb7f53233d739 *R/text_drake_graph.R
-ef63bcceb66b10465f6c11b1c2084958 *R/transform_plan.R
+e12bf626346112400d50c4828f3bb2c4 *R/transform_plan.R
 e9e81d73d3ef0f42ebe3ee7ea46a1a0a *R/use_drake.R
 ec8a22c840af771fe47d578642fea4d5 *R/utils.R
-8dcdcaefe4b73b8e0c916309f52b6c80 *R/vis_drake_graph.R
+d0358c777ee3b23fa5f506a69ebde4b2 *R/vis_drake_graph.R
 09cdd47ebd5f71cc3fb0dc9b75683a1c *R/walk_code.R
 6feb19f5d082091885ff1338e0070d72 *R/zzz.R
 e6ccf94d3105eac4ab4fe036d9bb6b64 *inst/CITATION
@@ -196,10 +196,10 @@ c2282723c5f8f981384bc5abc863b960 *man/figures/logo-hexbin.png
 42762477629f7e136f4a7c6a77781217 *man/figures/logo.png
 67f006c8ac8e795172c976808d61d3d5 *man/figures/readdhist-1.png
 67f006c8ac8e795172c976808d61d3d5 *man/figures/recoverhist-1.png
-a2581431669bdfc2d0bbc5be08afe076 *man/figures/unnamed-chunk-13-1.png
-aff193a58cc9cff0f8fa6a88b4051710 *man/figures/unnamed-chunk-18-1.png
+6d3ca6424212edbec9c966c2db11af1e *man/figures/unnamed-chunk-13-1.png
+433dadcfe0e8ad9d19170e4cc34e2754 *man/figures/unnamed-chunk-18-1.png
 bd92d27c43799b1c88dc631430778039 *man/figures/unnamed-chunk-19-1.png
-aff193a58cc9cff0f8fa6a88b4051710 *man/figures/unnamed-chunk-9-1.png
+433dadcfe0e8ad9d19170e4cc34e2754 *man/figures/unnamed-chunk-9-1.png
 a416ae1d5df4b791d84258a1142c8c32 *man/figures/video.png
 71d773b3ad3834ac28f06cb05a507387 *man/figures/workflowing.png
 ba9dc6e7363f985c06ff714c729cbc9b *man/file_in.Rd
@@ -285,7 +285,7 @@ f30d07c380bb218071ad7d0fbb67ffa4 *man/recoverable_impl.Rd
 d547218ba5646de6e5f2439af5649c1c *man/reduce_plan.Rd
 54eac5326d88606950be3f9bdefa7779 *man/reexports.Rd
 804221426af867164fb1dfd0a3a2a4f7 *man/render_drake_ggraph.Rd
-020cddc131c09fb4f80636dc3834941e *man/render_drake_graph.Rd
+06e4b06f0306dfdd1aece841071acdf2 *man/render_drake_graph.Rd
 9c0eceeb0d19f168b6f437b009a1c4a4 *man/render_graph.Rd
 b31f023ba32834b2cf0d9c1e7699bba4 *man/render_sankey_drake_graph.Rd
 cf0ef25311b94956852ab1f00560ad38 *man/render_static_drake_graph.Rd
@@ -317,8 +317,8 @@ ff47f094f033e348772424272f0ee5b8 *man/tracked.Rd
 6d277f31e37e0940ca048faf8401ca60 *man/triggers.Rd
 0c45df5c90b0a852deb20926dbc2e18f *man/type_sum.expr_list.Rd
 2a336bcee903f199c5385a6917d8149e *man/use_drake.Rd
-58aeaab0e299ba61093005ff7c83a29c *man/vis_drake_graph.Rd
-44a70bed26a26f8b716d8920b3b1a899 *man/vis_drake_graph_impl.Rd
+25cc3bc0b2e297c95adb3ec784fc0d03 *man/vis_drake_graph.Rd
+ee9d0a238926f51e214bf28bfd52d764 *man/vis_drake_graph_impl.Rd
 863444a541fc953964bd80d43ff069a5 *man/walk_code.Rd
 9cccd5a6abcc00cf95a536ebe7ba9bec *man/which_clean.Rd
 eca4fcfd4db977e68adab7bdc8515ee6 *man/workflow.Rd
@@ -329,7 +329,6 @@ a33179fbf2335d441c4dbd09a939d03a *tests/scenarios/results.sh
 decf2876d907f2e0aae2df7f352f5207 *tests/scenarios/run.sh
 92f6c04d0b9cf2757d2c70d64a2c06b4 *tests/scenarios/tests-all.R
 89055961c0cc8999b6eb39f5a791d1ed *tests/scenarios/tests-separate.R
-1a860e6e8d2bb37a2747739af6c3ef16 *tests/scenarios/tests-separate.Rout
 65e93a884a6d2754ff53cc5cef6bf722 *tests/testthat.R
 f426ed6a0a707fd4bf10bb07dbc8ca67 *tests/testthat/helper-checkers.R
 2a871fb367842a2d3ffd00019c754197 *tests/testthat/helper-code_to_function.R
@@ -339,7 +338,7 @@ dc1d8a4ef928bac7fd929cb8ab0c946e *tests/testthat/helper-operators.R
 f2d6a0575bb0c8e130663d201b09ad9a *tests/testthat/helper-testrun.R
 7ada3711a0a0eb6470a084d35d295b7e *tests/testthat/helper-testthat.R
 506f4c9975461184583969dd9eb33be2 *tests/testthat/test-1-hash-tables.R
-3cba8d4dfa1aa22652d3cae79cbc4f25 *tests/testthat/test-1-interactive.R
+20fabf92b9736bf2278242d99f806766 *tests/testthat/test-1-interactive.R
 8b7e4de7ebc7e5c03183886132917da0 *tests/testthat/test-1-keras.R
 2af18fc9b6e04421ff7ca5a337aac8df *tests/testthat/test-1-missed.R
 89b0fb9a2bd82fa574e4e465b35b3160 *tests/testthat/test-1-queue.R
@@ -349,7 +348,7 @@ b94f9dd3382f42f4957a82e870a2b10c *tests/testthat/test-2-checks.R
 cef1bc97f99bafd72e5a8d3507c13a3e *tests/testthat/test-2-lock.R
 73d79530fa5c13a4c295e491ef1941ef *tests/testthat/test-2-meta.R
 0eb0b25b3cf1c91123f228ed512f97f3 *tests/testthat/test-2-prework.R
-212311ad8d971e8256e9c6a1918da466 *tests/testthat/test-2-testing.R
+499f763487ff4c1a5e37ad75728ea29c *tests/testthat/test-2-testing.R
 a32d2c500bbabebfcec8af4ed602df37 *tests/testthat/test-3-commands.R
 a3e3f092553f94f2883834fc5a805776 *tests/testthat/test-3-lazy.R
 ce50c375d8f7bb83459d6e8b0d746a20 *tests/testthat/test-3-rstudio.R
@@ -374,8 +373,8 @@ c40901f04837d5d516b6b19f6f2c5d19 *tests/testthat/test-6-triggers.R
 12a1b11b2aea38a3714420dbb88f6724 *tests/testthat/test-7-deprecate.R
 f692524549218473f90c0be41396e022 *tests/testthat/test-7-dsl.R
 ad9d2ae671aaf411f7fd3317860fc15d *tests/testthat/test-7-files.R
-f6ffb7376771391507cb4ff1a984a677 *tests/testthat/test-7-recovery.R
-c1f6c0e117472b1193f3a18e94d01c6a *tests/testthat/test-8-cache.R
+7ff05ff4a5104171f8ff2d9fb3ae63fc *tests/testthat/test-7-recovery.R
+4c1a0f56ab47f17f00e98245747955b8 *tests/testthat/test-8-cache.R
 d8d8eee570f4611dbae2e5d56be89515 *tests/testthat/test-8-decorated-storr.R
 0120f6bd5b461caabe356e95af576ea0 *tests/testthat/test-9-clustermq.R
 c633e34902e48f5dc65c39df76b5a287 *tests/testthat/test-9-dynamic.R
