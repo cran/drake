@@ -1,6 +1,6 @@
-9c3b05b6deb12f6eea9ed329f979f98a *DESCRIPTION
+a3a99abed6986d16d22b447c406f204c *DESCRIPTION
 aae618f37c2b06e5fd54e2cb135aa7ae *NAMESPACE
-269f54c6c3df68abb6a41a263c4d812d *NEWS.md
+cdc7cb7a86442cc03d80b690da3e408e *NEWS.md
 863ef99ee55d4fe8793b2d1773df9ad2 *R/aaa.R
 3f6610b96abbef94fe62c186f00008be *R/backend_clustermq.R
 1a6c07d0bcad8b91bf22352511daa592 *R/backend_future.R
@@ -54,6 +54,7 @@ d0358c777ee3b23fa5f506a69ebde4b2 *R/vis_drake_graph.R
 09cdd47ebd5f71cc3fb0dc9b75683a1c *R/walk_code.R
 6feb19f5d082091885ff1338e0070d72 *R/zzz.R
 e6ccf94d3105eac4ab4fe036d9bb6b64 *inst/CITATION
+d4805b9ba7e90738cfd1caae26718361 *inst/NOTICE
 1cec3cc6b571f9b4d2f75e3f5b80de0c *inst/WORDLIST
 2993315c781ecab43523b4ce52be8159 *inst/rmarkdown/examples/mtcars/report.Rmd
 83c171867bdbfde50733057b861ce57d *inst/rmarkdown/templates/drake/skeleton/make.R
