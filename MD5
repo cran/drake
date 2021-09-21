@@ -1,6 +1,6 @@
-1f572333c0d6247f96c9b5e84769c7ef *DESCRIPTION
+1a5edcaaef7fad91bbc77854e0d5be1a *DESCRIPTION
 aae618f37c2b06e5fd54e2cb135aa7ae *NAMESPACE
-748cad90b89f994a2b3eaf34952894b8 *NEWS.md
+ccb780d24945186b86b18e8743fe1735 *NEWS.md
 863ef99ee55d4fe8793b2d1773df9ad2 *R/aaa.R
 3f6610b96abbef94fe62c186f00008be *R/backend_clustermq.R
 1a6c07d0bcad8b91bf22352511daa592 *R/backend_future.R
@@ -15,13 +15,13 @@ a764469b4df82aadca0b6db00dff1759 *R/decorate_storr.R
 d1f7ed96b6c4ebd34c3b4b930c45063d *R/deprecated.R
 1a26871baf288c75c3ac151059d2b680 *R/deps.R
 6259c1dac565ab2c5215b65a850515ef *R/drake_build.R
-a1d5693e151e1f07529004902b5d368c *R/drake_config.R
+bbdaa52553546795df6cc9bb79e2802b *R/drake_config.R
 dba1c95a04f17f5e33e166b79193ecbf *R/drake_example.R
 4a06e6a077a74a2e30026d19c19dba9a *R/drake_ggraph.R
 0d13b1548878e893c291c6934c0f6e49 *R/drake_graph_info.R
 db387b202b23ddd1079252d666fc996a *R/drake_history.R
 01e1f2528875331e0e9fdea79b7cdf86 *R/drake_meta_.R
-af8163adde8f1dc314267ad8d00f888a *R/drake_plan.R
+a01c85469c4bd6dd7de96572fd4ade8c *R/drake_plan.R
 d0de5c9e4ce9d4ff1d874a0e0a0afa23 *R/drake_plan_helpers.R
 8ed4cbd7400c55319f156255ff42af77 *R/drake_script.R
 8950969a1c6e28544170dc6bb75dd5c2 *R/dynamic.R
@@ -29,7 +29,7 @@ d0de5c9e4ce9d4ff1d874a0e0a0afa23 *R/drake_plan_helpers.R
 d86638ef71c2814046889ed3b81b1377 *R/hash_tables.R
 cf07ae26e0d84de14a581997c6113caf *R/hpc.R
 ec9efec7c343c8e784bca8d4bb23b812 *R/igraph.R
-43a9af3eaae1c6c78b7d4e37fb047284 *R/local_build.R
+c84ef07d533ab1751af05aea44c071da *R/local_build.R
 ec6567be0bc8c6d8632a39cf785f756c *R/logger.R
 97f91467ada1659a957a089bea1544c4 *R/make.R
 84fe9f4d8067255490a47073a4f2ece9 *R/manage_memory.R
@@ -51,7 +51,7 @@ e12bf626346112400d50c4828f3bb2c4 *R/transform_plan.R
 e9e81d73d3ef0f42ebe3ee7ea46a1a0a *R/use_drake.R
 ec8a22c840af771fe47d578642fea4d5 *R/utils.R
 d0358c777ee3b23fa5f506a69ebde4b2 *R/vis_drake_graph.R
-09cdd47ebd5f71cc3fb0dc9b75683a1c *R/walk_code.R
+8c856acc47dee92303d578a50da2a82a *R/walk_code.R
 a4f07c0f2e02b60ea756e9325f5879e5 *R/zzz.R
 e6ccf94d3105eac4ab4fe036d9bb6b64 *inst/CITATION
 298542c68a743a0e9f49d1e5364b12d4 *inst/NOTICE
@@ -146,7 +146,7 @@ d318be97206056daf03089c12e1b0f88 *man/drake-package.Rd
 fb0ae41c51dcd69c46f035d520cd1a84 *man/drake_cache_log.Rd
 773a951015a3888cf54d9b6dafc5f36e *man/drake_cache_log_file.Rd
 dc7cd3f94a2d0e03b8ca3409f5ea5847 *man/drake_cancelled.Rd
-e63992e6cff49c4daec1a23e5e8a469c *man/drake_config.Rd
+f277185557c2fa39f154a806fe7c2c63 *man/drake_config.Rd
 0c26334eee0b6a134101ea9e99a90134 *man/drake_debug.Rd
 7438af93a3a3e75e433cd1c89ba6eddc *man/drake_deps.Rd
 df745d777fa0a8484afd273b26e35f60 *man/drake_deps_ht.Rd
@@ -230,7 +230,7 @@ f18351824d9042dd48a292d125557e47 *man/knitr_deps.Rd
 8e02f30f62c32458577b946236f7270b *man/load_mtcars_example.Rd
 d130c15143584778cef1b96e9caf996d *man/long_hash.Rd
 5e3813437edeef678190b524c414ee15 *man/macros/lifecycle.Rd
-e0abc9b008d203c4fccbfe7c4c2ccab1 *man/make.Rd
+0a796e26ae033f2627abdd7c05f873c6 *man/make.Rd
 87669bed031f043f4fc724700ecdd164 *man/make_impl.Rd
 e39b41dfa0cdd8e40a62df9b21f551d9 *man/make_imports.Rd
 58fd8ff6a3807e7167737f104e8ee8b8 *man/make_targets.Rd
@@ -244,7 +244,7 @@ bc3a6e0937060bda1e95cec3432d7386 *man/missed.Rd
 f6bc29fed70f13838de72f90c85c13ae *man/new_cache.Rd
 af26d90eee83e18f5251175bcc7ad002 *man/new_drake_deps.Rd
 434d5c5d88b2ed069e7c3d80776cf664 *man/new_drake_deps_ht.Rd
-d3450b9c4ea4bf65ab33ace0bf7cfe54 *man/new_drake_settings.Rd
+1b47ba842608155241e61af66cc86cfb *man/new_drake_settings.Rd
 103d094c2fa993b0545b3b9c5d48c3f9 *man/new_drake_triggers.Rd
 baeb4f0b3d8b010097b4c7a2219a64bc *man/no_deps.Rd
 8bc9a4023ff7ed8102ba5f8c119c00d4 *man/outdated.Rd
@@ -363,10 +363,10 @@ c0f12abc651c6b7ba42f1fcac7109048 *tests/testthat/test-4-rng.R
 60a5dcfe418149974a96f54dd65ff7de *tests/testthat/test-5-examples.R
 92f171250ba2e6d9828442d768ba3fb5 *tests/testthat/test-5-graph.R
 9dc3558f274dac877ab42fff3b982d8f *tests/testthat/test-5-time.R
-0aee5d2ff715a14d9a6e876ae83651e4 *tests/testthat/test-6-analysis.R
+f8a6ada7a4e01acda21a5b99e9d44fde *tests/testthat/test-6-analysis.R
 c32013999a1305ce1b37e9fb0a0edb5c *tests/testthat/test-6-hpc.R
 c6cafa106b0e0a0d64c6155bb0de5ffd *tests/testthat/test-6-memory.R
-6dd025b1a1b5b76fc31682d674f5158b *tests/testthat/test-6-plans.R
+f4bee0ce4b6073b2d6c3fa657f4b8ae9 *tests/testthat/test-6-plans.R
 4caed3800fc19714bc295992a300bc6c *tests/testthat/test-6-retry.R
 9904364b350b7bdb4f5a724459bed158 *tests/testthat/test-6-triggers.R
 f23a9d95297e74772dbbaae6c364a049 *tests/testthat/test-6-visuals.R
