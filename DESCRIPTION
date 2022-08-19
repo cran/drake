@@ -1,6 +1,6 @@
 Package: drake
 Title: A Pipeline Toolkit for Reproducible Computation at Scale
-Version: 7.13.3
+Version: 7.13.4
 Authors@R: c(
   person(
     given = c("William", "Michael"),
@@ -114,9 +114,9 @@ Suggests: abind, bindr, callr, cli (>= 1.1.0), clustermq (>= 0.8.8),
         usethis, visNetwork (>= 2.0.9), webshot
 Encoding: UTF-8
 Language: en-US
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.1
 NeedsCompilation: yes
-Packaged: 2021-09-21 12:16:56 UTC; c240390
+Packaged: 2022-08-19 15:07:47 UTC; landau
 Author: William Michael Landau [aut, cre]
     (<https://orcid.org/0000-0003-1878-3253>),
   Alex Axthelm [ctb],
@@ -133,4 +133,4 @@ Author: William Michael Landau [aut, cre]
   Eli Lilly and Company [cph]
 Maintainer: William Michael Landau <will.landau@gmail.com>
 Repository: CRAN
-Date/Publication: 2021-09-21 13:10:34 UTC
+Date/Publication: 2022-08-19 15:40:02 UTC

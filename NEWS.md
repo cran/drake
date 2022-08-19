@@ -1,3 +1,7 @@
+# Version 7.13.4
+
+* Fix HTML documentation files.
+
 # Version 7.13.3
 
 * Improve error messages from static code analysis of malformed code (#1371, @billdenney).
