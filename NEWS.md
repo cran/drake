@@ -1,3 +1,7 @@
+# Version 7.13.6
+
+* Migrate to the new interface in `clustermq` 0.9.0 (@mschubert).
+
 # Version 7.13.5
 
 * Always pass a character vector to `rm()` and `remove()`.

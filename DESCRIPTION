@@ -1,12 +1,12 @@
 Package: drake
 Title: A Pipeline Toolkit for Reproducible Computation at Scale
-Version: 7.13.5
+Version: 7.13.6
 Authors@R: c(
   person(
     given = c("William", "Michael"),
     family = "Landau",
     role = c("aut", "cre"),
-    email = "will.landau@gmail.com",
+    email = "will.landau.oss@gmail.com",
     comment = c(ORCID = "0000-0003-1878-3253")
   ),
   person(
@@ -25,7 +25,7 @@ Authors@R: c(
     given = "Kirill",
     family = "Müller",
     role = "ctb",
-    email = "krlmlr+r@mailbox.org"
+    email = "kirill@cynkra.com"
   ),
   person(
     given = "Ben",
@@ -105,7 +105,7 @@ Depends: R (>= 3.3.0)
 Imports: base64url, digest (>= 0.6.21), igraph, methods, parallel,
         rlang (>= 0.2.0), storr (>= 1.1.0), tidyselect (>= 1.0.0), txtq
         (>= 0.2.3), utils, vctrs (>= 0.2.0)
-Suggests: abind, bindr, callr, cli (>= 1.1.0), clustermq (>= 0.8.8),
+Suggests: abind, bindr, callr, cli (>= 1.1.0), clustermq (>= 0.9.1),
         crayon, curl (>= 2.7), data.table, datasets, disk.frame,
         downloader, fst, future (>= 1.3.0), ggplot2, ggraph, grDevices,
         keras, knitr, lubridate, networkD3, prettycode, progress (>=
@@ -116,7 +116,7 @@ Encoding: UTF-8
 Language: en-US
 RoxygenNote: 7.2.3
 NeedsCompilation: yes
-Packaged: 2023-03-24 12:52:42 UTC; c240390
+Packaged: 2023-10-17 13:59:42 UTC; C240390
 Author: William Michael Landau [aut, cre]
     (<https://orcid.org/0000-0003-1878-3253>),
   Alex Axthelm [ctb],
@@ -131,6 +131,6 @@ Author: William Michael Landau [aut, cre]
   Ben Marwick [rev],
   Peter Slaughter [rev],
   Eli Lilly and Company [cph]
-Maintainer: William Michael Landau <will.landau@gmail.com>
+Maintainer: William Michael Landau <will.landau.oss@gmail.com>
 Repository: CRAN
-Date/Publication: 2023-03-24 13:10:02 UTC
+Date/Publication: 2023-10-17 22:30:10 UTC
