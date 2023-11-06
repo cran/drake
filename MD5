@@ -1,6 +1,6 @@
-e7b7edf357ccfef2c7ea737f6222b689 *DESCRIPTION
+2b30b80e8e5fc32683d16701ac39d113 *DESCRIPTION
 aae618f37c2b06e5fd54e2cb135aa7ae *NAMESPACE
-3ae89fdbf0f554eecd415a949cb4b3a1 *NEWS.md
+423316abbf55614976f51b084aa6694b *NEWS.md
 863ef99ee55d4fe8793b2d1773df9ad2 *R/aaa.R
 61a613ba6e6464a22262b9b9f4b4e3d7 *R/backend_clustermq.R
 b44835ab74d7b2477f1295ae9c68c950 *R/backend_future.R
@@ -363,15 +363,15 @@ c0f12abc651c6b7ba42f1fcac7109048 *tests/testthat/test-4-rng.R
 60a5dcfe418149974a96f54dd65ff7de *tests/testthat/test-5-examples.R
 92f171250ba2e6d9828442d768ba3fb5 *tests/testthat/test-5-graph.R
 9dc3558f274dac877ab42fff3b982d8f *tests/testthat/test-5-time.R
-9602d51c49480f3feccd7f3ac775d667 *tests/testthat/test-6-analysis.R
+a0118c8294f93fc6e2301af4fdf2559b *tests/testthat/test-6-analysis.R
 e6b9cd451a763a74d43b8af40076294f *tests/testthat/test-6-hpc.R
 c6cafa106b0e0a0d64c6155bb0de5ffd *tests/testthat/test-6-memory.R
-cb8049e42904c01c3344009105f93cf0 *tests/testthat/test-6-plans.R
+b5bf148c0ed805a3f48c1c645083e86a *tests/testthat/test-6-plans.R
 2d23c64d14a4576524e52ea6a60adc55 *tests/testthat/test-6-retry.R
 9904364b350b7bdb4f5a724459bed158 *tests/testthat/test-6-triggers.R
 f23a9d95297e74772dbbaae6c364a049 *tests/testthat/test-6-visuals.R
 31942df12cb65750a2ce951e8e324266 *tests/testthat/test-7-config-utils.R
-20b47d5cb7c328b2c44d85d7f88d6a6b *tests/testthat/test-7-deprecate.R
+c2e5487f55e0bbad377926e0b82592e0 *tests/testthat/test-7-deprecate.R
 02808fe98b4075dcadb37d7118e3af2a *tests/testthat/test-7-dsl.R
 f3e0f83ddfa3daff83412d42a9dc743a *tests/testthat/test-7-files.R
 7ff05ff4a5104171f8ff2d9fb3ae63fc *tests/testthat/test-7-recovery.R

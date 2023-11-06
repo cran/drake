@@ -1592,11 +1592,13 @@ test_with_dir("expose_imports() works", {
 })
 
 test_with_dir("move to caching = \"main\" at the top level", {
+  skip_if_not_installed("future")
   plan <- drake_plan(x = 1)
   expect_warning(make(plan, caching = "master"), message = "deprecated")
 })
 
 test_with_dir("move to caching = \"main\" at the target level", {
+  skip_if_not_installed("future")
   plan <- drake_plan(x = target(1, caching = "master"))
   expect_warning(
     make(plan, caching = "worker", parallelism = "future"),
