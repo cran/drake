@@ -1,6 +1,6 @@
-2b30b80e8e5fc32683d16701ac39d113 *DESCRIPTION
+9a8e76b5073aee06cbcf3382020be978 *DESCRIPTION
 aae618f37c2b06e5fd54e2cb135aa7ae *NAMESPACE
-423316abbf55614976f51b084aa6694b *NEWS.md
+acf674b1eb575776923d593248eb45b4 *NEWS.md
 863ef99ee55d4fe8793b2d1773df9ad2 *R/aaa.R
 61a613ba6e6464a22262b9b9f4b4e3d7 *R/backend_clustermq.R
 b44835ab74d7b2477f1295ae9c68c950 *R/backend_future.R
@@ -363,7 +363,7 @@ c0f12abc651c6b7ba42f1fcac7109048 *tests/testthat/test-4-rng.R
 60a5dcfe418149974a96f54dd65ff7de *tests/testthat/test-5-examples.R
 92f171250ba2e6d9828442d768ba3fb5 *tests/testthat/test-5-graph.R
 9dc3558f274dac877ab42fff3b982d8f *tests/testthat/test-5-time.R
-a0118c8294f93fc6e2301af4fdf2559b *tests/testthat/test-6-analysis.R
+13c485f6c89c9eb91cab8af0fe0e0e81 *tests/testthat/test-6-analysis.R
 e6b9cd451a763a74d43b8af40076294f *tests/testthat/test-6-hpc.R
 c6cafa106b0e0a0d64c6155bb0de5ffd *tests/testthat/test-6-memory.R
 b5bf148c0ed805a3f48c1c645083e86a *tests/testthat/test-6-plans.R
