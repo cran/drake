@@ -1,5 +1,4 @@
 #' drake: A pipeline toolkit for reproducible computation at scale.
-#' @docType package
 #' @description drake is a pipeline toolkit
 #' (`https://github.com/pditommaso/awesome-pipeline`)
 #' and a scalable, R-focused solution for reproducibility
@@ -44,13 +43,12 @@
 #' })
 #' }
 #' @references `https://github.com/ropensci/drake`
-#' @useDynLib drake, .registration = TRUE
 #' @importFrom base64url base32_decode base32_encode
 #' @importFrom digest getVDigest
 #' @importFrom igraph adjacent_vertices as_ids components delete_vertices
 #'   degree gorder graph_from_adjacency_matrix igraph_opt igraph_options
 #'   induced_subgraph is_dag make_empty_graph make_ego_graph set_vertex_attr
-#'   simplify topo_sort V vertex_attr
+#'   simplify topo_sort union V vertex_attr
 #' @importFrom methods new setRefClass
 #' @importFrom parallel mclapply
 #' @importFrom rlang dots_list enquo eval_tidy expr quo_squash quos trace_back

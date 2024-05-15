@@ -54,14 +54,6 @@
 #' `https://github.com/rstudio/gt/issues/297`)
 #' you can safely run the command in its own special `callr::r()` process.
 #' Example: `https://github.com/rstudio/gt/issues/297#issuecomment-497778735`. # nolint
-#'
-#' If that fails, you can run `make(plan, lock_envir = FALSE)`
-#' to suppress environment-locking for all targets.
-#' However, this is not usually recommended.
-#' There are legitimate use cases for `lock_envir = FALSE`
-#' (example: `https://books.ropensci.org/drake/hpc.html#parallel-computing-within-targets`) # nolint
-#' but most workflows should stick with the default `lock_envir = TRUE`.
-#'
 #' @section Cache locking:
 #' When `make()` runs, it locks the cache so other processes cannot modify it.
 #' Same goes for [outdated()], [vis_drake_graph()], and similar functions
@@ -169,7 +161,7 @@ make <- function(
   memory_strategy = "speed",
   layout = NULL,
   spec = NULL,
-  lock_envir = TRUE,
+  lock_envir = NULL,
   history = TRUE,
   recover = FALSE,
   recoverable = TRUE,
@@ -405,7 +397,7 @@ drake_set_session_info <- function(
 #' })
 #' }
 do_prework <- function(config, verbose_packages) {
-  for (package in union(c("methods", "drake"), config$packages)) {
+  for (package in base::union(c("methods", "drake"), config$packages)) {
     expr <- as.call(c(
       quote(require),
       package = package,
@@ -521,39 +513,48 @@ assert_format_impl <- function(format) {
   UseMethod("assert_format_impl")
 }
 
+#' @export
 assert_format_impl.fst <- function(format) {
   assert_pkg("fst")
 }
 
+#' @export
 assert_format_impl.fst_tbl <- function(format) {
   assert_pkg("fst")
   assert_pkg("tibble")
 }
 
+#' @export
 assert_format_impl.fst_dt <- function(format) {
   assert_pkg("fst")
   assert_pkg("data.table")
 }
 
+#' @export
 assert_format_impl.diskframe <- function(format) {
   assert_pkg("disk.frame")
 }
 
+#' @export
 assert_format_impl.keras <- function(format) {
   assert_pkg("keras") # nocov
 }
 
+#' @export
 assert_format_impl.qs <- function(format) {
   assert_pkg("qs")
 }
 
+#' @export
 assert_format_impl.rds <- function(format) {
   stopifnot(getRversion() >= "3.5.0")
 }
 
+#' @export
 assert_format_impl.file <- function(format) {
 }
 
+#' @export
 assert_format_impl.default <- function(format) {
   stop0(
     "illegal format ", format, ". Read ",

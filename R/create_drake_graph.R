@@ -7,18 +7,8 @@ create_drake_graph <- function(
   logger
 ) {
   args <- list(plan = plan, jobs = jobs, logger = logger, cache = cache)
-  edges <- memo_expr(
-    cdg_create_edges(args, spec),
-    cache,
-    plan,
-    spec
-  )
-  memo_expr(
-    cdg_finalize_graph(edges, targets, args),
-    cache,
-    edges,
-    targets
-  )
+  edges <- cdg_create_edges(args, spec)
+  cdg_finalize_graph(edges, targets, args)
 }
 
 cdg_create_edges <- function(args, spec) {
@@ -92,7 +82,7 @@ cdg_transitive_edges <- function(vertex, edges, args) {
 cdg_finalize_graph <- function(edges, targets, args) {
   args$logger$disk("finalize graph edges")
   file_out <- edges$to[edges$from %in% targets & is_encoded_path(edges$to)]
-  to <- union(targets, file_out)
+  to <- base::union(targets, file_out)
   args$logger$disk("create igraph")
   graph <- igraph::graph_from_data_frame(edges)
   args$logger$disk("trim neighborhoods")
